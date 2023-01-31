@@ -123,10 +123,10 @@ downloadFile() {
 }
 
 installFile() {
-    tar xf "$ARTIFACT_TMP_FILE" -C "$CLI_TMP_ROOT"
     local tmp_root_kbcli="$CLI_TMP_ROOT/${OS}-${ARCH}/$CLI_FILENAME"
+    tar xf "$ARTIFACT_TMP_FILE" -C "$CLI_TMP_ROOT"
 
-    if [ ! -f "$tmp_root_kbcli" ]; then
+    if [[ $? -ne 0 || ! -f "$tmp_root_kbcli" ]]; then
         echo "Failed to unpack kbcli executable."
         exit 1
     fi
@@ -189,4 +189,4 @@ fi
 downloadFile $ret_val
 installFile
 cleanup
-#installCompleted
+installCompleted
