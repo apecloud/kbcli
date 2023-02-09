@@ -18,6 +18,13 @@ CLI_BREW_FILE="${CLI_BREW_INSTALL_DIR}/${CLI_FILENAME}"
 
 REPO="apecloud/kbcli"
 GITHUB="https://api.github.com"
+GITLAB_REPO="85948"
+GITLAB="https://jihulab.com/api/v4/projects"
+COUNTRY_CODE=""
+
+getCountryCode() {
+    COUNTRY_CODE=`curl -s ifconfig.io/country_code`
+}
 
 getSystemInfo() {
     ARCH=$(uname -m)
@@ -86,15 +93,24 @@ checkExistingCLI() {
 }
 
 getLatestRelease() {
-    local releaseURL=$GITHUB/repos/$REPO/releases/latest
-    local latest_release=""
-
-    if [ "$HTTP_REQUEST_CLI" == "curl" ]; then
-        latest_release=$(curl -s $GITHUB/repos/$REPO/releases/latest | grep \"tag_name\" | awk 'NR==1{print $2}' | sed -n 's/\"\(.*\)\",/\1/p')
+    latest_release=""
+    if [[ "$COUNTRY_CODE" == "CN" ]]; then
+        releaseURL=$GITLAB/$GITLAB_REPO/releases
+        if [ "$HTTP_REQUEST_CLI" == "curl" ]; then
+            latest_release=`curl -s $releaseURL | grep 'tag_name'|awk 'NR==1{print $1}'`
+        else
+            latest_release=`wget -q --header="Accept: application/json" -O - $releaseURL | grep 'tag_name'|awk 'NR==1{print $1}'`
+        fi
+        latest_release=${latest_release#*"tag_name\":\""}
+        latest_release=${latest_release%%"\","*}
     else
-        latest_release=$(wget -q --header="Accept: application/json" -O - $GITHUB/repos/$REPO/releases/latest | grep \"tag_name\" | awk 'NR==1{print $2}' | sed -n 's/\"\(.*\)\",/\1/p')
+        releaseURL=$GITHUB/repos/$REPO/releases/latest
+        if [ "$HTTP_REQUEST_CLI" == "curl" ]; then
+            latest_release=$(curl -s $releaseURL | grep \"tag_name\" | awk 'NR==1{print $2}' | sed -n 's/\"\(.*\)\",/\1/p')
+        else
+            latest_release=$(wget -q --header="Accept: application/json" -O - $releaseURL | grep \"tag_name\" | awk 'NR==1{print $2}' | sed -n 's/\"\(.*\)\",/\1/p')
+        fi
     fi
-
     ret_val=$latest_release
 }
 
@@ -103,13 +119,16 @@ downloadFile() {
 
     CLI_ARTIFACT="${CLI_FILENAME}-${OS}-${ARCH}-${LATEST_RELEASE_TAG}.tar.gz"
     DOWNLOAD_BASE="https://github.com/$REPO/releases/download"
+    if [[ "$COUNTRY_CODE" == "CN" ]]; then
+        DOWNLOAD_BASE="$GITLAB/$GITLAB_REPO/packages/generic/kubeblocks"
+    fi
     DOWNLOAD_URL="${DOWNLOAD_BASE}/${LATEST_RELEASE_TAG}/${CLI_ARTIFACT}"
 
     # Create the temp directory
     CLI_TMP_ROOT=$(mktemp -dt kbcli-install-XXXXXX)
     ARTIFACT_TMP_FILE="$CLI_TMP_ROOT/$CLI_ARTIFACT"
 
-    echo "Downloading $DOWNLOAD_URL ..."
+    echo "Downloading ..."
     if [ "$HTTP_REQUEST_CLI" == "curl" ]; then
         curl -SL --header 'Accept:application/octet-stream' "$DOWNLOAD_URL" -o "$ARTIFACT_TMP_FILE"
     else
@@ -176,6 +195,7 @@ getSystemInfo
 verifySupported
 checkExistingCLI
 checkHttpRequestCLI
+getCountryCode
 
 if [ -z "$1" ]; then
     echo "Getting the latest kbcli ..."
