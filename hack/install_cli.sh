@@ -95,13 +95,13 @@ checkExistingCLI() {
 getLatestRelease() {
     latest_release=""
     if [[ "$COUNTRY_CODE" == "CN" ]]; then
-        releaseURL=$GITLAB/$GITLAB_REPO/releases
+        releaseURL=$GITLAB/$GITLAB_REPO/repository/tags/latest
         if [ "$HTTP_REQUEST_CLI" == "curl" ]; then
-            latest_release=`curl -s $releaseURL | grep 'tag_name'|awk 'NR==1{print $1}'`
+            latest_release=`curl -s $releaseURL | grep 'message'|awk 'NR==1{print $1}'`
         else
             latest_release=`wget -q --header="Accept: application/json" -O - $releaseURL | grep 'tag_name'|awk 'NR==1{print $1}'`
         fi
-        latest_release=${latest_release#*"tag_name\":\""}
+        latest_release=${latest_release#*"message\":\""}
         latest_release=${latest_release%%"\","*}
     else
         releaseURL=$GITHUB/repos/$REPO/releases/latest
