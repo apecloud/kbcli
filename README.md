@@ -58,11 +58,19 @@ powershell -Command " & ([scriptblock]::Create((iwr https://www.kubeblocks.io/in
 
 #### Install with winGet
 
-TODO
+1. Make sure your `powershell/CMD` support `winget` and run `winget install kbcli`.
 
 #### Install with scoop
 
-TODO
+1. Add the scoop bucket in `powershell/CMD`:
+
+   - `scoop bucket add scoop-bucket git@github.com:apecloud/scoop-bucket.git ` 
+   
+   or
+   - `scoop bucket add scoop-bucket https://github.com/apecloud/scoop-bucket.git`
+2. install the kbcli
+
+    `scoop install kbcli`
 
 #### Install with chocolatey
 
