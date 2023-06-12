@@ -22,7 +22,23 @@ curl -fsSL https://kubeblocks.io/installer/install_cli.sh | bash
 
 **Debian-based distributions**
 
-TODO
+1. Update the apt package index and install packages needed to use the kbcli apt repository:
+    ```sh
+    sudo apt-get update
+    sudo apt-get install curl
+    ```
+2. Download the kbcli public signing key:
+    ```sh
+    curl -fsSL https://apecloud.github.io/kbcli-apt/public.key | sudo apt-key add -
+    ```
+3. Add the kbcli apt repository:
+    ```sh
+    echo "deb [arch=amd64,arm64] https://apecloud.github.io/kbcli-apt/repo stable main" | sudo tee /etc/apt/sources.list.d/kbcli.list
+    ```
+4. update apt package index with the new repository and install kbcli:
+    ```sh
+    sudo apt-get update
+    sudo apt-get install kbcli
 
 **Red Hat-based distributions**
 
