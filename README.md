@@ -23,20 +23,20 @@ curl -fsSL https://kubeblocks.io/installer/install_cli.sh | bash
 **Debian-based distributions**
 
 1. Update the apt package index and install packages needed to use the kbcli apt repository:
-    ```sh
+    ```bash
     sudo apt-get update
     sudo apt-get install curl
     ```
 2. Download the kbcli public signing key:
-    ```sh
+    ```bash
     curl -fsSL https://apecloud.github.io/kbcli-apt/public.key | sudo apt-key add -
     ```
 3. Add the kbcli apt repository:
-    ```sh
+    ```bash
     echo "deb [arch=amd64,arm64] https://apecloud.github.io/kbcli-apt/repo stable main" | sudo tee /etc/apt/sources.list.d/kbcli.list
     ```
 4. update apt package index with the new repository and install kbcli:
-    ```sh
+    ```bash
     sudo apt-get update
     sudo apt-get install kbcli
 
@@ -74,19 +74,18 @@ powershell -Command " & ([scriptblock]::Create((iwr https://www.kubeblocks.io/in
 
 #### Install with winGet
 
-1. Make sure your `powershell/CMD` support `winget` and run `winget install kbcli`.
+Make sure your `powershell/CMD` support `winget` and run:
+
+```bash
+winget install kbcli
+```
 
 #### Install with scoop
 
-1. Add the scoop bucket in `powershell/CMD`:
-
-   - `scoop bucket add scoop-bucket git@github.com:apecloud/scoop-bucket.git ` 
-   
-   or
-   - `scoop bucket add scoop-bucket https://github.com/apecloud/scoop-bucket.git`
-2. install the kbcli
-
-    `scoop install kbcli`
+```bash
+scoop bucket add scoop-bucket https://github.com/apecloud/scoop-bucket.git
+scoop install kbcli
+```
 
 #### Install with chocolatey
 
@@ -96,7 +95,7 @@ TODO
 
 Each release of kbcli includes various OSes and architectures. These binary versions can be manually downloaded and installed.
 
-1. Download your desired [kbcli](https://github.com/apecloud/kbcli/releases)
+1. Download your desired [kbcli version](https://github.com/apecloud/kbcli/releases)
 2. Unpack it (e.g. kbcli-linux-amd64-v0.5.2.tar.gz, kbcli-darwin-amd64-v0.5.2.tar.gz)
 3. Move it to your desired location.
    * For Linux/macOS - `/usr/local/bin` or any other directory in your $PATH
@@ -120,62 +119,58 @@ Meet the following requirements for a smooth user experience:
 
 ### Initialize Playground
 
-1. Initialize Playground.
+ ```bash
+ kbcli playground init
+ ```
 
-    ```bash
-    kbcli playground init
-    ```
+ This command:
+ 1. Creates a Kubernetes cluster in the container with [K3d](https://k3d.io/v5.4.6/).
+ 2. Deploys KubeBlocks in the K3d cluster.
+ 3. Creates a standalone MySQL cluster.
 
-    This command:
-    1. Creates a Kubernetes cluster in the container with [K3d](https://k3d.io/v5.4.6/).
-    2. Deploys KubeBlocks in the K3d cluster.
-    3. Creates a standalone MySQL cluster.
+ > NOTE: If you previously ran `kbcli playground init` and it failed, running it again may cause errors. Please run the `kbcli playground destroy` command first to clean up the environment, then run `kbcli playground init` again.
 
-    > NOTE: If you previously ran `kbcli playground init` and it failed, running it again may cause errors. Please run the `kbcli playground destroy` command first to clean up the environment, then run `kbcli playground init` again.
+Check the MySQL cluster repeatedly until the status becomes `Running`.
 
-2. Check the MySQL cluster repeatedly until the status becomes `Running`.
-
-   ```bash
-   kbcli cluster list
-   ```
+```bash
+kbcli cluster list
+```
 
 ### Try KubeBlocks with Playground
 
-1. View the database cluster list.
+View the database cluster list.
 
-    ```bash
-    kbcli cluster list
-    ```
+ ```bash
+ kbcli cluster list
+ ```
 
-2. View the details of a specified database cluster, such as `STATUS`, `Endpoints`, `Topology`, `Images`, and `Events`.
+View the details of a specified database cluster, such as `STATUS`, `Endpoints`, `Topology`, `Images`, and `Events`.
 
-    ```bash
-    kbcli cluster describe mycluster
-    ```
+ ```bash
+ kbcli cluster describe mycluster
+ ```
 
-3. Access the database cluster.
+Wait until the status of this cluster is `Running`, then run `kbcli cluster connect` to access a specified database cluster. For example,
 
-    Wait until the status of this cluster is `Running`, then run `kbcli cluster connect` to access a specified database cluster. For example,
+ ```bash
+ kbcli cluster connect mycluster
+ ```
 
-    ```bash
-    kbcli cluster connect mycluster
-    ```
+List and open the grafana dashboard.
 
-4. List and open the grafana dashboard.
+ ```bash
+ # list all dashboard
+ kbcli dashboard list
 
-    ```bash
-    # list all dashboard
-    kbcli dashboard list
-
-    # open grafana dashboard
-    kbcli dashboard open kubeblocks-grafana
-    ```
+ # open grafana dashboard
+ kbcli dashboard open kubeblocks-grafana
+ ```
 
 ### Destroy Playground
 
-    ```bash
-    kbcli playground destroy
-    ```
+ ```bash
+ kbcli playground destroy
+ ```
 
 ## Reference Documentation
 
