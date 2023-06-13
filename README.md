@@ -49,7 +49,6 @@ curl -fsSL https://kubeblocks.io/installer/install_cli.sh | bash
 2. Add repo
     ```bash
     sudo yum-config-manager --add-repo https://github.com/apecloud/kbcli-yum-repo/raw/main
-
 3. Install kbcli 
     ```bash
     sudo yum update
