@@ -177,13 +177,13 @@ View the database cluster list.
  kbcli cluster list
  ```
 
-View the details of a specified database cluster, such as `STATUS`, `Endpoints`, `Topology`, `Images`, and `Events`.
+View the details of a specified database cluster, such as `STATUS`, `Endpoints`, `Topology`, `Images`.
 
  ```bash
  kbcli cluster describe mycluster
  ```
 
-Wait until the status of this cluster is `Running`, then run `kbcli cluster connect` to access a specified database cluster. For example,
+Wait until the status of this cluster is `Running`, run `kbcli cluster connect` to access a specified database cluster. For example,
 
  ```bash
  kbcli cluster connect mycluster
@@ -192,7 +192,7 @@ Wait until the status of this cluster is `Running`, then run `kbcli cluster conn
 List and open the grafana dashboard.
 
  ```bash
- # list all dashboard
+ # list all dashboards
  kbcli dashboard list
 
  # open grafana dashboard
