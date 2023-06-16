@@ -216,3 +216,8 @@ See the [Development Guide](https://github.com/apecloud/kubeblocks/blob/main/doc
 ## Code of Conduct
 
 Please refer to our [KubeBlocks Code of Conduct](https://github.com/apecloud/kubeblocks/blob/main/CODE_OF_CONDUCT.md)
+
+## License
+
+kbcli is under the GNU Affero General Public License v3.0.
+See the [LICENSE](./LICENSE) file for details.
