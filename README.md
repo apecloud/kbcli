@@ -77,7 +77,7 @@ curl -fsSL https://kubeblocks.io/installer/install_cli.sh | bash
 
 1. 
     ```bash
-    echo "deb [trusted=yes] https://apt.fury.io/huyongqii/ /" | sudo tee /etc/apt/sources.list.d/kbcli.list
+    echo "deb [trusted=yes] https://apt.fury.io/kubeblocks/ /" | sudo tee /etc/apt/sources.list.d/kbcli.list
     ```
 2. 
     ```bash
@@ -97,7 +97,7 @@ curl -fsSL https://kubeblocks.io/installer/install_cli.sh | bash
     ```
 2. Add a new repository to the YUM configuration using yum-config-manager
     ```bash
-    sudo yum-config-manager --add-repo https://yum.fury.io/huyongqii/
+    sudo yum-config-manager --add-repo https://yum.fury.io/kubeblocks/
     ```
 3. Update the local cache of available packages and metadata from all configured YUM repositories.
     ```bash
