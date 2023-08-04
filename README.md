@@ -73,10 +73,44 @@ curl -fsSL https://kubeblocks.io/installer/install_cli.sh | bash
     sudo apt-get update
     sudo apt-get install kbcli
 
+***For Debian-based distributions, in addition to the installation method above, you can also install it through the following methods:***
+
+1. 
+    ```bash
+    echo "deb [trusted=yes] https://apt.fury.io/huyongqii/ /" | sudo tee /etc/apt/sources.list.d/kbcli.list
+    ```
+2. 
+    ```bash
+    sudo apt update
+    ```
+3. 
+    ```bash
+    sudo apt install kbcli
+    ```
+
+
 **Red Hat-based distributions**
 
-TODO
-
+1. Installs the package yum-utils using the package manager yum.
+    ```bash
+    sudo yum install -y yum-utils
+    ```
+2. Add a new repository to the YUM configuration using yum-config-manager
+    ```bash
+    sudo yum-config-manager --add-repo https://yum.fury.io/huyongqii/
+    ```
+3. Update the local cache of available packages and metadata from all configured YUM repositories.
+    ```bash
+    sudo yum makecache
+    ```
+4. Install the kbcli.
+    ```bash
+    sudo yum install kbcli --nogpgcheck
+    ```
+5. Install the specified version of kbcli.
+    ```bash
+    sudo yum install kbcli-0.6.0~beta20-1 --nogpgcheck
+```
 ### Install kbcli on macOS
 
 #### Install with curl
