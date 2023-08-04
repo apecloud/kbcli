@@ -109,8 +109,8 @@ curl -fsSL https://kubeblocks.io/installer/install_cli.sh | bash
     ```
 5. Install the specified version of kbcli.
     ```bash
-    sudo yum install kbcli-0.6.0~beta20-1 --nogpgcheck
-```
+    sudo yum install kbcli-0.6.0~beta24 --nogpgcheck
+    ```
 ### Install kbcli on macOS
 
 #### Install with curl
@@ -156,7 +156,9 @@ scoop install kbcli
 
 #### Install with chocolatey
 
-TODO
+```bash
+choco install kbcli
+```
 
 ### Install using the Binary Releases
 
