@@ -17,17 +17,26 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package main
+package cluster
 
 import (
-	"github.com/apecloud/kbcli/pkg/cmd"
-	"github.com/apecloud/kbcli/pkg/util"
-	"k8s.io/component-base/cli"
+	"testing"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+
+	"github.com/apecloud/kbcli/pkg/types"
+	viper "github.com/apecloud/kubeblocks/pkg/viperx"
 )
 
-func main() {
-	cmd := cmd.NewDefaultCliCmd()
-	if err := cli.RunNoErrOutput(cmd); err != nil {
-		util.CheckErr(err)
-	}
+func TestCluster(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Cluster Suite")
 }
+
+var _ = BeforeSuite(func() {
+	viper.SetDefault(types.CfgKeyClusterDefaultStorageSize, "20Gi")
+	viper.SetDefault(types.CfgKeyClusterDefaultReplicas, 1)
+	viper.SetDefault(types.CfgKeyClusterDefaultCPU, "1000m")
+	viper.SetDefault(types.CfgKeyClusterDefaultMemory, "1Gi")
+})

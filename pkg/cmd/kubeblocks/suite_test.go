@@ -17,17 +17,25 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package main
+package kubeblocks
 
 import (
-	"github.com/apecloud/kbcli/pkg/cmd"
-	"github.com/apecloud/kbcli/pkg/util"
-	"k8s.io/component-base/cli"
+	"testing"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+
+	clitesting "github.com/apecloud/kbcli/pkg/testing"
+	"github.com/apecloud/kbcli/pkg/types"
 )
 
-func main() {
-	cmd := cmd.NewDefaultCliCmd()
-	if err := cli.RunNoErrOutput(cmd); err != nil {
-		util.CheckErr(err)
-	}
+func TestKubeBlocks(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "KubeBlocks Suite")
 }
+
+var _ = BeforeSuite(func() {
+	// use a fake URL to test
+	types.KubeBlocksChartName = clitesting.KubeBlocksChartName
+	types.KubeBlocksChartURL = clitesting.KubeBlocksChartURL
+})

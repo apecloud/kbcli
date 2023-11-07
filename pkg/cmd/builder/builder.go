@@ -17,17 +17,26 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package main
+package builder
 
 import (
-	"github.com/apecloud/kbcli/pkg/cmd"
-	"github.com/apecloud/kbcli/pkg/util"
-	"k8s.io/component-base/cli"
+	"github.com/spf13/cobra"
+	"k8s.io/cli-runtime/pkg/genericiooptions"
+	cmdutil "k8s.io/kubectl/pkg/cmd/util"
+
+	"github.com/apecloud/kbcli/pkg/cmd/builder/template"
+	"github.com/apecloud/kbcli/pkg/cmd/builder/tools"
 )
 
-func main() {
-	cmd := cmd.NewDefaultCliCmd()
-	if err := cli.RunNoErrOutput(cmd); err != nil {
-		util.CheckErr(err)
+// NewBuilderCmd for builder functions
+func NewBuilderCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "builder",
+		Short: "builder command.",
 	}
+	cmd.AddCommand(
+		template.NewComponentTemplateRenderCmd(f, streams),
+		tools.NewMigrateHelmScriptsCmd(f, streams),
+	)
+	return cmd
 }

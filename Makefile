@@ -137,8 +137,23 @@ check_helm_repo: helmtool
 
 
 .PHONY: staticcheck
-staticcheck: staticchecktool test-go-generate generate ## Run staticcheck against code.
+staticcheck: staticchecktool  ## Run staticcheck against code.
 	$(STATICCHECK) -tags $(BUILD_TAGS) ./...
+
+
+
+.PHONY: staticchecktool
+staticchecktool: ## Download staticcheck locally if necessary.
+ifeq (, $(shell which staticcheck))
+	@{ \
+	set -e ;\
+	echo 'installing honnef.co/go/tools/cmd/staticcheck' ;\
+	go install honnef.co/go/tools/cmd/staticcheck@latest;\
+	}
+STATICCHECK=$(GOBIN)/staticcheck
+else
+STATICCHECK=$(shell which staticcheck)
+endif
 
 
 .PHONY: fmt

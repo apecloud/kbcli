@@ -17,17 +17,18 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package main
+package utils
 
-import (
-	"github.com/apecloud/kbcli/pkg/cmd"
-	"github.com/apecloud/kbcli/pkg/util"
-	"k8s.io/component-base/cli"
-)
+import "github.com/apecloud/kbcli/pkg/cmd/infrastructure/types"
 
-func main() {
-	cmd := cmd.NewDefaultCliCmd()
-	if err := cli.RunNoErrOutput(cmd); err != nil {
-		util.CheckErr(err)
-	}
+type YamlInstallHelper struct {
+}
+
+func (y *YamlInstallHelper) Install(name, ns string) error {
+	// TODO implement me
+	panic("implement me")
+}
+
+func NewYamlInstaller(yaml types.Yaml, kubeconfig string) Installer {
+	return &YamlInstallHelper{}
 }
