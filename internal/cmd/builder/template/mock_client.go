@@ -29,8 +29,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	cfgcore "github.com/apecloud/kubeblocks/pkg/configuration/core"
-	testutil "github.com/apecloud/kubeblocks/pkg/testutil/k8s"
+	cfgcore "github.com/1aal/kubeblocks/pkg/configuration/core"
+	testutil "github.com/1aal/kubeblocks/pkg/testutil/k8s"
 )
 
 type ResourceMatcher = func(obj runtime.Object) bool

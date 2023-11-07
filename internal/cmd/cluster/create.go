@@ -52,20 +52,20 @@ import (
 	"k8s.io/kubectl/pkg/util/storage"
 	"k8s.io/kubectl/pkg/util/templates"
 
-	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
-	dpv1alpha1 "github.com/apecloud/kubeblocks/apis/dataprotection/v1alpha1"
+	appsv1alpha1 "github.com/1aal/kubeblocks/apis/apps/v1alpha1"
+	dpv1alpha1 "github.com/1aal/kubeblocks/apis/dataprotection/v1alpha1"
 
+	"github.com/1aal/kubeblocks/pkg/class"
+	"github.com/1aal/kubeblocks/pkg/constant"
+	dptypes "github.com/1aal/kubeblocks/pkg/dataprotection/types"
+	"github.com/1aal/kubeblocks/pkg/dataprotection/utils/boolptr"
+	viper "github.com/1aal/kubeblocks/pkg/viperx"
 	"github.com/apecloud/kbcli/internal/cluster"
 	classutil "github.com/apecloud/kbcli/internal/cmd/class"
 	"github.com/apecloud/kbcli/internal/create"
 	"github.com/apecloud/kbcli/internal/printer"
 	"github.com/apecloud/kbcli/internal/types"
 	"github.com/apecloud/kbcli/internal/util"
-	"github.com/apecloud/kubeblocks/pkg/class"
-	"github.com/apecloud/kubeblocks/pkg/constant"
-	dptypes "github.com/apecloud/kubeblocks/pkg/dataprotection/types"
-	"github.com/apecloud/kubeblocks/pkg/dataprotection/utils/boolptr"
-	viper "github.com/apecloud/kubeblocks/pkg/viperx"
 )
 
 var clusterCreateExample = templates.Examples(`

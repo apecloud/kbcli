@@ -26,8 +26,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 
+	dptypes "github.com/1aal/kubeblocks/pkg/dataprotection/types"
 	"github.com/apecloud/kbcli/internal/testing"
-	dptypes "github.com/apecloud/kubeblocks/pkg/dataprotection/types"
 )
 
 var _ = Describe("cluster util", func() {

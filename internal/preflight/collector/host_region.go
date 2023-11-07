@@ -29,9 +29,9 @@ import (
 	"k8s.io/client-go/rest"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 
+	preflightv1beta2 "github.com/1aal/kubeblocks/externalapis/preflight/v1beta2"
 	"github.com/apecloud/kbcli/internal/preflight/util"
 	cliutil "github.com/apecloud/kbcli/internal/util"
-	preflightv1beta2 "github.com/apecloud/kubeblocks/externalapis/preflight/v1beta2"
 )
 
 const (

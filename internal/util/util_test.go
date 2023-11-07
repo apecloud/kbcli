@@ -39,13 +39,13 @@ import (
 	cmdtesting "k8s.io/kubectl/pkg/cmd/testing"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
+	appsv1alpha1 "github.com/1aal/kubeblocks/apis/apps/v1alpha1"
+	cfgcore "github.com/1aal/kubeblocks/pkg/configuration/core"
+	"github.com/1aal/kubeblocks/pkg/constant"
+	testapps "github.com/1aal/kubeblocks/pkg/testutil/apps"
+	"github.com/1aal/kubeblocks/test/testdata"
 	"github.com/apecloud/kbcli/internal/testing"
 	"github.com/apecloud/kbcli/internal/types"
-	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
-	cfgcore "github.com/apecloud/kubeblocks/pkg/configuration/core"
-	"github.com/apecloud/kubeblocks/pkg/constant"
-	testapps "github.com/apecloud/kubeblocks/pkg/testutil/apps"
-	"github.com/apecloud/kubeblocks/test/testdata"
 )
 
 var _ = Describe("util", func() {

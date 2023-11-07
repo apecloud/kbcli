@@ -27,7 +27,7 @@ import (
 	analyze "github.com/replicatedhq/troubleshoot/pkg/analyze"
 	"helm.sh/helm/v3/pkg/cli/values"
 
-	preflightv1beta2 "github.com/apecloud/kubeblocks/externalapis/preflight/v1beta2"
+	preflightv1beta2 "github.com/1aal/kubeblocks/externalapis/preflight/v1beta2"
 )
 
 type KBAnalyzer interface {

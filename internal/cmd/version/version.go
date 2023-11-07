@@ -28,8 +28,8 @@ import (
 	"k8s.io/klog/v2"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 
+	"github.com/1aal/kubeblocks/version"
 	"github.com/apecloud/kbcli/internal/util"
-	"github.com/apecloud/kubeblocks/version"
 )
 
 type versionOptions struct {

@@ -27,10 +27,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
 
+	"github.com/1aal/kubeblocks/apis/apps/v1alpha1"
+	"github.com/1aal/kubeblocks/pkg/class"
+	"github.com/1aal/kubeblocks/pkg/constant"
 	"github.com/apecloud/kbcli/internal/types"
-	"github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
-	"github.com/apecloud/kubeblocks/pkg/class"
-	"github.com/apecloud/kubeblocks/pkg/constant"
 )
 
 // GetManager gets a class manager which manages default classes and user custom classes
@@ -74,7 +74,11 @@ func GetResourceConstraints(dynamic dynamic.Interface) (map[string]*v1alpha1.Com
 	result := make(map[string]*v1alpha1.ComponentResourceConstraint)
 	for idx := range constraintsList.Items {
 		cf := constraintsList.Items[idx]
-		if _, ok := cf.GetLabels()[constant.ResourceConstraintProviderLabelKey]; !ok {
+		// todo: fix when Kubeblocks release
+		//if _, ok := cf.GetLabels()[constant.ResourceConstraintProviderLabelKey]; !ok {
+		//	continue
+		//}
+		if _, ok := cf.GetLabels()["resourceconstraint.kubeblocks.io/provider"]; !ok {
 			continue
 		}
 		result[cf.GetName()] = &cf

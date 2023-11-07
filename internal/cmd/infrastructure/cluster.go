@@ -34,12 +34,12 @@ import (
 	"k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
+	cfgcore "github.com/1aal/kubeblocks/pkg/configuration/core"
+	cfgutil "github.com/1aal/kubeblocks/pkg/configuration/util"
 	"github.com/apecloud/kbcli/internal/cmd/infrastructure/builder"
 	"github.com/apecloud/kbcli/internal/cmd/infrastructure/types"
 	"github.com/apecloud/kbcli/internal/printer"
 	"github.com/apecloud/kbcli/internal/util/prompt"
-	cfgcore "github.com/apecloud/kubeblocks/pkg/configuration/core"
-	cfgutil "github.com/apecloud/kubeblocks/pkg/configuration/util"
 )
 
 type clusterOptions struct {

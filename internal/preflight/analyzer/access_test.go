@@ -30,7 +30,7 @@ import (
 	"github.com/replicatedhq/troubleshoot/pkg/collect"
 	"k8s.io/apimachinery/pkg/version"
 
-	preflightv1beta2 "github.com/apecloud/kubeblocks/externalapis/preflight/v1beta2"
+	preflightv1beta2 "github.com/1aal/kubeblocks/externalapis/preflight/v1beta2"
 )
 
 var _ = Describe("access_test", func() {

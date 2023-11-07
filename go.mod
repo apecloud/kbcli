@@ -8,7 +8,6 @@ require (
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/StudioSol/set v1.0.0
 	github.com/apecloud/kubebench v0.0.0-20230807061913-16124b86637f
-	github.com/apecloud/kubeblocks v0.8.0-alpha.0
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
 	github.com/benbjohnson/clock v1.3.5
 	github.com/briandowns/spinner v1.23.0
@@ -83,6 +82,8 @@ require (
 	cloud.google.com/go/iam v0.13.0 // indirect
 	cloud.google.com/go/storage v1.29.0 // indirect
 	dario.cat/mergo v1.0.0 // indirect
+	// todo: replace with github.com/apecloud/kubeblocks when deepcopy and mock file dependency
+	github.com/1aal/kubeblocks v0.0.0-20231107070852-e1c03e598921 // indirect
 	github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4 // indirect
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20230811130428-ced1acdcaa24 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect

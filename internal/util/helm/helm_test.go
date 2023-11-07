@@ -28,9 +28,9 @@ import (
 	"helm.sh/helm/v3/pkg/release"
 	"helm.sh/helm/v3/pkg/repo"
 
+	"github.com/1aal/kubeblocks/version"
 	"github.com/apecloud/kbcli/internal/testing"
 	"github.com/apecloud/kbcli/internal/types"
-	"github.com/apecloud/kubeblocks/version"
 )
 
 var _ = Describe("helm util", func() {

@@ -24,7 +24,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 
-	kubeblocks "github.com/apecloud/kubeblocks/pkg/client/clientset/versioned"
+	kubeblocks "github.com/1aal/kubeblocks/pkg/client/clientset/versioned"
 )
 
 type genericClientSet struct {

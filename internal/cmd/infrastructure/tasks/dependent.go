@@ -32,9 +32,9 @@ import (
 	"github.com/kubesphere/kubekey/v3/cmd/kk/pkg/kubernetes"
 	"github.com/mitchellh/mapstructure"
 
+	"github.com/1aal/kubeblocks/pkg/gotemplate"
 	"github.com/apecloud/kbcli/internal/cmd/infrastructure/builder"
 	"github.com/apecloud/kbcli/internal/cmd/infrastructure/constant"
-	"github.com/apecloud/kubeblocks/pkg/gotemplate"
 )
 
 type InstallDependenciesModule struct {

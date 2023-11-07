@@ -28,8 +28,8 @@ import (
 	"github.com/leaanthony/debme"
 	"k8s.io/apimachinery/pkg/util/yaml"
 
-	cfgcore "github.com/apecloud/kubeblocks/pkg/configuration/core"
-	"github.com/apecloud/kubeblocks/pkg/gotemplate"
+	cfgcore "github.com/1aal/kubeblocks/pkg/configuration/core"
+	"github.com/1aal/kubeblocks/pkg/gotemplate"
 )
 
 var (

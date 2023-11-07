@@ -29,7 +29,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/apecloud/kubeblocks/pkg/lorry/client"
+	"github.com/1aal/kubeblocks/pkg/lorry/client"
 )
 
 type ListUserOptions struct {

@@ -27,9 +27,9 @@ import (
 	"github.com/pkg/errors"
 	analyzer "github.com/replicatedhq/troubleshoot/pkg/analyze"
 
+	preflightv1beta2 "github.com/1aal/kubeblocks/externalapis/preflight/v1beta2"
 	kbcollector "github.com/apecloud/kbcli/internal/preflight/collector"
 	"github.com/apecloud/kbcli/internal/preflight/util"
-	preflightv1beta2 "github.com/apecloud/kubeblocks/externalapis/preflight/v1beta2"
 )
 
 type AnalyzeClusterRegion struct {

@@ -25,9 +25,9 @@ import (
 	"github.com/pkg/errors"
 	"k8s.io/client-go/kubernetes/scheme"
 
+	preflightv1beta2 "github.com/1aal/kubeblocks/externalapis/preflight/v1beta2"
 	"github.com/apecloud/kbcli/internal/cmd/cluster"
 	"github.com/apecloud/kbcli/internal/preflight/util"
-	preflightv1beta2 "github.com/apecloud/kubeblocks/externalapis/preflight/v1beta2"
 )
 
 // LoadPreflightSpec loads content of preflightSpec and hostPreflightSpec against yamlFiles from args

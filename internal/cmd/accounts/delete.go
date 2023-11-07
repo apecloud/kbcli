@@ -28,8 +28,8 @@ import (
 	"k8s.io/klog/v2"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 
+	"github.com/1aal/kubeblocks/pkg/lorry/client"
 	"github.com/apecloud/kbcli/internal/util/prompt"
-	"github.com/apecloud/kubeblocks/pkg/lorry/client"
 )
 
 type DeleteUserOptions struct {

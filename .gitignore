@@ -1,0 +1,53 @@
+# Mac OS X files
+.DS_Store
+
+
+
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.tar.gz
+**/*.tgz
+bin
+testbin/*
+__debug_bin
+
+
+# Test binary, build with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+*.out.*
+cover.html
+.coverage/
+
+# Project-local glide cache, RE: https://github.com/Masterminds/glide/issues/736
+.glide/
+
+# editor and IDE paraphernalia
+.vscode/
+.idea/
+.history/
+.run/
+.vimrc
+*.swp
+*.swo
+*~
+
+# Dependency directories (remove the comment below to include it)
+vendor/
+pkg/resources/static/k3s
+pkg/resources/static/k3d/
+
+# Distribution directories
+_dist/
+dist/
+bin/
+tmp/
+
+
+

@@ -27,10 +27,10 @@ import (
 
 	metricsfakeclient "k8s.io/metrics/pkg/client/clientset/versioned/fake"
 
-	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
-	dpv1alpha1 "github.com/apecloud/kubeblocks/apis/dataprotection/v1alpha1"
-	extensionsv1alpha1 "github.com/apecloud/kubeblocks/apis/extensions/v1alpha1"
-	kbfakeclient "github.com/apecloud/kubeblocks/pkg/client/clientset/versioned/fake"
+	appsv1alpha1 "github.com/1aal/kubeblocks/apis/apps/v1alpha1"
+	dpv1alpha1 "github.com/1aal/kubeblocks/apis/dataprotection/v1alpha1"
+	extensionsv1alpha1 "github.com/1aal/kubeblocks/apis/extensions/v1alpha1"
+	kbfakeclient "github.com/1aal/kubeblocks/pkg/client/clientset/versioned/fake"
 )
 
 func FakeClientSet(objects ...runtime.Object) *kubefakeclient.Clientset {

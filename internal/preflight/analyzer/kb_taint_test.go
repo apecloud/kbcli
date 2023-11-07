@@ -30,7 +30,7 @@ import (
 	"helm.sh/helm/v3/pkg/cli/values"
 	v1 "k8s.io/api/core/v1"
 
-	preflightv1beta2 "github.com/apecloud/kubeblocks/externalapis/preflight/v1beta2"
+	preflightv1beta2 "github.com/1aal/kubeblocks/externalapis/preflight/v1beta2"
 )
 
 var (
