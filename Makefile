@@ -57,13 +57,13 @@ K3D_VERSION ?= 5.4.4
 K3S_IMG_TAG ?= $(subst +,-,$(K3S_VERSION))
 
 CLI_LD_FLAGS ="-s -w \
-	-X github.com/apecloud/kubeblocks/version.BuildDate=`date -u +'%Y-%m-%dT%H:%M:%SZ'` \
-	-X github.com/apecloud/kubeblocks/version.GitCommit=$(GIT_COMMIT) \
-	-X github.com/apecloud/kubeblocks/version.GitVersion=$(GIT_VERSION) \
-	-X github.com/apecloud/kubeblocks/version.Version=$(VERSION) \
-	-X github.com/apecloud/kubeblocks/version.K3sImageTag=$(K3S_IMG_TAG) \
-	-X github.com/apecloud/kubeblocks/version.K3dVersion=$(K3D_VERSION) \
-	-X github.com/apecloud/kubeblocks/version.DefaultKubeBlocksVersion=$(VERSION)"
+	-X github.com/apecloud/kbcli/version.BuildDate=`date -u +'%Y-%m-%dT%H:%M:%SZ'` \
+	-X github.com/apecloud/kbcli/version.GitCommit=$(GIT_COMMIT) \
+	-X github.com/apecloud/kbcli/version.GitVersion=$(GIT_VERSION) \
+	-X github.com/apecloud/kbcli/version.Version=$(VERSION) \
+	-X github.com/apecloud/kbcli/version.K3sImageTag=$(K3S_IMG_TAG) \
+	-X github.com/apecloud/kbcli/version.K3dVersion=$(K3D_VERSION) \
+	-X github.com/apecloud/kbcli/version.DefaultKubeBlocksVersion=$(VERSION)"
 
 bin/kbcli.%: test-go-generate ## Cross build bin/kbcli.$(OS).$(ARCH).
 	GOOS=$(word 2,$(subst ., ,$@)) GOARCH=$(word 3,$(subst ., ,$@)) $(GO) build -tags $(BUILD_TAGS) -ldflags=${CLI_LD_FLAGS} -o $@ cmd/cli/main.go

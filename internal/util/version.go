@@ -33,8 +33,8 @@ import (
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/1aal/kubeblocks/version"
 	"github.com/apecloud/kbcli/internal/types"
+	"github.com/apecloud/kbcli/version"
 )
 
 const (
