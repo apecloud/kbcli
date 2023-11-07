@@ -73,10 +73,10 @@ CLI_LD_FLAGS ="-s -w \
 bin/kbcli.%:  ## Cross build bin/kbcli.$(OS).$(ARCH).
 	GOOS=$(word 2,$(subst ., ,$@)) GOARCH=$(word 3,$(subst ., ,$@)) $(GO) build -tags $(BUILD_TAGS) -ldflags=${CLI_LD_FLAGS} -o $@ cmd/cli/main.go
 
-.PHONY: kbcli-fast
-kbcli-fast: OS=$(shell $(GO) env GOOS)
-kbcli-fast: ARCH=$(shell $(GO) env GOARCH)
-kbcli-fast: build-kbcli-embed-chart
+.PHONY: kbcli
+kbcli: OS=$(shell $(GO) env GOOS)
+kbcli: ARCH=$(shell $(GO) env GOARCH)
+kbcli: build-kbcli-embed-chart
 	$(MAKE) bin/kbcli.$(OS).$(ARCH)
 	@mv bin/kbcli.$(OS).$(ARCH) bin/kbcli
 
@@ -104,8 +104,6 @@ build-kbcli-embed-chart: helmtool create-kbcli-embed-charts-dir \
 #	build-single-kbcli-embed-chart.qdrant-cluster \
 #	build-single-kbcli-embed-chart.weaviate-cluster
 
-.PHONY: kbcli
-kbcli:  build-checks kbcli-fast ## Build bin/kbcli.
 
 .PHONY: clean-kbcli
 clean-kbcli: ## Clean bin/kbcli*.
@@ -155,7 +153,39 @@ else
 STATICCHECK=$(shell which staticcheck)
 endif
 
+.PHONY: vet
+vet: ## Run go vet against code.
+	GOOS=$(GOOS) $(GO) vet -tags $(BUILD_TAGS) -mod=mod ./...
 
 .PHONY: fmt
 fmt: ## Run go fmt against code.
 	$(GOFMT) -l -w -s $$(git ls-files --exclude-standard | grep "\.go$$" )
+
+
+.PHONY: golangci-lint
+golangci-lint: golangci  ## Run golangci-lint against code.
+	$(GOLANGCILINT) run ./...
+
+
+.PHONY: golangci
+golangci: GOLANGCILINT_VERSION = v1.54.2
+golangci: ## Download golangci-lint locally if necessary.
+ifneq ($(shell which golangci-lint),)
+	@echo golangci-lint is already installed
+GOLANGCILINT=$(shell which golangci-lint)
+else ifeq (, $(shell which $(GOBIN)/golangci-lint))
+	@{ \
+	set -e ;\
+	echo 'installing golangci-lint-$(GOLANGCILINT_VERSION)' ;\
+	curl -sSfL $(GITHUB_PROXY)https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOBIN) $(GOLANGCILINT_VERSION) ;\
+	echo 'Successfully installed' ;\
+	}
+GOLANGCILINT=$(GOBIN)/golangci-lint
+else
+	@echo golangci-lint is already installed
+GOLANGCILINT=$(GOBIN)/golangci-lint
+endif
+
+
+.PHONY: lint
+lint: staticcheck vet golangci-lint

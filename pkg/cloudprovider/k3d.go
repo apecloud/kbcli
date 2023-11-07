@@ -24,15 +24,11 @@ import (
 	_ "embed"
 	"fmt"
 	"io"
-	"k8s.io/klog/v2"
 	"net"
 	"os"
 	"strconv"
 	"strings"
 
-	"github.com/apecloud/kbcli/pkg/types"
-	"github.com/apecloud/kbcli/pkg/util"
-	"github.com/apecloud/kubeblocks/version"
 	"github.com/docker/go-connections/nat"
 	"github.com/k3d-io/k3d/v5/pkg/actions"
 	k3dClient "github.com/k3d-io/k3d/v5/pkg/client"
@@ -44,6 +40,11 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/klog/v2"
+
+	"github.com/apecloud/kbcli/pkg/types"
+	"github.com/apecloud/kbcli/pkg/util"
+	"github.com/apecloud/kubeblocks/version"
 )
 
 var (

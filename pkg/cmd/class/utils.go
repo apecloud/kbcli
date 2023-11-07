@@ -74,11 +74,7 @@ func GetResourceConstraints(dynamic dynamic.Interface) (map[string]*v1alpha1.Com
 	result := make(map[string]*v1alpha1.ComponentResourceConstraint)
 	for idx := range constraintsList.Items {
 		cf := constraintsList.Items[idx]
-		// todo: fix when Kubeblocks release
-		//if _, ok := cf.GetLabels()[constant.ResourceConstraintProviderLabelKey]; !ok {
-		//	continue
-		//}
-		if _, ok := cf.GetLabels()["resourceconstraint.kubeblocks.io/provider"]; !ok {
+		if _, ok := cf.GetLabels()[constant.ResourceConstraintProviderLabelKey]; !ok {
 			continue
 		}
 		result[cf.GetName()] = &cf
