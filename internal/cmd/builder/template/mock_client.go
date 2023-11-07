@@ -21,16 +21,17 @@ package template
 
 import (
 	"context"
+	"reflect"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	cfgcore "github.com/1aal/kubeblocks/pkg/configuration/core"
-	testutil "github.com/1aal/kubeblocks/pkg/testutil/k8s"
 )
 
 type ResourceMatcher = func(obj runtime.Object) bool
@@ -92,12 +93,12 @@ func splitRuntimeObject(objects []client.Object) map[string][]runtime.Object {
 func (m *mockClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 	objKey := key
 	if object, ok := m.objects[objKey]; ok {
-		testutil.SetGetReturnedObject(obj, object)
+		SetGetReturnedObject(obj, object)
 		return nil
 	}
 	objKey.Namespace = ""
 	if object, ok := m.objects[objKey]; ok {
-		testutil.SetGetReturnedObject(obj, object)
+		SetGetReturnedObject(obj, object)
 		return nil
 	}
 	return apierrors.NewNotFound(corev1.SchemeGroupVersion.WithResource("mock_resource").GroupResource(), key.String())
@@ -106,7 +107,7 @@ func (m *mockClient) Get(ctx context.Context, key client.ObjectKey, obj client.O
 func (m *mockClient) List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
 	r := m.kindObjectList[list.GetObjectKind().GroupVersionKind().Kind]
 	if r != nil {
-		return testutil.SetListReturnedObjects(list, r)
+		return SetListReturnedObjects(list, r)
 	}
 	return nil
 }
@@ -162,4 +163,14 @@ func (m *mockClient) GroupVersionKindFor(obj runtime.Object) (schema.GroupVersio
 
 func (m *mockClient) IsObjectNamespaced(obj runtime.Object) (bool, error) {
 	panic("implement me")
+}
+
+func SetGetReturnedObject(out client.Object, expectedObj client.Object) {
+	outVal := reflect.ValueOf(out)
+	objVal := reflect.ValueOf(expectedObj)
+	reflect.Indirect(outVal).Set(reflect.Indirect(objVal))
+}
+
+func SetListReturnedObjects(list client.ObjectList, objects []runtime.Object) error {
+	return apimeta.SetList(list, objects)
 }
