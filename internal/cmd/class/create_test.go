@@ -30,8 +30,8 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	cmdtesting "k8s.io/kubectl/pkg/cmd/testing"
 
-	appsv1alpha1 "github.com/1aal/kubeblocks/apis/apps/v1alpha1"
 	"github.com/apecloud/kbcli/internal/testing"
+	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 )
 
 var _ = Describe("create", func() {

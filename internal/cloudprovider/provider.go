@@ -25,7 +25,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/1aal/kubeblocks/version"
+	"github.com/apecloud/kubeblocks/version"
 )
 
 type cloudProvider struct {

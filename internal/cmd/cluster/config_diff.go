@@ -30,13 +30,13 @@ import (
 	"k8s.io/kubectl/pkg/util/templates"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	appsv1alpha1 "github.com/1aal/kubeblocks/apis/apps/v1alpha1"
-	"github.com/1aal/kubeblocks/pkg/configuration/core"
-	"github.com/1aal/kubeblocks/pkg/constant"
-	"github.com/1aal/kubeblocks/pkg/unstructured"
 	"github.com/apecloud/kbcli/internal/printer"
 	"github.com/apecloud/kbcli/internal/types"
 	"github.com/apecloud/kbcli/internal/util"
+	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
+	"github.com/apecloud/kubeblocks/pkg/configuration/core"
+	"github.com/apecloud/kubeblocks/pkg/constant"
+	"github.com/apecloud/kubeblocks/pkg/unstructured"
 )
 
 type configDiffOptions struct {

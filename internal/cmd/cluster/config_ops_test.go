@@ -26,7 +26,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	cfgcore "github.com/1aal/kubeblocks/pkg/configuration/core"
+	cfgcore "github.com/apecloud/kubeblocks/pkg/configuration/core"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -34,9 +34,9 @@ import (
 	clientfake "k8s.io/client-go/rest/fake"
 	cmdtesting "k8s.io/kubectl/pkg/cmd/testing"
 
-	appsv1alpha1 "github.com/1aal/kubeblocks/apis/apps/v1alpha1"
-	testapps "github.com/1aal/kubeblocks/pkg/testutil/apps"
 	"github.com/apecloud/kbcli/internal/testing"
+	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
+	testapps "github.com/apecloud/kubeblocks/pkg/testutil/apps"
 )
 
 var _ = Describe("reconfigure test", func() {

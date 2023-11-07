@@ -30,8 +30,8 @@ import (
 	"github.com/replicatedhq/troubleshoot/pkg/preflight"
 	"helm.sh/helm/v3/pkg/cli/values"
 
-	preflightv1beta2 "github.com/1aal/kubeblocks/externalapis/preflight/v1beta2"
 	kbanalyzer "github.com/apecloud/kbcli/internal/preflight/analyzer"
+	preflightv1beta2 "github.com/apecloud/kubeblocks/externalapis/preflight/v1beta2"
 )
 
 type KBClusterCollectResult struct {

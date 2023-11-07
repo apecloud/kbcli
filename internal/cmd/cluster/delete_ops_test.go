@@ -36,11 +36,11 @@ import (
 	clientfake "k8s.io/client-go/rest/fake"
 	cmdtesting "k8s.io/kubectl/pkg/cmd/testing"
 
-	appsv1alpha1 "github.com/1aal/kubeblocks/apis/apps/v1alpha1"
 	"github.com/apecloud/kbcli/internal/delete"
 	clitesting "github.com/apecloud/kbcli/internal/testing"
 	"github.com/apecloud/kbcli/internal/types"
 	"github.com/apecloud/kbcli/internal/util"
+	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 )
 
 var _ = Describe("Expose", func() {

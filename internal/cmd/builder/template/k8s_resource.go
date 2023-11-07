@@ -27,7 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/1aal/kubeblocks/pkg/generics"
+	"github.com/apecloud/kubeblocks/pkg/generics"
 )
 
 type MatchResourceFunc func(object client.Object) bool

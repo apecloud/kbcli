@@ -38,10 +38,6 @@ import (
 	clientfake "k8s.io/client-go/rest/fake"
 	cmdtesting "k8s.io/kubectl/pkg/cmd/testing"
 
-	appsv1alpha1 "github.com/1aal/kubeblocks/apis/apps/v1alpha1"
-	dpv1alpha1 "github.com/1aal/kubeblocks/apis/dataprotection/v1alpha1"
-	"github.com/1aal/kubeblocks/pkg/constant"
-	dptypes "github.com/1aal/kubeblocks/pkg/dataprotection/types"
 	"github.com/apecloud/kbcli/internal/cluster"
 	"github.com/apecloud/kbcli/internal/create"
 	"github.com/apecloud/kbcli/internal/delete"
@@ -49,6 +45,10 @@ import (
 	"github.com/apecloud/kbcli/internal/testing"
 	"github.com/apecloud/kbcli/internal/types"
 	"github.com/apecloud/kbcli/internal/util"
+	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
+	dpv1alpha1 "github.com/apecloud/kubeblocks/apis/dataprotection/v1alpha1"
+	"github.com/apecloud/kubeblocks/pkg/constant"
+	dptypes "github.com/apecloud/kubeblocks/pkg/dataprotection/types"
 )
 
 var _ = Describe("DataProtection", func() {

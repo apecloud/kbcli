@@ -38,11 +38,11 @@ import (
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
 
-	preflightv1beta2 "github.com/1aal/kubeblocks/externalapis/preflight/v1beta2"
-	intctrlutil "github.com/1aal/kubeblocks/pkg/controllerutil"
 	kbpreflight "github.com/apecloud/kbcli/internal/preflight"
 	"github.com/apecloud/kbcli/internal/spinner"
 	"github.com/apecloud/kbcli/internal/util"
+	preflightv1beta2 "github.com/apecloud/kubeblocks/externalapis/preflight/v1beta2"
+	intctrlutil "github.com/apecloud/kubeblocks/pkg/controllerutil"
 )
 
 const (

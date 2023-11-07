@@ -27,9 +27,9 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	cmdtesting "k8s.io/kubectl/pkg/cmd/testing"
 
-	appsv1alpha1 "github.com/1aal/kubeblocks/apis/apps/v1alpha1"
 	"github.com/apecloud/kbcli/internal/create"
 	"github.com/apecloud/kbcli/internal/types"
+	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 )
 
 func NewFakeOperationsOptions(ns, cName string, opsType appsv1alpha1.OpsType, objs ...runtime.Object) (*cmdtesting.TestFactory, *create.CreateOptions) {

@@ -82,8 +82,6 @@ require (
 	cloud.google.com/go/iam v0.13.0 // indirect
 	cloud.google.com/go/storage v1.29.0 // indirect
 	dario.cat/mergo v1.0.0 // indirect
-	// todo: replace with github.com/apecloud/kubeblocks when deepcopy and mock file dependency
-	github.com/1aal/kubeblocks v0.0.0-20231107070852-e1c03e598921 // indirect
 	github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4 // indirect
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20230811130428-ced1acdcaa24 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
@@ -100,6 +98,8 @@ require (
 	github.com/acomagu/bufpipe v1.0.4 // indirect
 	github.com/ahmetalpbalkan/go-cursor v0.0.0-20131010032410-8136607ea412 // indirect
 	github.com/alecthomas/units v0.0.0-20211218093645-b94a6e3cc137 // indirect
+	// todo: replace with github.com/apecloud/kubeblocks when deepcopy and mock file dependency
+	github.com/apecloud/kubeblocks v0.8.0-alpha.1.0.20231107070923-46722a4c7d68
 	github.com/aws/aws-sdk-go v1.44.257 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d // indirect

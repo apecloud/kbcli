@@ -34,8 +34,8 @@ import (
 	"k8s.io/kubectl/pkg/cmd/get"
 	cmdtesting "k8s.io/kubectl/pkg/cmd/testing"
 
-	"github.com/1aal/kubeblocks/pkg/constant"
 	"github.com/apecloud/kbcli/internal/testing"
+	"github.com/apecloud/kubeblocks/pkg/constant"
 )
 
 var _ = Describe("completion", func() {

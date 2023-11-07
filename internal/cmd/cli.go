@@ -35,7 +35,6 @@ import (
 	utilcomp "k8s.io/kubectl/pkg/util/completion"
 	"k8s.io/kubectl/pkg/util/templates"
 
-	viper "github.com/1aal/kubeblocks/pkg/viperx"
 	"github.com/apecloud/kbcli/internal/cmd/addon"
 	"github.com/apecloud/kbcli/internal/cmd/alert"
 	"github.com/apecloud/kbcli/internal/cmd/auth"
@@ -59,6 +58,7 @@ import (
 	"github.com/apecloud/kbcli/internal/cmd/version"
 	"github.com/apecloud/kbcli/internal/types"
 	"github.com/apecloud/kbcli/internal/util"
+	viper "github.com/apecloud/kubeblocks/pkg/viperx"
 )
 
 const (

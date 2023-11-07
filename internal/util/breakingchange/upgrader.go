@@ -34,7 +34,7 @@ import (
 	"k8s.io/client-go/dynamic"
 	"sigs.k8s.io/yaml"
 
-	"github.com/1aal/kubeblocks/pkg/constant"
+	"github.com/apecloud/kubeblocks/pkg/constant"
 )
 
 var upgradeHandlerMapper = map[string]upgradeHandlerRecorder{}

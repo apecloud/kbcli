@@ -96,7 +96,7 @@ func (o *listVersionsOption) listVersions() error {
 	tbl := printer.NewTablePrinter(o.Out)
 	tbl.SetHeader("VERSION", "RELEASE-NOTES")
 	for _, v := range versions {
-		tbl.AddRow(v.String(), fmt.Sprintf("https://github.com/1aal/kubeblocks/releases/tag/v%s", v))
+		tbl.AddRow(v.String(), fmt.Sprintf("https://github.com/apecloud/kubeblocks/releases/tag/v%s", v))
 		num += 1
 		if num == o.limit {
 			break

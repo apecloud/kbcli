@@ -32,11 +32,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	appsv1alpha1 "github.com/1aal/kubeblocks/apis/apps/v1alpha1"
-	dpv1alpha1 "github.com/1aal/kubeblocks/apis/dataprotection/v1alpha1"
-	"github.com/1aal/kubeblocks/pkg/constant"
 	"github.com/apecloud/kbcli/internal/testing"
 	"github.com/apecloud/kbcli/internal/types"
+	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
+	dpv1alpha1 "github.com/apecloud/kubeblocks/apis/dataprotection/v1alpha1"
+	"github.com/apecloud/kubeblocks/pkg/constant"
 )
 
 var _ = Describe("kubeblocks objects", func() {

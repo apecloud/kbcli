@@ -27,8 +27,8 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
-	cfgcore "github.com/1aal/kubeblocks/pkg/configuration/core"
 	"github.com/apecloud/kbcli/internal/util"
+	cfgcore "github.com/apecloud/kubeblocks/pkg/configuration/core"
 )
 
 func kubeconfigMerge(newKubeConfig *clientcmdapi.Config, existingKubeConfig *clientcmdapi.Config, outPath string) error {

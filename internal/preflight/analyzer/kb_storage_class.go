@@ -27,8 +27,8 @@ import (
 	storagev1beta1 "k8s.io/api/storage/v1beta1"
 	"k8s.io/kubectl/pkg/util/storage"
 
-	preflightv1beta2 "github.com/1aal/kubeblocks/externalapis/preflight/v1beta2"
 	"github.com/apecloud/kbcli/internal/preflight/util"
+	preflightv1beta2 "github.com/apecloud/kubeblocks/externalapis/preflight/v1beta2"
 )
 
 const (

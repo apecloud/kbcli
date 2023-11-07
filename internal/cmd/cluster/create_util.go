@@ -34,11 +34,11 @@ import (
 	"k8s.io/kubectl/pkg/util/templates"
 	"sigs.k8s.io/yaml"
 
-	"github.com/1aal/kubeblocks/pkg/constant"
 	"github.com/apecloud/kbcli/internal/cluster"
 	"github.com/apecloud/kbcli/internal/types"
 	"github.com/apecloud/kbcli/internal/util"
 	"github.com/apecloud/kbcli/internal/util/flags"
+	"github.com/apecloud/kubeblocks/pkg/constant"
 )
 
 var (

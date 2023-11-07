@@ -31,10 +31,10 @@ import (
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
 
-	"github.com/1aal/kubeblocks/pkg/class"
 	"github.com/apecloud/kbcli/internal/printer"
 	"github.com/apecloud/kbcli/internal/util"
 	"github.com/apecloud/kbcli/internal/util/flags"
+	"github.com/apecloud/kubeblocks/pkg/class"
 )
 
 type ListOptions struct {

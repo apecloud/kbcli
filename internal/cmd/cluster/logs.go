@@ -36,11 +36,11 @@ import (
 	"k8s.io/kubectl/pkg/polymorphichelpers"
 	"k8s.io/kubectl/pkg/util/templates"
 
-	"github.com/1aal/kubeblocks/pkg/constant"
 	"github.com/apecloud/kbcli/internal/cluster"
 	"github.com/apecloud/kbcli/internal/exec"
 	"github.com/apecloud/kbcli/internal/types"
 	"github.com/apecloud/kbcli/internal/util"
+	"github.com/apecloud/kubeblocks/pkg/constant"
 )
 
 var (

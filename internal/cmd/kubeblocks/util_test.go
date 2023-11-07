@@ -28,9 +28,9 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	extensionsv1alpha1 "github.com/1aal/kubeblocks/apis/extensions/v1alpha1"
 	"github.com/apecloud/kbcli/internal/testing"
 	"github.com/apecloud/kbcli/internal/types"
+	extensionsv1alpha1 "github.com/apecloud/kubeblocks/apis/extensions/v1alpha1"
 )
 
 var _ = Describe("kubeblocks", func() {

@@ -28,8 +28,8 @@ import (
 	"github.com/pkg/errors"
 	pkgcollector "github.com/replicatedhq/troubleshoot/pkg/collect"
 
-	preflightv1beta2 "github.com/1aal/kubeblocks/externalapis/preflight/v1beta2"
 	"github.com/apecloud/kbcli/internal/preflight/util"
+	preflightv1beta2 "github.com/apecloud/kubeblocks/externalapis/preflight/v1beta2"
 )
 
 const UtilityPathFormat = "host-collectors/utility/%s.json"

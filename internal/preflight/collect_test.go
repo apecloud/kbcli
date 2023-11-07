@@ -37,10 +37,10 @@ import (
 	clientfake "k8s.io/client-go/rest/fake"
 	cmdtesting "k8s.io/kubectl/pkg/cmd/testing"
 
-	preflightv1beta2 "github.com/1aal/kubeblocks/externalapis/preflight/v1beta2"
 	preflightTesting "github.com/apecloud/kbcli/internal/preflight/testing"
 	"github.com/apecloud/kbcli/internal/testing"
 	"github.com/apecloud/kbcli/internal/types"
+	preflightv1beta2 "github.com/apecloud/kubeblocks/externalapis/preflight/v1beta2"
 )
 
 var _ = Describe("collect_test", func() {

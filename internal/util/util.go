@@ -69,14 +69,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 
-	appsv1alpha1 "github.com/1aal/kubeblocks/apis/apps/v1alpha1"
-	"github.com/1aal/kubeblocks/pkg/configuration/core"
-	"github.com/1aal/kubeblocks/pkg/configuration/openapi"
-	cfgutil "github.com/1aal/kubeblocks/pkg/configuration/util"
-	"github.com/1aal/kubeblocks/pkg/constant"
-	viper "github.com/1aal/kubeblocks/pkg/viperx"
 	"github.com/apecloud/kbcli/internal/testing"
 	"github.com/apecloud/kbcli/internal/types"
+	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
+	"github.com/apecloud/kubeblocks/pkg/configuration/core"
+	"github.com/apecloud/kubeblocks/pkg/configuration/openapi"
+	cfgutil "github.com/apecloud/kubeblocks/pkg/configuration/util"
+	"github.com/apecloud/kubeblocks/pkg/constant"
+	viper "github.com/apecloud/kubeblocks/pkg/viperx"
 )
 
 // CloseQuietly closes `io.Closer` quietly. Very handy and helpful for code

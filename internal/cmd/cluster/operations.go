@@ -39,8 +39,6 @@ import (
 	"k8s.io/kubectl/pkg/util/templates"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	appsv1alpha1 "github.com/1aal/kubeblocks/apis/apps/v1alpha1"
-	"github.com/1aal/kubeblocks/pkg/constant"
 	"github.com/apecloud/kbcli/internal/cluster"
 	classutil "github.com/apecloud/kbcli/internal/cmd/class"
 	"github.com/apecloud/kbcli/internal/create"
@@ -49,6 +47,8 @@ import (
 	"github.com/apecloud/kbcli/internal/util"
 	"github.com/apecloud/kbcli/internal/util/flags"
 	"github.com/apecloud/kbcli/internal/util/prompt"
+	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
+	"github.com/apecloud/kubeblocks/pkg/constant"
 )
 
 type OperationsOptions struct {

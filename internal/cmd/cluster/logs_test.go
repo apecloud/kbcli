@@ -38,10 +38,10 @@ import (
 	cmdlogs "k8s.io/kubectl/pkg/cmd/logs"
 	cmdtesting "k8s.io/kubectl/pkg/cmd/testing"
 
-	appsv1alpha1 "github.com/1aal/kubeblocks/apis/apps/v1alpha1"
-	"github.com/1aal/kubeblocks/pkg/constant"
 	"github.com/apecloud/kbcli/internal/cluster"
 	"github.com/apecloud/kbcli/internal/exec"
+	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
+	"github.com/apecloud/kubeblocks/pkg/constant"
 )
 
 var _ = Describe("logs", func() {

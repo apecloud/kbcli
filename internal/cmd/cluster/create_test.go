@@ -35,15 +35,15 @@ import (
 	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
-	appsv1alpha1 "github.com/1aal/kubeblocks/apis/apps/v1alpha1"
-	"github.com/1aal/kubeblocks/apis/dataprotection/v1alpha1"
-	"github.com/1aal/kubeblocks/pkg/class"
-	"github.com/1aal/kubeblocks/pkg/dataprotection/utils/boolptr"
-	viper "github.com/1aal/kubeblocks/pkg/viperx"
 	"github.com/apecloud/kbcli/internal/cluster"
 	"github.com/apecloud/kbcli/internal/testing"
 	"github.com/apecloud/kbcli/internal/types"
 	"github.com/apecloud/kbcli/internal/util"
+	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
+	"github.com/apecloud/kubeblocks/apis/dataprotection/v1alpha1"
+	"github.com/apecloud/kubeblocks/pkg/class"
+	"github.com/apecloud/kubeblocks/pkg/dataprotection/utils/boolptr"
+	viper "github.com/apecloud/kubeblocks/pkg/viperx"
 )
 
 func generateComponents(component appsv1alpha1.ClusterComponentSpec, count int) []map[string]interface{} {

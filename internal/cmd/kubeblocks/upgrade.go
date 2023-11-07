@@ -139,7 +139,7 @@ func (o *InstallOptions) Upgrade() error {
 		upgradeWarn := ""
 		switch {
 		case oldVersion.GreaterThan(newVersion):
-			upgradeWarn = printer.BoldYellow(fmt.Sprintf("Warning: You're attempting to downgrade KubeBlocks version from %s to %s, this action may cause your clusters and some KubeBlocks feature unavailable.\nEnsure you proceed after reviewing detailed release notes at https://github.com/1aal/kubeblocks/releases.", kbVersion, o.Version))
+			upgradeWarn = printer.BoldYellow(fmt.Sprintf("Warning: You're attempting to downgrade KubeBlocks version from %s to %s, this action may cause your clusters and some KubeBlocks feature unavailable.\nEnsure you proceed after reviewing detailed release notes at https://github.com/apecloud/kubeblocks/releases.", kbVersion, o.Version))
 		default:
 			if err = breakingchange.ValidateUpgradeVersion(kbVersion, o.Version); err != nil {
 				return err

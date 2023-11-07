@@ -27,7 +27,7 @@ import (
 	"k8s.io/client-go/dynamic"
 	cmdtesting "k8s.io/kubectl/pkg/cmd/testing"
 
-	appsv1alpha1 "github.com/1aal/kubeblocks/apis/apps/v1alpha1"
+	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 
 	"github.com/apecloud/kbcli/internal/patch"
 	"github.com/apecloud/kbcli/internal/testing"

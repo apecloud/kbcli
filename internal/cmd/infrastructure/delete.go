@@ -29,8 +29,8 @@ import (
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	"k8s.io/kubectl/pkg/util/templates"
 
-	"github.com/1aal/kubeblocks/pkg/gotemplate"
 	"github.com/apecloud/kbcli/internal/util"
+	"github.com/apecloud/kubeblocks/pkg/gotemplate"
 )
 
 type deleteOptions struct {

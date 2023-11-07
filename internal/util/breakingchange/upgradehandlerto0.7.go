@@ -35,10 +35,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/client-go/dynamic"
 
-	dpv1alpha1 "github.com/1aal/kubeblocks/apis/dataprotection/v1alpha1"
-	"github.com/1aal/kubeblocks/pkg/constant"
-	"github.com/1aal/kubeblocks/pkg/controller/builder"
 	"github.com/apecloud/kbcli/internal/types"
+	dpv1alpha1 "github.com/apecloud/kubeblocks/apis/dataprotection/v1alpha1"
+	"github.com/apecloud/kubeblocks/pkg/constant"
+	"github.com/apecloud/kubeblocks/pkg/controller/builder"
 )
 
 var _ upgradeHandler = &upgradeHandlerTo7{}

@@ -34,15 +34,15 @@ import (
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
 
-	appsv1alpha1 "github.com/1aal/kubeblocks/apis/apps/v1alpha1"
-	cfgcore "github.com/1aal/kubeblocks/pkg/configuration/core"
-	"github.com/1aal/kubeblocks/pkg/configuration/openapi"
-	cfgutil "github.com/1aal/kubeblocks/pkg/configuration/util"
-	"github.com/1aal/kubeblocks/pkg/constant"
 	"github.com/apecloud/kbcli/internal/printer"
 	"github.com/apecloud/kbcli/internal/types"
 	"github.com/apecloud/kbcli/internal/util"
 	"github.com/apecloud/kbcli/internal/util/flags"
+	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
+	cfgcore "github.com/apecloud/kubeblocks/pkg/configuration/core"
+	"github.com/apecloud/kubeblocks/pkg/configuration/openapi"
+	cfgutil "github.com/apecloud/kubeblocks/pkg/configuration/util"
+	"github.com/apecloud/kubeblocks/pkg/constant"
 )
 
 type configObserverOptions struct {

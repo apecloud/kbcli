@@ -22,18 +22,23 @@ GIT_COMMIT  = $(shell git rev-list -1 HEAD)
 GIT_VERSION = $(shell git describe --always --abbrev=0 --tag)
 KB_ADDONS_HELM_REPO = kubeblocks-addon
 KB_ADDONS_HELM_REPO_URL = https://jihulab.com/api/v4/projects/150246/packages/helm/stable
-
+CONTROLLER_TOOLS_VERSION ?= v0.12.1
+LOCALBIN ?= $(shell pwd)/bin
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
+
+
 # Go setup
 export GO111MODULE = auto
 export GOSUMDB = sum.golang.org
 export GONOPROXY = github.com/apecloud
 export GONOSUMDB = github.com/apecloud
 export GOPRIVATE = github.com/apecloud
+
 GO ?= go
 GOFMT ?= gofmt
 GOOS ?= $(shell $(GO) env GOOS)
 GOARCH ?= $(shell $(GO) env GOARCH)
+
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell $(GO) env GOBIN))
 GOBIN=$(shell $(GO) env GOPATH)/bin
@@ -65,7 +70,7 @@ CLI_LD_FLAGS ="-s -w \
 	-X github.com/apecloud/kbcli/version.K3dVersion=$(K3D_VERSION) \
 	-X github.com/apecloud/kbcli/version.DefaultKubeBlocksVersion=$(VERSION)"
 
-bin/kbcli.%: test-go-generate ## Cross build bin/kbcli.$(OS).$(ARCH).
+bin/kbcli.%:  ## Cross build bin/kbcli.$(OS).$(ARCH).
 	GOOS=$(word 2,$(subst ., ,$@)) GOARCH=$(word 3,$(subst ., ,$@)) $(GO) build -tags $(BUILD_TAGS) -ldflags=${CLI_LD_FLAGS} -o $@ cmd/cli/main.go
 
 .PHONY: kbcli-fast
@@ -100,20 +105,15 @@ build-kbcli-embed-chart: helmtool create-kbcli-embed-charts-dir \
 #	build-single-kbcli-embed-chart.weaviate-cluster
 
 .PHONY: kbcli
-kbcli: test-go-generate build-checks kbcli-fast ## Build bin/kbcli.
+kbcli:  build-checks kbcli-fast ## Build bin/kbcli.
 
 .PHONY: clean-kbcli
 clean-kbcli: ## Clean bin/kbcli*.
 	rm -f bin/kbcli*
 
 .PHONY: kbcli-doc
-kbcli-doc: generate  ## generate CLI command reference manual.
+kbcli-doc:   ## generate CLI command reference manual.
 	$(GO) run -tags $(BUILD_TAGS) ./hack/docgen/cli/main.go ./docs/user_docs/cli
-
-# todo: remove vendor
-.PHONY: generate
-generate: controller-gen build-kbcli-embed-chart ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
-	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt"  paths="./vendor/github.com/apecloud/kubeblocks/apis/...;./vendor/github.com/apecloud/kubeblocks/externalapis/..."
 
 .PHONY: helmtool
 helmtool: ## Download helm locally if necessary.
@@ -135,9 +135,12 @@ check_helm_repo: helmtool
 		$(HELM) repo add $(KB_ADDONS_HELM_REPO) $(KB_ADDONS_HELM_REPO_URL); \
 	fi
 
-# todo: remove vendor
-.PHONY: test-go-generate
-test-go-generate: ## Run go generate against test code.
-	$(GO) generate -x ./vendor/github.com/apecloud/kubeblocks/pkg/testutil/k8s/mocks/...
-	$(GO) generate -x ./vendor/github.com/apecloud/kubeblocks/pkg/configuration/container/mocks/...
-	$(GO) generate -x ./vendor/github.com/apecloud/kubeblocks/pkg/configuration/proto/mocks/...
+
+.PHONY: staticcheck
+staticcheck: staticchecktool test-go-generate generate ## Run staticcheck against code.
+	$(STATICCHECK) -tags $(BUILD_TAGS) ./...
+
+
+.PHONY: fmt
+fmt: ## Run go fmt against code.
+	$(GOFMT) -l -w -s $$(git ls-files --exclude-standard | grep "\.go$$" )

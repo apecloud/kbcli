@@ -32,10 +32,10 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/1aal/kubeblocks/version"
 	cp "github.com/apecloud/kbcli/internal/cloudprovider"
 	"github.com/apecloud/kbcli/internal/spinner"
 	"github.com/apecloud/kbcli/internal/util"
+	"github.com/apecloud/kubeblocks/version"
 )
 
 func playgroundDir() (string, error) {

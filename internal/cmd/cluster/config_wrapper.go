@@ -23,14 +23,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/1aal/kubeblocks/pkg/configuration/core"
+	"github.com/apecloud/kubeblocks/pkg/configuration/core"
 
-	appsv1alpha1 "github.com/1aal/kubeblocks/apis/apps/v1alpha1"
-	cfgutil "github.com/1aal/kubeblocks/pkg/configuration/util"
 	"github.com/apecloud/kbcli/internal/cluster"
 	"github.com/apecloud/kbcli/internal/create"
 	"github.com/apecloud/kbcli/internal/types"
 	"github.com/apecloud/kbcli/internal/util"
+	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
+	cfgutil "github.com/apecloud/kubeblocks/pkg/configuration/util"
 )
 
 type configWrapper struct {

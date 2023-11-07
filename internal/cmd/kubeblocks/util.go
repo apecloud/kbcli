@@ -36,13 +36,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
 
-	extensionsv1alpha1 "github.com/1aal/kubeblocks/apis/extensions/v1alpha1"
-	"github.com/1aal/kubeblocks/pkg/constant"
 	"github.com/apecloud/kbcli/internal/printer"
 	"github.com/apecloud/kbcli/internal/types"
 	"github.com/apecloud/kbcli/internal/util"
 	"github.com/apecloud/kbcli/internal/util/helm"
 	"github.com/apecloud/kbcli/internal/util/prompt"
+	extensionsv1alpha1 "github.com/apecloud/kubeblocks/apis/extensions/v1alpha1"
+	"github.com/apecloud/kubeblocks/pkg/constant"
 )
 
 func getGVRByCRD(crd *unstructured.Unstructured) (*schema.GroupVersionResource, error) {

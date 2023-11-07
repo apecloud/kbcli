@@ -37,7 +37,6 @@ import (
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
 
-	"github.com/1aal/kubeblocks/version"
 	cp "github.com/apecloud/kbcli/internal/cloudprovider"
 	cmdcluster "github.com/apecloud/kbcli/internal/cmd/cluster"
 	"github.com/apecloud/kbcli/internal/cmd/kubeblocks"
@@ -47,6 +46,7 @@ import (
 	"github.com/apecloud/kbcli/internal/util"
 	"github.com/apecloud/kbcli/internal/util/helm"
 	"github.com/apecloud/kbcli/internal/util/prompt"
+	"github.com/apecloud/kubeblocks/version"
 )
 
 var (
