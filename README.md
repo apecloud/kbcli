@@ -1,91 +1,219 @@
-# KubeBlocks
+# kbcli
 
-[![Documentation status](https://github.com/apecloud/kubeblocks.io/workflows/Documentation/badge.svg)](https://kubeblocks.io)
-[![OpenSSF Best Practices](https://bestpractices.coreinfrastructure.org/projects/7544/badge)](https://bestpractices.coreinfrastructure.org/projects/7544)
-[![Releases](https://img.shields.io/github/v/release/apecloud/kubeblocks)](https://github.com/apecloud/kubeblocks/releases/latest)
-[![LICENSE](https://img.shields.io/github/license/apecloud/kubeblocks.svg?style=flat-square)](/LICENSE)
-[![Go Report Card](https://goreportcard.com/badge/github.com/apecloud/kubeblocks)](https://goreportcard.com/report/github.com/apecloud/kubeblocks)
-[![Docker Pulls](https://img.shields.io/docker/pulls/apecloud/kubeblocks)](https://hub.docker.com/r/apecloud/kubeblocks)
-[![codecov](https://codecov.io/gh/apecloud/kubeblocks/branch/main/graph/badge.svg?token=GEH4I1C80Y)](https://codecov.io/gh/apecloud/kubeblocks)
-[![Build status](https://github.com/apecloud/kubeblocks/workflows/CICD-PUSH/badge.svg)](https://github.com/apecloud/kubeblocks/actions/workflows/cicd-push.yml)
-![maturity](https://img.shields.io/static/v1?label=maturity&message=alpha&color=red)
-[![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/kubeblocks)](https://artifacthub.io/packages/search?repo=kubeblocks)
+kbcli is a command line interface (CLI) tool for [KubeBlocks](https://github.com/apecloud/kubeblocks).
 
-![image](./docs/img/banner-readme.png)
+kbcli has the following features:
+- Manage KubeBlocks, including installation, uninstallation, viewing status, and upgrading, etc.
+- Manage clusters, including creating, deleting, configuration changes, backups and restores, etc.
+- Support playgrounds to quickly experience KubeBlocks locally or on the cloud.
 
-- [KubeBlocks](#kubeblocks)
-  - [What is KubeBlocks](#what-is-kubeblocks)
-    - [Why you need KubeBlocks](#why-you-need-kubeblocks)
-    - [Goals](#goals)
-    - [Key features](#key-features)
-  - [Get started with KubeBlocks](#get-started-with-kubeblocks)
-  - [Community](#community)
-  - [Contributing to KubeBlocks](#contributing-to-kubeblocks)
-  - [Report Vulnerability](#report-vulnerability)
-  - [License](#license)
+## Install kbcli
 
-## What is KubeBlocks
+### Install kbcli on Linux
 
-KubeBlocks is an open source system software that runs and manages data infrastructure on Kubernetes. It could manage various data/database engines, including RDBMSs (MySQL, PostgreSQL), Caches(Redis), NoSQLs (MongoDB), MQs(Kafka, Pulsar), and vector databases(Milvus, Qdrant, Weaviate), and the community is actively integrating more types of data/database engines into KubeBlocks. KubeBlocks helps developers, SREs, and platform engineers deploy and maintain dedicated DBPaaS, and supports a variety of public clouds and on-premise environments. 
+#### Install with curl
 
-KubeBlocks is designed for production purposes, providing secure, cost-effective, high-available and extensible DBPaaS solution for enterprise. The name KubeBlocks is inspired by Kubernetes and LEGO blocks, signifying that integrating data infrastructure on K8s can be standard and productive, like playing with LEGO blocks. The core of KubeBlocks is a K8s operator, which defines a set of CRDs to abstract the common attributes of various data/database engines, thereby supporting the rapid integration of a new data/database system into KubeBlocks while keeping the same operating experience and expected behaviors.
+Install the latest linux kbcli to `/usr/local/bin`
 
-### Why you need KubeBlocks
+```bash
+curl -fsSL https://kubeblocks.io/installer/install_cli.sh | bash
+```
 
-KubeBlocks integrates the most popular data/database engines and provides rich management functions, along with declarative APIs, on various environments. Furthermore, KubeBlocks offers the following benefits:
+#### Install using native package management
 
-* Cost-effective
-  
-  KubeBlocks optimizes the kernel and parameters of MySQL and PostgreSQL databases for containerized and cloud environments, and its performance exceeds that of RDS with the same hardware (see our blogs for test reports).
+**Debian-based distributions**
 
-* Reliability
-  
-  KubeBlocks supports high-availability cluster configurations for multiple database engines, and supports Raft replication cluster for MySQL to achieve enhanced availability with durability guarantees.
+1. Update the apt package index and install packages needed to use the kbcli apt repository:
+    ```bash
+    sudo apt-get update
+    sudo apt-get install curl
+    ```
+2. Download the kbcli public signing key:
+    ```bash
+    curl -fsSL https://apecloud.github.io/kbcli-apt/public.key | sudo apt-key add -
+    ```
+3. Add the kbcli apt repository:
+    ```bash
+    echo "deb [arch=amd64,arm64] https://apecloud.github.io/kbcli-apt/repo stable main" | sudo tee /etc/apt/sources.list.d/kbcli.list
+    ```
+4. update apt package index with the new repository and install kbcli:
+    ```bash
+    sudo apt-get update
+    sudo apt-get install kbcli
+    ```
+    
+***For Debian-based distributions, in addition to the installation method above, you can also install it through the following methods:***
+```bash
+echo "deb [trusted=yes] https://apt.fury.io/kubeblocks/ /" | sudo tee /etc/apt/sources.list.d/kbcli.list
+sudo apt update
+sudo apt install kbcli
+```
+    
+**Red Hat-based distributions**
 
-* Observability
-  
-  KubeBlocks collects monitoring metrics from richful data sources, integrates with the Prometheus stack, and provides insightful Grafana templates. In addition, troubleshooting tools such as slow logs are also provided.
+1. Installs the package yum-utils using the package manager yum.
+    ```bash
+    sudo yum install -y yum-utils
+    ```
+2. Add a new repository to the YUM configuration using yum-config-manager
+    ```bash
+    sudo yum-config-manager --add-repo https://yum.fury.io/kubeblocks/
+    ```
+3. Update the local cache of available packages and metadata from all configured YUM repositories.
+    ```bash
+    sudo yum makecache
+    ```
+4. Install the kbcli.
+    ```bash
+    sudo yum install kbcli --nogpgcheck
+    ```
+5. Install the specified version of kbcli.
+    ```bash
+    sudo yum install kbcli-0.6.0~beta24 --nogpgcheck
+    ```
+### Install kbcli on macOS
 
-* Extensibility
-  
-  KubeBlocks provides the addon mechanism for integrating new data/database engines. So it can be extended to run the databases your project needs.
+#### Install with curl
 
-### Goals
-- Being open and cloud-neutral
-- Promoting the containerization of database workloads
-- Promoting IaC and GitOps in the field of databases
-- Reducing the cost of using databases
-- Smoothing the learning curve of managing databases
+Install the latest darwin kbcli to `/usr/local/bin`.
 
-### Key features
+```bash
+curl -fsSL https://kubeblocks.io/installer/install_cli.sh | bash
+```
 
-- Be compatible with AWS, GCP, Azure, and more
-- Supports various data infrastructure systems, including MySQL, PostgreSQL, Redis, MongoDB, Kafka, Pulsar and more
-- Provides production-level performance, resilience, scalability, and observability
-- Simplifies day-2 operations, such as upgrading, scaling, monitoring, backup, and restore
-- Contains a powerful and intuitive command line tool
-  
-## Get started with KubeBlocks
+#### Install with Homebrew
 
-[Quick Start](https://kubeblocks.io/docs/preview/user_docs/try-out-on-playground/try-kubeblocks-on-your-laptop) shows you the quickest way to get started with KubeBlocks.
+```bash
+brew tap apecloud/tap
+brew install kbcli
+```
 
-## Community
+### Install kbcli on Windows
 
-- KubeBlocks [Slack Channel](https://join.slack.com/t/kubeblocks/shared_invite/zt-23vym7xpx-Xu3xcE7HmcqGKvTX4U9yTg)
-- KubeBlocks Github [Discussions](https://github.com/apecloud/kubeblocks/discussions)
+#### Install with powershell
 
-## Contributing to KubeBlocks
+1. Run PowerShell as an administrator and execute `Set-ExecutionPolicy Unrestricted`.
+2. Run following script to automatically install kbcli at `C:\Program Files\kbcli-windows-amd64`.
 
-Your contributions are welcomed and appreciated.
+```powershell
+powershell -Command " & ([scriptblock]::Create((iwr https://www.kubeblocks.io/installer/install_cli.ps1)))"
+```
 
-- See the [Contributor Guide](docs/CONTRIBUTING.md) for details on typical contribution workflows.
-- See the [Developer Guide](docs/DEVELOPING.md) to get started with building and developing.
+#### Install with winGet
 
-## Report Vulnerability
+Make sure your `powershell/CMD` support `winget` and run:
 
-We consider security is a top priority issue. If you come across a related issue, please create a [Report a security vulnerability](https://github.com/apecloud/kubeblocks/security/advisories/new) issue.
+```bash
+winget install kbcli
+```
+
+#### Install with scoop
+
+```bash
+scoop bucket add scoop-bucket https://github.com/apecloud/scoop-bucket.git
+scoop install kbcli
+```
+
+#### Install with chocolatey
+
+```bash
+choco install kbcli
+```
+
+### Install using the Binary Releases
+
+Each release of kbcli includes various OSes and architectures. These binary versions can be manually downloaded and installed.
+
+1. Download your desired [kbcli version](https://github.com/apecloud/kbcli/releases)
+2. Unpack it (e.g. kbcli-linux-amd64-v0.5.2.tar.gz, kbcli-darwin-amd64-v0.5.2.tar.gz)
+3. Move it to your desired location.
+   * For Linux/macOS - `/usr/local/bin` or any other directory in your $PATH
+   * For Windows, create a directory and add it to you System PATH. We recommend creating a `C:\Program Files\kbcli` directory and adding it to the PATH.
+
+## Install KubeBlocks on your local machine
+
+This guide walks you through the quickest way to get started with KubeBlocks, demonstrating how to create a demo environment (Playground) with one kbcli command.
+
+### Prerequisites
+
+Meet the following requirements for a smooth user experience:
+
+* Minimum system requirements:
+    * CPU: 4 cores, use `sysctl hw.physicalcpu` command to check CPU;
+    * RAM: 4 GB, use `top -d` command to check memory.
+
+* Make sure the following tools are installed on your laptop:
+    * [Docker](https://docs.docker.com/get-docker/): v20.10.5 (runc ≥ v1.0.0-rc93) or above;
+    * [kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl): it is used to interact with Kubernetes clusters;
+
+### Initialize Playground
+
+ ```bash
+ kbcli playground init
+ ```
+
+ This command:
+ 1. Creates a Kubernetes cluster in the container with [K3d](https://k3d.io/v5.4.6/).
+ 2. Deploys KubeBlocks in the K3d cluster.
+ 3. Creates a standalone MySQL cluster.
+
+ > NOTE: If you previously ran `kbcli playground init` and it failed, running it again may cause errors. Please run the `kbcli playground destroy` command first to clean up the environment, then run `kbcli playground init` again.
+
+Check the MySQL cluster repeatedly until the status becomes `Running`.
+
+```bash
+kbcli cluster list
+```
+
+### Try KubeBlocks with Playground
+
+View the database cluster list.
+
+ ```bash
+ kbcli cluster list
+ ```
+
+View the details of a specified database cluster, such as `STATUS`, `Endpoints`, `Topology`, `Images`.
+
+ ```bash
+ kbcli cluster describe mycluster
+ ```
+
+Wait until the status of this cluster is `Running`, run `kbcli cluster connect` to access a specified database cluster. For example,
+
+ ```bash
+ kbcli cluster connect mycluster
+ ```
+
+List and open the grafana dashboard.
+
+ ```bash
+ # list all dashboards
+ kbcli dashboard list
+
+ # open grafana dashboard
+ kbcli dashboard open kubeblocks-grafana
+ ```
+
+### Destroy Playground
+
+ ```bash
+ kbcli playground destroy
+ ```
+
+## Reference Documentation
+
+See the [Reference Documentation](https://kubeblocks.io/docs/preview/user_docs/cli) for more information about kbcli commands.
+
+## Contributing to kbcli
+
+See the [Development Guide](https://github.com/apecloud/kubeblocks/blob/main/docs/DEVELOPING.md) to get started with building and developing.
+
+## Code of Conduct
+
+Please refer to our [KubeBlocks Code of Conduct](https://github.com/apecloud/kubeblocks/blob/main/CODE_OF_CONDUCT.md)
 
 ## License
 
-KubeBlocks is under the GNU Affero General Public License v3.0.
+kbcli is under the GNU Affero General Public License v3.0.
 See the [LICENSE](./LICENSE) file for details.
