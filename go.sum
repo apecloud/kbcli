@@ -276,8 +276,8 @@ github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be/go.mod h1:ySMOLuW
 github.com/antihax/optional v1.0.0/go.mod h1:uupD/76wgC+ih3iEmQUL+0Ugr19nfwCT1kdvxnR2qWY=
 github.com/apecloud/kubebench v0.0.0-20230807061913-16124b86637f h1:cQz3dMsNSlEBPl9WFxxAhPP+VAOmaWruQlEdaWwZeZY=
 github.com/apecloud/kubebench v0.0.0-20230807061913-16124b86637f/go.mod h1:pk7XhTJO9+AVE0mGUGb0WfU8ME9o4s3nClyuWATMQAQ=
-github.com/apecloud/kubeblocks v0.8.0-alpha.1.0.20231107070923-46722a4c7d68 h1:m6ZcHA5vBFx/mMnQe4z2wgOWcsoykPGr/A/+ilps3N8=
-github.com/apecloud/kubeblocks v0.8.0-alpha.1.0.20231107070923-46722a4c7d68/go.mod h1:Ud3C32cAYI9Wqe43hebF8KrpUS45cIkiwljOG8u2Hk8=
+github.com/apecloud/kubeblocks v0.8.0-alpha.2 h1:fSSP1mk2t3WiTYZe1zKAtkmwO2LEgC2Z0DF7mHELQD0=
+github.com/apecloud/kubeblocks v0.8.0-alpha.2/go.mod h1:zOsApGlAbJbz12XxrZ9pHmYi+qDT85RLq5WieJLDiIs=
 github.com/apparentlymart/go-textseg v1.0.0/go.mod h1:z96Txxhf3xSFMPmb5X/1W05FF/Nj9VFpLOpjS5yuumk=
 github.com/apparentlymart/go-textseg/v13 v13.0.0/go.mod h1:ZK2fH7c4NqDTLtiYLvIkEghdlcqw7yxLeM89kiTRPUo=
 github.com/armon/circbuf v0.0.0-20150827004946-bbbad097214e/go.mod h1:3U/XgcO3hCbHZ8TKRvWD2dDTCfh9M9ya+I9JpbB7O8o=
@@ -1372,9 +1372,8 @@ github.com/sirupsen/logrus v1.9.3 h1:dueUQJ1C2q9oE3F7wvmSGAaVtTmUizReu6fjN8uqzbQ
 github.com/sirupsen/logrus v1.9.3/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVsIT4qYEQ=
 github.com/skeema/knownhosts v1.1.0 h1:Wvr9V0MxhjRbl3f9nMnKnFfiWTJmtECJ9Njkea3ysW0=
 github.com/skeema/knownhosts v1.1.0/go.mod h1:sKFq3RD6/TKZkSWn8boUbDC7Qkgcv+8XXijpFO6roag=
+github.com/smartystreets/assertions v0.0.0-20180927180507-b2de0cb4f26d h1:zE9ykElWQ6/NYmHa3jpm/yHnI4xSofP+UP6SpjHcSeM=
 github.com/smartystreets/assertions v0.0.0-20180927180507-b2de0cb4f26d/go.mod h1:OnSkiWE9lh6wB0YB77sQom3nweQdgAjqCqsofrRNTgc=
-github.com/smartystreets/assertions v1.0.0 h1:UVQPSSmc3qtTi+zPPkCXvZX9VvW/xT/NsRvKfwY81a8=
-github.com/smartystreets/assertions v1.0.0/go.mod h1:kHHU4qYBaI3q23Pp3VPrmWhuIUrLW/7eUrw0BU5VaoM=
 github.com/smartystreets/goconvey v1.6.4/go.mod h1:syvi0/a8iFYH4r/RixwvyeAJjdLS9QV7WQ/tjFTllLA=
 github.com/smartystreets/goconvey v1.7.2 h1:9RBaZCeXEQ3UselpuwUQHltGVXvdwm6cv1hgR6gDIPg=
 github.com/smartystreets/goconvey v1.7.2/go.mod h1:Vw0tHAZW6lzCRk3xgdin6fKYcG+G3Pg9vgXWeJpQFMM=

@@ -22,6 +22,7 @@ package backuprepo
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/dustin/go-humanize"
 	"github.com/spf13/cobra"
@@ -35,6 +36,7 @@ import (
 	"k8s.io/kubectl/pkg/util/templates"
 
 	dpv1alpha1 "github.com/apecloud/kubeblocks/apis/dataprotection/v1alpha1"
+	"github.com/apecloud/kubeblocks/pkg/dataprotection/utils"
 
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
@@ -61,7 +63,7 @@ type describeBackupRepoOptions struct {
 	genericiooptions.IOStreams
 }
 
-func newDescribeCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
+func newDescribeCommand(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
 	o := &describeBackupRepoOptions{
 		factory:   f,
 		IOStreams: streams,
@@ -150,6 +152,21 @@ func (o *describeBackupRepoOptions) printBackupRepo(backupRepo *dpv1alpha1.Backu
 	printer.PrintPairStringToLine("BackupPVCName", backupRepo.Status.BackupPVCName)
 	printer.PrintPairStringToLine("ObservedGeneration", fmt.Sprintf("%d", backupRepo.Status.ObservedGeneration))
 
+	printer.PrintLine("\n  Conditions:")
+	for _, cond := range backupRepo.Status.Conditions {
+		printer.PrintLine("    " + cond.Type + ":")
+		printer.PrintPairStringToLine("    Status", string(cond.Status))
+		printer.PrintPairStringToLine("    Reason", cond.Reason)
+		if !strings.Contains(cond.Message, "\n") {
+			if cond.Message != "" {
+				printer.PrintPairStringToLine("    Message", cond.Message)
+			}
+		} else {
+			printer.PrintLine("      Message:")
+			printer.PrintLine(utils.PrependSpaces(cond.Message, 8))
+		}
+	}
+
 	return nil
 }
 
@@ -158,7 +175,7 @@ func countBackupNumsAndSize(dynamic dynamic.Interface, backupRepo *dpv1alpha1.Ba
 	count := 0
 
 	backupList, err := dynamic.Resource(types.BackupGVR()).List(context.TODO(), metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("dataprotection.kubeblocks.io/backup-repo-name=%s", backupRepo.Name),
+		LabelSelector: fmt.Sprintf("%s=%s", associatedBackupRepoKey, backupRepo.Name),
 	})
 	if err != nil {
 		return count, humanize.Bytes(size), err
