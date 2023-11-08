@@ -1,13 +1,13 @@
 #!/bin/bash
 #
 # Copyright (C) 2022-2023 ApeCloud Co., Ltd
-#
+# 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-#
+# 
 #     http://www.apache.org/licenses/LICENSE-2.0
-#
+# 
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -23,23 +23,11 @@
 # Http request CLI
 HTTP_REQUEST_CLI=curl
 
-# kbcli filename
+# cli filename
 CLI_FILENAME=kbcli
 
 CLI_FILE="${CLI_INSTALL_DIR}/${CLI_FILENAME}"
 CLI_BREW_FILE="${CLI_BREW_INSTALL_DIR}/${CLI_FILENAME}"
-
-TOKEN="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"
-REPO="apecloud/kubeblocks"
-GITHUB="https://api.github.com"
-DOWNLOAD_BASE="https://github.com/${REPO}/releases/download"
-FILE="kbcli-darwin-arm64-v0.3.0.tar.gz" # the name of your release asset file, e.g. build.tar.gz
-
-gh_curl() {
-    curl -H "Authorization: token $TOKEN" \
-         -H "Accept: application/vnd.github.v3.raw" \
-         $@
-}
 
 getSystemInfo() {
     ARCH=$(uname -m)
@@ -109,41 +97,24 @@ checkExistingCli() {
     fi
 }
 
-downloadFile() {
+downloadDockerImage() {
     LATEST_RELEASE_TAG=$1
-
-    if [ "$LATEST_RELEASE_TAG" = "latest" ]; then
-        LATEST_RELEASE_TAG=$(gh_curl -s $GITHUB/repos/$REPO/releases/latest | grep '.tag_name' | awk -F: '{print $2}' | sed 's/,//g;s/\"//g;s/ //g')
-    fi
-
-    CLI_ARTIFACT="${CLI_FILENAME}-${OS}-${ARCH}-${LATEST_RELEASE_TAG}.tar.gz"
-    asset_id=$(gh_curl -s $GITHUB/repos/$REPO/releases/tags/$LATEST_RELEASE_TAG | grep -B 2 "\"name\": \"$CLI_ARTIFACT\"" | grep -w id | awk -F: '{print $2}' | sed 's/,//g;s/\"//g;s/ //g')
-
-    if [ "$asset_id" = "null" ] || [ -z "$asset_id" ]; then
-        echo "ERROR: LATEST_RELEASE_TAG not found $LATEST_RELEASE_TAG"
-        exit 1
-    fi
-
     # Create the temp directory
     CLI_TMP_ROOT=$(mktemp -dt kbcli-install-XXXXXX)
-    ARTIFACT_TMP_FILE="$CLI_TMP_ROOT/$CLI_ARTIFACT"
-
-    echo "Downloading ..."
-    DOWNLOAD_ASSET_URL="https://$TOKEN:@api.github.com/repos/$REPO/releases/assets/$asset_id"
-    httpstatus=$(curl -SL -q -w "%{http_code}" --header 'Accept:application/octet-stream' "$DOWNLOAD_ASSET_URL" -o "$ARTIFACT_TMP_FILE")
-
-    if [[ "$httpstatus" != "200" || ! -f "$ARTIFACT_TMP_FILE" ]]; then
-        echo "Failed to download $CLI_ARTIFACT"
-        exit 1
-    fi
+    # pull image and run
+    echo -e "Pulling kbcli image..."
+    docker run --name kbcli -d docker.io/apecloud/kbcli:${LATEST_RELEASE_TAG} sh &>/dev/null
+    # copy kbcli to /tmp-xxx/kbcli
+    docker cp kbcli:/kbcli.${OS}.${ARCH} ${CLI_TMP_ROOT}/${CLI_FILENAME} 2>&1 >/dev/null
+    # remove docker
+    docker rm kbcli 2>&1 >/dev/null
 }
 
 installFile() {
-    local tmp_root_kbcli="$CLI_TMP_ROOT/${OS}-${ARCH}/$CLI_FILENAME"
-    tar xf "$ARTIFACT_TMP_FILE" -C "$CLI_TMP_ROOT"
+    local tmp_root_kbcli="$CLI_TMP_ROOT/$CLI_FILENAME"
 
-    if [[ $? -ne 0 || ! -f "$tmp_root_kbcli" ]]; then
-        echo "Failed to unpack kbcli executable."
+    if [ ! -f "$tmp_root_kbcli" ]; then
+        echo "Failed to pull kbcli."
         exit 1
     fi
 
@@ -193,15 +164,15 @@ checkExistingCli
 checkHttpRequestCLI
 
 if [ -z "$1" ]; then
-    echo "Getting the latest kbcli ..."
-    ret_val="latest"
+    echo "Getting the latest kbcli..."
+    ret_val="v0.1.0"
 elif [[ $1 == v* ]]; then
     ret_val=$1
 else
     ret_val=v$1
 fi
 
-downloadFile $ret_val
+downloadDockerImage $ret_val
 installFile
 cleanup
 installCompleted
