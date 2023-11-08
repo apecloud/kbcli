@@ -21,6 +21,7 @@ package cmd
 
 import (
 	"fmt"
+
 	"os"
 	"strings"
 
@@ -47,6 +48,7 @@ import (
 	"github.com/apecloud/kbcli/pkg/cmd/cluster"
 	"github.com/apecloud/kbcli/pkg/cmd/clusterdefinition"
 	"github.com/apecloud/kbcli/pkg/cmd/clusterversion"
+	"github.com/apecloud/kbcli/pkg/cmd/context"
 	"github.com/apecloud/kbcli/pkg/cmd/dashboard"
 	"github.com/apecloud/kbcli/pkg/cmd/dataprotection"
 	"github.com/apecloud/kbcli/pkg/cmd/fault"
@@ -54,6 +56,7 @@ import (
 	"github.com/apecloud/kbcli/pkg/cmd/kubeblocks"
 	"github.com/apecloud/kbcli/pkg/cmd/migration"
 	"github.com/apecloud/kbcli/pkg/cmd/options"
+	"github.com/apecloud/kbcli/pkg/cmd/organization"
 	"github.com/apecloud/kbcli/pkg/cmd/playground"
 	"github.com/apecloud/kbcli/pkg/cmd/plugin"
 	"github.com/apecloud/kbcli/pkg/cmd/report"
@@ -191,8 +194,8 @@ A Command Line Interface for KubeBlocks`,
 	cmd.AddCommand(
 		auth.NewLogin(ioStreams),
 		auth.NewLogout(ioStreams),
-		// organization.NewOrganizationCmd(ioStreams),
-		// context.NewContextCmd(ioStreams),
+		organization.NewOrganizationCmd(ioStreams),
+		context.NewContextCmd(ioStreams),
 		playground.NewPlaygroundCmd(ioStreams),
 		kubeblocks.NewKubeBlocksCmd(f, ioStreams),
 		bench.NewBenchCmd(f, ioStreams),
