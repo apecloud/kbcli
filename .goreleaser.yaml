@@ -33,13 +33,13 @@ builds:
     tags:
       - containers_image_openpgp
     ldflags:
-      - -s -w -X github.com/apecloud/kubeblocks/version.BuildDate={{ .Date }}
-      - -s -w -X github.com/apecloud/kubeblocks/version.GitCommit={{ .FullCommit }}
-      - -s -w -X github.com/apecloud/kubeblocks/version.Version={{ .Version }}
-      - -s -w -X github.com/apecloud/kubeblocks/version.DefaultKubeBlocksVersion={{ .Version }}
-      - -s -w -X github.com/apecloud/kubeblocks/version.GitVersion={{ .Tag }}
-      - -s -w -X github.com/apecloud/kubeblocks/version.K3sImageTag={{ .Env.K3S_IMG_TAG }}
-      - -s -w -X github.com/apecloud/kubeblocks/version.K3dVersion={{ .Env.K3D_VERSION }}
+      - -s -w -X github.com/apecloud/kbcli/version.BuildDate={{ .Date }}
+      - -s -w -X github.com/apecloud/kbcli/version.GitCommit={{ .FullCommit }}
+      - -s -w -X github.com/apecloud/kbcli/version.Version={{ .Version }}
+      - -s -w -X github.com/apecloud/kbcli/version.DefaultKubeBlocksVersion={{ .Version }}
+      - -s -w -X github.com/apecloud/kbcli/version.GitVersion={{ .Tag }}
+      - -s -w -X github.com/apecloud/kbcli/version.K3sImageTag={{ .Env.K3S_IMG_TAG }}
+      - -s -w -X github.com/apecloud/kbcli/version.K3dVersion={{ .Env.K3D_VERSION }}
 
 archives:
   - format: tar.gz

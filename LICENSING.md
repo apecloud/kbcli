@@ -9,20 +9,13 @@ The default license for this project is [AGPL-3.0-only](LICENSE).
 The following directories and their subdirectories are licensed under Apache-2.0:
 
 ```
-apis/**
-deploy/**
 docker/**
-externalapis/**
 hack/**
-pkg/client/**
-test/**
-tools/**
 ```
 
 The following directories and their subdirectories are licensed under their original upstream licenses:
 
 ```
-cmd/probe/pkg/component/
-pkg/cli/cmd/plugin/download/**
+pkg/cmd/plugin/download/**
 vendor/
 ```

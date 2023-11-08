@@ -1,12 +1,6 @@
 # Mac OS X files
 .DS_Store
 
-# ignore go generate code files
-pkg/testutil/k8s/mocks/*_mocks.go
-pkg/configuration/proto/mocks/*_mocks.go
-pkg/configuration/container/mocks/*_mocks.go
-# pkg/configuration/proto/*.pb.go
-
 # ignore go mock temporary files
 **/gomock_reflect*/
 
@@ -50,8 +44,6 @@ cover.html
 
 # Dependency directories (remove the comment below to include it)
 vendor/
-pkg/resources/static/k3s
-pkg/resources/static/k3d/
 
 # Distribution directories
 _dist/
@@ -59,17 +51,8 @@ dist/
 bin/
 tmp/
 
-
-# helm dependency charts
-deploy/**/Chart.lock
-deploy/**/charts
-
 # cli embed chart directory
 pkg/cli/cluster/charts/
 
 # ignore the addons that clone from apecloud/kubeblocks-addons
 addons/
-
-# ignore test result
-test/e2e/report.json
-test/e2e/*.txt

@@ -1,8 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: mysql-scripts
-data:
-  setup.sh: |
-    #!/bin/bash
-    exec docker-entrypoint.sh

@@ -1,6 +1,6 @@
 # KubeBlocks Maintainers
 
-[GOVERNANCE.md](https://github.com/apecloud/kubeblocks/blob/main/GOVERNANCE.md) describes governance guidelines and
+[GOVERNANCE.md](https://github.com/apecloud/kbcli/blob/main/GOVERNANCE.md) describes governance guidelines and
 maintainer responsibilities.
 
 ## Maintainers

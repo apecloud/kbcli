@@ -27,7 +27,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
 
-	"github.com/apecloud/kubeblocks/pkg/cli/cmd"
+	"github.com/apecloud/kbcli/pkg/cmd"
 )
 
 func genMarkdownTreeForOverview(cmd *cobra.Command, dir string) error {
