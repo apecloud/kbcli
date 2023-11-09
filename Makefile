@@ -132,10 +132,6 @@ build-checks: generate fmt vet goimports lint-fast ## Run build checks.
 mod-download: ## Run go mod download against go modules.
 	$(GO) mod download
 
-.PHONY: mod-vendor
-mod-vendor: module ## Run go mod vendor against go modules.
-	$(GO) mod vendor
-
 .PHONY: module
 module: ## Run go mod tidy->verify against go modules.
 	$(GO) mod tidy -compat=1.21

@@ -138,9 +138,9 @@ jobs:
         run: |
           curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.54.2
 
-      - name: make mod-vendor
+      - name: make module
         run: |
-          make mod-vendor
+          make module
 
       - name: make lint
         run: |
