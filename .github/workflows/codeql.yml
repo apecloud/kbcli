@@ -65,7 +65,7 @@ jobs:
 
       - name: make generate
         run: |
-          make generate test-go-generate
+          make generate
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v2

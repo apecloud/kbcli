@@ -10,10 +10,10 @@ jobs:
       - name: Run simple-pr-stats
         uses: akwodkiewicz/simple-pr-stats@v0.2
         with:
-          token: ${{ secrets.KUBEBLOCKS_TOKEN }}
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           days_back: 40
       - name: Run all-pr-stats
         uses: akwodkiewicz/simple-pr-stats@v0.2
         with:
-          token: ${{ secrets.KUBEBLOCKS_TOKEN }}
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           days_back: 360    
