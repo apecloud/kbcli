@@ -5,6 +5,7 @@ on:
     types: [ edited, opened ]
 
 env:
+  GH_TOKEN: ${{ github.token }}
   GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
   REVIEWERS: 'realzyy,fireworm2002'
   REPO: 'kbcli'
