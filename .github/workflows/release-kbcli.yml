@@ -181,3 +181,12 @@ jobs:
           asset_path: ${{ github.workspace }}/dist/${{ env.CLI_NAME }}-${{ matrix.os }}-${{ env.TAG_NAME }}.zip
           asset_name: ${{ env.CLI_NAME }}-${{ matrix.os }}-${{ env.TAG_NAME }}.zip
           asset_content_type: application/zip
+
+  remove-artifact:
+    needs: upload-release-assert
+    runs-on: ubuntu-latest
+    steps:
+      - name: Remove kbcli Artifact
+        uses: geekyeggo/delete-artifact@v2
+        with:
+          name: ${{ env.TAG_NAME }}-kbcli
