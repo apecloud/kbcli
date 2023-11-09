@@ -1,0 +1,140 @@
+name: CICD-PULL-REQUEST
+
+on:
+  pull_request_review:
+    types: [submitted]
+
+env:
+  GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+  BASE_BRANCH: origin/main
+  GO_VERSION: "1.21"
+
+jobs:
+  trigger-mode:
+    name: trigger mode
+    if: github.event.review.state == 'approved'
+    runs-on: ubuntu-latest
+    outputs:
+      trigger-mode: ${{ steps.get_trigger_mode.outputs.trigger_mode }}
+      matrix: ${{ steps.get_trigger_mode.outputs.matrix }}
+    steps:
+      - name: Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.11.0
+        with:
+          all_but_latest: true
+          access_token: ${{ github.token }}
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+
+      - name: Get trigger mode
+        id: get_trigger_mode
+        run: |
+          if [[ "${{ github.event.pull_request.head.ref }}" != "main" ]]; then
+              git checkout -b ${{ github.event.pull_request.head.ref }} --track origin/${{ github.event.pull_request.head.ref }}
+          fi
+          TRIGGER_MODE=`bash .github/utils/utils.sh --type 6 \
+              --branch-name "${{ github.event.pull_request.head.ref }}" \
+              --base-branch "${{ env.BASE_BRANCH }}"`
+          echo $TRIGGER_MODE
+          echo trigger_mode=$TRIGGER_MODE >> $GITHUB_OUTPUT
+
+  make-test:
+    needs: trigger-mode
+    if: ${{ contains(needs.trigger-mode.outputs.trigger-mode, '[test]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: install lib
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libbtrfs-dev \
+            libdevmapper-dev
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "${{ env.GO_VERSION }}"
+
+      - name: Install golangci-lint
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.54.2
+
+      - name: make module
+        run: |
+          make module
+
+      - name: make lint
+        run: |
+          make lint
+
+      - name: make test
+        run: |
+          make test
+
+      - name: upload coverage report
+        uses: codecov/codecov-action@v3
+        continue-on-error: true
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./cover_new.out
+          flags: unittests
+          name: codecov-report
+          verbose: true
+
+  check-kbcli:
+    needs: trigger-mode
+    runs-on: ubuntu-latest
+    if: contains(needs.trigger-mode.outputs.trigger-mode, '[cli]')
+    strategy:
+      matrix:
+        os: [linux-amd64, darwin-arm64]
+    steps:
+      - uses: actions/checkout@v4
+      - name: install lib
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libbtrfs-dev \
+            libdevmapper-dev \
+            libgpgme-dev
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "${{ env.GO_VERSION }}"
+
+      - name: make generate
+        run: make generate
+
+      - name: build cli
+        run: |
+          CLI_OS_ARCH=`bash .github/utils/utils.sh \
+            --tag-name ${{ matrix.os }} \
+            --type 2`
+
+          make bin/kbcli.$CLI_OS_ARCH
+
+  pr-check:
+    name: make test
+    needs: [ trigger-mode, make-test, check-kbcli ]
+    if: ${{ github.event.review.state == 'approved' && always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: make test check
+        if: github.event.pull_request.head.repo.full_name != github.repository
+        run: |
+          if [[ "${{ needs.make-test.result }}" == "failure" || "${{ needs.make-test.result }}" == "cancelled" ]]; then
+              echo "make test fail"
+              exit 1
+          fi
+
+      - name: release kbcli check
+        run: |
+          if [[ "${{ needs.check-kbcli.result }}" == "failure" || "${{ needs.check-kbcli.result }}" == "cancelled" ]]; then
+              echo "release kbcli fail"
+              exit 1
+          fi
