@@ -43,7 +43,7 @@ jobs:
 
   make-test:
     needs: trigger-mode
-    if: ${{ contains(needs.trigger-mode.outputs.trigger-mode, '[test]') && github.event.pull_request.head.repo.full_name != github.repository }}
+    if: ${{ contains(needs.trigger-mode.outputs.trigger-mode, '[test]') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
