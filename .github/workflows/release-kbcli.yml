@@ -1,0 +1,183 @@
+name: Release Kbcli
+
+on:
+  workflow_call:
+    inputs:
+      KBCLI_REF:
+        description: "The ref of kbcli"
+        type: string
+        required: false
+        default: 'main'
+
+env:
+  GH_TOKEN: ${{ github.token }}
+  GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+  TAG_NAME: ${{ github.ref_name }}
+  GO_VERSION: "1.21"
+  CLI_NAME: 'kbcli'
+  CLI_REPO: 'apecloud/kbcli'
+  GITLAB_KBCLI_PROJECT_ID: 85948
+  GITLAB_ACCESS_TOKEN: ${{ secrets.GITLAB_ACCESS_TOKEN }}
+  FURY_TOKEN: ${{ secrets.FURY_UPLOAD_TOKEN }}
+  FURY_ACCOUNT: ${{ secrets.FURY_ACCOUNT }}
+  GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+  PASSPHRASE: ${{ secrets.PASSPHRASE }}
+
+jobs:
+  create-release-kbcli:
+    name: Create Release Kbcli
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Kbcli Code
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.CLI_REPO }}
+          token: ${{ env.GITHUB_TOKEN }}
+          ref: ${{ inputs.KBCLI_REF }}
+          path: ./
+
+      - name: create release ${{ env.CLI_NAME }}
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ env.TAG_NAME }}
+          name: KubeBlocks ${{ env.TAG_NAME }}
+          repository: ${{ env.CLI_REPO }}
+          token: ${{ env.GITHUB_TOKEN }}
+          prerelease: true
+
+      - name: create gitlab release ${{ env.CLI_NAME }}
+        run: |
+          bash ${{ github.workspace }}/.github/utils/release_gitlab.sh \
+            --type 1 \
+            --project-id ${{ env.GITLAB_KBCLI_PROJECT_ID }} \
+            --tag-name ${{ env.TAG_NAME }} \
+            --access-token ${{ env.GITLAB_ACCESS_TOKEN }}
+
+  gorelease-assert:
+    needs: create-release-kbcli
+    name: Upload and release kbcli
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Kbcli Code
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.CLI_REPO }}
+          token: ${{ env.GITHUB_TOKEN }}
+          ref: ${{ inputs.KBCLI_REF }}
+          path: ./
+
+      - name: install lib
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libbtrfs-dev \
+            libdevmapper-dev \
+            libgpgme-dev
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Import GPG key
+        id: import_gpg
+        uses: crazy-max/ghaction-import-gpg@v5
+        with:
+          gpg_private_key: ${{ env.GPG_PRIVATE_KEY }}
+          passphrase: ${{ env.PASSPHRASE }}
+
+      - uses: goreleaser/goreleaser-action@v4
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release --config ${{ github.workspace }}/.goreleaser.yaml --clean
+        env:
+          GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}
+          GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
+
+      - name: upload .rpm and .deb to fury.io
+        run: |
+          for file in $(find "${{ github.workspace }}/dist" -type f | grep -E '\.(deb|rpm)$'); do
+            echo "Processing file: $file"
+            curl -F package=@$file https://${{ env.FURY_TOKEN }}@push.fury.io/${{ env.FURY_ACCOUNT }}/
+          done
+
+      - name: get kbcli's release upload url
+        run: |
+          echo 'UPLOAD_URL='`bash ${{ github.workspace }}/.github/utils/utils.sh \
+            --tag-name ${{ env.TAG_NAME }} \
+            --type 3 \
+            --github-repo ${{ env.CLI_REPO }} \
+            --github-token ${{ env.GITHUB_TOKEN }}` >> $GITHUB_ENV
+
+      - name: upload kbcli.exe to kbcli's release page for winget
+        uses: actions/upload-release-asset@main
+        with:
+          upload_url: ${{ env.UPLOAD_URL }}
+          asset_path: ${{ github.workspace }}/dist/kbcli_windows_amd64_v1/${{ env.CLI_NAME }}.exe
+          asset_name: ${{ env.CLI_NAME }}.exe
+          asset_content_type: application/octet-stream
+
+      - name: Upload kbcli Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.TAG_NAME }}-kbcli
+          path: |
+            ./dist/*.tar.gz
+            ./dist/*.zip
+          if-no-files-found: error
+          retention-days: 1
+
+  upload-release-assert:
+    needs: gorelease-assert
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [linux-amd64, linux-arm64, darwin-amd64, darwin-arm64, windows-amd64, windows-arm64]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Kbcli Artifact
+        uses: actions/download-artifact@v3.0.2
+        with:
+          name: ${{ env.TAG_NAME }}-kbcli
+          path: ${{ github.workspace }}/dist
+
+      - name: upload assets to gitlab
+        run: |
+          for file in $(find "${{ github.workspace }}/dist" -type f | grep -E '\.(gz|zip)$'); do
+              if [[ "$file" == *"${{ matrix.os }}"* ]]; then
+                  echo "Processing file: $file"
+                  filename=$(basename "$file")
+                  bash ${{ github.workspace }}/.github/utils/release_gitlab.sh \
+                  --type 2 \
+                  --project-id ${{ env.GITLAB_KBCLI_PROJECT_ID }} \
+                  --tag-name ${{ env.TAG_NAME }} \
+                  --asset-path $file \
+                  --asset-name $filename \
+                  --access-token ${{ env.GITLAB_ACCESS_TOKEN }}
+              fi
+          done
+
+      - name: Get release
+        id: get_release
+        uses: bruceadams/get-release@v1.3.2
+
+      - name: upload release asset ${{ matrix.os }}
+        if: ${{ matrix.os != 'windows-amd64' && matrix.os != 'windows-arm64' }}
+        uses: actions/upload-release-asset@main
+        with:
+          upload_url: ${{ steps.get_release.outputs.upload_url }}
+          asset_path: ${{ github.workspace }}/dist/${{ env.CLI_NAME }}-${{ matrix.os }}-${{ env.TAG_NAME }}.tar.gz
+          asset_name: ${{ env.CLI_NAME }}-${{ matrix.os }}-${{ env.TAG_NAME }}.tar.gz
+          asset_content_type: application/gzip
+
+      - name: upload release asset ${{ matrix.os }}
+        if: ${{ matrix.os == 'windows-amd64' || matrix.os == 'windows-arm64' }}
+        uses: actions/upload-release-asset@main
+        with:
+          upload_url: ${{ steps.get_release.outputs.upload_url }}
+          asset_path: ${{ github.workspace }}/dist/${{ env.CLI_NAME }}-${{ matrix.os }}-${{ env.TAG_NAME }}.zip
+          asset_name: ${{ env.CLI_NAME }}-${{ matrix.os }}-${{ env.TAG_NAME }}.zip
+          asset_content_type: application/zip
