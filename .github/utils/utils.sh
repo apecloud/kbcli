@@ -505,7 +505,7 @@ get_trigger_mode() {
             .github/*|.devcontainer/*|githooks/*|examples/*)
                 add_trigger_mode "[other]"
             ;;
-            pkg/cli/cmd/*)
+            pkg/cmd/*)
                 add_trigger_mode "[cli][test]"
             ;;
             *)

@@ -80,7 +80,7 @@ jobs:
         continue-on-error: true
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./cover_new.out
+          files: ./cover.out
           flags: unittests
           name: codecov-report
           verbose: true
