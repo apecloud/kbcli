@@ -9,7 +9,7 @@ env:
   REPO: kbcli
   milestone: 8
   ORGANIZATION: apecloud
-  PROJECT_NUMBER: 2
+  PROJECT_NUMBER: 19
 
 jobs:
   move_milestone:

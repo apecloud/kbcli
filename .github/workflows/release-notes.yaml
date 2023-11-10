@@ -44,7 +44,7 @@ jobs:
       - name: Get project data
         env:
           ORGANIZATION: apecloud
-          PROJECT_NUMBER: 2
+          PROJECT_NUMBER: 19
         run: |
           gh api graphql -f query='
             query($org: String!, $number: Int!) {
