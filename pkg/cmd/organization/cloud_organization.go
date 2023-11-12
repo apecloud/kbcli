@@ -29,8 +29,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-const OrgAPIName = "organizations"
-
 type CloudOrganization struct {
 	Token   string
 	APIURL  string
@@ -38,7 +36,7 @@ type CloudOrganization struct {
 }
 
 func (o *CloudOrganization) getOrganization(name string) (*OrgItem, error) {
-	path := strings.Join([]string{o.APIURL, o.APIPath, OrgAPIName, name}, "/")
+	path := strings.Join([]string{o.APIURL, o.APIPath, "organizations", name}, "/")
 	response, err := NewRequest(http.MethodGet, path, o.Token, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to get organization.")
@@ -54,7 +52,7 @@ func (o *CloudOrganization) getOrganization(name string) (*OrgItem, error) {
 }
 
 func (o *CloudOrganization) GetOrganizations() (*Organizations, error) {
-	path := strings.Join([]string{o.APIURL, o.APIPath, OrgAPIName}, "/")
+	path := strings.Join([]string{o.APIURL, o.APIPath, "organizations"}, "/")
 	response, err := NewRequest(http.MethodGet, path, o.Token, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to get organizations.")
@@ -112,7 +110,7 @@ func (o *CloudOrganization) IsValidOrganization(name string) (bool, error) {
 }
 
 func (o *CloudOrganization) addOrganization(body []byte) error {
-	path := strings.Join([]string{o.APIURL, o.APIPath, OrgAPIName}, "/")
+	path := strings.Join([]string{o.APIURL, o.APIPath, "organizations"}, "/")
 	_, err := NewRequest(http.MethodPost, path, o.Token, body)
 	if err != nil {
 		return errors.Wrap(err, "Failed to add organization.")
@@ -122,7 +120,7 @@ func (o *CloudOrganization) addOrganization(body []byte) error {
 }
 
 func (o *CloudOrganization) deleteOrganization(name string) error {
-	path := strings.Join([]string{o.APIURL, o.APIPath, OrgAPIName, name}, "/")
+	path := strings.Join([]string{o.APIURL, o.APIPath, "organizations", name}, "/")
 	_, err := NewRequest(http.MethodDelete, path, o.Token, nil)
 	if err != nil {
 		return errors.Wrap(err, "Failed to delete organization.")
