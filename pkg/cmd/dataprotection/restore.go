@@ -25,8 +25,8 @@ import (
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
 
+	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/cmd/cluster"
-	"github.com/apecloud/kbcli/pkg/create"
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
@@ -40,7 +40,7 @@ var (
 
 func newRestoreCommand(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
 	o := cluster.CreateRestoreOptions{}
-	o.CreateOptions = create.CreateOptions{
+	o.CreateOptions = action.CreateOptions{
 		IOStreams: streams,
 		Factory:   f,
 		Options:   o,

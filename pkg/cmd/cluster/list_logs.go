@@ -36,8 +36,8 @@ import (
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	"github.com/apecloud/kubeblocks/pkg/constant"
 
+	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/cluster"
-	"github.com/apecloud/kbcli/pkg/exec"
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
@@ -66,7 +66,7 @@ type ListLogsOptions struct {
 	clientSet     *kubernetes.Clientset
 	factory       cmdutil.Factory
 	genericiooptions.IOStreams
-	exec *exec.ExecOptions
+	exec *action.ExecOptions
 }
 
 func NewListLogsCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
@@ -114,7 +114,7 @@ func (o *ListLogsOptions) Complete(f cmdutil.Factory, args []string) error {
 		return err
 	}
 	o.dynamicClient, err = f.DynamicClient()
-	o.exec = exec.NewExecOptions(o.factory, o.IOStreams)
+	o.exec = action.NewExecOptions(o.factory, o.IOStreams)
 	o.exec.Config = config
 	// hide unnecessary output
 	o.exec.Quiet = true

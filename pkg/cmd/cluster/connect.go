@@ -40,8 +40,8 @@ import (
 	"github.com/apecloud/kubeblocks/pkg/lorry/engines/models"
 	"github.com/apecloud/kubeblocks/pkg/lorry/engines/register"
 
+	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/cluster"
-	"github.com/apecloud/kbcli/pkg/exec"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
 	"github.com/apecloud/kbcli/pkg/util/flags"
@@ -94,12 +94,12 @@ type ConnectOptions struct {
 	userName   string
 	userPasswd string
 
-	*exec.ExecOptions
+	*action.ExecOptions
 }
 
 // NewConnectCmd returns the cmd of connecting to a cluster
 func NewConnectCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := &ConnectOptions{ExecOptions: exec.NewExecOptions(f, streams)}
+	o := &ConnectOptions{ExecOptions: action.NewExecOptions(f, streams)}
 	cmd := &cobra.Command{
 		Use:               "connect (NAME | -i INSTANCE-NAME)",
 		Short:             "Connect to a cluster or instance.",

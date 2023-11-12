@@ -41,8 +41,8 @@ import (
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	"github.com/apecloud/kubeblocks/pkg/constant"
 
+	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/cluster"
-	"github.com/apecloud/kbcli/pkg/exec"
 )
 
 var _ = Describe("logs", func() {
@@ -76,7 +76,7 @@ var _ = Describe("logs", func() {
 
 	It("addPrefixIfNeeded Test", func() {
 		l := &LogsOptions{
-			ExecOptions: &exec.ExecOptions{
+			ExecOptions: &action.ExecOptions{
 				StreamOptions: cmdexec.StreamOptions{
 					ContainerName: "container",
 				},
@@ -113,7 +113,7 @@ var _ = Describe("logs", func() {
 
 		stream := genericiooptions.NewTestIOStreamsDiscard()
 		l := &LogsOptions{
-			ExecOptions: exec.NewExecOptions(tf, stream),
+			ExecOptions: action.NewExecOptions(tf, stream),
 			logOptions: cmdlogs.LogsOptions{
 				IOStreams: stream,
 			},

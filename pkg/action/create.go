@@ -17,7 +17,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package create
+package action
 
 import (
 	"context"
@@ -29,6 +29,7 @@ import (
 	"cuelang.org/go/cue/ast"
 	"cuelang.org/go/cue/cuecontext"
 	cuejson "cuelang.org/go/encoding/json"
+	"github.com/apecloud/kubeblocks/pkg/cli/edit"
 	"github.com/leaanthony/debme"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -43,7 +44,6 @@ import (
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/scheme"
 
-	"github.com/apecloud/kbcli/pkg/edit"
 	"github.com/apecloud/kbcli/pkg/printer"
 )
 

@@ -28,7 +28,7 @@ import (
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
 
-	"github.com/apecloud/kbcli/pkg/create"
+	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/util"
 )
 
@@ -46,16 +46,16 @@ type DNSChaosOptions struct {
 	FaultBaseOptions
 }
 
-func NewDNSChaosOptions(f cmdutil.Factory, streams genericiooptions.IOStreams, action string) *DNSChaosOptions {
+func NewDNSChaosOptions(f cmdutil.Factory, streams genericiooptions.IOStreams, act string) *DNSChaosOptions {
 	o := &DNSChaosOptions{
 		FaultBaseOptions: FaultBaseOptions{
-			CreateOptions: create.CreateOptions{
+			CreateOptions: action.CreateOptions{
 				Factory:         f,
 				IOStreams:       streams,
 				CueTemplateName: CueTemplateDNSChaos,
 				GVR:             GetGVR(Group, Version, ResourceDNSChaos),
 			},
-			Action: action,
+			Action: act,
 		},
 	}
 	o.CreateOptions.PreCreate = o.PreCreate

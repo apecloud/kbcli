@@ -17,13 +17,14 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package patch
+package action
 
 import (
 	"fmt"
 	"reflect"
 	"strings"
 
+	"github.com/apecloud/kubeblocks/pkg/cli/edit"
 	jsonpatch "github.com/evanphx/json-patch"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -43,13 +44,12 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 
-	"github.com/apecloud/kbcli/pkg/edit"
 	"github.com/apecloud/kbcli/pkg/util"
 )
 
 type OutputOperation func(bool) string
 
-type Options struct {
+type PatchOptions struct {
 	Factory cmdutil.Factory
 
 	// resource names
@@ -76,8 +76,8 @@ type Options struct {
 	genericiooptions.IOStreams
 }
 
-func NewOptions(f cmdutil.Factory, streams genericiooptions.IOStreams, gvr schema.GroupVersionResource) *Options {
-	return &Options{
+func NewPatchOptions(f cmdutil.Factory, streams genericiooptions.IOStreams, gvr schema.GroupVersionResource) *PatchOptions {
+	return &PatchOptions{
 		Factory:         f,
 		GVR:             gvr,
 		PrintFlags:      genericclioptions.NewPrintFlags("").WithTypeSetter(scheme.Scheme),
@@ -86,13 +86,13 @@ func NewOptions(f cmdutil.Factory, streams genericiooptions.IOStreams, gvr schem
 	}
 }
 
-func (o *Options) AddFlags(cmd *cobra.Command) {
+func (o *PatchOptions) AddFlags(cmd *cobra.Command) {
 	o.PrintFlags.AddFlags(cmd)
 	cmdutil.AddDryRunFlag(cmd)
 	cmd.Flags().BoolVar(&o.EditBeforeUpdate, "edit", o.EditBeforeUpdate, "Edit the API resource")
 }
 
-func (o *Options) complete(cmd *cobra.Command) error {
+func (o *PatchOptions) complete(cmd *cobra.Command) error {
 	var err error
 	if len(o.Names) == 0 {
 		return fmt.Errorf("missing %s name", o.GVR.Resource)
@@ -119,7 +119,7 @@ func (o *Options) complete(cmd *cobra.Command) error {
 	return nil
 }
 
-func (o *Options) Run(cmd *cobra.Command) error {
+func (o *PatchOptions) Run(cmd *cobra.Command) error {
 	if err := o.complete(cmd); err != nil {
 		return err
 	}

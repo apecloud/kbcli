@@ -33,7 +33,7 @@ import (
 
 	dpv1alpha1 "github.com/apecloud/kubeblocks/apis/dataprotection/v1alpha1"
 
-	"github.com/apecloud/kbcli/pkg/list"
+	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
@@ -48,12 +48,12 @@ var (
 
 type listBackupRepoOptions struct {
 	dynamic dynamic.Interface
-	*list.ListOptions
+	*action.ListOptions
 }
 
 func newListCommand(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
 	o := &listBackupRepoOptions{
-		ListOptions: list.NewListOptions(f, streams, types.BackupRepoGVR()),
+		ListOptions: action.NewListOptions(f, streams, types.BackupRepoGVR()),
 	}
 	cmd := &cobra.Command{
 		Use:               "list",

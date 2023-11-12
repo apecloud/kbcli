@@ -24,15 +24,15 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/apecloud/kubeblocks/pkg/cli/edit"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 
+	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/cluster"
-	"github.com/apecloud/kbcli/pkg/create"
-	"github.com/apecloud/kbcli/pkg/edit"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
 )
@@ -53,10 +53,10 @@ type createSubCmdsOptions struct {
 	// and validate the values.
 	chartInfo *cluster.ChartInfo
 
-	*create.CreateOptions
+	*action.CreateOptions
 }
 
-func newSubCmdsOptions(createOptions *create.CreateOptions, t cluster.ClusterType) (*createSubCmdsOptions, error) {
+func newSubCmdsOptions(createOptions *action.CreateOptions, t cluster.ClusterType) (*createSubCmdsOptions, error) {
 	var err error
 	o := &createSubCmdsOptions{
 		CreateOptions: createOptions,
@@ -69,7 +69,7 @@ func newSubCmdsOptions(createOptions *create.CreateOptions, t cluster.ClusterTyp
 	return o, nil
 }
 
-func buildCreateSubCmds(createOptions *create.CreateOptions) []*cobra.Command {
+func buildCreateSubCmds(createOptions *action.CreateOptions) []*cobra.Command {
 	var cmds []*cobra.Command
 
 	for _, t := range cluster.SupportedTypes() {
@@ -188,9 +188,9 @@ func (o *createSubCmdsOptions) run() error {
 		isCluster := obj.gvr == types.ClusterGVR()
 		resObj := obj.obj
 
-		if dryRun != create.DryRunClient {
+		if dryRun != action.DryRunClient {
 			createOptions := metav1.CreateOptions{}
-			if dryRun == create.DryRunServer {
+			if dryRun == action.DryRunServer {
 				createOptions.DryRun = []string{metav1.DryRunAll}
 			}
 
@@ -201,7 +201,7 @@ func (o *createSubCmdsOptions) run() error {
 			}
 
 			// only output cluster resource
-			if dryRun != create.DryRunServer && isCluster {
+			if dryRun != action.DryRunServer && isCluster {
 				if o.Quiet {
 					continue
 				}
@@ -252,7 +252,7 @@ func (o *createSubCmdsOptions) validateVersion() error {
 		return err
 	}
 	// if dryRun is set, run in quiet mode, avoid to output yaml file with the info
-	if dryRun != create.DryRunNone {
+	if dryRun != action.DryRunNone {
 		return nil
 	}
 

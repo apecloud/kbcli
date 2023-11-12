@@ -30,7 +30,7 @@ import (
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 
-	"github.com/apecloud/kbcli/pkg/create"
+	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/types"
 	migrationv1 "github.com/apecloud/kbcli/pkg/types/migrationapi"
 	"github.com/apecloud/kbcli/pkg/util"
@@ -67,12 +67,12 @@ type CreateMigrationOptions struct {
 	Resources            []string                 `json:"resources,omitempty"`
 	ResourceModel        map[string]interface{}   `json:"resourceModel,omitempty"`
 	ServerID             uint32                   `json:"serverId,omitempty"`
-	create.CreateOptions `json:"-"`
+	action.CreateOptions `json:"-"`
 }
 
 func NewMigrationCreateCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
 	o := &CreateMigrationOptions{
-		CreateOptions: create.CreateOptions{
+		CreateOptions: action.CreateOptions{
 			Factory:         f,
 			IOStreams:       streams,
 			CueTemplateName: "migration_template.cue",

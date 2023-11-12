@@ -30,7 +30,7 @@ import (
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
 
-	"github.com/apecloud/kbcli/pkg/create"
+	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/util"
 )
 
@@ -155,15 +155,15 @@ type NetworkChaosOptions struct {
 	FaultBaseOptions
 }
 
-func NewNetworkChaosOptions(f cmdutil.Factory, streams genericiooptions.IOStreams, action string) *NetworkChaosOptions {
+func NewNetworkChaosOptions(f cmdutil.Factory, streams genericiooptions.IOStreams, act string) *NetworkChaosOptions {
 	o := &NetworkChaosOptions{
-		FaultBaseOptions: FaultBaseOptions{CreateOptions: create.CreateOptions{
+		FaultBaseOptions: FaultBaseOptions{CreateOptions: action.CreateOptions{
 			Factory:         f,
 			IOStreams:       streams,
 			CueTemplateName: CueTemplateNetworkChaos,
 			GVR:             GetGVR(Group, Version, ResourceNetworkChaos),
 		},
-			Action: action,
+			Action: act,
 		},
 	}
 	o.CreateOptions.PreCreate = o.PreCreate

@@ -37,7 +37,7 @@ import (
 
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 
-	"github.com/apecloud/kbcli/pkg/delete"
+	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
 )
@@ -54,7 +54,7 @@ var (
 )
 
 func NewDeleteCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := delete.NewDeleteOptions(f, streams, types.ClusterGVR())
+	o := action.NewDeleteOptions(f, streams, types.ClusterGVR())
 	o.PreDeleteHook = clusterPreDeleteHook
 	o.PostDeleteHook = clusterPostDeleteHook
 
@@ -72,7 +72,7 @@ func NewDeleteCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.
 	return cmd
 }
 
-func deleteCluster(o *delete.DeleteOptions, args []string) error {
+func deleteCluster(o *action.DeleteOptions, args []string) error {
 	if len(args) == 0 && len(o.LabelSelector) == 0 {
 		return fmt.Errorf("missing cluster name or a lable selector")
 	}
@@ -80,7 +80,7 @@ func deleteCluster(o *delete.DeleteOptions, args []string) error {
 	return o.Run()
 }
 
-func clusterPreDeleteHook(o *delete.DeleteOptions, object runtime.Object) error {
+func clusterPreDeleteHook(o *action.DeleteOptions, object runtime.Object) error {
 	if object == nil {
 		return nil
 	}
@@ -95,7 +95,7 @@ func clusterPreDeleteHook(o *delete.DeleteOptions, object runtime.Object) error 
 	return nil
 }
 
-func clusterPostDeleteHook(o *delete.DeleteOptions, object runtime.Object) error {
+func clusterPostDeleteHook(o *action.DeleteOptions, object runtime.Object) error {
 	if object == nil {
 		return nil
 	}

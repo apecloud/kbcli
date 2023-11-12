@@ -34,7 +34,7 @@ import (
 	restfake "k8s.io/client-go/rest/fake"
 	cmdtesting "k8s.io/kubectl/pkg/cmd/testing"
 
-	"github.com/apecloud/kbcli/pkg/patch"
+	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/testing"
 	"github.com/apecloud/kbcli/pkg/types"
 )
@@ -83,7 +83,7 @@ var _ = Describe("Manage applications related to KubeBlocks", func() {
 	When("Validate at enable an addon", func() {
 		It("should return error", func() {
 			o := &addonCmdOpts{
-				Options:          patch.NewOptions(tf, streams, types.AddonGVR()),
+				PatchOptions:     action.NewPatchOptions(tf, streams, types.AddonGVR()),
 				Factory:          tf,
 				IOStreams:        streams,
 				addonEnableFlags: &addonEnableFlags{},

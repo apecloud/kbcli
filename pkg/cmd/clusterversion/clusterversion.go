@@ -30,7 +30,7 @@ import (
 	"github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	"github.com/apecloud/kubeblocks/pkg/constant"
 
-	"github.com/apecloud/kbcli/pkg/list"
+	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
@@ -42,7 +42,7 @@ var listExample = templates.Examples(`
 		kbcli clusterversion list`)
 
 type ListClusterVersionOptions struct {
-	*list.ListOptions
+	*action.ListOptions
 	clusterDefinitionRef string
 }
 
@@ -61,7 +61,7 @@ func NewClusterVersionCmd(f cmdutil.Factory, streams genericiooptions.IOStreams)
 
 func NewListCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
 	o := &ListClusterVersionOptions{
-		ListOptions: list.NewListOptions(f, streams, types.ClusterVersionGVR()),
+		ListOptions: action.NewListOptions(f, streams, types.ClusterVersionGVR()),
 	}
 	cmd := &cobra.Command{
 		Use:               "list",

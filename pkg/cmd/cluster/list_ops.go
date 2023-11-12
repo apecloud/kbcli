@@ -36,7 +36,7 @@ import (
 
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 
-	"github.com/apecloud/kbcli/pkg/list"
+	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
@@ -54,7 +54,7 @@ var (
 )
 
 type opsListOptions struct {
-	*list.ListOptions
+	*action.ListOptions
 	status         []string
 	opsType        []string
 	opsRequestName string
@@ -62,7 +62,7 @@ type opsListOptions struct {
 
 func NewListOpsCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
 	o := &opsListOptions{
-		ListOptions: list.NewListOptions(f, streams, types.OpsGVR()),
+		ListOptions: action.NewListOptions(f, streams, types.OpsGVR()),
 	}
 	cmd := &cobra.Command{
 		Use:               "list-ops",

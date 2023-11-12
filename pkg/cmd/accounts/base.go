@@ -32,8 +32,8 @@ import (
 
 	lorryutil "github.com/apecloud/kubeblocks/pkg/lorry/util"
 
+	"github.com/apecloud/kbcli/pkg/action"
 	clusterutil "github.com/apecloud/kbcli/pkg/cluster"
-	"github.com/apecloud/kbcli/pkg/exec"
 	"github.com/apecloud/kbcli/pkg/printer"
 )
 
@@ -46,7 +46,7 @@ type AccountBaseOptions struct {
 	Verbose       bool
 	AccountOp     lorryutil.OperationKind
 	RequestMeta   map[string]interface{}
-	*exec.ExecOptions
+	*action.ExecOptions
 }
 
 var (
@@ -60,7 +60,7 @@ var (
 
 func NewAccountBaseOptions(f cmdutil.Factory, streams genericiooptions.IOStreams) *AccountBaseOptions {
 	return &AccountBaseOptions{
-		ExecOptions: exec.NewExecOptions(f, streams),
+		ExecOptions: action.NewExecOptions(f, streams),
 	}
 }
 

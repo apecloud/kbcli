@@ -34,7 +34,7 @@ import (
 	"k8s.io/klog/v2"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 
-	"github.com/apecloud/kbcli/pkg/create"
+	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/util"
 )
@@ -66,7 +66,7 @@ type FaultBaseOptions struct {
 
 	Selector `json:"selector"`
 
-	create.CreateOptions `json:"-"`
+	action.CreateOptions `json:"-"`
 }
 
 func NewFaultCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {

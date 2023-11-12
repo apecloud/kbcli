@@ -29,14 +29,14 @@ import (
 
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 
-	"github.com/apecloud/kbcli/pkg/create"
+	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/types"
 )
 
-func NewFakeOperationsOptions(ns, cName string, opsType appsv1alpha1.OpsType, objs ...runtime.Object) (*cmdtesting.TestFactory, *create.CreateOptions) {
+func NewFakeOperationsOptions(ns, cName string, opsType appsv1alpha1.OpsType, objs ...runtime.Object) (*cmdtesting.TestFactory, *action.CreateOptions) {
 	streams, _, _, _ := genericiooptions.NewTestIOStreams()
 	tf := cmdtesting.NewTestFactory().WithNamespace(ns)
-	baseOptions := &create.CreateOptions{
+	baseOptions := &action.CreateOptions{
 		IOStreams: streams,
 		Name:      cName,
 		Namespace: ns,

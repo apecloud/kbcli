@@ -31,7 +31,7 @@ import (
 
 	"github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 
-	"github.com/apecloud/kbcli/pkg/list"
+	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
@@ -44,7 +44,7 @@ var (
 )
 
 func NewListComponentsCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := list.NewListOptions(f, streams, types.ClusterDefGVR())
+	o := action.NewListOptions(f, streams, types.ClusterDefGVR())
 	o.AllNamespaces = true
 	cmd := &cobra.Command{
 		Use:               "list-components",
@@ -68,7 +68,7 @@ func validate(args []string) error {
 	return nil
 }
 
-func listComponents(o *list.ListOptions) error {
+func listComponents(o *action.ListOptions) error {
 	o.Print = false
 
 	r, err := o.Run()

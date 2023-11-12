@@ -42,9 +42,9 @@ import (
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	"github.com/apecloud/kubeblocks/pkg/constant"
 
+	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/cluster"
 	classutil "github.com/apecloud/kbcli/pkg/cmd/class"
-	"github.com/apecloud/kbcli/pkg/create"
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
@@ -53,7 +53,7 @@ import (
 )
 
 type OperationsOptions struct {
-	create.CreateOptions  `json:"-"`
+	action.CreateOptions  `json:"-"`
 	HasComponentNamesFlag bool `json:"-"`
 	// autoApprove when set true, skip the double check.
 	autoApprove            bool     `json:"-"`
@@ -104,7 +104,7 @@ type OperationsOptions struct {
 
 func newBaseOperationsOptions(f cmdutil.Factory, streams genericiooptions.IOStreams,
 	opsType appsv1alpha1.OpsType, hasComponentNamesFlag bool) *OperationsOptions {
-	customOutPut := func(opt *create.CreateOptions) {
+	customOutPut := func(opt *action.CreateOptions) {
 		output := fmt.Sprintf("OpsRequest %s created successfully, you can view the progress:", opt.Name)
 		printer.PrintLine(output)
 		nextLine := fmt.Sprintf("\tkbcli cluster describe-ops %s -n %s", opt.Name, opt.Namespace)
@@ -118,7 +118,7 @@ func newBaseOperationsOptions(f cmdutil.Factory, streams genericiooptions.IOStre
 		OpsType:               opsType,
 		HasComponentNamesFlag: hasComponentNamesFlag,
 		autoApprove:           false,
-		CreateOptions: create.CreateOptions{
+		CreateOptions: action.CreateOptions{
 			Factory:         f,
 			IOStreams:       streams,
 			CueTemplateName: "cluster_operations_template.cue",

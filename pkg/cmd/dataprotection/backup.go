@@ -27,10 +27,8 @@ import (
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
 
+	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/cmd/cluster"
-	"github.com/apecloud/kbcli/pkg/create"
-	"github.com/apecloud/kbcli/pkg/delete"
-	"github.com/apecloud/kbcli/pkg/list"
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
@@ -71,7 +69,7 @@ var (
 )
 
 func newBackupCommand(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	customOutPut := func(opt *create.CreateOptions) {
+	customOutPut := func(opt *action.CreateOptions) {
 		output := fmt.Sprintf("Backup %s created successfully, you can view the progress:", opt.Name)
 		printer.PrintLine(output)
 		nextLine := fmt.Sprintf("\tkbcli dp list-backups %s -n %s", opt.Name, opt.Namespace)
@@ -81,7 +79,7 @@ func newBackupCommand(f cmdutil.Factory, streams genericiooptions.IOStreams) *co
 	clusterName := ""
 
 	o := &cluster.CreateBackupOptions{
-		CreateOptions: create.CreateOptions{
+		CreateOptions: action.CreateOptions{
 			IOStreams:       streams,
 			Factory:         f,
 			GVR:             types.BackupGVR(),
@@ -122,7 +120,7 @@ func newBackupCommand(f cmdutil.Factory, streams genericiooptions.IOStreams) *co
 }
 
 func newBackupDeleteCommand(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := delete.NewDeleteOptions(f, streams, types.BackupGVR())
+	o := action.NewDeleteOptions(f, streams, types.BackupGVR())
 	clusterName := ""
 	cmd := &cobra.Command{
 		Use:               "delete-backup",
@@ -144,7 +142,7 @@ func newBackupDeleteCommand(f cmdutil.Factory, streams genericiooptions.IOStream
 	return cmd
 }
 
-func completeForDeleteBackup(o *delete.DeleteOptions, cluster string) error {
+func completeForDeleteBackup(o *action.DeleteOptions, cluster string) error {
 	if o.Force && len(o.Names) == 0 {
 		if cluster == "" {
 			return fmt.Errorf("must give a backup name or cluster name")
@@ -176,7 +174,7 @@ func newBackupDescribeCommand(f cmdutil.Factory, streams genericiooptions.IOStre
 }
 
 func newListBackupCommand(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := &cluster.ListBackupOptions{ListOptions: list.NewListOptions(f, streams, types.BackupGVR())}
+	o := &cluster.ListBackupOptions{ListOptions: action.NewListOptions(f, streams, types.BackupGVR())}
 	clusterName := ""
 	cmd := &cobra.Command{
 		Use:               "list-backups",

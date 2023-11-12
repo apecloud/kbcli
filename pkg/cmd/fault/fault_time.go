@@ -28,7 +28,7 @@ import (
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
 
-	"github.com/apecloud/kbcli/pkg/create"
+	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/util"
 )
 
@@ -59,16 +59,16 @@ type TimeChaosOptions struct {
 	FaultBaseOptions
 }
 
-func NewTimeChaosOptions(f cmdutil.Factory, streams genericiooptions.IOStreams, action string) *TimeChaosOptions {
+func NewTimeChaosOptions(f cmdutil.Factory, streams genericiooptions.IOStreams, act string) *TimeChaosOptions {
 	o := &TimeChaosOptions{
 		FaultBaseOptions: FaultBaseOptions{
-			CreateOptions: create.CreateOptions{
+			CreateOptions: action.CreateOptions{
 				Factory:         f,
 				IOStreams:       streams,
 				CueTemplateName: CueTemplateTimeChaos,
 				GVR:             GetGVR(Group, Version, ResourceTimeChaos),
 			},
-			Action: action,
+			Action: act,
 		},
 	}
 	o.CreateOptions.PreCreate = o.PreCreate

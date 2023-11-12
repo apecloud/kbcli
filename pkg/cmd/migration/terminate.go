@@ -26,13 +26,13 @@ import (
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 
-	"github.com/apecloud/kbcli/pkg/delete"
+	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
 )
 
 func NewMigrationTerminateCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := delete.NewDeleteOptions(f, streams, types.MigrationTaskGVR())
+	o := action.NewDeleteOptions(f, streams, types.MigrationTaskGVR())
 	cmd := &cobra.Command{
 		Use:               "terminate NAME",
 		Short:             "Delete migration task.",
@@ -48,7 +48,7 @@ func NewMigrationTerminateCmd(f cmdutil.Factory, streams genericiooptions.IOStre
 	return cmd
 }
 
-func deleteMigrationTask(o *delete.DeleteOptions, args []string) error {
+func deleteMigrationTask(o *action.DeleteOptions, args []string) error {
 	if len(args) == 0 {
 		return fmt.Errorf("missing migration task name")
 	}

@@ -38,14 +38,14 @@ import (
 	cfgcore "github.com/apecloud/kubeblocks/pkg/configuration/core"
 	cfgutil "github.com/apecloud/kubeblocks/pkg/configuration/util"
 
-	"github.com/apecloud/kbcli/pkg/create"
+	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
 )
 
 type configEditContext struct {
-	create.CreateOptions
+	action.CreateOptions
 
 	clusterName    string
 	componentName  string
@@ -107,7 +107,7 @@ func (c *configEditContext) editConfig(editor editor.Editor, reader io.Reader) e
 	return nil
 }
 
-func newConfigContext(baseOptions create.CreateOptions, clusterName, componentName, configSpec, file string) *configEditContext {
+func newConfigContext(baseOptions action.CreateOptions, clusterName, componentName, configSpec, file string) *configEditContext {
 	return &configEditContext{
 		CreateOptions:  baseOptions,
 		clusterName:    clusterName,

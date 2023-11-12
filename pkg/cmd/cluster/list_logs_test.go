@@ -38,8 +38,8 @@ import (
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	"github.com/apecloud/kubeblocks/pkg/constant"
 
+	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/cluster"
-	"github.com/apecloud/kbcli/pkg/exec"
 )
 
 var _ = Describe("listLogs test", func() {
@@ -115,7 +115,7 @@ var _ = Describe("listLogs test", func() {
 		}
 		dataObj.Pods.Items = append(dataObj.Pods.Items, pod)
 		o := &ListLogsOptions{
-			exec: &exec.ExecOptions{},
+			exec: &action.ExecOptions{},
 			IOStreams: genericiooptions.IOStreams{
 				Out:    os.Stdout,
 				ErrOut: os.Stdout,

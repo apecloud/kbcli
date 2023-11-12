@@ -17,7 +17,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package edit
+package action
 
 import (
 	"testing"
@@ -26,7 +26,10 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestList(t *testing.T) {
+// These tests use Ginkgo (BDD-style Go testing framework). Refer to
+// http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
+
+func TestCreate(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Edit Suite")
+	RunSpecs(t, "Create Suite")
 }

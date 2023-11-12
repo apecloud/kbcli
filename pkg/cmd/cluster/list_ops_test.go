@@ -26,6 +26,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
@@ -33,7 +34,7 @@ import (
 
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 
-	"github.com/apecloud/kbcli/pkg/list"
+	"github.com/apecloud/kbcli/pkg/action"
 	clitesting "github.com/apecloud/kbcli/pkg/testing"
 	"github.com/apecloud/kbcli/pkg/types"
 )
@@ -116,7 +117,7 @@ var _ = Describe("Expose", func() {
 	initOpsOption := func(status []string, opsTypes []string) *opsListOptions {
 		streams, _, _, _ = genericiooptions.NewTestIOStreams()
 		return &opsListOptions{
-			ListOptions: list.NewListOptions(tf, streams, types.OpsGVR()),
+			ListOptions: action.NewListOptions(tf, streams, types.OpsGVR()),
 			status:      status,
 			opsType:     opsTypes,
 		}

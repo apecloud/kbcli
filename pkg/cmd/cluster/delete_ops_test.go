@@ -38,7 +38,7 @@ import (
 
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 
-	"github.com/apecloud/kbcli/pkg/delete"
+	"github.com/apecloud/kbcli/pkg/action"
 	clitesting "github.com/apecloud/kbcli/pkg/testing"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
@@ -105,7 +105,7 @@ var _ = Describe("Expose", func() {
 		testLabel := "kubeblocks.io/test=test"
 
 		By("test delete OpsRequest with cluster")
-		o := delete.NewDeleteOptions(tf, streams, types.OpsGVR())
+		o := action.NewDeleteOptions(tf, streams, types.OpsGVR())
 		Expect(completeForDeleteOps(o, args)).Should(Succeed())
 		Expect(o.LabelSelector == clusterLabel).Should(BeTrue())
 
@@ -126,7 +126,7 @@ var _ = Describe("Expose", func() {
 		initClient(runningOps)
 
 		By("expect error when deleting running opsRequest")
-		o := delete.NewDeleteOptions(tf, streams, types.OpsGVR())
+		o := action.NewDeleteOptions(tf, streams, types.OpsGVR())
 		o.PreDeleteHook = preDeleteOps
 		o.Names = []string{runningOps.Name}
 		in.Write([]byte(runningOps.Name + "\n"))

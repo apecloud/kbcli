@@ -22,6 +22,7 @@ package cluster
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	"k8s.io/client-go/dynamic"
@@ -29,7 +30,7 @@ import (
 
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 
-	"github.com/apecloud/kbcli/pkg/patch"
+	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/testing"
 	"github.com/apecloud/kbcli/pkg/types"
 )
@@ -58,7 +59,7 @@ var _ = Describe("cluster update", func() {
 		var args []string
 		BeforeEach(func() {
 			cmd = NewUpdateCmd(tf, streams)
-			o = &updateOptions{Options: patch.NewOptions(tf, streams, types.ClusterGVR())}
+			o = &updateOptions{PatchOptions: action.NewPatchOptions(tf, streams, types.ClusterGVR())}
 			args = []string{"c1"}
 
 		})
