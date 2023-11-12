@@ -16,7 +16,7 @@
 ################################################################################
 
 APP_NAME = kbcli
-VERSION ?= 0.8.0-alpha.0
+VERSION ?= 0.9.0-alpha.0
 GITHUB_PROXY ?=
 GIT_COMMIT  = $(shell git rev-list -1 HEAD)
 GIT_VERSION = $(shell git describe --always --abbrev=0 --tag)
