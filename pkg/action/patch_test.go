@@ -17,7 +17,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package patch
+package action
 
 import (
 	. "github.com/onsi/ginkgo/v2"
@@ -45,7 +45,7 @@ var _ = Describe("Patch", func() {
 
 	It("complete", func() {
 		cmd := &cobra.Command{}
-		o := NewOptions(tf, streams, types.ClusterGVR())
+		o := NewPatchOptions(tf, streams, types.ClusterGVR())
 		o.AddFlags(cmd)
 		Expect(o.complete(cmd)).Should(HaveOccurred())
 
@@ -55,7 +55,7 @@ var _ = Describe("Patch", func() {
 
 	It("run", func() {
 		cmd := &cobra.Command{}
-		o := NewOptions(tf, streams, types.ClusterGVR())
+		o := NewPatchOptions(tf, streams, types.ClusterGVR())
 		o.Names = []string{"c1"}
 		o.AddFlags(cmd)
 

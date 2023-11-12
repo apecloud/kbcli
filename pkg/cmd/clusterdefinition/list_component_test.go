@@ -38,7 +38,7 @@ import (
 
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 
-	"github.com/apecloud/kbcli/pkg/list"
+	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/testing"
 	"github.com/apecloud/kbcli/pkg/types"
 )
@@ -91,7 +91,7 @@ var _ = Describe("clusterdefinition list components", func() {
 	})
 
 	It("cd list-components when the cd do not exist", func() {
-		o := list.NewListOptions(tf, streams, types.ClusterDefGVR())
+		o := action.NewListOptions(tf, streams, types.ClusterDefGVR())
 		o.AllNamespaces = true
 		codec := scheme.Codecs.LegacyCodec(scheme.Scheme.PrioritizedVersionsAllGroups()...)
 		tf.UnstructuredClient = &clientfake.RESTClient{

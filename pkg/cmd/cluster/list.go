@@ -29,8 +29,8 @@ import (
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
 
+	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/cluster"
-	"github.com/apecloud/kbcli/pkg/list"
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
@@ -76,7 +76,7 @@ var (
 )
 
 func NewListCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := list.NewListOptions(f, streams, types.ClusterGVR())
+	o := action.NewListOptions(f, streams, types.ClusterGVR())
 	cmd := &cobra.Command{
 		Use:               "list [NAME]",
 		Short:             "List clusters.",
@@ -97,7 +97,7 @@ func NewListCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Co
 }
 
 func NewListInstancesCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := list.NewListOptions(f, streams, types.ClusterGVR())
+	o := action.NewListOptions(f, streams, types.ClusterGVR())
 	cmd := &cobra.Command{
 		Use:               "list-instances",
 		Short:             "List cluster instances.",
@@ -115,7 +115,7 @@ func NewListInstancesCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) 
 }
 
 func NewListComponentsCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := list.NewListOptions(f, streams, types.ClusterGVR())
+	o := action.NewListOptions(f, streams, types.ClusterGVR())
 	cmd := &cobra.Command{
 		Use:               "list-components",
 		Short:             "List cluster components.",
@@ -133,7 +133,7 @@ func NewListComponentsCmd(f cmdutil.Factory, streams genericiooptions.IOStreams)
 }
 
 func NewListEventsCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := list.NewListOptions(f, streams, types.ClusterGVR())
+	o := action.NewListOptions(f, streams, types.ClusterGVR())
 	cmd := &cobra.Command{
 		Use:               "list-events",
 		Short:             "List cluster events.",
@@ -150,7 +150,7 @@ func NewListEventsCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *co
 	return cmd
 }
 
-func run(o *list.ListOptions, printType cluster.PrintType) error {
+func run(o *action.ListOptions, printType cluster.PrintType) error {
 	// if format is JSON or YAML, use default printer to output the result.
 	if o.Format == printer.JSON || o.Format == printer.YAML {
 		_, err := o.Run()

@@ -36,7 +36,7 @@ import (
 
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 
-	"github.com/apecloud/kbcli/pkg/delete"
+	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
 )
@@ -52,7 +52,7 @@ var (
 )
 
 func NewDeleteOpsCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := delete.NewDeleteOptions(f, streams, types.OpsGVR())
+	o := action.NewDeleteOptions(f, streams, types.OpsGVR())
 	o.PreDeleteHook = preDeleteOps
 	cmd := &cobra.Command{
 		Use:               "delete-ops",
@@ -70,7 +70,7 @@ func NewDeleteOpsCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cob
 	return cmd
 }
 
-func preDeleteOps(o *delete.DeleteOptions, obj runtime.Object) error {
+func preDeleteOps(o *action.DeleteOptions, obj runtime.Object) error {
 	unstructured := obj.(*unstructured.Unstructured)
 	opsRequest := &appsv1alpha1.OpsRequest{}
 	if err := runtime.DefaultUnstructuredConverter.FromUnstructured(unstructured.Object, opsRequest); err != nil {
@@ -109,7 +109,7 @@ func preDeleteOps(o *delete.DeleteOptions, obj runtime.Object) error {
 // completeForDeleteOps completes cmd for delete OpsRequest, if resource name
 // is not specified, construct a label selector based on the cluster name to
 // delete all OpeRequests belonging to the cluster.
-func completeForDeleteOps(o *delete.DeleteOptions, args []string) error {
+func completeForDeleteOps(o *action.DeleteOptions, args []string) error {
 	// If resource name is not empty, delete these resources by name, do not need
 	// to construct the label selector.
 	if len(o.Names) > 0 {

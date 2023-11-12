@@ -16,7 +16,7 @@
 ################################################################################
 
 APP_NAME = kbcli
-VERSION ?= 0.8.0-alpha.0
+VERSION ?= 0.9.0-alpha.0
 GITHUB_PROXY ?=
 GIT_COMMIT  = $(shell git rev-list -1 HEAD)
 GIT_VERSION = $(shell git describe --always --abbrev=0 --tag)
@@ -231,7 +231,8 @@ clean-kbcli: ## Clean bin/kbcli*.
 	rm -f bin/kbcli*
 
 .PHONY: kbcli-doc
-kbcli-doc: generate ## generate CLI command reference manual.
+kbcli-doc: build-kbcli-embed-chart ## generate CLI command reference manual.
+
 	$(GO) run -tags $(BUILD_TAGS) ./hack/docgen/cli/main.go ./docs/user_docs/cli
 
 .PHONY: install-docker-buildx

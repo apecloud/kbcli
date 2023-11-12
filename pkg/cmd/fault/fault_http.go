@@ -31,7 +31,7 @@ import (
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
 
-	"github.com/apecloud/kbcli/pkg/create"
+	"github.com/apecloud/kbcli/pkg/action"
 )
 
 var faultHTTPExample = templates.Examples(`
@@ -95,16 +95,16 @@ type HTTPChaosOptions struct {
 	FaultBaseOptions
 }
 
-func NewHTTPChaosOptions(f cmdutil.Factory, streams genericiooptions.IOStreams, action string) *HTTPChaosOptions {
+func NewHTTPChaosOptions(f cmdutil.Factory, streams genericiooptions.IOStreams, act string) *HTTPChaosOptions {
 	o := &HTTPChaosOptions{
 		FaultBaseOptions: FaultBaseOptions{
-			CreateOptions: create.CreateOptions{
+			CreateOptions: action.CreateOptions{
 				Factory:         f,
 				IOStreams:       streams,
 				CueTemplateName: CueTemplateHTTPChaos,
 				GVR:             GetGVR(Group, Version, ResourceHTTPChaos),
 			},
-			Action: action,
+			Action: act,
 		},
 	}
 	o.CreateOptions.PreCreate = o.PreCreate

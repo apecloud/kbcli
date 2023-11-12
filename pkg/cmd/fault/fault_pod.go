@@ -28,7 +28,7 @@ import (
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
 
-	"github.com/apecloud/kbcli/pkg/create"
+	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/util"
 )
 
@@ -75,16 +75,16 @@ type PodChaosOptions struct {
 	FaultBaseOptions
 }
 
-func NewPodChaosOptions(f cmdutil.Factory, streams genericiooptions.IOStreams, action string) *PodChaosOptions {
+func NewPodChaosOptions(f cmdutil.Factory, streams genericiooptions.IOStreams, act string) *PodChaosOptions {
 	o := &PodChaosOptions{
 		FaultBaseOptions: FaultBaseOptions{
-			CreateOptions: create.CreateOptions{
+			CreateOptions: action.CreateOptions{
 				Factory:         f,
 				IOStreams:       streams,
 				CueTemplateName: CueTemplatePodChaos,
 				GVR:             GetGVR(Group, Version, ResourcePodChaos),
 			},
-			Action: action,
+			Action: act,
 		},
 	}
 	o.CreateOptions.PreCreate = o.PreCreate

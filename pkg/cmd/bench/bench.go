@@ -39,8 +39,8 @@ import (
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
 
+	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/cluster"
-	"github.com/apecloud/kbcli/pkg/list"
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
@@ -275,7 +275,7 @@ func (o *benchListOption) run() error {
 
 	var infos []*resource.Info
 	for _, gvr := range benchGVRList {
-		bench := list.NewListOptions(o.Factory, o.IOStreams, gvr)
+		bench := action.NewListOptions(o.Factory, o.IOStreams, gvr)
 
 		bench.Print = false
 		bench.LabelSelector = o.LabelSelector
@@ -460,7 +460,7 @@ func registerBenchmarkCompletionFunc(cmd *cobra.Command, f cmdutil.Factory, args
 func validateBenchmarkExist(factory cmdutil.Factory, streams genericiooptions.IOStreams, name string) error {
 	var infos []*resource.Info
 	for _, gvr := range benchGVRList {
-		bench := list.NewListOptions(factory, streams, gvr)
+		bench := action.NewListOptions(factory, streams, gvr)
 
 		bench.Print = false
 		result, err := bench.Run()

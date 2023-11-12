@@ -51,8 +51,8 @@ import (
 	"github.com/apecloud/kubeblocks/pkg/dataprotection/utils"
 	"github.com/apecloud/kubeblocks/pkg/gotemplate"
 
+	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/cluster"
-	"github.com/apecloud/kbcli/pkg/patch"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
 )
@@ -107,12 +107,12 @@ type updateOptions struct {
 	cluster   *appsv1alpha1.Cluster
 
 	UpdatableFlags
-	*patch.Options
+	*action.PatchOptions
 }
 
 func NewUpdateCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := &updateOptions{Options: patch.NewOptions(f, streams, types.ClusterGVR())}
-	o.Options.OutputOperation = func(didPatch bool) string {
+	o := &updateOptions{PatchOptions: action.NewPatchOptions(f, streams, types.ClusterGVR())}
+	o.PatchOptions.OutputOperation = func(didPatch bool) string {
 		if didPatch {
 			return "updated"
 		}
@@ -130,7 +130,7 @@ func NewUpdateCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.
 		},
 	}
 	o.UpdatableFlags.addFlags(cmd)
-	o.Options.AddFlags(cmd)
+	o.PatchOptions.AddFlags(cmd)
 
 	return cmd
 }

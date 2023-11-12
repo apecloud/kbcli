@@ -61,9 +61,9 @@ import (
 	"github.com/apecloud/kubeblocks/pkg/dataprotection/utils/boolptr"
 	viper "github.com/apecloud/kubeblocks/pkg/viperx"
 
+	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/cluster"
 	classutil "github.com/apecloud/kbcli/pkg/cmd/class"
-	"github.com/apecloud/kbcli/pkg/create"
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
@@ -253,7 +253,7 @@ type CreateOptions struct {
 	Cmd *cobra.Command `json:"-"`
 
 	UpdatableFlags
-	create.CreateOptions `json:"-"`
+	action.CreateOptions `json:"-"`
 }
 
 func NewCreateCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
@@ -304,7 +304,7 @@ func NewCreateCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.
 }
 
 func NewCreateOptions(f cmdutil.Factory, streams genericiooptions.IOStreams) *CreateOptions {
-	o := &CreateOptions{CreateOptions: create.CreateOptions{
+	o := &CreateOptions{CreateOptions: action.CreateOptions{
 		Factory:         f,
 		IOStreams:       streams,
 		CueTemplateName: CueTemplateName,
@@ -1310,7 +1310,7 @@ func (o *CreateOptions) validateClusterVersion() error {
 		return err
 	}
 	// if dryRun is set, run in quiet mode, avoid to output yaml file with the info
-	if dryRun != create.DryRunNone {
+	if dryRun != action.DryRunNone {
 		return nil
 	}
 

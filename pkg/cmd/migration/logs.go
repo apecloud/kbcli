@@ -36,7 +36,7 @@ import (
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/polymorphichelpers"
 
-	"github.com/apecloud/kbcli/pkg/exec"
+	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/types"
 	migrationv1 "github.com/apecloud/kbcli/pkg/types/migrationapi"
 	"github.com/apecloud/kbcli/pkg/util"
@@ -47,13 +47,13 @@ type LogsOptions struct {
 	step     string
 	Client   *kubernetes.Clientset
 	Dynamic  dynamic.Interface
-	*exec.ExecOptions
+	*action.ExecOptions
 	logOptions cmdlogs.LogsOptions
 }
 
 func NewMigrationLogsCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
 	l := &LogsOptions{
-		ExecOptions: exec.NewExecOptions(f, streams),
+		ExecOptions: action.NewExecOptions(f, streams),
 		logOptions: cmdlogs.LogsOptions{
 			Tail:      -1,
 			IOStreams: streams,

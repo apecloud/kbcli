@@ -26,7 +26,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestAppp(t *testing.T) {
+func TestAddon(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Addon Cmd Test Suite")
 }

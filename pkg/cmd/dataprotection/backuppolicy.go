@@ -25,8 +25,8 @@ import (
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
 
+	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/cmd/cluster"
-	"github.com/apecloud/kbcli/pkg/list"
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
@@ -54,7 +54,7 @@ var (
 )
 
 func newListBackupPolicyCmd(f cmdutil.Factory, streams genericclioptions.IOStreams) *cobra.Command {
-	o := list.NewListOptions(f, streams, types.BackupPolicyGVR())
+	o := action.NewListOptions(f, streams, types.BackupPolicyGVR())
 	clusterName := ""
 	cmd := &cobra.Command{
 		Use:               "list-backup-policy",

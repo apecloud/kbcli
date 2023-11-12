@@ -1,13 +1,18 @@
 ---
-title: kbcli backuprepo
+title: kbcli context describe
 ---
 
-BackupRepo command.
+Get the description information of a context.
+
+```
+kbcli context describe [flags]
+```
 
 ### Options
 
 ```
-  -h, --help   help for backuprepo
+  -h, --help            help for describe
+  -o, --output string   Output format (table|yaml|json) (default "human")
 ```
 
 ### Options inherited from parent commands
@@ -36,11 +41,7 @@ BackupRepo command.
 
 ### SEE ALSO
 
-
-* [kbcli backuprepo create](kbcli_backuprepo_create.md)	 - Create a backup repo
-* [kbcli backuprepo describe](kbcli_backuprepo_describe.md)	 - Describe a backup repository.
-* [kbcli backuprepo list](kbcli_backuprepo_list.md)	 - List Backup Repositories.
-* [kbcli backuprepo update](kbcli_backuprepo_update.md)	 - Update a backup repository.
+* [kbcli context](kbcli_context.md)	 - kbcli context allows you to manage cloud context. This command is currently only applicable to cloud, and currently does not support switching the context of the local k8s cluster.
 
 #### Go Back to [CLI Overview](cli.md) Homepage.
 

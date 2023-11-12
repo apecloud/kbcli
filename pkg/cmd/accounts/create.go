@@ -53,7 +53,7 @@ func (o *CreateUserOptions) AddFlags(cmd *cobra.Command) {
 	// cmd.Flags().DurationVar(&o.info.ExpireAt, "expire", 0, "Optional. Specify the expired time of password. The default value is 0, which means the user will never expire.")
 }
 
-func (o CreateUserOptions) Validate(args []string) error {
+func (o *CreateUserOptions) Validate(args []string) error {
 	if err := o.AccountBaseOptions.Validate(args); err != nil {
 		return err
 	}

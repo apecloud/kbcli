@@ -41,8 +41,8 @@ import (
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
 
+	"github.com/apecloud/kbcli/pkg/action"
 	cp "github.com/apecloud/kbcli/pkg/cloudprovider"
-	"github.com/apecloud/kbcli/pkg/create"
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/util"
 	"github.com/apecloud/kbcli/pkg/util/prompt"
@@ -96,12 +96,12 @@ type NodeChaoOptions struct {
 
 	AutoApprove bool `json:"-"`
 
-	create.CreateOptions `json:"-"`
+	action.CreateOptions `json:"-"`
 }
 
 func NewNodeOptions(f cmdutil.Factory, streams genericiooptions.IOStreams) *NodeChaoOptions {
 	o := &NodeChaoOptions{
-		CreateOptions: create.CreateOptions{
+		CreateOptions: action.CreateOptions{
 			Factory:         f,
 			IOStreams:       streams,
 			CueTemplateName: CueTemplateNodeChaos,

@@ -24,13 +24,13 @@ import (
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 
-	"github.com/apecloud/kbcli/pkg/list"
+	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
 )
 
 func NewMigrationListCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := list.NewListOptions(f, streams, types.MigrationTaskGVR())
+	o := action.NewListOptions(f, streams, types.MigrationTaskGVR())
 	cmd := &cobra.Command{
 		Use:               "list [NAME]",
 		Short:             "List migration tasks.",

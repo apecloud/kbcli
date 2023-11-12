@@ -57,10 +57,8 @@ import (
 	"github.com/apecloud/kubeblocks/pkg/dataprotection/restore"
 	dptypes "github.com/apecloud/kubeblocks/pkg/dataprotection/types"
 
+	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/cluster"
-	"github.com/apecloud/kbcli/pkg/create"
-	"github.com/apecloud/kbcli/pkg/delete"
-	"github.com/apecloud/kbcli/pkg/list"
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
@@ -132,11 +130,11 @@ type CreateBackupOptions struct {
 	RetentionPeriod  string `json:"retentionPeriod"`
 	ParentBackupName string `json:"parentBackupName"`
 
-	create.CreateOptions `json:"-"`
+	action.CreateOptions `json:"-"`
 }
 
 type ListBackupOptions struct {
-	*list.ListOptions
+	*action.ListOptions
 	BackupName string
 }
 
@@ -266,7 +264,7 @@ func (o *CreateBackupOptions) getDefaultBackupPolicy() (string, error) {
 }
 
 func NewCreateBackupCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	customOutPut := func(opt *create.CreateOptions) {
+	customOutPut := func(opt *action.CreateOptions) {
 		output := fmt.Sprintf("Backup %s created successfully, you can view the progress:", opt.Name)
 		printer.PrintLine(output)
 		nextLine := fmt.Sprintf("\tkbcli cluster list-backups --name=%s -n %s", opt.Name, opt.Namespace)
@@ -274,7 +272,7 @@ func NewCreateBackupCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *
 	}
 
 	o := &CreateBackupOptions{
-		CreateOptions: create.CreateOptions{
+		CreateOptions: action.CreateOptions{
 			IOStreams:       streams,
 			Factory:         f,
 			GVR:             types.BackupGVR(),
@@ -424,7 +422,7 @@ func PrintBackupList(o ListBackupOptions) error {
 }
 
 func NewListBackupCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := &ListBackupOptions{ListOptions: list.NewListOptions(f, streams, types.BackupGVR())}
+	o := &ListBackupOptions{ListOptions: action.NewListOptions(f, streams, types.BackupGVR())}
 	cmd := &cobra.Command{
 		Use:               "list-backups",
 		Short:             "List backups.",
@@ -468,7 +466,7 @@ func NewDescribeBackupCmd(f cmdutil.Factory, streams genericiooptions.IOStreams)
 }
 
 func NewDeleteBackupCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := delete.NewDeleteOptions(f, streams, types.BackupGVR())
+	o := action.NewDeleteOptions(f, streams, types.BackupGVR())
 	cmd := &cobra.Command{
 		Use:               "delete-backup",
 		Short:             "Delete a backup.",
@@ -486,7 +484,7 @@ func NewDeleteBackupCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *
 }
 
 // completeForDeleteBackup completes cmd for delete backup
-func completeForDeleteBackup(o *delete.DeleteOptions, args []string) error {
+func completeForDeleteBackup(o *action.DeleteOptions, args []string) error {
 	if len(args) == 0 {
 		return errors.New("Missing cluster name")
 	}
@@ -515,7 +513,7 @@ type CreateRestoreOptions struct {
 	RestoreTimeStr      string     `json:"restoreTimeStr,omitempty"`
 	VolumeRestorePolicy string     `json:"volumeRestorePolicy,omitempty"`
 
-	create.CreateOptions `json:"-"`
+	action.CreateOptions `json:"-"`
 }
 
 func (o *CreateRestoreOptions) getClusterObject(backup *dpv1alpha1.Backup) (*appsv1alpha1.Cluster, error) {
@@ -614,7 +612,7 @@ func (o *CreateRestoreOptions) Validate() error {
 
 func NewCreateRestoreCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
 	o := &CreateRestoreOptions{}
-	o.CreateOptions = create.CreateOptions{
+	o.CreateOptions = action.CreateOptions{
 		IOStreams: streams,
 		Factory:   f,
 		Options:   o,
@@ -639,7 +637,7 @@ func NewCreateRestoreCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) 
 }
 
 func NewListBackupPolicyCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := list.NewListOptions(f, streams, types.BackupPolicyGVR())
+	o := action.NewListOptions(f, streams, types.BackupPolicyGVR())
 	cmd := &cobra.Command{
 		Use:               "list-backup-policy",
 		Short:             "List backups policies.",
@@ -659,7 +657,7 @@ func NewListBackupPolicyCmd(f cmdutil.Factory, streams genericiooptions.IOStream
 }
 
 // PrintBackupPolicyList prints the backup policy list.
-func PrintBackupPolicyList(o list.ListOptions) error {
+func PrintBackupPolicyList(o action.ListOptions) error {
 	var backupPolicyNameMap = make(map[string]bool)
 	for _, name := range o.Names {
 		backupPolicyNameMap[name] = true

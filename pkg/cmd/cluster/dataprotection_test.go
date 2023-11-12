@@ -43,10 +43,8 @@ import (
 	"github.com/apecloud/kubeblocks/pkg/constant"
 	dptypes "github.com/apecloud/kubeblocks/pkg/dataprotection/types"
 
+	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/cluster"
-	"github.com/apecloud/kbcli/pkg/create"
-	"github.com/apecloud/kbcli/pkg/delete"
-	"github.com/apecloud/kbcli/pkg/list"
 	"github.com/apecloud/kbcli/pkg/testing"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
@@ -136,7 +134,7 @@ var _ = Describe("DataProtection", func() {
 		It("validate create backup", func() {
 			By("without cluster name")
 			o := &CreateBackupOptions{
-				CreateOptions: create.CreateOptions{
+				CreateOptions: action.CreateOptions{
 					Dynamic:   testing.FakeDynamicClient(),
 					IOStreams: streams,
 					Factory:   tf,
@@ -182,7 +180,7 @@ var _ = Describe("DataProtection", func() {
 
 			By("test with specified backupMethod and backupPolicy")
 			o := &CreateBackupOptions{
-				CreateOptions: create.CreateOptions{
+				CreateOptions: action.CreateOptions{
 					IOStreams:       streams,
 					Factory:         tf,
 					GVR:             types.BackupGVR(),
@@ -207,7 +205,7 @@ var _ = Describe("DataProtection", func() {
 		clusterLabel := util.BuildLabelSelectorByNames("", args)
 
 		By("test delete-backup with cluster")
-		o := delete.NewDeleteOptions(tf, streams, types.BackupGVR())
+		o := action.NewDeleteOptions(tf, streams, types.BackupGVR())
 		Expect(completeForDeleteBackup(o, args)).Should(HaveOccurred())
 
 		By("test delete-backup with cluster and force")
@@ -228,7 +226,7 @@ var _ = Describe("DataProtection", func() {
 		Expect(cmd).ShouldNot(BeNil())
 		By("test list-backup cmd with no backup")
 		tf.FakeDynamicClient = testing.FakeDynamicClient()
-		o := ListBackupOptions{ListOptions: list.NewListOptions(tf, streams, types.BackupGVR())}
+		o := ListBackupOptions{ListOptions: action.NewListOptions(tf, streams, types.BackupGVR())}
 		Expect(PrintBackupList(o)).Should(Succeed())
 		Expect(o.ErrOut.(*bytes.Buffer).String()).Should(ContainSubstring("No backups found"))
 

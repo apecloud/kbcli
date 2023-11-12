@@ -25,7 +25,7 @@ import (
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
 
-	"github.com/apecloud/kbcli/pkg/list"
+	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
 )
@@ -49,7 +49,7 @@ func NewClusterDefinitionCmd(f cmdutil.Factory, streams genericiooptions.IOStrea
 }
 
 func NewListCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := list.NewListOptions(f, streams, types.ClusterDefGVR())
+	o := action.NewListOptions(f, streams, types.ClusterDefGVR())
 	cmd := &cobra.Command{
 		Use:               "list",
 		Short:             "List ClusterDefinitions.",

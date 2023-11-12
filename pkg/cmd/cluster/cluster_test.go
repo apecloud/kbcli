@@ -36,8 +36,7 @@ import (
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	testapps "github.com/apecloud/kubeblocks/pkg/testutil/apps"
 
-	"github.com/apecloud/kbcli/pkg/create"
-	kbclidelete "github.com/apecloud/kbcli/pkg/delete"
+	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/testing"
 	"github.com/apecloud/kbcli/pkg/types"
 )
@@ -93,7 +92,7 @@ var _ = Describe("Cluster", func() {
 				UpdatableFlags: UpdatableFlags{
 					TerminationPolicy: "Delete",
 				},
-				CreateOptions: create.CreateOptions{
+				CreateOptions: action.CreateOptions{
 					Factory:   tf,
 					Dynamic:   tf.FakeDynamicClient,
 					IOStreams: streams,
@@ -136,7 +135,7 @@ var _ = Describe("Cluster", func() {
 				resourceConstraint,
 			)
 			o = &CreateOptions{
-				CreateOptions: create.CreateOptions{
+				CreateOptions: action.CreateOptions{
 					IOStreams:       streams,
 					Name:            clusterName,
 					Dynamic:         tf.FakeDynamicClient,
@@ -296,7 +295,7 @@ var _ = Describe("Cluster", func() {
 				UpdatableFlags: UpdatableFlags{
 					TerminationPolicy: "Delete",
 				},
-				CreateOptions: create.CreateOptions{
+				CreateOptions: action.CreateOptions{
 					Factory:   tf,
 					Namespace: namespace,
 					Name:      "mycluster",
@@ -448,7 +447,7 @@ var _ = Describe("Cluster", func() {
 	})
 
 	Context("delete cluster", func() {
-		var o *kbclidelete.DeleteOptions
+		var o *action.DeleteOptions
 
 		BeforeEach(func() {
 			tf = testing.NewTestFactory(namespace)
@@ -466,7 +465,7 @@ var _ = Describe("Cluster", func() {
 			}
 
 			tf.Client = tf.UnstructuredClient
-			o = &kbclidelete.DeleteOptions{
+			o = &action.DeleteOptions{
 				Factory:     tf,
 				IOStreams:   streams,
 				GVR:         types.ClusterGVR(),

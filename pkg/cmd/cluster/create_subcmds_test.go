@@ -39,8 +39,8 @@ import (
 
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 
+	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/cluster"
-	"github.com/apecloud/kbcli/pkg/create"
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/testing"
 	"github.com/apecloud/kbcli/pkg/types"
@@ -54,7 +54,7 @@ var _ = Describe("create cluster by cluster type", func() {
 	var (
 		tf            *cmdtesting.TestFactory
 		streams       genericiooptions.IOStreams
-		createOptions *create.CreateOptions
+		createOptions *action.CreateOptions
 		mockClient    = func(data runtime.Object) *cmdtesting.TestFactory {
 			tf = testing.NewTestFactory(testing.Namespace)
 			codec := scheme.Codecs.LegacyCodec(scheme.Scheme.PrioritizedVersionsAllGroups()...)
@@ -75,7 +75,7 @@ var _ = Describe("create cluster by cluster type", func() {
 		_ = metav1.AddMetaToScheme(scheme.Scheme)
 		streams, _, _, _ = genericiooptions.NewTestIOStreams()
 		tf = mockClient(testing.FakeClusterVersion())
-		createOptions = &create.CreateOptions{
+		createOptions = &action.CreateOptions{
 			IOStreams: streams,
 			Factory:   tf,
 		}

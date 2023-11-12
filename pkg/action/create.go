@@ -17,7 +17,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package create
+package action
 
 import (
 	"context"
@@ -43,7 +43,6 @@ import (
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/scheme"
 
-	"github.com/apecloud/kbcli/pkg/edit"
 	"github.com/apecloud/kbcli/pkg/printer"
 )
 
@@ -159,7 +158,7 @@ func (o *CreateOptions) Run() error {
 	}
 
 	if o.EditBeforeCreate {
-		customEdit := edit.NewCustomEditOptions(o.Factory, o.IOStreams, "create")
+		customEdit := NewCustomEditOptions(o.Factory, o.IOStreams, "create")
 		if err := customEdit.Run(resObj); err != nil {
 			return err
 		}

@@ -38,8 +38,8 @@ import (
 
 	"github.com/apecloud/kubeblocks/pkg/constant"
 
+	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/cluster"
-	"github.com/apecloud/kbcli/pkg/exec"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
 )
@@ -81,14 +81,14 @@ type LogsOptions struct {
 	clusterName string
 	fileType    string
 	filePath    string
-	*exec.ExecOptions
+	*action.ExecOptions
 	logOptions cmdlogs.LogsOptions
 }
 
 // NewLogsCmd returns the logic of accessing cluster log file
 func NewLogsCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
 	l := &LogsOptions{
-		ExecOptions: exec.NewExecOptions(f, streams),
+		ExecOptions: action.NewExecOptions(f, streams),
 		logOptions: cmdlogs.LogsOptions{
 			IOStreams: streams,
 		},

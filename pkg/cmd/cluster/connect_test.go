@@ -35,7 +35,7 @@ import (
 	clientfake "k8s.io/client-go/rest/fake"
 	cmdtesting "k8s.io/kubectl/pkg/cmd/testing"
 
-	"github.com/apecloud/kbcli/pkg/exec"
+	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/testing"
 	"github.com/apecloud/kbcli/pkg/types"
 )
@@ -88,7 +88,7 @@ var _ = Describe("connection", func() {
 	})
 
 	It("validate", func() {
-		o := &ConnectOptions{ExecOptions: exec.NewExecOptions(tf, streams)}
+		o := &ConnectOptions{ExecOptions: action.NewExecOptions(tf, streams)}
 
 		By("specified more than one cluster")
 		Expect(o.validate([]string{"c1", "c2"})).Should(HaveOccurred())
@@ -113,14 +113,14 @@ var _ = Describe("connection", func() {
 	})
 
 	It("complete by cluster name", func() {
-		o := &ConnectOptions{ExecOptions: exec.NewExecOptions(tf, streams)}
+		o := &ConnectOptions{ExecOptions: action.NewExecOptions(tf, streams)}
 		Expect(o.validate([]string{clusterName})).Should(Succeed())
 		Expect(o.complete()).Should(Succeed())
 		Expect(o.Pod).ShouldNot(BeNil())
 	})
 
 	It("complete by pod name", func() {
-		o := &ConnectOptions{ExecOptions: exec.NewExecOptions(tf, streams)}
+		o := &ConnectOptions{ExecOptions: action.NewExecOptions(tf, streams)}
 		o.PodName = "test-pod-0"
 		Expect(o.validate([]string{})).Should(Succeed())
 		Expect(o.complete()).Should(Succeed())
@@ -128,7 +128,7 @@ var _ = Describe("connection", func() {
 	})
 
 	It("show example", func() {
-		o := &ConnectOptions{ExecOptions: exec.NewExecOptions(tf, streams)}
+		o := &ConnectOptions{ExecOptions: action.NewExecOptions(tf, streams)}
 		Expect(o.validate([]string{clusterName})).Should(Succeed())
 		Expect(o.complete()).Should(Succeed())
 
@@ -157,7 +157,7 @@ var _ = Describe("connection", func() {
 		})
 
 		It("--show-password", func() {
-			o := &ConnectOptions{ExecOptions: exec.NewExecOptions(tf, streams)}
+			o := &ConnectOptions{ExecOptions: action.NewExecOptions(tf, streams)}
 			Expect(o.validate([]string{clusterName})).Should(Succeed())
 			Expect(o.complete()).Should(Succeed())
 			info, err := o.getConnectionInfo()

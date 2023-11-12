@@ -28,7 +28,7 @@ import (
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
 
-	"github.com/apecloud/kbcli/pkg/create"
+	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/util"
 )
 
@@ -107,16 +107,16 @@ func NewIOChaosCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 	return cmd
 }
 
-func NewIOChaosOptions(f cmdutil.Factory, streams genericiooptions.IOStreams, action string) *IOChaosOptions {
+func NewIOChaosOptions(f cmdutil.Factory, streams genericiooptions.IOStreams, act string) *IOChaosOptions {
 	o := &IOChaosOptions{
 		FaultBaseOptions: FaultBaseOptions{
-			CreateOptions: create.CreateOptions{
+			CreateOptions: action.CreateOptions{
 				Factory:         f,
 				IOStreams:       streams,
 				CueTemplateName: CueTemplateIOChaos,
 				GVR:             GetGVR(Group, Version, ResourceIOChaos),
 			},
-			Action: action,
+			Action: act,
 		},
 	}
 	o.CreateOptions.PreCreate = o.PreCreate

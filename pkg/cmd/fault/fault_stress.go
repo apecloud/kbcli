@@ -30,7 +30,7 @@ import (
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
 
-	"github.com/apecloud/kbcli/pkg/create"
+	"github.com/apecloud/kbcli/pkg/action"
 )
 
 var faultStressExample = templates.Examples(`
@@ -66,16 +66,16 @@ type StressChaosOptions struct {
 	FaultBaseOptions
 }
 
-func NewStressChaosOptions(f cmdutil.Factory, streams genericiooptions.IOStreams, action string) *StressChaosOptions {
+func NewStressChaosOptions(f cmdutil.Factory, streams genericiooptions.IOStreams, act string) *StressChaosOptions {
 	o := &StressChaosOptions{
 		FaultBaseOptions: FaultBaseOptions{
-			CreateOptions: create.CreateOptions{
+			CreateOptions: action.CreateOptions{
 				Factory:         f,
 				IOStreams:       streams,
 				CueTemplateName: CueTemplateStressChaos,
 				GVR:             GetGVR(Group, Version, ResourceStressChaos),
 			},
-			Action: action,
+			Action: act,
 		},
 	}
 	o.CreateOptions.PreCreate = o.PreCreate

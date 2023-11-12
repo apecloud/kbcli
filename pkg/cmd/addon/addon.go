@@ -48,9 +48,8 @@ import (
 	"github.com/apecloud/kubeblocks/pkg/constant"
 	viper "github.com/apecloud/kubeblocks/pkg/viperx"
 
+	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/cmd/plugin"
-	"github.com/apecloud/kbcli/pkg/list"
-	"github.com/apecloud/kbcli/pkg/patch"
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
@@ -84,7 +83,7 @@ type addonCmdOpts struct {
 
 	addon extensionsv1alpha1.Addon
 
-	*patch.Options
+	*action.PatchOptions
 	addonEnableFlags *addonEnableFlags
 
 	complete func(self *addonCmdOpts, cmd *cobra.Command, args []string) error
@@ -106,7 +105,7 @@ func NewAddonCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.C
 }
 
 func newListCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := list.NewListOptions(f, streams, types.AddonGVR())
+	o := action.NewListOptions(f, streams, types.AddonGVR())
 	cmd := &cobra.Command{
 		Use:               "list",
 		Short:             "List addons.",
@@ -123,10 +122,10 @@ func newListCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Co
 
 func newDescribeCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
 	o := &addonCmdOpts{
-		Options:   patch.NewOptions(f, streams, types.AddonGVR()),
-		Factory:   f,
-		IOStreams: streams,
-		complete:  addonDescribeHandler,
+		PatchOptions: action.NewPatchOptions(f, streams, types.AddonGVR()),
+		Factory:      f,
+		IOStreams:    streams,
+		complete:     addonDescribeHandler,
 	}
 	cmd := &cobra.Command{
 		Use:               "describe ADDON_NAME",
@@ -145,14 +144,14 @@ func newDescribeCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobr
 
 func newEnableCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
 	o := &addonCmdOpts{
-		Options:          patch.NewOptions(f, streams, types.AddonGVR()),
+		PatchOptions:     action.NewPatchOptions(f, streams, types.AddonGVR()),
 		Factory:          f,
 		IOStreams:        streams,
 		addonEnableFlags: &addonEnableFlags{},
 		complete:         addonEnableDisableHandler,
 	}
 
-	o.Options.OutputOperation = func(didPatch bool) string {
+	o.PatchOptions.OutputOperation = func(didPatch bool) string {
 		if didPatch {
 			return "enabled"
 		}
@@ -225,19 +224,19 @@ re-enable the addon (More info on how-to resize a PVC: https://kubernetes.io/doc
 		"set values on the command line (can specify multiple or separate values with commas: key1=val1,key2=val2), it's only being processed if addon's type is helm.")
 	cmd.Flags().BoolVar(&o.addonEnableFlags.Force, "force", false, "ignoring the installable restrictions and forcefully enabling.")
 
-	o.Options.AddFlags(cmd)
+	o.PatchOptions.AddFlags(cmd)
 	return cmd
 }
 
 func newDisableCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
 	o := &addonCmdOpts{
-		Options:   patch.NewOptions(f, streams, types.AddonGVR()),
-		Factory:   f,
-		IOStreams: streams,
-		complete:  addonEnableDisableHandler,
+		PatchOptions: action.NewPatchOptions(f, streams, types.AddonGVR()),
+		Factory:      f,
+		IOStreams:    streams,
+		complete:     addonEnableDisableHandler,
 	}
 
-	o.Options.OutputOperation = func(didPatch bool) string {
+	o.PatchOptions.OutputOperation = func(didPatch bool) string {
 		if didPatch {
 			return "disabled"
 		}
@@ -256,7 +255,7 @@ func newDisableCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 			util.CheckErr(o.Run(cmd))
 		},
 	}
-	o.Options.AddFlags(cmd)
+	o.PatchOptions.AddFlags(cmd)
 	return cmd
 }
 
@@ -764,7 +763,7 @@ func (o *addonCmdOpts) buildPatch(flags []*pflag.Flag) error {
 	return nil
 }
 
-func addonListRun(o *list.ListOptions) error {
+func addonListRun(o *action.ListOptions) error {
 	// if format is JSON or YAML, use default printer to output the result.
 	if o.Format == printer.JSON || o.Format == printer.YAML {
 		_, err := o.Run()
