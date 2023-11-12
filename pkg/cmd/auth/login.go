@@ -247,7 +247,7 @@ func getFirstContext(token string, orgName string) string {
 	}
 
 	if contexts != nil {
-		return contexts[0].Name
+		return contexts.Items[0].Metadata.Name
 	}
 	return ""
 }
