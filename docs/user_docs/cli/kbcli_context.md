@@ -1,13 +1,26 @@
 ---
-title: kbcli backuprepo
+title: kbcli context
 ---
 
-BackupRepo command.
+kbcli context allows you to manage cloud context. This command is currently only applicable to cloud, and currently does not support switching the context of the local k8s cluster.
+
+### Examples
+
+```
+  // Get the context name currently used by the user.
+  kbcli context current
+  // List all contexts created by the current user.
+  kbcli context list
+  // Get the description information of context context1.
+  kbcli context describe context1
+  // Switch to context context2.
+  kbcli context use context2
+```
 
 ### Options
 
 ```
-  -h, --help   help for backuprepo
+  -h, --help   help for context
 ```
 
 ### Options inherited from parent commands
@@ -37,10 +50,10 @@ BackupRepo command.
 ### SEE ALSO
 
 
-* [kbcli backuprepo create](kbcli_backuprepo_create.md)	 - Create a backup repo
-* [kbcli backuprepo describe](kbcli_backuprepo_describe.md)	 - Describe a backup repository.
-* [kbcli backuprepo list](kbcli_backuprepo_list.md)	 - List Backup Repositories.
-* [kbcli backuprepo update](kbcli_backuprepo_update.md)	 - Update a backup repository.
+* [kbcli context current](kbcli_context_current.md)	 - Get the currently used context.
+* [kbcli context describe](kbcli_context_describe.md)	 - Get the description information of a context.
+* [kbcli context list](kbcli_context_list.md)	 - List all created contexts.
+* [kbcli context use](kbcli_context_use.md)	 - Use another context that you have already created.
 
 #### Go Back to [CLI Overview](cli.md) Homepage.
 

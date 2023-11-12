@@ -29,7 +29,6 @@ import (
 	"cuelang.org/go/cue/ast"
 	"cuelang.org/go/cue/cuecontext"
 	cuejson "cuelang.org/go/encoding/json"
-	"github.com/apecloud/kubeblocks/pkg/cli/edit"
 	"github.com/leaanthony/debme"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -159,7 +158,7 @@ func (o *CreateOptions) Run() error {
 	}
 
 	if o.EditBeforeCreate {
-		customEdit := edit.NewCustomEditOptions(o.Factory, o.IOStreams, "create")
+		customEdit := NewCustomEditOptions(o.Factory, o.IOStreams, "create")
 		if err := customEdit.Run(resObj); err != nil {
 			return err
 		}

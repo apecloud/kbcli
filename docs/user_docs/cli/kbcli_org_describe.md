@@ -1,13 +1,18 @@
 ---
-title: kbcli backuprepo
+title: kbcli org describe
 ---
 
-BackupRepo command.
+Get the description information of an organization.
+
+```
+kbcli org describe [flags]
+```
 
 ### Options
 
 ```
-  -h, --help   help for backuprepo
+  -h, --help            help for describe
+  -o, --output string   Output format (human|yaml|json) (default "human")
 ```
 
 ### Options inherited from parent commands
@@ -36,11 +41,7 @@ BackupRepo command.
 
 ### SEE ALSO
 
-
-* [kbcli backuprepo create](kbcli_backuprepo_create.md)	 - Create a backup repo
-* [kbcli backuprepo describe](kbcli_backuprepo_describe.md)	 - Describe a backup repository.
-* [kbcli backuprepo list](kbcli_backuprepo_list.md)	 - List Backup Repositories.
-* [kbcli backuprepo update](kbcli_backuprepo_update.md)	 - Update a backup repository.
+* [kbcli org](kbcli_org.md)	 - kbcli org is used to manage cloud organizations and is only suitable for interacting with cloud.
 
 #### Go Back to [CLI Overview](cli.md) Homepage.
 

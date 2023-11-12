@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/apecloud/kubeblocks/pkg/cli/edit"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -172,7 +171,7 @@ func (o *createSubCmdsOptions) run() error {
 		if err != nil {
 			return err
 		}
-		customEdit := edit.NewCustomEditOptions(o.Factory, o.IOStreams, "create")
+		customEdit := action.NewCustomEditOptions(o.Factory, o.IOStreams, "create")
 		if err = customEdit.Run(clusterObj); err != nil {
 			return err
 		}

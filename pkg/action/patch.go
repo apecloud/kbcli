@@ -24,7 +24,6 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/apecloud/kubeblocks/pkg/cli/edit"
 	jsonpatch "github.com/evanphx/json-patch"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -176,7 +175,7 @@ func (o *PatchOptions) Run(cmd *cobra.Command) error {
 			}
 
 			if o.EditBeforeUpdate {
-				customEdit := edit.NewCustomEditOptions(o.Factory, o.IOStreams, "patched")
+				customEdit := NewCustomEditOptions(o.Factory, o.IOStreams, "patched")
 				if err = customEdit.Run(patchedObj); err != nil {
 					return fmt.Errorf("unable to edit %s %s/%s: %v", info.Mapping.GroupVersionKind.Kind, info.Namespace, info.Name, err)
 				}

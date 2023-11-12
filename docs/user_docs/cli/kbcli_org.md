@@ -1,13 +1,26 @@
 ---
-title: kbcli backuprepo
+title: kbcli org
 ---
 
-BackupRepo command.
+kbcli org is used to manage cloud organizations and is only suitable for interacting with cloud.
+
+### Examples
+
+```
+  // Get the organization name currently used by the user.
+  kbcli org current
+  // List all organizations the current user has joined.
+  kbcli org list
+  // Get the description information of organization org1.
+  kbcli org describe org1
+  // Switch to organization org2.
+  kbcli org switch org2
+```
 
 ### Options
 
 ```
-  -h, --help   help for backuprepo
+  -h, --help   help for org
 ```
 
 ### Options inherited from parent commands
@@ -37,10 +50,10 @@ BackupRepo command.
 ### SEE ALSO
 
 
-* [kbcli backuprepo create](kbcli_backuprepo_create.md)	 - Create a backup repo
-* [kbcli backuprepo describe](kbcli_backuprepo_describe.md)	 - Describe a backup repository.
-* [kbcli backuprepo list](kbcli_backuprepo_list.md)	 - List Backup Repositories.
-* [kbcli backuprepo update](kbcli_backuprepo_update.md)	 - Update a backup repository.
+* [kbcli org current](kbcli_org_current.md)	 - Get current organization.
+* [kbcli org describe](kbcli_org_describe.md)	 - Get the description information of an organization.
+* [kbcli org list](kbcli_org_list.md)	 - List all organizations you have joined.
+* [kbcli org switch](kbcli_org_switch.md)	 - Switch to another organization you are already a member of.
 
 #### Go Back to [CLI Overview](cli.md) Homepage.
 
