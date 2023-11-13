@@ -100,6 +100,7 @@ func NewAddonCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.C
 		newDescribeCmd(f, streams),
 		newEnableCmd(f, streams),
 		newDisableCmd(f, streams),
+		newIndexCmd(streams),
 	)
 	return cmd
 }
@@ -107,10 +108,9 @@ func NewAddonCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.C
 func newListCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
 	o := action.NewListOptions(f, streams, types.AddonGVR())
 	cmd := &cobra.Command{
-		Use:               "list",
-		Short:             "List addons.",
-		Aliases:           []string{"ls"},
-		ValidArgsFunction: util.ResourceNameCompletionFunc(f, o.GVR),
+		Use:     "list",
+		Short:   "List addons.",
+		Aliases: []string{"ls"},
 		Run: func(cmd *cobra.Command, args []string) {
 			o.Names = args
 			util.CheckErr(addonListRun(o))

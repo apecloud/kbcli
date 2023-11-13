@@ -48,6 +48,11 @@ const (
 	// DefaultLogFilePrefix is the default log file prefix
 	DefaultLogFilePrefix = "kbcli"
 
+	// AddonIndexEnv defines kbcli addon index dir
+	AddonIndexEnv = "KBCLI_ADDON_INDEX_DIR"
+	// AddonIndexDir is the default addon index dir
+	AddonIndexDir = "addon_index"
+
 	// DefaultNamespace is the namespace where kubeblocks is installed if
 	// no other namespace is specified
 	DefaultNamespace = "kb-system"
@@ -222,6 +227,9 @@ var (
 
 	// KubeBlocksManagerConfigMapName the kubeblocks manager configMap name
 	KubeBlocksManagerConfigMapName = fmt.Sprintf("%s-manager-config", KubeBlocksChartName)
+
+	// DefaultAddonIndexURL points to the upstream index.
+	DefaultAddonIndexURL = "https://github.com/apecloud/block-index.git"
 )
 
 // Playground
