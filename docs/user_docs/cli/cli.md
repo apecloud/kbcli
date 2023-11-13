@@ -11,6 +11,7 @@ Addon command.
 * [kbcli addon describe](kbcli_addon_describe.md)	 - Describe an addon specification.
 * [kbcli addon disable](kbcli_addon_disable.md)	 - Disable an addon.
 * [kbcli addon enable](kbcli_addon_enable.md)	 - Enable an addon.
+* [kbcli addon index](kbcli_addon_index.md)	 - Manage custom plugin indexes
 * [kbcli addon list](kbcli_addon_list.md)	 - List addons.
 
 
