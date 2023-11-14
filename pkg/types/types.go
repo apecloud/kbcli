@@ -54,7 +54,7 @@ const (
 	// AddonIndexEnv defines kbcli addon index dir
 	AddonIndexEnv = "KBCLI_ADDON_INDEX_DIR"
 	// AddonIndexDir is the default addon index dir
-	AddonIndexDir = "addon_index"
+	AddonIndexDir = "index"
 
 	// DefaultNamespace is the namespace where kubeblocks is installed if
 	// no other namespace is specified

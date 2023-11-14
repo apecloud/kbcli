@@ -142,3 +142,14 @@ func ExecGitCommand(pwd string, args ...string) (string, error) {
 	}
 	return strings.TrimSpace(buf.String()), nil
 }
+
+func IsRepoLatest(destinationPath string) (bool, error) {
+	if _, err := ExecGitCommand(destinationPath, "fetch", "-v"); err != nil {
+		return false, err
+	}
+	output, err := ExecGitCommand(destinationPath, "status", "-uno", "--porcelain")
+	if err != nil {
+		return false, err
+	}
+	return output == "", nil
+}

@@ -1,3 +1,22 @@
+/*
+Copyright (C) 2022-2023 ApeCloud Co., Ltd
+
+This file is part of KubeBlocks project
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 package addon
 
 import (
@@ -7,36 +26,19 @@ import (
 	"os"
 	"path"
 	"regexp"
+	"strings"
+
+	"github.com/spf13/cobra"
+	"k8s.io/cli-runtime/pkg/genericiooptions"
 
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
-	"github.com/apecloud/kbcli/pkg/util/gitutil"
-	"github.com/spf13/cobra"
-	"k8s.io/cli-runtime/pkg/genericiooptions"
-	"k8s.io/klog/v2"
 )
 
-type Index struct {
-	Name string
-	URL  string
-}
-
-func init() {
-	addonDir, err := util.GetCliAddonDir()
-	if err != nil {
-		klog.V(1).ErrorS(err, "can't get the addon ")
-	}
-
-	defaultIndexDir := path.Join(addonDir, types.KubeBlocksReleaseName)
-	if _, err := os.Stat(defaultIndexDir); os.IsNotExist(err) {
-		err = gitutil.EnsureCloned(types.DefaultAddonIndexURL, defaultIndexDir)
-		if err != nil {
-			klog.V(1).ErrorS(err, "can't pull the DefaultAddonIndexURL", types.DefaultAddonIndexURL)
-		}
-	} else {
-		klog.V(1).ErrorS(err, "can't get the kbcli addon index dir")
-	}
+type index struct {
+	name string
+	url  string
 }
 
 func newIndexListCmd(streams genericiooptions.IOStreams) *cobra.Command {
@@ -62,22 +64,35 @@ func newIndexAddCmd() *cobra.Command {
 		Example: "kbcli index add KubeBlocks " + types.DefaultAddonIndexURL,
 		Args:    cobra.ExactArgs(2),
 		Run: func(_ *cobra.Command, args []string) {
-			util.CheckErr(addAddonIndex(args))
-			fmt.Printf("You have added a new index from %q\nThe addons in this index are not audited by ApeCloud.", args[1])
+			util.CheckErr(addIndex(args))
+			fmt.Printf("You have added a new index from %q\n", args[1])
 		},
 	}
+
+	defaultIndexCmd := &cobra.Command{
+		Use:   "default",
+		Short: "Add the KubeBlocks default addon index: https://github.com/apecloud/block-index.git",
+		Args:  cobra.NoArgs,
+		Run: func(_ *cobra.Command, args []string) {
+			util.CheckErr(addDefaultIndex())
+			fmt.Printf("Default addon index \"kubeblocks\" has been added.")
+		},
+	}
+
+	indexAddCmd.AddCommand(defaultIndexCmd)
 	return indexAddCmd
 }
 
 func newIndexDeleteCmd() *cobra.Command {
 	indexDeleteCmd := &cobra.Command{
-		Use:   "remove",
-		Short: "Remove an addon index",
-		Long:  `Remove a configured addon index.`,
-
-		Args: cobra.ExactArgs(1),
+		Use:               "delete",
+		Short:             "Delete an addon index",
+		Long:              `Delete a configured addon index.`,
+		ValidArgsFunction: indexCompletion(),
+		Args:              cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			util.CheckErr(indexDelete(args[0]))
+			util.CheckErr(deleteIndex(args[0]))
+			fmt.Printf("Index \"%s\" have been deleted", args[0])
 		},
 	}
 
@@ -87,17 +102,99 @@ func newIndexDeleteCmd() *cobra.Command {
 func newIndexCmd(streams genericiooptions.IOStreams) *cobra.Command {
 	indexCmd := &cobra.Command{
 		Use:   "index",
-		Short: "Manage custom plugin indexes",
-		Long:  "Manage which repositories are used to discover and install plugins from.",
+		Short: "Manage custom addon indexes",
+		Long:  "Manage which repositories are used to discover and install addon from.",
 		Args:  cobra.NoArgs,
 	}
 	indexCmd.AddCommand(
 		newIndexAddCmd(),
 		newIndexDeleteCmd(),
 		newIndexListCmd(streams),
+		newIndexUpdateCmd(streams),
 	)
 
 	return indexCmd
+}
+
+type updateOption struct {
+	names []string
+	all   bool
+
+	genericiooptions.IOStreams
+}
+
+// validate will check the update index whether existed
+func (o *updateOption) validate(args []string) error {
+	indexes, err := getAllIndexes()
+	if err != nil {
+		return err
+	}
+
+	if o.all {
+		for _, e := range indexes {
+			o.names = append(o.names, e.name)
+		}
+		return nil
+	}
+	if len(args) == 0 {
+		return fmt.Errorf("you must specify one index or use --all flag update all indexes.\nuse `kbcli addon index list` list all available indexes")
+	}
+	indexMaps := make(map[string]struct{})
+	for _, index := range indexes {
+		indexMaps[index.name] = struct{}{}
+	}
+	for _, name := range args {
+		if _, ok := indexMaps[name]; !ok {
+			return fmt.Errorf("index %s don't existed", name)
+		}
+		o.names = append(o.names, name)
+	}
+	return nil
+}
+
+func (o *updateOption) run() error {
+	addonDir, err := util.GetCliAddonDir()
+	if err != nil {
+		return err
+	}
+	// update := []string{}
+
+	for _, name := range o.names {
+
+		if isLatest, err := util.IsRepoLatest(path.Join(addonDir, name)); err == nil && isLatest {
+			fmt.Fprintf(o.Out, "index \"%s\" is already at the latest and requires no updates.\n", name)
+			continue
+		}
+
+		err = util.UpdateAndCleanUntracked(path.Join(addonDir, name))
+		if err != nil {
+			return fmt.Errorf("failed to update index %s due to %s", name, err.Error())
+		}
+		fmt.Fprintf(o.Out, "index \"%s\" has been updated.\n", name)
+	}
+
+	return nil
+}
+
+func newIndexUpdateCmd(streams genericiooptions.IOStreams) *cobra.Command {
+	o := &updateOption{
+		names:     make([]string, 0),
+		all:       false,
+		IOStreams: streams,
+	}
+	indexUpdateCmd := &cobra.Command{
+		Use:               "update",
+		Short:             "update a existed index",
+		Long:              "Update a existed index repository from index origin URL",
+		Example:           "kbcli index update KubeBlocks",
+		ValidArgsFunction: indexCompletion(),
+		Run: func(cmd *cobra.Command, args []string) {
+			util.CheckErr(o.validate(args))
+			util.CheckErr(o.run())
+		},
+	}
+	indexUpdateCmd.Flags().BoolVar(&o.all, "all", false, "Upgrade all addon index")
+	return indexUpdateCmd
 }
 
 // IsValidIndexName validates if an index name contains invalid characters
@@ -106,7 +203,7 @@ func IsValidIndexName(name string) bool {
 	return validNamePattern.MatchString(name)
 }
 
-func addAddonIndex(args []string) error {
+func addIndex(args []string) error {
 	name, url := args[0], args[1]
 	if !IsValidIndexName(name) {
 		return errors.New("invalid index name")
@@ -118,7 +215,7 @@ func addAddonIndex(args []string) error {
 	}
 	index := path.Join(addonDir, name)
 	if _, err := os.Stat(index); os.IsNotExist(err) {
-		return gitutil.EnsureCloned(url, index)
+		return util.EnsureCloned(url, index)
 	} else if err != nil {
 		return err
 	}
@@ -130,32 +227,19 @@ func listIndexes(out io.Writer) error {
 	tbl.SortBy(1)
 	tbl.SetHeader("INDEX", "URL")
 
-	dir, err := util.GetCliAddonDir()
+	indexes, err := getAllIndexes()
 	if err != nil {
 		return err
 	}
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return fmt.Errorf("failed to list directory: %s", err.Error())
-	}
-
-	for _, e := range entries {
-		if !e.IsDir() {
-			continue
-		}
-		indexName := e.Name()
-		remote, err := gitutil.GetRemoteURL(path.Join(dir, indexName))
-		if err != nil {
-			return fmt.Errorf("failed to list the remote URL for index %s due to %s", indexName, err.Error())
-		}
-		tbl.AddRow(indexName, remote)
+	for _, e := range indexes {
+		tbl.AddRow(e.name, e.url)
 	}
 	tbl.Print()
 	return nil
 }
 
-func indexDelete(index string) error {
-	if IsValidIndexName(index) {
+func deleteIndex(index string) error {
+	if !IsValidIndexName(index) {
 		return errors.New("invalid index name")
 	}
 
@@ -173,4 +257,66 @@ func indexDelete(index string) error {
 		return fmt.Errorf("error while removing the addon index: %s", err.Error())
 	}
 
+}
+
+func addDefaultIndex() error {
+	addonDir, err := util.GetCliAddonDir()
+	if err != nil {
+		return fmt.Errorf("can't get the index dir : %s", err.Error())
+	}
+
+	defaultIndexDir := path.Join(addonDir, types.KubeBlocksReleaseName)
+	if _, err := os.Stat(defaultIndexDir); err != nil && os.IsNotExist(err) {
+		return util.EnsureCloned(types.DefaultAddonIndexURL, defaultIndexDir)
+	}
+	return fmt.Errorf("default index %s:%s already exists", types.KubeBlocksReleaseName, types.DefaultAddonIndexURL)
+}
+
+func getAllIndexes() ([]index, error) {
+	addonDir, err := util.GetCliAddonDir()
+	if err != nil {
+		return nil, err
+	}
+	entries, err := os.ReadDir(addonDir)
+	if err != nil {
+		return nil, err
+	}
+	res := []index{}
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue
+		}
+		indexName := e.Name()
+		remote, err := util.GitGetRemoteURL(path.Join(addonDir, indexName))
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, index{
+			name: indexName,
+			url:  remote,
+		})
+	}
+	return res, nil
+}
+
+func indexCompletion() func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	return func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		availableComps := []string{}
+		indexes, err := getAllIndexes()
+		if err != nil {
+			return availableComps, cobra.ShellCompDirectiveNoFileComp
+		}
+		seen := make(map[string]struct{})
+		for _, input := range args {
+			seen[input] = struct{}{}
+		}
+
+		for _, e := range indexes {
+			if _, ok := seen[e.name]; !ok && strings.HasPrefix(e.name, toComplete) {
+				availableComps = append(availableComps, e.name)
+			}
+		}
+
+		return availableComps, cobra.ShellCompDirectiveNoFileComp
+	}
 }
