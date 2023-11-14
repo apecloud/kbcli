@@ -55,11 +55,11 @@ var _ = Describe("Patch", func() {
 
 	It("run", func() {
 		cmd := &cobra.Command{}
-		o := NewPatchOptions(tf, streams, types.ClusterGVR())
-		o.Names = []string{"c1"}
+		o := NewPatchOptions(tf, streams, types.CRDGVR())
+		o.Names = []string{"test"}
 		o.AddFlags(cmd)
-
 		o.Patch = "{terminationPolicy: Delete}"
+		// The resource "CRD" expect not found in mock K8s
 		Expect(o.Run(cmd)).Should(HaveOccurred())
 	})
 })
