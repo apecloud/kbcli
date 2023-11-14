@@ -31,5 +31,5 @@ import (
 
 func TestCreate(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Create Suite")
+	RunSpecs(t, "Action Suite")
 }
