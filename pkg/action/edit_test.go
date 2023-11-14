@@ -37,7 +37,7 @@ import (
 	"github.com/apecloud/kbcli/pkg/types"
 )
 
-var _ = Describe("List", func() {
+var _ = Describe("Edit", func() {
 	var (
 		streams genericiooptions.IOStreams
 		tf      *cmdtesting.TestFactory

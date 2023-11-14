@@ -106,6 +106,22 @@ func GetCliHomeDir() (string, error) {
 	return cliHome, nil
 }
 
+// GetCliLogDir returns kbcli log dir
+func GetCliLogDir() (string, error) {
+	cliHome, err := GetCliHomeDir()
+	if err != nil {
+		return "", err
+	}
+	logDir := filepath.Join(cliHome, types.CliLogDir)
+	if _, err := os.Stat(logDir); err != nil && os.IsNotExist(err) {
+		if err = os.MkdirAll(logDir, 0750); err != nil {
+			return "", errors.Wrap(err, "error when create kbcli log directory")
+		}
+	}
+	return logDir, nil
+}
+
+// GetCliAddonDir returns kbcli addon index dir
 func GetCliAddonDir() (string, error) {
 	var addonIndexDir string
 	if custom := os.Getenv(types.AddonIndexEnv); custom != "" {
