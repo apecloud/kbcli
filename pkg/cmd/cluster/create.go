@@ -64,6 +64,8 @@ import (
 	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/cluster"
 	classutil "github.com/apecloud/kbcli/pkg/cmd/class"
+	"github.com/apecloud/kbcli/pkg/cmd/cloud"
+	"github.com/apecloud/kbcli/pkg/cmd/request"
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
@@ -256,6 +258,13 @@ type CreateOptions struct {
 	action.CreateOptions `json:"-"`
 }
 
+type CreateRequestBody struct {
+	CloudProvider string `json:"cloudProvider"`
+	CloudRegion   string `json:"cloudRegion"`
+	Name          string `json:"name"`
+	Version       string `json:"version"`
+}
+
 func NewCreateCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
 	o := NewCreateOptions(f, streams)
 	cmd := &cobra.Command{
@@ -267,7 +276,11 @@ func NewCreateCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.
 			cmdutil.CheckErr(o.CreateOptions.Complete())
 			cmdutil.CheckErr(o.Complete())
 			cmdutil.CheckErr(o.Validate())
-			cmdutil.CheckErr(o.Run())
+			if cloud.IsCloud() {
+				cmdutil.CheckErr(o.RunCloud())
+			} else {
+				cmdutil.CheckErr(o.Run())
+			}
 		},
 	}
 
@@ -515,6 +528,29 @@ func (o *CreateOptions) Complete() error {
 
 	// validate default storageClassName
 	return validateStorageClass(o.Dynamic, o.ComponentSpecs)
+}
+
+func (o *CreateOptions) RunCloud() error {
+
+	path := strings.Join([]string{request.BaseURL, request.APIPath, request.OrgsAPIName, cloud.GetCurrentOrg(), request.ClustersAPIName}, "/")
+	body := CreateRequestBody{
+		CloudProvider: "aliyun",
+		CloudRegion:   "cn-zhangjiakou",
+		Name:          o.Name,
+		Version:       o.ClusterVersionRef,
+	}
+	bodyB, err := json.Marshal(&body)
+	if err != nil {
+		return err
+	}
+	response, err := request.NewRequest(http.MethodPost, path, cloud.GetToken(), bodyB)
+	if err != nil {
+		return err
+	}
+
+	print(response)
+
+	return nil
 }
 
 func (o *CreateOptions) CleanUp() error {

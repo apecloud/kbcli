@@ -34,6 +34,7 @@ import (
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
 	"github.com/apecloud/kbcli/pkg/cmd/organization"
+	"github.com/apecloud/kbcli/pkg/cmd/request"
 	"github.com/apecloud/kbcli/pkg/printer"
 )
 
@@ -288,7 +289,7 @@ func (c *CloudContext) showRemoveContext() error {
 
 func (c *CloudContext) GetContext() (*CloudContextResponse, error) {
 	path := strings.Join([]string{c.APIURL, c.APIPath, organization.OrgAPIName, c.OrgName, contextAPIName, c.ContextName}, "/")
-	response, err := organization.NewRequest(http.MethodGet, path, c.Token, nil)
+	response, err := request.NewRequest(http.MethodGet, path, c.Token, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -304,7 +305,7 @@ func (c *CloudContext) GetContext() (*CloudContextResponse, error) {
 
 func (c *CloudContext) GetContexts() ([]CloudContextResponse, error) {
 	path := strings.Join([]string{c.APIURL, c.APIPath, organization.OrgAPIName, c.OrgName, contextAPIName}, "/")
-	response, err := organization.NewRequest(http.MethodGet, path, c.Token, nil)
+	response, err := request.NewRequest(http.MethodGet, path, c.Token, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -353,7 +354,7 @@ func (c *CloudContext) useContext(contextName string) (string, error) {
 // RemoveContext TODO: By the way, delete the context stored locally.
 func (c *CloudContext) removeContext() error {
 	path := strings.Join([]string{c.APIURL, c.APIPath, organization.OrgAPIName, c.OrgName, contextAPIName, c.ContextName}, "/")
-	_, err := organization.NewRequest(http.MethodDelete, path, c.Token, nil)
+	_, err := request.NewRequest(http.MethodDelete, path, c.Token, nil)
 	if err != nil {
 		return err
 	}
