@@ -59,9 +59,9 @@ each addon index in table format.`,
 func newIndexAddCmd() *cobra.Command {
 	indexAddCmd := &cobra.Command{
 		Use:     "add",
-		Short:   "Add a new index",
+		Short:   "Add a new addon index",
 		Long:    "Configure a new index to install KubeBlocks addon from.",
-		Example: "kbcli index add KubeBlocks " + types.DefaultAddonIndexURL,
+		Example: "kbcli index add kubeblocks " + types.DefaultAddonIndexURL,
 		Args:    cobra.ExactArgs(2),
 		Run: func(_ *cobra.Command, args []string) {
 			util.CheckErr(addIndex(args))
@@ -184,8 +184,8 @@ func newIndexUpdateCmd(streams genericiooptions.IOStreams) *cobra.Command {
 	}
 	indexUpdateCmd := &cobra.Command{
 		Use:               "update",
-		Short:             "update a existed index",
-		Long:              "Update a existed index repository from index origin URL",
+		Short:             "update the specified index(es)",
+		Long:              "Update existed index repository from index origin URL",
 		Example:           "kbcli index update KubeBlocks",
 		ValidArgsFunction: indexCompletion(),
 		Run: func(cmd *cobra.Command, args []string) {
