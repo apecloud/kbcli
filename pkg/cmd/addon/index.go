@@ -63,23 +63,14 @@ func newIndexAddCmd() *cobra.Command {
 		Long:    "Configure a new index to install KubeBlocks addon from.",
 		Example: "kbcli index add kubeblocks " + types.DefaultAddonIndexURL,
 		Args:    cobra.ExactArgs(2),
+		PersistentPreRun: func(_ *cobra.Command, _ []string) {
+			util.CheckErr(addDefaultIndex())
+		},
 		Run: func(_ *cobra.Command, args []string) {
 			util.CheckErr(addIndex(args))
-			fmt.Printf("You have added a new index from %q\n", args[1])
 		},
 	}
 
-	defaultIndexCmd := &cobra.Command{
-		Use:   "default",
-		Short: "Add the KubeBlocks default addon index: https://github.com/apecloud/block-index.git",
-		Args:  cobra.NoArgs,
-		Run: func(_ *cobra.Command, args []string) {
-			util.CheckErr(addDefaultIndex())
-			fmt.Printf("Default addon index \"kubeblocks\" has been added.")
-		},
-	}
-
-	indexAddCmd.AddCommand(defaultIndexCmd)
 	return indexAddCmd
 }
 
@@ -92,7 +83,6 @@ func newIndexDeleteCmd() *cobra.Command {
 		Args:              cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			util.CheckErr(deleteIndex(args[0]))
-			fmt.Printf("Index \"%s\" have been deleted", args[0])
 		},
 	}
 
@@ -157,8 +147,6 @@ func (o *updateOption) run() error {
 	if err != nil {
 		return err
 	}
-	// update := []string{}
-
 	for _, name := range o.names {
 
 		if isLatest, err := util.IsRepoLatest(path.Join(addonDir, name)); err == nil && isLatest {
@@ -215,7 +203,11 @@ func addIndex(args []string) error {
 	}
 	index := path.Join(addonDir, name)
 	if _, err := os.Stat(index); os.IsNotExist(err) {
-		return util.EnsureCloned(url, index)
+		if err = util.EnsureCloned(url, index); err != nil {
+			return err
+		}
+		fmt.Printf("You have added a new index from %q\n", args[1])
+		return err
 	} else if err != nil {
 		return err
 	}
@@ -249,7 +241,11 @@ func deleteIndex(index string) error {
 	}
 	indexDir := path.Join(addonDir, index)
 	if _, err := os.Stat(indexDir); err == nil {
-		return os.RemoveAll(indexDir)
+		if err = os.RemoveAll(indexDir); err != nil {
+			return err
+		}
+		fmt.Printf("Index \"%s\" have been deleted", index)
+		return nil
 	} else {
 		if os.IsNotExist(err) {
 			return fmt.Errorf("index %s does not exist", index)
@@ -267,7 +263,11 @@ func addDefaultIndex() error {
 
 	defaultIndexDir := path.Join(addonDir, types.KubeBlocksReleaseName)
 	if _, err := os.Stat(defaultIndexDir); err != nil && os.IsNotExist(err) {
-		return util.EnsureCloned(types.DefaultAddonIndexURL, defaultIndexDir)
+		if err = util.EnsureCloned(types.DefaultAddonIndexURL, defaultIndexDir); err != nil {
+			return err
+		}
+		fmt.Printf("Default addon index \"kubeblocks\" has been added.")
+		return nil
 	}
 	return fmt.Errorf("default index %s:%s already exists", types.KubeBlocksReleaseName, types.DefaultAddonIndexURL)
 }

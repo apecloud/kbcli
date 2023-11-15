@@ -124,7 +124,7 @@ func GetCliLogDir() (string, error) {
 // GetCliAddonDir returns kbcli addon index dir
 func GetCliAddonDir() (string, error) {
 	var addonIndexDir string
-	if custom := os.Getenv(types.AddonIndexEnv); custom != "" {
+	if custom := os.Getenv(types.AddonIndexDirEnv); custom != "" {
 		addonIndexDir = custom
 	} else {
 		home, err := GetCliHomeDir()
