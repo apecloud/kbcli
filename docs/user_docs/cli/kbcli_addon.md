@@ -42,6 +42,7 @@ Addon command.
 * [kbcli addon enable](kbcli_addon_enable.md)	 - Enable an addon.
 * [kbcli addon index](kbcli_addon_index.md)	 - Manage custom addon indexes
 * [kbcli addon list](kbcli_addon_list.md)	 - List addons.
+* [kbcli addon search](kbcli_addon_search.md)	 - search the addon from index
 
 #### Go Back to [CLI Overview](cli.md) Homepage.
 
