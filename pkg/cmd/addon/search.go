@@ -8,11 +8,13 @@ import (
 	"regexp"
 	"strings"
 
-	extensionsv1alpha1 "github.com/apecloud/kubeblocks/apis/extensions/v1alpha1"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v2"
+	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	"k8s.io/klog/v2"
+
+	extensionsv1alpha1 "github.com/apecloud/kubeblocks/apis/extensions/v1alpha1"
+	"github.com/apecloud/kubeblocks/pkg/constant"
 
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/util"
@@ -40,13 +42,14 @@ func newSearchCmd(streams genericiooptions.IOStreams) *cobra.Command {
 
 func search(args []string, out io.Writer) error {
 	tbl := printer.NewTablePrinter(out)
-	tbl.AddRow("ADDON", "INDEX", "URL")
+	tbl.AddRow("ADDON", "VERSION", "INDEX")
 	results, err := searchAddon(args[0])
 	if err != nil {
 		return err
 	}
 	for _, res := range results {
-		tbl.AddRow(res.addon.Name, res.index.name, res.index.url)
+		label := res.addon.Labels
+		tbl.AddRow(res.addon.Name, label[constant.AppVersionLabelKey], res.index.name)
 	}
 	tbl.Print()
 	return nil
