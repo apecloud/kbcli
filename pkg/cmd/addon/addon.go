@@ -100,6 +100,7 @@ func NewAddonCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.C
 		newDescribeCmd(f, streams),
 		newEnableCmd(f, streams),
 		newDisableCmd(f, streams),
+		newIndexCmd(streams),
 	)
 	return cmd
 }

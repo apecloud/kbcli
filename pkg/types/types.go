@@ -21,6 +21,7 @@ package types
 
 import (
 	"fmt"
+	"path/filepath"
 
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -50,6 +51,9 @@ const (
 
 	// DefaultLogFilePrefix is the default log file prefix
 	DefaultLogFilePrefix = "kbcli"
+
+	// AddonIndexDirEnv defines kbcli addon index dir
+	AddonIndexDirEnv = "KBCLI_ADDON_INDEX_DIR"
 
 	// DefaultNamespace is the namespace where kubeblocks is installed if
 	// no other namespace is specified
@@ -225,6 +229,12 @@ var (
 
 	// KubeBlocksManagerConfigMapName the kubeblocks manager configMap name
 	KubeBlocksManagerConfigMapName = fmt.Sprintf("%s-manager-config", KubeBlocksChartName)
+
+	// DefaultAddonIndexURL points to the upstream index.
+	DefaultAddonIndexURL = "https://github.com/apecloud/block-index.git"
+
+	// AddonIndexDir is the default addon index dir
+	AddonIndexDir = filepath.Join("addon", "index")
 )
 
 // Playground

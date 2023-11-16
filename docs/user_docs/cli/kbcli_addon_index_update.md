@@ -1,13 +1,28 @@
 ---
-title: kbcli addon
+title: kbcli addon index update
 ---
 
-Addon command.
+update the specified index(es)
+
+### Synopsis
+
+Update existed index repository from index origin URL
+
+```
+kbcli addon index update [flags]
+```
+
+### Examples
+
+```
+kbcli addon index update KubeBlocks
+```
 
 ### Options
 
 ```
-  -h, --help   help for addon
+      --all    Upgrade all addon index
+  -h, --help   help for update
 ```
 
 ### Options inherited from parent commands
@@ -36,12 +51,7 @@ Addon command.
 
 ### SEE ALSO
 
-
-* [kbcli addon describe](kbcli_addon_describe.md)	 - Describe an addon specification.
-* [kbcli addon disable](kbcli_addon_disable.md)	 - Disable an addon.
-* [kbcli addon enable](kbcli_addon_enable.md)	 - Enable an addon.
 * [kbcli addon index](kbcli_addon_index.md)	 - Manage custom addon indexes
-* [kbcli addon list](kbcli_addon_list.md)	 - List addons.
 
 #### Go Back to [CLI Overview](cli.md) Homepage.
 

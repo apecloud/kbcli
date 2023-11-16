@@ -121,6 +121,28 @@ func GetCliLogDir() (string, error) {
 	return logDir, nil
 }
 
+// GetCliAddonDir returns kbcli addon index dir
+func GetCliAddonDir() (string, error) {
+	var addonIndexDir string
+	if custom := os.Getenv(types.AddonIndexDirEnv); custom != "" {
+		addonIndexDir = custom
+	} else {
+		home, err := GetCliHomeDir()
+		if err != nil {
+			return "", err
+		}
+		addonIndexDir = path.Join(home, types.AddonIndexDir)
+	}
+
+	if _, err := os.Stat(addonIndexDir); err != nil && os.IsNotExist(err) {
+		if err = os.MkdirAll(addonIndexDir, 0750); err != nil {
+			return "", errors.Wrap(err, "error when create addon index directory")
+		}
+	}
+
+	return addonIndexDir, nil
+}
+
 // GetKubeconfigDir returns the kubeconfig directory.
 func GetKubeconfigDir() string {
 	var kubeconfigDir string

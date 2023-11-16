@@ -1,13 +1,24 @@
 ---
-title: kbcli addon
+title: kbcli addon index list
 ---
 
-Addon command.
+List addon indexes
+
+### Synopsis
+
+Print a list of addon indexes.
+
+This command prints a list of addon indexes. It shows the name and the remote URL for
+each addon index in table format.
+
+```
+kbcli addon index list [flags]
+```
 
 ### Options
 
 ```
-  -h, --help   help for addon
+  -h, --help   help for list
 ```
 
 ### Options inherited from parent commands
@@ -36,12 +47,7 @@ Addon command.
 
 ### SEE ALSO
 
-
-* [kbcli addon describe](kbcli_addon_describe.md)	 - Describe an addon specification.
-* [kbcli addon disable](kbcli_addon_disable.md)	 - Disable an addon.
-* [kbcli addon enable](kbcli_addon_enable.md)	 - Enable an addon.
 * [kbcli addon index](kbcli_addon_index.md)	 - Manage custom addon indexes
-* [kbcli addon list](kbcli_addon_list.md)	 - List addons.
 
 #### Go Back to [CLI Overview](cli.md) Homepage.
 
