@@ -20,6 +20,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package dataprotection
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
@@ -39,11 +41,19 @@ var (
 )
 
 func newRestoreCommand(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
+	customOutPut := func(opt *action.CreateOptions) {
+		output := fmt.Sprintf("Cluster %s created", opt.Name)
+		printer.PrintLine(output)
+	}
+
 	o := cluster.CreateRestoreOptions{}
 	o.CreateOptions = action.CreateOptions{
-		IOStreams: streams,
-		Factory:   f,
-		Options:   o,
+		IOStreams:       streams,
+		Factory:         f,
+		Options:         o,
+		GVR:             types.OpsGVR(),
+		CueTemplateName: "opsrequest_template.cue",
+		CustomOutPut:    customOutPut,
 	}
 
 	clusterName := ""
@@ -55,7 +65,7 @@ func newRestoreCommand(f cmdutil.Factory, streams genericiooptions.IOStreams) *c
 		Example:           createRestoreExample,
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) > 0 {
-				o.Backup = args[0]
+				o.RestoreSpec.BackupName = args[0]
 			}
 			if clusterName != "" {
 				o.Args = []string{clusterName}
@@ -68,7 +78,7 @@ func newRestoreCommand(f cmdutil.Factory, streams genericiooptions.IOStreams) *c
 	}
 
 	cmd.Flags().StringVar(&clusterName, "cluster", "", "The cluster to restore")
-	cmd.Flags().StringVar(&o.RestoreTimeStr, "restore-to-time", "", "point in time recovery(PITR)")
-	cmd.Flags().StringVar(&o.VolumeRestorePolicy, "volume-restore-policy", "Parallel", "the volume claim restore policy, supported values: [Serial, Parallel]")
+	cmd.Flags().StringVar(&o.RestoreSpec.RestoreTimeStr, "restore-to-time", "", "point in time recovery(PITR)")
+	cmd.Flags().StringVar(&o.RestoreSpec.VolumeRestorePolicy, "volume-restore-policy", "Parallel", "the volume claim restore policy, supported values: [Serial, Parallel]")
 	return cmd
 }

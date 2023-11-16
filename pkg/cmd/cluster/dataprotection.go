@@ -22,6 +22,7 @@ package cluster
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"sort"
@@ -39,7 +40,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/duration"
-	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	"k8s.io/client-go/dynamic"
 	clientset "k8s.io/client-go/kubernetes"
@@ -51,17 +51,16 @@ import (
 	"k8s.io/kubectl/pkg/util/templates"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
-	dpv1alpha1 "github.com/apecloud/kubeblocks/apis/dataprotection/v1alpha1"
-	"github.com/apecloud/kubeblocks/pkg/constant"
-	"github.com/apecloud/kubeblocks/pkg/dataprotection/restore"
-	dptypes "github.com/apecloud/kubeblocks/pkg/dataprotection/types"
-
 	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/cluster"
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
+	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
+	dpv1alpha1 "github.com/apecloud/kubeblocks/apis/dataprotection/v1alpha1"
+	"github.com/apecloud/kubeblocks/pkg/constant"
+	"github.com/apecloud/kubeblocks/pkg/dataprotection/restore"
+	dptypes "github.com/apecloud/kubeblocks/pkg/dataprotection/types"
 )
 
 var (
@@ -123,12 +122,10 @@ var (
 const annotationTrueValue = "true"
 
 type CreateBackupOptions struct {
-	BackupMethod     string `json:"backupMethod"`
-	BackupName       string `json:"backupName"`
-	BackupPolicy     string `json:"backupPolicy"`
-	DeletionPolicy   string `json:"deletionPolicy"`
-	RetentionPeriod  string `json:"retentionPeriod"`
-	ParentBackupName string `json:"parentBackupName"`
+	BackupSpec     appsv1alpha1.BackupSpec `json:"backupSpec"`
+	ClusterRef     string                  `json:"clusterRef"`
+	OpsType        string                  `json:"opsType"`
+	OpsRequestName string                  `json:"opsRequestName"`
 
 	action.CreateOptions `json:"-"`
 }
@@ -156,9 +153,14 @@ func (o *CreateBackupOptions) CompleteBackup() error {
 		return err
 	}
 	// generate backupName
-	if len(o.BackupName) == 0 {
-		o.BackupName = strings.Join([]string{"backup", o.Namespace, o.Name, time.Now().Format("20060102150405")}, "-")
+	if len(o.BackupSpec.BackupName) == 0 {
+		o.BackupSpec.BackupName = strings.Join([]string{"backup", o.Namespace, o.Name, time.Now().Format("20060102150405")}, "-")
 	}
+
+	// set ops type, ops request name and clusterRef
+	o.OpsType = string(appsv1alpha1.BackupType)
+	o.OpsRequestName = o.BackupSpec.BackupName
+	o.ClusterRef = o.Name
 
 	return o.CreateOptions.Complete()
 }
@@ -169,14 +171,14 @@ func (o *CreateBackupOptions) Validate() error {
 	}
 
 	// if backup policy is not specified, use the default backup policy
-	if o.BackupPolicy == "" {
+	if o.BackupSpec.BackupPolicyName == "" {
 		if err := o.completeDefaultBackupPolicy(); err != nil {
 			return err
 		}
 	}
 
 	// check if backup policy exists
-	backupPolicyObj, err := o.Dynamic.Resource(types.BackupPolicyGVR()).Namespace(o.Namespace).Get(context.TODO(), o.BackupPolicy, metav1.GetOptions{})
+	backupPolicyObj, err := o.Dynamic.Resource(types.BackupPolicyGVR()).Namespace(o.Namespace).Get(context.TODO(), o.BackupSpec.BackupPolicyName, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -185,22 +187,22 @@ func (o *CreateBackupOptions) Validate() error {
 		return err
 	}
 
-	if o.BackupMethod == "" {
+	if o.BackupSpec.BackupMethod == "" {
 		return fmt.Errorf("backup method can not be empty, you can specify it by --method")
 	}
 	// TODO: check if pvc exists
 
 	// valid retention period
-	if o.RetentionPeriod != "" {
-		_, err := dpv1alpha1.RetentionPeriod(o.RetentionPeriod).ToDuration()
+	if o.BackupSpec.RetentionPeriod != "" {
+		_, err := dpv1alpha1.RetentionPeriod(o.BackupSpec.RetentionPeriod).ToDuration()
 		if err != nil {
 			return fmt.Errorf("invalid retention period, please refer to examples [1y, 1m, 1d, 1h, 1m] or combine them [1y1m1d1h1m]")
 		}
 	}
 
 	// check if parent backup exists
-	if o.ParentBackupName != "" {
-		parentBackupObj, err := o.Dynamic.Resource(types.BackupGVR()).Namespace(o.Namespace).Get(context.TODO(), o.ParentBackupName, metav1.GetOptions{})
+	if o.BackupSpec.ParentBackupName != "" {
+		parentBackupObj, err := o.Dynamic.Resource(types.BackupGVR()).Namespace(o.Namespace).Get(context.TODO(), o.BackupSpec.ParentBackupName, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -209,10 +211,10 @@ func (o *CreateBackupOptions) Validate() error {
 			return err
 		}
 		if parentBackup.Status.Phase != dpv1alpha1.BackupPhaseCompleted {
-			return fmt.Errorf("parent backup %s is not completed", o.ParentBackupName)
+			return fmt.Errorf("parent backup %s is not completed", o.BackupSpec.ParentBackupName)
 		}
 		if parentBackup.Labels[constant.AppInstanceLabelKey] != o.Name {
-			return fmt.Errorf("parent backup %s is not belong to cluster %s", o.ParentBackupName, o.Name)
+			return fmt.Errorf("parent backup %s is not belong to cluster %s", o.BackupSpec.ParentBackupName, o.Name)
 		}
 	}
 	return nil
@@ -224,7 +226,7 @@ func (o *CreateBackupOptions) completeDefaultBackupPolicy() error {
 	if err != nil {
 		return err
 	}
-	o.BackupPolicy = defaultBackupPolicyName
+	o.BackupSpec.BackupPolicyName = defaultBackupPolicyName
 	return nil
 }
 
@@ -275,8 +277,8 @@ func NewCreateBackupCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *
 		CreateOptions: action.CreateOptions{
 			IOStreams:       streams,
 			Factory:         f,
-			GVR:             types.BackupGVR(),
-			CueTemplateName: "backup_template.cue",
+			GVR:             types.OpsGVR(),
+			CueTemplateName: "opsrequest_template.cue",
 			CustomOutPut:    customOutPut,
 		},
 	}
@@ -296,12 +298,12 @@ func NewCreateBackupCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *
 		},
 	}
 
-	cmd.Flags().StringVar(&o.BackupMethod, "method", "", "Backup methods are defined in backup policy (required), if only one backup method in backup policy, use it as default backup method, if multiple backup methods in backup policy, use method which volume snapshot is true as default backup method")
-	cmd.Flags().StringVar(&o.BackupName, "name", "", "Backup name")
-	cmd.Flags().StringVar(&o.BackupPolicy, "policy", "", "Backup policy name, if not specified, use the cluster default backup policy")
-	cmd.Flags().StringVar(&o.DeletionPolicy, "deletion-policy", "Delete", "Deletion policy for backup, determine whether the backup content in backup repo will be deleted after the backup is deleted, supported values: [Delete, Retain]")
-	cmd.Flags().StringVar(&o.RetentionPeriod, "retention-period", "", "Retention period for backup, supported values: [1y, 1mo, 1d, 1h, 1m] or combine them [1y1mo1d1h1m], if not specified, the backup will not be automatically deleted, you need to manually delete it.")
-	cmd.Flags().StringVar(&o.ParentBackupName, "parent-backup", "", "Parent backup name, used for incremental backup")
+	cmd.Flags().StringVar(&o.BackupSpec.BackupMethod, "method", "", "Backup methods are defined in backup policy (required), if only one backup method in backup policy, use it as default backup method, if multiple backup methods in backup policy, use method which volume snapshot is true as default backup method")
+	cmd.Flags().StringVar(&o.BackupSpec.BackupName, "name", "", "Backup name")
+	cmd.Flags().StringVar(&o.BackupSpec.BackupPolicyName, "policy", "", "Backup policy name, if not specified, use the cluster default backup policy")
+	cmd.Flags().StringVar(&o.BackupSpec.DeletionPolicy, "deletion-policy", "Delete", "Deletion policy for backup, determine whether the backup content in backup repo will be deleted after the backup is deleted, supported values: [Delete, Retain]")
+	cmd.Flags().StringVar(&o.BackupSpec.RetentionPeriod, "retention-period", "", "Retention period for backup, supported values: [1y, 1mo, 1d, 1h, 1m] or combine them [1y1mo1d1h1m], if not specified, the backup will not be automatically deleted, you need to manually delete it.")
+	cmd.Flags().StringVar(&o.BackupSpec.ParentBackupName, "parent-backup", "", "Parent backup name, used for incremental backup")
 	// register backup flag completion func
 	o.RegisterBackupFlagCompletionFunc(cmd, f)
 	return cmd
@@ -515,13 +517,10 @@ func completeForDeleteBackup(o *action.DeleteOptions, args []string) error {
 }
 
 type CreateRestoreOptions struct {
-	// backup name to restore in creation
-	Backup string `json:"backup,omitempty"`
-
-	// point in time recovery args
-	RestoreTime         *time.Time `json:"restoreTime,omitempty"`
-	RestoreTimeStr      string     `json:"restoreTimeStr,omitempty"`
-	VolumeRestorePolicy string     `json:"volumeRestorePolicy,omitempty"`
+	RestoreSpec    appsv1alpha1.RestoreSpec `json:"restoreSpec"`
+	ClusterRef     string                   `json:"clusterRef"`
+	OpsType        string                   `json:"opsType"`
+	OpsRequestName string                   `json:"opsRequestName"`
 
 	action.CreateOptions `json:"-"`
 }
@@ -540,7 +539,7 @@ func (o *CreateRestoreOptions) getClusterObject(backup *dpv1alpha1.Backup) (*app
 }
 
 func (o *CreateRestoreOptions) Run() error {
-	if o.Backup != "" {
+	if o.RestoreSpec.BackupName != "" {
 		return o.runRestoreFromBackup()
 	}
 	return nil
@@ -549,7 +548,7 @@ func (o *CreateRestoreOptions) Run() error {
 func (o *CreateRestoreOptions) runRestoreFromBackup() error {
 	// get backup
 	backup := &dpv1alpha1.Backup{}
-	if err := cluster.GetK8SClientObject(o.Dynamic, backup, types.BackupGVR(), o.Namespace, o.Backup); err != nil {
+	if err := cluster.GetK8SClientObject(o.Dynamic, backup, types.BackupGVR(), o.Namespace, o.RestoreSpec.BackupName); err != nil {
 		return err
 	}
 	if backup.Status.Phase != dpv1alpha1.BackupPhaseCompleted &&
@@ -557,10 +556,10 @@ func (o *CreateRestoreOptions) runRestoreFromBackup() error {
 		return errors.Errorf(`backup "%s" is not completed.`, backup.Name)
 	}
 	if len(backup.Labels[constant.AppInstanceLabelKey]) == 0 {
-		return errors.Errorf(`missing source cluster in backup "%s", "app.kubernetes.io/instance" is empty in labels.`, o.Backup)
+		return errors.Errorf(`missing source cluster in backup "%s", "app.kubernetes.io/instance" is empty in labels.`, o.RestoreSpec.BackupName)
 	}
 
-	restoreTimeStr, err := restore.FormatRestoreTimeAndValidate(o.RestoreTimeStr, backup)
+	restoreTimeStr, err := restore.FormatRestoreTimeAndValidate(o.RestoreSpec.RestoreTimeStr, backup)
 	if err != nil {
 		return err
 	}
@@ -569,7 +568,7 @@ func (o *CreateRestoreOptions) runRestoreFromBackup() error {
 	if err != nil {
 		return err
 	}
-	restoreAnnotation, err := restore.GetRestoreFromBackupAnnotation(backup, o.VolumeRestorePolicy, len(clusterObj.Spec.ComponentSpecs), clusterObj.Spec.ComponentSpecs[0].Name, restoreTimeStr)
+	restoreAnnotation, err := restore.GetRestoreFromBackupAnnotation(backup, o.RestoreSpec.VolumeRestorePolicy, len(clusterObj.Spec.ComponentSpecs), clusterObj.Spec.ComponentSpecs[0].Name, restoreTimeStr)
 	if err != nil {
 		return err
 	}
@@ -604,7 +603,7 @@ func (o *CreateRestoreOptions) createCluster(cluster *appsv1alpha1.Cluster) erro
 }
 
 func (o *CreateRestoreOptions) Validate() error {
-	if o.Backup == "" {
+	if o.RestoreSpec.BackupName == "" {
 		return fmt.Errorf("must be specified one of the --backup ")
 	}
 
@@ -618,15 +617,29 @@ func (o *CreateRestoreOptions) Validate() error {
 		}
 		o.Name = name
 	}
+
+	// set ops type, ops request name and clusterRef
+	o.OpsType = string(appsv1alpha1.RestoreType)
+	o.ClusterRef = o.Name
+	o.OpsRequestName = o.Name
+
 	return nil
 }
 
 func NewCreateRestoreCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
+	customOutPut := func(opt *action.CreateOptions) {
+		output := fmt.Sprintf("Cluster %s created", opt.Name)
+		printer.PrintLine(output)
+	}
+
 	o := &CreateRestoreOptions{}
 	o.CreateOptions = action.CreateOptions{
-		IOStreams: streams,
-		Factory:   f,
-		Options:   o,
+		IOStreams:       streams,
+		Factory:         f,
+		Options:         o,
+		GVR:             types.OpsGVR(),
+		CueTemplateName: "opsrequest_template.cue",
+		CustomOutPut:    customOutPut,
 	}
 
 	cmd := &cobra.Command{
@@ -641,9 +654,9 @@ func NewCreateRestoreCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) 
 			util.CheckErr(o.Run())
 		},
 	}
-	cmd.Flags().StringVar(&o.Backup, "backup", "", "Backup name")
-	cmd.Flags().StringVar(&o.RestoreTimeStr, "restore-to-time", "", "point in time recovery(PITR)")
-	cmd.Flags().StringVar(&o.VolumeRestorePolicy, "volume-restore-policy", "Parallel", "the volume claim restore policy, supported values: [Serial, Parallel]")
+	cmd.Flags().StringVar(&o.RestoreSpec.BackupName, "backup", "", "Backup name")
+	cmd.Flags().StringVar(&o.RestoreSpec.RestoreTimeStr, "restore-to-time", "", "point in time recovery(PITR)")
+	cmd.Flags().StringVar(&o.RestoreSpec.VolumeRestorePolicy, "volume-restore-policy", "Parallel", "the volume claim restore policy, supported values: [Serial, Parallel]")
 	return cmd
 }
 
