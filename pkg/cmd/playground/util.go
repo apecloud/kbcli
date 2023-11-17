@@ -32,7 +32,7 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/apecloud/kubeblocks/version"
+	"github.com/apecloud/kbcli/version"
 
 	cp "github.com/apecloud/kbcli/pkg/cloudprovider"
 	"github.com/apecloud/kbcli/pkg/spinner"

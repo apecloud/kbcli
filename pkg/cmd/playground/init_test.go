@@ -28,7 +28,7 @@ import (
 	gv "github.com/hashicorp/go-version"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
-	"github.com/apecloud/kubeblocks/version"
+	"github.com/apecloud/kbcli/version"
 
 	cp "github.com/apecloud/kbcli/pkg/cloudprovider"
 	clitesting "github.com/apecloud/kbcli/pkg/testing"

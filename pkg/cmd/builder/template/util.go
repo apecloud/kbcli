@@ -30,10 +30,10 @@ import (
 
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	testapps "github.com/apecloud/kubeblocks/pkg/testutil/apps"
-	"github.com/apecloud/kubeblocks/version"
 
 	"github.com/apecloud/kbcli/pkg/testing"
 	"github.com/apecloud/kbcli/pkg/util/helm"
+	"github.com/apecloud/kbcli/version"
 )
 
 type RenderedOptions struct {
