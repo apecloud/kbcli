@@ -46,13 +46,13 @@ import (
 	"k8s.io/kubectl/pkg/util/templates"
 
 	extensionsv1alpha1 "github.com/apecloud/kubeblocks/apis/extensions/v1alpha1"
-	"github.com/apecloud/kubeblocks/version"
 
 	"github.com/apecloud/kbcli/pkg/spinner"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
 	"github.com/apecloud/kbcli/pkg/util/breakingchange"
 	"github.com/apecloud/kbcli/pkg/util/helm"
+	"github.com/apecloud/kbcli/version"
 )
 
 const (
