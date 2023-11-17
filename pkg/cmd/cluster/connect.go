@@ -391,7 +391,6 @@ func (o *ConnectOptions) getConnectionInfo() (*engines.ConnectionInfo, error) {
 		// find no endpoints
 		return nil, fmt.Errorf("failed to find any cluster endpoints")
 	}
-
 	if o.engine, err = register.NewClusterCommands(o.componentDef.CharacterType); err != nil {
 		return nil, err
 	}

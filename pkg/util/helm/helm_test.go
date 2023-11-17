@@ -28,7 +28,7 @@ import (
 	"helm.sh/helm/v3/pkg/release"
 	"helm.sh/helm/v3/pkg/repo"
 
-	"github.com/apecloud/kubeblocks/version"
+	"github.com/apecloud/kbcli/version"
 
 	"github.com/apecloud/kbcli/pkg/testing"
 	"github.com/apecloud/kbcli/pkg/types"
