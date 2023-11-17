@@ -343,7 +343,7 @@ func generateComponentObjects(w *templateRenderWorkflow, reqCtx intctrlutil.Requ
 	cli.AppendMockObjects(secret)
 
 	// TODO(xingran & zhangtao): this is the logic before the componentDefinition refactoring. component.Create has already been removed during the refactoring
-	// if any functionality dependd on it, please check to replace it with tne new approach
+	// if any functionality depend on it, please check to replace it with tne new approach
 	/*	if err = component.Create(ctx, cli); err != nil {
 		return nil, nil, err
 	}*/
