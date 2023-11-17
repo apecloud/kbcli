@@ -417,6 +417,7 @@ func PrintBackupList(o ListBackupOptions) error {
 		for _, v := range backup.Status.Actions {
 			if v.ActionType == dpv1alpha1.ActionTypeStatefulSet {
 				availableReplicas = v.AvailableReplicas
+				break
 			}
 		}
 		if availableReplicas != nil {
