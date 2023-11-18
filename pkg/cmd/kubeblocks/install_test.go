@@ -28,11 +28,10 @@ import (
 	clientfake "k8s.io/client-go/rest/fake"
 	cmdtesting "k8s.io/kubectl/pkg/cmd/testing"
 
-	"github.com/apecloud/kbcli/version"
-
 	"github.com/apecloud/kbcli/pkg/testing"
 	"github.com/apecloud/kbcli/pkg/util"
 	"github.com/apecloud/kbcli/pkg/util/helm"
+	"github.com/apecloud/kbcli/version"
 )
 
 const namespace = "test"

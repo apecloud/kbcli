@@ -2,7 +2,7 @@
 name: Improvement request
 about: Suggest an improvement idea for this project
 title: "[Improvement]"
-labels: kind/enhancement
+labels: enhancement
 assignees: ldming
 
 ---
