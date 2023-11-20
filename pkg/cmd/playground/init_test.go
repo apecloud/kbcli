@@ -28,12 +28,11 @@ import (
 	gv "github.com/hashicorp/go-version"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
-	"github.com/apecloud/kubeblocks/version"
-
 	cp "github.com/apecloud/kbcli/pkg/cloudprovider"
 	clitesting "github.com/apecloud/kbcli/pkg/testing"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util/helm"
+	"github.com/apecloud/kbcli/version"
 )
 
 var _ = Describe("playground", func() {

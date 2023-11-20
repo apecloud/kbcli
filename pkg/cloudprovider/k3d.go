@@ -42,10 +42,9 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
 
-	"github.com/apecloud/kubeblocks/version"
-
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
+	"github.com/apecloud/kbcli/version"
 )
 
 var (
