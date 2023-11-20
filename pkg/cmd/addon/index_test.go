@@ -19,7 +19,9 @@ var _ = Describe("index test", func() {
 	)
 	BeforeEach(func() {
 		streams, _, out, _ = genericiooptions.NewTestIOStreams()
+		Expect(addDefaultIndex()).Should(Succeed())
 	})
+
 	It("test index cmd", func() {
 		Expect(newIndexCmd(streams)).ShouldNot(BeNil())
 	})
@@ -37,6 +39,7 @@ var _ = Describe("index test", func() {
 	})
 
 	It("test index list cmd", func() {
+
 		Expect(newIndexListCmd(streams)).ShouldNot(BeNil())
 
 		Expect(listIndexes(out)).Should(Succeed())
