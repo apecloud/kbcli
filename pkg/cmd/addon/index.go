@@ -63,9 +63,6 @@ func newIndexAddCmd() *cobra.Command {
 		Long:    "Configure a new index to install KubeBlocks addon from.",
 		Example: "kbcli addon index add kubeblocks " + types.DefaultAddonIndexURL,
 		Args:    cobra.ExactArgs(2),
-		PersistentPreRun: func(_ *cobra.Command, _ []string) {
-			util.CheckErr(addDefaultIndex())
-		},
 		Run: func(_ *cobra.Command, args []string) {
 			util.CheckErr(addIndex(args))
 		},
@@ -95,6 +92,9 @@ func newIndexCmd(streams genericiooptions.IOStreams) *cobra.Command {
 		Short: "Manage custom addon indexes",
 		Long:  "Manage which repositories are used to discover and install addon from.",
 		Args:  cobra.NoArgs,
+		PersistentPreRun: func(_ *cobra.Command, _ []string) {
+			util.CheckErr(addDefaultIndex())
+		},
 	}
 	indexCmd.AddCommand(
 		newIndexAddCmd(),
@@ -211,7 +211,7 @@ func addIndex(args []string) error {
 	} else if err != nil {
 		return err
 	}
-	return errors.New("index already exists")
+	return fmt.Errorf("index %s:%s already exists", name, url)
 }
 
 func listIndexes(out io.Writer) error {
@@ -261,15 +261,19 @@ func addDefaultIndex() error {
 		return fmt.Errorf("can't get the index dir : %s", err.Error())
 	}
 
+	// check if the default index is already added
 	defaultIndexDir := path.Join(addonDir, types.KubeBlocksReleaseName)
-	if _, err := os.Stat(defaultIndexDir); err != nil && os.IsNotExist(err) {
+	if _, err := os.Stat(defaultIndexDir); os.IsNotExist(err) {
 		if err = util.EnsureCloned(types.DefaultAddonIndexURL, defaultIndexDir); err != nil {
 			return err
 		}
 		fmt.Printf("Default addon index \"kubeblocks\" has been added.")
 		return nil
+	} else if err != nil {
+		return err
 	}
-	return fmt.Errorf("default index %s:%s already exists", types.KubeBlocksReleaseName, types.DefaultAddonIndexURL)
+
+	return nil
 }
 
 func getAllIndexes() ([]index, error) {
