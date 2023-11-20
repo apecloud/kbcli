@@ -22,7 +22,6 @@ package cluster
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"reflect"
 	"sort"
@@ -59,7 +58,6 @@ import (
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	dpv1alpha1 "github.com/apecloud/kubeblocks/apis/dataprotection/v1alpha1"
 	"github.com/apecloud/kubeblocks/pkg/constant"
-	"github.com/apecloud/kubeblocks/pkg/dataprotection/restore"
 	dptypes "github.com/apecloud/kubeblocks/pkg/dataprotection/types"
 )
 
@@ -523,83 +521,6 @@ type CreateRestoreOptions struct {
 	OpsRequestName string                   `json:"opsRequestName"`
 
 	action.CreateOptions `json:"-"`
-}
-
-func (o *CreateRestoreOptions) getClusterObject(backup *dpv1alpha1.Backup) (*appsv1alpha1.Cluster, error) {
-	// use the cluster snapshot to restore firstly
-	clusterString, ok := backup.Annotations[constant.ClusterSnapshotAnnotationKey]
-	if !ok {
-		return nil, fmt.Errorf("missing snapshot annotation in backup %s, %s is empty in Annotations", backup.Name, constant.ClusterSnapshotAnnotationKey)
-	}
-	clusterObj := &appsv1alpha1.Cluster{}
-	if err := json.Unmarshal([]byte(clusterString), &clusterObj); err != nil {
-		return nil, err
-	}
-	return clusterObj, nil
-}
-
-func (o *CreateRestoreOptions) Run() error {
-	if o.RestoreSpec.BackupName != "" {
-		return o.runRestoreFromBackup()
-	}
-	return nil
-}
-
-func (o *CreateRestoreOptions) runRestoreFromBackup() error {
-	// get backup
-	backup := &dpv1alpha1.Backup{}
-	if err := cluster.GetK8SClientObject(o.Dynamic, backup, types.BackupGVR(), o.Namespace, o.RestoreSpec.BackupName); err != nil {
-		return err
-	}
-	if backup.Status.Phase != dpv1alpha1.BackupPhaseCompleted &&
-		backup.Labels[dptypes.BackupTypeLabelKey] != string(dpv1alpha1.BackupTypeContinuous) {
-		return errors.Errorf(`backup "%s" is not completed.`, backup.Name)
-	}
-	if len(backup.Labels[constant.AppInstanceLabelKey]) == 0 {
-		return errors.Errorf(`missing source cluster in backup "%s", "app.kubernetes.io/instance" is empty in labels.`, o.RestoreSpec.BackupName)
-	}
-
-	restoreTimeStr, err := restore.FormatRestoreTimeAndValidate(o.RestoreSpec.RestoreTimeStr, backup)
-	if err != nil {
-		return err
-	}
-	// get the cluster object and set the annotation for restore
-	clusterObj, err := o.getClusterObject(backup)
-	if err != nil {
-		return err
-	}
-	restoreAnnotation, err := restore.GetRestoreFromBackupAnnotation(backup, o.RestoreSpec.VolumeRestorePolicy, len(clusterObj.Spec.ComponentSpecs), clusterObj.Spec.ComponentSpecs[0].Name, restoreTimeStr)
-	if err != nil {
-		return err
-	}
-	clusterObj.ObjectMeta = metav1.ObjectMeta{
-		Namespace:   clusterObj.Namespace,
-		Name:        o.Name,
-		Annotations: map[string]string{constant.RestoreFromBackupAnnotationKey: restoreAnnotation},
-	}
-	return o.createCluster(clusterObj)
-}
-
-func (o *CreateRestoreOptions) createCluster(cluster *appsv1alpha1.Cluster) error {
-	clusterGVR := types.ClusterGVR()
-	cluster.Status = appsv1alpha1.ClusterStatus{}
-	cluster.TypeMeta = metav1.TypeMeta{
-		Kind:       types.KindCluster,
-		APIVersion: clusterGVR.GroupVersion().String(),
-	}
-	// convert the cluster object and create it.
-	unstructuredMap, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&cluster)
-	if err != nil {
-		return err
-	}
-	unstructuredObj := &unstructured.Unstructured{Object: unstructuredMap}
-	if unstructuredObj, err = o.Dynamic.Resource(clusterGVR).Namespace(o.Namespace).Create(context.TODO(), unstructuredObj, metav1.CreateOptions{}); err != nil {
-		return err
-	}
-	if !o.Quiet {
-		fmt.Fprintf(o.Out, "%s %s created\n", unstructuredObj.GetKind(), unstructuredObj.GetName())
-	}
-	return nil
 }
 
 func (o *CreateRestoreOptions) Validate() error {

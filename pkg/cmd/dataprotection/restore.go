@@ -46,7 +46,7 @@ func newRestoreCommand(f cmdutil.Factory, streams genericiooptions.IOStreams) *c
 		printer.PrintLine(output)
 	}
 
-	o := cluster.CreateRestoreOptions{}
+	o := &cluster.CreateRestoreOptions{}
 	o.CreateOptions = action.CreateOptions{
 		IOStreams:       streams,
 		Factory:         f,
