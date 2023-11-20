@@ -39,9 +39,7 @@ var _ = Describe("index test", func() {
 	})
 
 	It("test index list cmd", func() {
-
 		Expect(newIndexListCmd(streams)).ShouldNot(BeNil())
-
 		Expect(listIndexes(out)).Should(Succeed())
 		expect := `INDEX        URL                                           
 kubeblocks   https://github.com/apecloud/block-index.git   
