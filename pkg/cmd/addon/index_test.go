@@ -16,6 +16,7 @@ var _ = Describe("index test", func() {
 		defaultIndexName = "kubeblocks"
 		testIndexName    = "kb-other"
 		testIndexURL     = "unknown"
+		testIndexDir     = "./testdata"
 	)
 	BeforeEach(func() {
 		streams, _, out, _ = genericiooptions.NewTestIOStreams()
@@ -79,5 +80,15 @@ kubeblocks   https://github.com/apecloud/block-index.git
 				Expect(IsValidIndexName(t.name)).Should(BeFalse())
 			}
 		}
+	})
+
+	It("test get index", func() {
+		indexes, err := getAllIndexes(testIndexDir)
+		Expect(err).Should(Succeed())
+		Expect(indexes).Should(HaveLen(1))
+		Expect(indexes[0]).Should(Equal(index{
+			name: defaultIndexName,
+			url:  "git@github.com:apecloud/kbcli.git",
+		}))
 	})
 })

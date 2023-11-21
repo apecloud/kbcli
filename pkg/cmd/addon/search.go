@@ -64,6 +64,7 @@ func search(args []string, out io.Writer) error {
 	return nil
 }
 
+// searchAddon function will search for the addons with the specified name in the index of the specified directory and return them.
 func searchAddon(name string, indexDir string) ([]searchResult, error) {
 	indexes, err := getAllIndexes(indexDir)
 	if err != nil {
