@@ -246,7 +246,7 @@ func getFirstContext(token string, orgName string) string {
 		return ""
 	}
 
-	if contexts != nil {
+	if contexts != nil && len(contexts) > 0 {
 		return contexts[0].Name
 	}
 	return ""
