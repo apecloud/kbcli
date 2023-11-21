@@ -122,6 +122,7 @@ func (o *InstallOptions) Upgrade() error {
 	}
 	fmt.Fprintf(o.Out, "Current KubeBlocks version %s.\n", v.KubeBlocks)
 
+	// check installing version exists
 	if err = o.checkVersion(v); err != nil {
 		return err
 	}
