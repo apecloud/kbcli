@@ -42,5 +42,6 @@ content: {
 		if options.opsType == "Restore" {
 			restoreSpec: options.restoreSpec
 		}
+		ttlSecondsAfterSucceed: 30
 	}
 }
