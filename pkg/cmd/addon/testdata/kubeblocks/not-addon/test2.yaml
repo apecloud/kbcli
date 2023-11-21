@@ -1,0 +1,11 @@
+# Testing a YAML file that is not of addon type.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: random-pod
+spec:
+  containers:
+    - name: random-container
+      image: nginx:latest
+      ports:
+        - containerPort: 80
