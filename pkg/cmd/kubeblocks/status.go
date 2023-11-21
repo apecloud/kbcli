@@ -46,6 +46,7 @@ import (
 
 	extensionsv1alpha1 "github.com/apecloud/kubeblocks/apis/extensions/v1alpha1"
 	"github.com/apecloud/kubeblocks/pkg/constant"
+	dptypes "github.com/apecloud/kubeblocks/pkg/dataprotection/types"
 
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
@@ -162,7 +163,10 @@ func (o *statusOptions) complete(f cmdutil.Factory) error {
 	}
 
 	o.selectorList = []metav1.ListOptions{
-		{LabelSelector: fmt.Sprintf("%s=%s", constant.AppManagedByLabelKey, constant.AppName)}, // app.kubernetes.io/managed-by=kubeblocks
+		// app.kubernetes.io/managed-by=kubeblocks
+		{LabelSelector: fmt.Sprintf("%s=%s", constant.AppManagedByLabelKey, constant.AppName)},
+		// app.kubernetes.io/name=kubeblocks-dataprotection
+		{LabelSelector: fmt.Sprintf("%s=%s", constant.AppManagedByLabelKey, dptypes.AppName)},
 	}
 
 	return nil
