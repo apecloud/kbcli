@@ -115,7 +115,11 @@ type updateOption struct {
 
 // validate will check the update index whether existed
 func (o *updateOption) validate(args []string) error {
-	indexes, err := getAllIndexes()
+	addonDir, err := util.GetCliAddonDir()
+	if err != nil {
+		return err
+	}
+	indexes, err := getAllIndexes(addonDir)
 	if err != nil {
 		return err
 	}
@@ -215,11 +219,14 @@ func addIndex(args []string) error {
 }
 
 func listIndexes(out io.Writer) error {
+	addonDir, err := util.GetCliAddonDir()
+	if err != nil {
+		return err
+	}
 	tbl := printer.NewTablePrinter(out)
 	tbl.SortBy(1)
 	tbl.SetHeader("INDEX", "URL")
-
-	indexes, err := getAllIndexes()
+	indexes, err := getAllIndexes(addonDir)
 	if err != nil {
 		return err
 	}
@@ -267,7 +274,7 @@ func addDefaultIndex() error {
 		if err = util.EnsureCloned(types.DefaultAddonIndexURL, defaultIndexDir); err != nil {
 			return err
 		}
-		fmt.Printf("Default addon index \"kubeblocks\" has been added.")
+		fmt.Printf("Default addon index \"kubeblocks\" has been added.\n")
 		return nil
 	} else if err != nil {
 		return err
@@ -276,12 +283,8 @@ func addDefaultIndex() error {
 	return nil
 }
 
-func getAllIndexes() ([]index, error) {
-	addonDir, err := util.GetCliAddonDir()
-	if err != nil {
-		return nil, err
-	}
-	entries, err := os.ReadDir(addonDir)
+func getAllIndexes(indexDir string) ([]index, error) {
+	entries, err := os.ReadDir(indexDir)
 	if err != nil {
 		return nil, err
 	}
@@ -291,7 +294,7 @@ func getAllIndexes() ([]index, error) {
 			continue
 		}
 		indexName := e.Name()
-		remote, err := util.GitGetRemoteURL(path.Join(addonDir, indexName))
+		remote, err := util.GitGetRemoteURL(path.Join(indexDir, indexName))
 		if err != nil {
 			return nil, err
 		}
@@ -306,7 +309,11 @@ func getAllIndexes() ([]index, error) {
 func indexCompletion() func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 	return func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		availableComps := []string{}
-		indexes, err := getAllIndexes()
+		addonDir, err := util.GetCliAddonDir()
+		if err != nil {
+			return availableComps, cobra.ShellCompDirectiveNoFileComp
+		}
+		indexes, err := getAllIndexes(addonDir)
 		if err != nil {
 			return availableComps, cobra.ShellCompDirectiveNoFileComp
 		}

@@ -1,6 +1,7 @@
 package addon
 
 import (
+	"fmt"
 	"io"
 	"io/fs"
 	"os"
@@ -30,8 +31,8 @@ func newSearchCmd(streams genericiooptions.IOStreams) *cobra.Command {
 		Use:   "search",
 		Short: "search the addon from index",
 		Args:  cobra.ExactArgs(1),
-		PersistentPreRun: func(_ *cobra.Command, _ []string) {
-			klog.V(2).Enabled()
+		PersistentPreRun: func(cmd *cobra.Command, _ []string) {
+			util.CheckErr(util.EnableLogToFile(cmd.Flags()))
 		},
 		Run: func(_ *cobra.Command, args []string) {
 			util.CheckErr(search(args, streams.Out))
@@ -43,9 +44,17 @@ func newSearchCmd(streams genericiooptions.IOStreams) *cobra.Command {
 func search(args []string, out io.Writer) error {
 	tbl := printer.NewTablePrinter(out)
 	tbl.AddRow("ADDON", "VERSION", "INDEX")
-	results, err := searchAddon(args[0])
+	dir, err := util.GetCliAddonDir()
 	if err != nil {
 		return err
+	}
+	results, err := searchAddon(args[0], dir)
+	if err != nil {
+		return err
+	}
+	if len(results) == 0 {
+		fmt.Fprintf(out, "%s addon not found. Please update your index or check the addon name", args[0])
+		return nil
 	}
 	for _, res := range results {
 		label := res.addon.Labels
@@ -55,19 +64,14 @@ func search(args []string, out io.Writer) error {
 	return nil
 }
 
-func searchAddon(name string) ([]searchResult, error) {
-	addonDir, err := util.GetCliAddonDir()
-	if err != nil {
-		return nil, err
-	}
-	indexes, err := getAllIndexes()
+func searchAddon(name string, indexDir string) ([]searchResult, error) {
+	indexes, err := getAllIndexes(indexDir)
 	if err != nil {
 		return nil, err
 	}
 	var res []searchResult
-
 	searchInDir := func(i index) error {
-		return filepath.WalkDir(filepath.Join(addonDir, i.name), func(path string, d fs.DirEntry, err error) error {
+		return filepath.WalkDir(filepath.Join(indexDir, i.name), func(path string, d fs.DirEntry, err error) error {
 			// skip .git .github
 			if ok, _ := regexp.MatchString(`^\..*`, d.Name()); ok && d.IsDir() {
 				return filepath.SkipDir
