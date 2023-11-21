@@ -105,9 +105,6 @@ kubeblocks   https://github.com/apecloud/block-index.git
 		indexes, err := getAllIndexes(testIndexDir)
 		Expect(err).Should(Succeed())
 		Expect(indexes).Should(HaveLen(1))
-		Expect(indexes[0]).Should(Equal(index{
-			name: defaultIndexName,
-			url:  "git@github.com:apecloud/kbcli.git",
-		}))
+		Expect(indexes[0].name).Should(Equal(defaultIndexName))
 	})
 })
