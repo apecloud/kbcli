@@ -21,10 +21,12 @@ package util
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/go-git/go-git/v5"
@@ -144,12 +146,33 @@ func ExecGitCommand(pwd string, args ...string) (string, error) {
 }
 
 func IsRepoLatest(destinationPath string) (bool, error) {
-	if _, err := ExecGitCommand(destinationPath, "fetch", "-v"); err != nil {
+	var (
+		currentBranch string
+		commits       string
+		err           error
+	)
+	if currentBranch, err = GetCurrentBranch(destinationPath); err != nil {
 		return false, err
 	}
-	output, err := ExecGitCommand(destinationPath, "status", "-uno", "--porcelain")
-	if err != nil {
+	if _, err = ExecGitCommand(destinationPath, "fetch", "origin", "-v", "-n"); err != nil {
 		return false, err
 	}
-	return output == "", nil
+
+	if commits, err = ExecGitCommand(destinationPath, "rev-list", fmt.Sprintf("%s..origin/%s", currentBranch, currentBranch), "--count"); err == nil {
+		commits, err := strconv.Atoi(commits)
+		return err == nil && commits == 0, err
+	}
+	return false, err
+}
+
+func GetCurrentBranch(destinationPath string) (string, error) {
+	var (
+		output string
+		err    error
+	)
+
+	if output, err = ExecGitCommand(destinationPath, "rev-parse", "--abbrev-ref", "HEAD"); err != nil {
+		return "", err
+	}
+	return output, nil
 }

@@ -191,7 +191,7 @@ func newIndexUpdateCmd(streams genericiooptions.IOStreams) *cobra.Command {
 
 // IsValidIndexName validates if an index name contains invalid characters
 func IsValidIndexName(name string) bool {
-	var validNamePattern = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
+	var validNamePattern = regexp.MustCompile(`^[A-Za-z0-9_-]{1,16}$`)
 	return validNamePattern.MatchString(name)
 }
 
