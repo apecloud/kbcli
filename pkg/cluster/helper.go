@@ -136,7 +136,17 @@ func getInstanceInfoByList(dynamic dynamic.Interface, name, componentName, names
 	}
 
 	for _, o := range objs.Items {
-		infos = append(infos, &InstanceInfo{Name: o.GetName()})
+		info := &InstanceInfo{Name: o.GetName()}
+		podLabels := o.GetLabels()
+		role, ok := podLabels[constant.RoleLabelKey]
+		if ok {
+			info.Role = role
+		}
+		if role == constant.Primary || role == constant.Leader {
+			infos = append([]*InstanceInfo{info}, infos...)
+		} else {
+			infos = append(infos, info)
+		}
 	}
 	return infos
 }
