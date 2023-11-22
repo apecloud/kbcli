@@ -403,9 +403,9 @@ func (o *InstallOptions) checkVersion(v util.Version) error {
 	// check installing version exists
 	if exists, err := versionExists(o.Version); !exists {
 		if err != nil {
-			klog.V(1).Infof(err.Error())
+			return err
 		}
-		return errors.Wrapf(err, "version %s does not exist, please use \"kbcli kubeblocks list-versions --devel\" to show the available versions", o.Version)
+		return fmt.Errorf("version %s does not exist, please use \"kbcli kubeblocks list-versions --devel\" to show the available versions", o.Version)
 	}
 
 	versionErr := fmt.Errorf("failed to get kubernetes version")
