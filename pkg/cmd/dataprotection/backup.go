@@ -82,8 +82,8 @@ func newBackupCommand(f cmdutil.Factory, streams genericiooptions.IOStreams) *co
 		CreateOptions: action.CreateOptions{
 			IOStreams:       streams,
 			Factory:         f,
-			GVR:             types.BackupGVR(),
-			CueTemplateName: "backup_template.cue",
+			GVR:             types.OpsGVR(),
+			CueTemplateName: "opsrequest_template.cue",
 			CustomOutPut:    customOutPut,
 		},
 	}
@@ -95,7 +95,7 @@ func newBackupCommand(f cmdutil.Factory, streams genericiooptions.IOStreams) *co
 		Example: createBackupExample,
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) > 0 {
-				o.BackupName = args[0]
+				o.BackupSpec.BackupName = args[0]
 			}
 			if clusterName != "" {
 				o.Args = []string{clusterName}
@@ -107,12 +107,12 @@ func newBackupCommand(f cmdutil.Factory, streams genericiooptions.IOStreams) *co
 		},
 	}
 
-	cmd.Flags().StringVar(&o.BackupMethod, "method", "", "Backup methods are defined in backup policy (required), if only one backup method in backup policy, use it as default backup method, if multiple backup methods in backup policy, use method which volume snapshot is true as default backup method")
+	cmd.Flags().StringVar(&o.BackupSpec.BackupMethod, "method", "", "Backup methods are defined in backup policy (required), if only one backup method in backup policy, use it as default backup method, if multiple backup methods in backup policy, use method which volume snapshot is true as default backup method")
 	cmd.Flags().StringVar(&clusterName, "cluster", "", "Cluster name")
-	cmd.Flags().StringVar(&o.BackupPolicy, "policy", "", "Backup policy name, if not specified, use the cluster default backup policy")
-	cmd.Flags().StringVar(&o.DeletionPolicy, "deletion-policy", "Delete", "Deletion policy for backup, determine whether the backup content in backup repo will be deleted after the backup is deleted, supported values: [Delete, Retain]")
-	cmd.Flags().StringVar(&o.RetentionPeriod, "retention-period", "", "Retention period for backup, supported values: [1y, 1mo, 1d, 1h, 1m] or combine them [1y1mo1d1h1m], if not specified, the backup will not be automatically deleted, you need to manually delete it.")
-	cmd.Flags().StringVar(&o.ParentBackupName, "parent-backup", "", "Parent backup name, used for incremental backup")
+	cmd.Flags().StringVar(&o.BackupSpec.BackupPolicyName, "policy", "", "Backup policy name, if not specified, use the cluster default backup policy")
+	cmd.Flags().StringVar(&o.BackupSpec.DeletionPolicy, "deletion-policy", "Delete", "Deletion policy for backup, determine whether the backup content in backup repo will be deleted after the backup is deleted, supported values: [Delete, Retain]")
+	cmd.Flags().StringVar(&o.BackupSpec.RetentionPeriod, "retention-period", "", "Retention period for backup, supported values: [1y, 1mo, 1d, 1h, 1m] or combine them [1y1mo1d1h1m], if not specified, the backup will not be automatically deleted, you need to manually delete it.")
+	cmd.Flags().StringVar(&o.BackupSpec.ParentBackupName, "parent-backup", "", "Parent backup name, used for incremental backup")
 	util.RegisterClusterCompletionFunc(cmd, f)
 	o.RegisterBackupFlagCompletionFunc(cmd, f)
 

@@ -32,22 +32,20 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	k8sapitypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	"k8s.io/client-go/dynamic"
 	clientfake "k8s.io/client-go/rest/fake"
 	cmdtesting "k8s.io/kubectl/pkg/cmd/testing"
-
-	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
-	dpv1alpha1 "github.com/apecloud/kubeblocks/apis/dataprotection/v1alpha1"
-	"github.com/apecloud/kubeblocks/pkg/constant"
-	dptypes "github.com/apecloud/kubeblocks/pkg/dataprotection/types"
 
 	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/cluster"
 	"github.com/apecloud/kbcli/pkg/testing"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
+	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
+	dpv1alpha1 "github.com/apecloud/kubeblocks/apis/dataprotection/v1alpha1"
+	"github.com/apecloud/kubeblocks/pkg/constant"
+	dptypes "github.com/apecloud/kubeblocks/pkg/dataprotection/types"
 )
 
 var _ = Describe("DataProtection", func() {
@@ -163,7 +161,7 @@ var _ = Describe("DataProtection", func() {
 			By("test with one default backupPolicy")
 			initClient(defaultBackupPolicy)
 			o.Dynamic = tf.FakeDynamicClient
-			o.BackupMethod = testing.BackupMethodName
+			o.BackupSpec.BackupMethod = testing.BackupMethodName
 			Expect(o.Validate()).Should(Succeed())
 		})
 
@@ -187,8 +185,10 @@ var _ = Describe("DataProtection", func() {
 					CueTemplateName: "backup_template.cue",
 					Name:            testing.ClusterName,
 				},
-				BackupPolicy: otherBackupPolicy.Name,
-				BackupMethod: testing.BackupMethodName,
+				BackupSpec: appsv1alpha1.BackupSpec{
+					BackupPolicyName: otherBackupPolicy.Name,
+					BackupMethod:     testing.BackupMethodName,
+				},
 			}
 			Expect(o.CompleteBackup()).Should(Succeed())
 			err := o.Validate()
@@ -269,11 +269,9 @@ var _ = Describe("DataProtection", func() {
 			&pods.Items[0], clusterDef, clusterObj, backupPolicy)
 		tf.Client = &clientfake.RESTClient{}
 		// create backup
-		cmd := NewCreateBackupCmd(tf, streams)
-		Expect(cmd).ShouldNot(BeNil())
-		_ = cmd.Flags().Set("method", testing.BackupMethodName)
-		_ = cmd.Flags().Set("name", backupName)
-		cmd.Run(nil, []string{clusterName})
+		backup := testing.FakeBackup(backupName)
+		dynamic := testing.FakeDynamicClient(backup)
+		tf.FakeDynamicClient = dynamic
 
 		By("restore new cluster from source cluster which is not deleted")
 		// mock backup is ok
@@ -282,22 +280,9 @@ var _ = Describe("DataProtection", func() {
 		Expect(cmdRestore != nil).To(BeTrue())
 		_ = cmdRestore.Flags().Set("backup", backupName)
 		cmdRestore.Run(nil, []string{newClusterName})
-		newClusterObj := &appsv1alpha1.Cluster{}
-		Expect(cluster.GetK8SClientObject(tf.FakeDynamicClient, newClusterObj, types.ClusterGVR(), testing.Namespace, newClusterName)).Should(Succeed())
+		newRestoreOps := &appsv1alpha1.OpsRequest{}
+		Expect(cluster.GetK8SClientObject(tf.FakeDynamicClient, newRestoreOps, types.OpsGVR(), testing.Namespace, newClusterName)).Should(Succeed())
 		Expect(clusterObj.Spec.ComponentSpecs[0].Replicas).Should(Equal(int32(1)))
-		// check if cluster contains the annotation for restoring
-		Expect(newClusterObj.Annotations[constant.RestoreFromBackupAnnotationKey]).Should(ContainSubstring(constant.ConnectionPassword))
-		Expect(newClusterObj.Annotations[constant.RestoreFromBackupAnnotationKey]).Should(ContainSubstring(constant.BackupNamespaceKeyForRestore))
-		By("restore new cluster from source cluster which is deleted")
-		// mock cluster is not lived in kubernetes
-		mockBackupInfo(tf.FakeDynamicClient, backupName, "deleted-cluster", nil, "")
-		cmdRestore.Run(nil, []string{newClusterName + "1"})
-
-		By("run restore cmd with cluster spec.affinity=nil")
-		patchCluster := []byte(`{"spec":{"affinity":null}}`)
-		_, _ = tf.FakeDynamicClient.Resource(types.ClusterGVR()).Namespace(testing.Namespace).Patch(context.TODO(), clusterName,
-			k8sapitypes.MergePatchType, patchCluster, metav1.PatchOptions{})
-		cmdRestore.Run(nil, []string{newClusterName + "-with-nil-affinity"})
 	})
 
 	// It("restore-to-time", func() {

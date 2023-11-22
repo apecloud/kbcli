@@ -17,37 +17,31 @@
 
 // required, command line input options for parameters and flags
 options: {
-	backupName:       string
-	namespace:        string
-	backupMethod:     string
-	backupPolicy:     string
-	deletionPolicy:   string
-	retentionPeriod:  string
-	parentBackupName: string
+	opsRequestName: 	string
+	namespace: 				string
+	clusterRef: 			string
+	opsType: 						string
+	backupSpec: 			{}
+	restoreSpec: 			{}
 }
 
 // required, k8s api resource content
 content: {
-	apiVersion: "dataprotection.kubeblocks.io/v1alpha1"
-	kind:       "Backup"
+	apiVersion: "apps.kubeblocks.io/v1alpha1"
+	kind:       "OpsRequest"
 	metadata: {
-		name:      options.backupName
+		name:      options.opsRequestName
 		namespace: options.namespace
-		labels: {
-			"kubeblocks.io/backup-protection": "retain"
-		}
 	}
 	spec: {
-		backupMethod:     options.backupMethod
-		backupPolicyName: options.backupPolicy
-		if options.deletionPolicy != "" {
-			deletionPolicy: options.deletionPolicy
+		clusterRef: options.clusterRef
+		type: options.opsType
+		if options.opsType == "Backup" {
+			backupSpec: options.backupSpec
 		}
-		if options.retentionPeriod != "" {
-			retentionPeriod: options.retentionPeriod
+		if options.opsType == "Restore" {
+			restoreSpec: options.restoreSpec
 		}
-		if options.parentBackupName != "" {
-			parentBackupName: options.parentBackupName
-		}
+		ttlSecondsAfterSucceed: 30
 	}
 }
