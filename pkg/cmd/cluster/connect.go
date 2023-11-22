@@ -67,9 +67,9 @@ var connectExample = templates.Examples(`
 		kbcli cluster connect mycluster --show-example --client=java
 
 		# show all connection examples with password mask
-		kbcli cluster connect mycluster --show-example 
+		kbcli cluster connect mycluster --show-example
 
-		# show cli connection examples with real password 
+		# show cli connection examples with real password
 		kbcli cluster connect mycluster --show-example --client=cli --show-password`)
 
 const passwordMask = "******"
@@ -279,24 +279,31 @@ func (o *ConnectOptions) connect() error {
 }
 
 func (o *ConnectOptions) getAuthInfo() (*engines.AuthInfo, error) {
-	// select secrets by labels, admin account is preferred
-	labels := fmt.Sprintf("%s=%s,%s=%s,%s=%s",
-		constant.AppInstanceLabelKey, o.clusterName,
-		constant.KBAppComponentLabelKey, o.componentName,
-		constant.ClusterAccountLabelKey, (string)(appsv1alpha1.AdminAccount),
-	)
+	getter := cluster.ObjectsGetter{
+		Client:    o.Client,
+		Dynamic:   o.Dynamic,
+		Name:      o.clusterName,
+		Namespace: o.Namespace,
+		GetOptions: cluster.GetOptions{
+			WithClusterDef: true,
+			WithService:    true,
+			WithSecret:     true,
+		},
+	}
 
-	secrets, err := o.Client.CoreV1().Secrets(o.Namespace).List(context.Background(), metav1.ListOptions{LabelSelector: labels})
+	objs, err := getter.Get()
 	if err != nil {
-		return nil, fmt.Errorf("failed to list secrets for cluster %s, component %s, err %v", o.clusterName, o.componentName, err)
+		return nil, err
 	}
-	if len(secrets.Items) == 0 {
-		return nil, nil
+
+	if user, passwd, err := getUserAndPassword(objs.ClusterDef, objs.Secrets); err != nil {
+		return nil, err
+	} else {
+		return &engines.AuthInfo{
+			UserName:   user,
+			UserPasswd: passwd,
+		}, nil
 	}
-	return &engines.AuthInfo{
-		UserName:   string(secrets.Items[0].Data["username"]),
-		UserPasswd: string(secrets.Items[0].Data["password"]),
-	}, nil
 }
 
 func (o *ConnectOptions) getTargetPod() error {
@@ -399,6 +406,7 @@ func (o *ConnectOptions) getConnectionInfo() (*engines.ConnectionInfo, error) {
 }
 
 // getUserAndPassword gets cluster user and password from secrets
+// TODO:@shanshanying, should use admin user and password. Use root credential for now.
 func getUserAndPassword(clusterDef *appsv1alpha1.ClusterDefinition, secrets *corev1.SecretList) (string, string, error) {
 	var (
 		user, password = "", ""
