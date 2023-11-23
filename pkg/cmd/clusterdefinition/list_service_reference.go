@@ -40,7 +40,7 @@ import (
 var (
 	listServiceRefExample = templates.Examples(`
 		# List cluster references name declared in a cluster definition.
-		kbcli clusterdefinition list-service-reference apecloud-mysql`)
+		kbcli clusterdefinition list-service-reference orioledb`)
 )
 
 func NewListServiceReferenceCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {

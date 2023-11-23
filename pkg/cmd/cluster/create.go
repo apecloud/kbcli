@@ -1763,7 +1763,7 @@ func getServiceRefs(serviceRef []string, cd *appsv1alpha1.ClusterDefinition) ([]
 			}
 			if !valid {
 				// todo:  kbcli cluster list-serviceRef
-				return nil, fmt.Errorf("the service reference name \"%s\" is not declared in the cluster components,use `kbcli cluster list-serviceRef %s` to show all available service reference names", serviceRefName, cd.Name)
+				return nil, fmt.Errorf("the service reference name \"%s\" is not declared in the cluster-definition %s ,use `kbcli clusterdefinition list-serviceRef %s` to show all available service reference names", serviceRefName, cd.Name, cd.Name)
 			}
 		}
 		serviceRefSets = append(serviceRefSets, refMap)
