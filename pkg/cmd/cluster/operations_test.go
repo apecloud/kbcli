@@ -43,8 +43,9 @@ import (
 
 var _ = Describe("operations", func() {
 	const (
-		clusterName  = "cluster-ops"
-		clusterName1 = "cluster-ops1"
+		clusterName            = "cluster-ops"
+		clusterName1           = "cluster-ops1"
+		clusterNameWithCompDef = "cluster-ops-with-comp-def"
 	)
 	var (
 		streams genericiooptions.IOStreams
@@ -55,7 +56,10 @@ var _ = Describe("operations", func() {
 	BeforeEach(func() {
 		streams, in, _, _ = genericiooptions.NewTestIOStreams()
 		tf = cmdtesting.NewTestFactory().WithNamespace(testing.Namespace)
+		// init cluster with two components
 		clusterWithTwoComps := testing.FakeCluster(clusterName, testing.Namespace)
+
+		// init cluster with one component
 		clusterWithOneComp := clusterWithTwoComps.DeepCopy()
 		clusterWithOneComp.Name = clusterName1
 		clusterWithOneComp.Spec.ComponentSpecs = []appsv1alpha1.ClusterComponentSpec{
@@ -77,10 +81,21 @@ var _ = Describe("operations", func() {
 				},
 			}).
 			GetObject()
+
+		// init cluster with one component and componentDefinition
+		clusterWithCompDef := clusterWithOneComp.DeepCopy()
+		clusterWithCompDef.Name = clusterNameWithCompDef
+		clusterWithCompDef.Spec.ComponentSpecs = []appsv1alpha1.ClusterComponentSpec{
+			clusterWithCompDef.Spec.ComponentSpecs[0],
+		}
+		clusterWithCompDef.Spec.ComponentSpecs[0].ComponentDef = testing.CompDefName
+
 		pods := testing.FakePods(2, clusterWithOneComp.Namespace, clusterName1)
+		podsWithCompDef := testing.FakePods(2, clusterWithCompDef.Namespace, clusterNameWithCompDef)
 		tf.Client = &clientfake.RESTClient{}
 		tf.FakeDynamicClient = testing.FakeDynamicClient(testing.FakeClusterDef(),
-			testing.FakeClusterVersion(), clusterWithTwoComps, clusterWithOneComp, classDef, &pods.Items[0], &pods.Items[1], resourceConstraint)
+			testing.FakeClusterVersion(), testing.FakeCompDef(), clusterWithTwoComps, clusterWithOneComp, clusterWithCompDef,
+			classDef, &pods.Items[0], &pods.Items[1], &podsWithCompDef.Items[0], &podsWithCompDef.Items[1], resourceConstraint)
 	})
 
 	AfterEach(func() {
@@ -331,7 +346,7 @@ var _ = Describe("operations", func() {
 		}
 	})
 
-	It("Switchover ops", func() {
+	It("Switchover ops base on cluster component definition", func() {
 		o := initCommonOperationOps(appsv1alpha1.SwitchoverType, clusterName1, false)
 		By("expect to auto complete components when cluster has only one component")
 		Expect(o.CompleteComponentsFlag()).Should(Succeed())
@@ -357,18 +372,60 @@ var _ = Describe("operations", func() {
 		By("validate failed because o.Instance is already leader and cannot be promoted")
 		o.Instance = fmt.Sprintf("%s-pod-%d", clusterName1, 0)
 		Expect(o.Validate()).ShouldNot(Succeed())
-		Expect(testing.ContainExpectStrings(o.Validate().Error(), "cannot be promoted because it is already the primary or leader instance")).Should(BeTrue())
+		Expect(testing.ContainExpectStrings(o.Validate().Error(), "cannot be promoted because it is already the targetRole")).Should(BeTrue())
 
 		By("validate failed because o.Instance does not belong to the current component")
 		o.Instance = fmt.Sprintf("%s-pod-%d", clusterName1, 1)
 		Expect(o.Validate()).ShouldNot(Succeed())
 		Expect(testing.ContainExpectStrings(o.Validate().Error(), "does not belong to the current component")).Should(BeTrue())
 
-		By("validate failed because mock component has no switchoverSpec, does not support switchover")
+		By("validate failed because mock component is invalid, does not support switchover")
 		o.Name = clusterName
 		o.Instance = ""
-		o.Component = testing.ComponentName
+		o.Component = testing.ComponentDefName
 		Expect(o.Validate()).ShouldNot(Succeed())
-		Expect(testing.ContainExpectStrings(o.Validate().Error(), "does not support switchover")).Should(BeTrue())
+		Expect(testing.ContainExpectStrings(o.Validate().Error(), "is invalid")).Should(BeTrue())
+	})
+
+	It("Switchover ops base on component definition", func() {
+		o := initCommonOperationOps(appsv1alpha1.SwitchoverType, clusterNameWithCompDef, false)
+		By("expect to auto complete components when cluster has only one component")
+		Expect(o.CompleteComponentsFlag()).Should(Succeed())
+		Expect(o.ComponentNames[0]).Should(Equal(testing.ComponentName))
+
+		By("expect for componentNames is nil when cluster has only two component")
+		o.Name = clusterName
+		o.ComponentNames = nil
+		Expect(o.CompleteComponentsFlag()).Should(Succeed())
+		Expect(o.ComponentNames).Should(BeEmpty())
+
+		By("validate failed because there are multi-components in cluster and not specify the component")
+		Expect(o.CompleteComponentsFlag()).Should(Succeed())
+		Expect(o.Validate()).ShouldNot(Succeed())
+		Expect(testing.ContainExpectStrings(o.Validate().Error(), "there are multiple components in cluster, please use --component to specify the component for promote")).Should(BeTrue())
+
+		By("validate failed because o.Instance is illegal ")
+		o.Name = clusterNameWithCompDef
+		o.Instance = fmt.Sprintf("%s-%s-%d", clusterNameWithCompDef, testing.ComponentName, 5)
+		Expect(o.Validate()).ShouldNot(Succeed())
+		Expect(testing.ContainExpectStrings(o.Validate().Error(), "not found")).Should(BeTrue())
+
+		By("validate failed because o.Instance is already leader and cannot be promoted")
+		o.Instance = fmt.Sprintf("%s-pod-%d", clusterNameWithCompDef, 0)
+		Expect(o.Validate()).ShouldNot(Succeed())
+		Expect(testing.ContainExpectStrings(o.Validate().Error(), "cannot be promoted because it is already the targetRole")).Should(BeTrue())
+
+		By("validate failed because o.Instance does not belong to the current component")
+		o.Instance = fmt.Sprintf("%s-pod-%d", clusterNameWithCompDef, 1)
+		Expect(o.Validate()).ShouldNot(Succeed())
+		Expect(testing.ContainExpectStrings(o.Validate().Error(), "does not belong to the current component")).Should(BeTrue())
+
+		By("validate failed because mock component is invalid, does not support switchover")
+		o.Name = clusterName
+		o.Instance = ""
+		o.Component = testing.ComponentDefName
+		Expect(o.Validate()).ShouldNot(Succeed())
+		fmt.Println(o.Validate().Error())
+		Expect(testing.ContainExpectStrings(o.Validate().Error(), "is invalid")).Should(BeTrue())
 	})
 })
