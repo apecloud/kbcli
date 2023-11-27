@@ -55,6 +55,7 @@ const (
 	Namespace          = "fake-namespace"
 	ClusterVersionName = "fake-cluster-version"
 	ClusterDefName     = "fake-cluster-definition"
+	CompDefName        = "fake-component-definition"
 	ComponentName      = "fake-component-name"
 	ComponentDefName   = "fake-component-type"
 	NodeName           = "fake-node-name"
@@ -305,6 +306,19 @@ func FakeClusterDef() *appsv1alpha1.ClusterDefinition {
 			ServiceRefDeclarations: []appsv1alpha1.ServiceRefDeclaration{
 				FakeServiceRef(ServiceRefName),
 			},
+			SwitchoverSpec: &appsv1alpha1.SwitchoverSpec{
+				WithCandidate: &appsv1alpha1.SwitchoverAction{
+					CmdExecutorConfig: &appsv1alpha1.CmdExecutorConfig{
+						CommandExecutorEnvItem: appsv1alpha1.CommandExecutorEnvItem{
+							Image: "",
+						},
+						CommandExecutorItem: appsv1alpha1.CommandExecutorItem{
+							Command: []string{"mysql"},
+							Args:    []string{"-h$(KB_CONSENSUS_LEADER_POD_FQDN)", "-e $(KB_SWITCHOVER_ACTION)"},
+						},
+					},
+				},
+			},
 		},
 		{
 			Name:          ExtraComponentDefName,
@@ -320,22 +334,123 @@ func FakeClusterDef() *appsv1alpha1.ClusterDefinition {
 					ConfigConstraintRef: "mysql8.0-config-constraints",
 				},
 			},
-			SwitchoverSpec: &appsv1alpha1.SwitchoverSpec{
-				WithCandidate: &appsv1alpha1.SwitchoverAction{
-					CmdExecutorConfig: &appsv1alpha1.CmdExecutorConfig{
-						CommandExecutorEnvItem: appsv1alpha1.CommandExecutorEnvItem{
-							Image: "",
-						},
-						CommandExecutorItem: appsv1alpha1.CommandExecutorItem{
-							Command: []string{"mysql"},
-							Args:    []string{"-h$(KB_CONSENSUS_LEADER_POD_FQDN)", "-e $(KB_SWITCHOVER_ACTION)"},
+		},
+	}
+	return clusterDef
+}
+
+func FakeCompDef() *appsv1alpha1.ComponentDefinition {
+	commandExecutorEnvItem := &appsv1alpha1.CommandExecutorEnvItem{
+		Image: "test-image",
+		Env:   []corev1.EnvVar{},
+	}
+	commandExecutorItem := &appsv1alpha1.CommandExecutorItem{
+		Command: []string{"echo", "hello"},
+		Args:    []string{},
+	}
+	scriptSpecSelectors := []appsv1alpha1.ScriptSpecSelector{
+		{
+			Name: "test-mock-cm",
+		},
+		{
+			Name: "test-mock-cm-2",
+		},
+	}
+	defaultBuiltinHandler := appsv1alpha1.MySQLBuiltinActionHandler
+	defaultLifecycleActionHandler := &appsv1alpha1.LifecycleActionHandler{
+		BuiltinHandler: &defaultBuiltinHandler,
+	}
+	compDef := &appsv1alpha1.ComponentDefinition{}
+	compDef.Name = CompDefName
+	compDef.Spec = appsv1alpha1.ComponentDefinitionSpec{
+		Provider:       "kubeblocks.io",
+		Description:    "fake-component-definition-description",
+		ServiceKind:    "fake-service-kind",
+		ServiceVersion: "fake-service-version",
+		Runtime: corev1.PodSpec{
+			Containers: []corev1.Container{
+				{
+					Name:  "foo",
+					Image: "bar",
+				},
+			},
+			Volumes: []corev1.Volume{
+				{
+					Name: "for_test",
+					VolumeSource: corev1.VolumeSource{
+						HostPath: &corev1.HostPathVolumeSource{
+							Path: "/tmp",
 						},
 					},
 				},
 			},
 		},
+		Volumes: []appsv1alpha1.ComponentVolume{
+			{
+				Name:          "for_test",
+				NeedSnapshot:  true,
+				HighWatermark: 80,
+			},
+		},
+		Roles: []appsv1alpha1.ReplicaRole{
+			{
+				Name:        "leader",
+				Serviceable: true,
+				Writable:    true,
+				Votable:     true,
+			},
+			{
+				Name:        "follower",
+				Serviceable: true,
+				Writable:    false,
+				Votable:     true,
+			},
+			{
+				Name:        "learner",
+				Serviceable: false,
+				Writable:    false,
+				Votable:     false,
+			},
+		},
+		LifecycleActions: &appsv1alpha1.ComponentLifecycleActions{
+			PostStart: nil,
+			PreStop:   nil,
+			RoleProbe: &appsv1alpha1.RoleProbeSpec{
+				LifecycleActionHandler: *defaultLifecycleActionHandler,
+				FailureThreshold:       3,
+				PeriodSeconds:          1,
+				TimeoutSeconds:         5,
+			},
+			Switchover: &appsv1alpha1.ComponentSwitchoverSpec{
+				WithCandidate: &appsv1alpha1.Action{
+					Image: commandExecutorEnvItem.Image,
+					Env:   commandExecutorEnvItem.Env,
+					Exec: &appsv1alpha1.ExecAction{
+						Command: commandExecutorItem.Command,
+						Args:    commandExecutorItem.Args,
+					},
+				},
+				WithoutCandidate: &appsv1alpha1.Action{
+					Image: commandExecutorEnvItem.Image,
+					Env:   commandExecutorEnvItem.Env,
+					Exec: &appsv1alpha1.ExecAction{
+						Command: commandExecutorItem.Command,
+						Args:    commandExecutorItem.Args,
+					},
+				},
+				ScriptSpecSelectors: scriptSpecSelectors,
+			},
+			MemberJoin:       defaultLifecycleActionHandler,
+			MemberLeave:      defaultLifecycleActionHandler,
+			Readonly:         defaultLifecycleActionHandler,
+			Readwrite:        defaultLifecycleActionHandler,
+			DataPopulate:     defaultLifecycleActionHandler,
+			DataAssemble:     defaultLifecycleActionHandler,
+			Reconfigure:      defaultLifecycleActionHandler,
+			AccountProvision: defaultLifecycleActionHandler,
+		},
 	}
-	return clusterDef
+	return compDef
 }
 
 func FakeComponentClassDef(name string, clusterDefRef string, componentDefRef string) *appsv1alpha1.ComponentClassDefinition {

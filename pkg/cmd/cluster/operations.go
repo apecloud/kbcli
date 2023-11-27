@@ -351,6 +351,7 @@ func (o *OperationsOptions) Validate() error {
 func (o *OperationsOptions) validatePromote(cluster *appsv1alpha1.Cluster) error {
 	var (
 		clusterDefObj = appsv1alpha1.ClusterDefinition{}
+		compDefObj    = appsv1alpha1.ComponentDefinition{}
 		podObj        = &corev1.Pod{}
 		componentName string
 	)
@@ -368,7 +369,20 @@ func (o *OperationsOptions) validatePromote(cluster *appsv1alpha1.Cluster) error
 		componentName = cluster.Spec.ComponentSpecs[0].Name
 	}
 
-	if o.Instance != "" {
+	// check clusterDefinition exist
+	clusterDefKey := client.ObjectKey{
+		Namespace: "",
+		Name:      cluster.Spec.ClusterDefRef,
+	}
+	if err := util.GetResourceObjectFromGVR(types.ClusterDefGVR(), clusterDefKey, o.Dynamic, &clusterDefObj); err != nil {
+		return err
+	}
+
+	getAndValidatePod := func(targetRoles ...string) error {
+		// if the instance is not specified, do not need to check the validity of the instance
+		if o.Instance == "" {
+			return nil
+		}
 		// checks the validity of the instance whether it belongs to the current component and ensure it is not the primary or leader instance currently.
 		podKey := client.ObjectKey{
 			Namespace: cluster.Namespace,
@@ -381,46 +395,105 @@ func (o *OperationsOptions) validatePromote(cluster *appsv1alpha1.Cluster) error
 		if !ok || v == "" {
 			return fmt.Errorf("instance %s cannot be promoted because it had a invalid role label", o.Instance)
 		}
-		if v == constant.Primary || v == constant.Leader {
-			return fmt.Errorf("instance %s cannot be promoted because it is already the primary or leader instance", o.Instance)
+		for _, targetRole := range targetRoles {
+			if v == targetRole {
+				return fmt.Errorf("instanceName %s cannot be promoted because it is already the targetRole %s instance", o.Instance, targetRole)
+			}
 		}
 		if !strings.HasPrefix(podObj.Name, fmt.Sprintf("%s-%s", cluster.Name, componentName)) {
-			return fmt.Errorf("instance %s does not belong to the current component, please check the validity of the instance using \"kbcli cluster list-instances\"", o.Instance)
+			return fmt.Errorf("instanceName %s does not belong to the current component, please check the validity of the instance using \"kbcli cluster list-instances\"", o.Instance)
 		}
+		return nil
 	}
 
-	// check clusterDefinition switchoverSpec exist
-	clusterDefKey := client.ObjectKey{
-		Namespace: "",
-		Name:      cluster.Spec.ClusterDefRef,
-	}
-	if err := util.GetResourceObjectFromGVR(types.ClusterDefGVR(), clusterDefKey, o.Dynamic, &clusterDefObj); err != nil {
-		return err
-	}
-	var compDefObj *appsv1alpha1.ClusterComponentDefinition
-	for _, compDef := range clusterDefObj.Spec.ComponentDefs {
-		if compDef.Name == cluster.Spec.GetComponentDefRefName(componentName) {
-			compDefObj = &compDef
-			break
+	// TODO(xingran): this will be removed in the future.
+	validateBaseOnClusterCompDef := func() error {
+		var clusterCompDefObj *appsv1alpha1.ClusterComponentDefinition
+		for _, clusterCompDef := range clusterDefObj.Spec.ComponentDefs {
+			if clusterCompDef.Name == cluster.Spec.GetComponentDefRefName(componentName) {
+				clusterCompDefObj = &clusterCompDef
+				break
+			}
 		}
-	}
-	if compDefObj == nil {
-		return fmt.Errorf("cluster component %s is invalid", componentName)
-	}
-	if compDefObj.SwitchoverSpec == nil {
-		return fmt.Errorf("cluster component %s does not support switchover", componentName)
-	}
-	switch o.Instance {
-	case "":
-		if compDefObj.SwitchoverSpec.WithoutCandidate == nil {
-			return fmt.Errorf("cluster component %s does not support promote without specifying an instance. Please specify a specific instance for the promotion", componentName)
+		if clusterCompDefObj == nil {
+			return fmt.Errorf("cluster component %s is invalid", componentName)
 		}
-	default:
-		if compDefObj.SwitchoverSpec.WithCandidate == nil {
-			return fmt.Errorf("cluster component %s does not support specifying an instance for promote. If you want to perform a promote operation, please do not specify an instance", componentName)
+		if clusterCompDefObj.SwitchoverSpec == nil {
+			return fmt.Errorf("cluster component %s does not support switchover", componentName)
 		}
+		switch o.Instance {
+		case "":
+			if clusterCompDefObj.SwitchoverSpec.WithoutCandidate == nil {
+				return fmt.Errorf("cluster component %s does not support promote without specifying an instance. Please specify a specific instance for the promotion", componentName)
+			}
+		default:
+			if clusterCompDefObj.SwitchoverSpec.WithCandidate == nil {
+				return fmt.Errorf("cluster component %s does not support specifying an instance for promote. If you want to perform a promote operation, please do not specify an instance", componentName)
+			}
+		}
+		targetRoles := []string{constant.Primary, constant.Leader}
+		if err := getAndValidatePod(targetRoles...); err != nil {
+			return err
+		}
+		return nil
 	}
-	return nil
+
+	validateBaseOnCompDef := func(compDef string) error {
+		getTargetRole := func(roles []appsv1alpha1.ReplicaRole) (string, error) {
+			targetRole := ""
+			if len(roles) == 0 {
+				return targetRole, fmt.Errorf("component has no roles definition, does not support switchover")
+			}
+			for _, role := range roles {
+				if role.Serviceable && role.Writable {
+					if targetRole != "" {
+						return targetRole, fmt.Errorf("componentDefinition has more than role is serviceable and writable, does not support switchover")
+					}
+					targetRole = role.Name
+				}
+			}
+			return targetRole, nil
+		}
+
+		// check componentDefinition exist
+		compDefKey := client.ObjectKey{
+			Namespace: "",
+			Name:      compDef,
+		}
+		if err := util.GetResourceObjectFromGVR(types.CompDefGVR(), compDefKey, o.Dynamic, &compDefObj); err != nil {
+			return err
+		}
+		if compDefObj.Spec.LifecycleActions == nil || compDefObj.Spec.LifecycleActions.Switchover == nil {
+			return fmt.Errorf("this cluster component %s does not support switchover", componentName)
+		}
+		switch o.Instance {
+		case "":
+			if compDefObj.Spec.LifecycleActions.Switchover.WithoutCandidate == nil {
+				return fmt.Errorf("this cluster component %s does not support promote without specifying an instance. Please specify a specific instance for the promotion", componentName)
+			}
+		default:
+			if compDefObj.Spec.LifecycleActions.Switchover.WithCandidate == nil {
+				return fmt.Errorf("this cluster component %s does not support specifying an instance for promote. If you want to perform a promote operation, please do not specify an instance", componentName)
+			}
+		}
+		targetRole, err := getTargetRole(compDefObj.Spec.Roles)
+		if err != nil {
+			return err
+		}
+		if targetRole == "" {
+			return fmt.Errorf("componentDefinition has no role is serviceable and writable, does not support switchover")
+		}
+		if err := getAndValidatePod(targetRole); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	if cluster.Spec.ComponentSpecs[0].ComponentDef != "" {
+		return validateBaseOnCompDef(cluster.Spec.ComponentSpecs[0].ComponentDef)
+	} else {
+		return validateBaseOnClusterCompDef()
+	}
 }
 
 func (o *OperationsOptions) validateExpose() error {
