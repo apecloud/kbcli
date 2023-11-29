@@ -55,6 +55,9 @@ const (
 	// AddonIndexDirEnv defines kbcli addon index dir
 	AddonIndexDirEnv = "KBCLI_ADDON_INDEX_DIR"
 
+	// DefaultIndexName defines the kbcli addon default index name
+	DefaultIndexName = "kubeblocks"
+
 	// DefaultNamespace is the namespace where kubeblocks is installed if
 	// no other namespace is specified
 	DefaultNamespace = "kb-system"
@@ -142,6 +145,8 @@ const (
 
 	ClassProviderLabelKey        = "class.kubeblocks.io/provider"
 	ReloadConfigMapAnnotationKey = "kubeblocks.io/reload-configmap" // mark an annotation to load configmap
+
+	KBVersionValidateAnnotationKey = "addon.kubeblocks.io/kubeblocks-version"
 )
 
 // DataProtection API group
