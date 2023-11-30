@@ -37,7 +37,7 @@ import (
 var _ = Describe("index test", func() {
 	var streams genericiooptions.IOStreams
 	var tf *cmdtesting.TestFactory
-
+	var addonName = "apecloud-mysql"
 	BeforeEach(func() {
 		streams, _, _, _ = genericiooptions.NewTestIOStreams()
 		tf = cmdtesting.NewTestFactory().WithNamespace(testNamespace)
@@ -65,16 +65,21 @@ var _ = Describe("index test", func() {
 		Expect(option.Complete()).Should(HaveOccurred())
 
 		Expect(addDefaultIndex()).Should(BeNil())
-		option.name = "apecloud-mysql"
+		option.name = addonName
+		option.version = "0.7.0"
+		Expect(option.Complete()).Should(Succeed())
+
+		option.addon = nil
 		option.version = "0.0.0"
 		Expect(option.Complete()).Should(HaveOccurred())
 
-		option.name = "apecloud-mysql"
-		option.version = ""
-		option.source = "not-existed"
+		option.addon = nil
+		option.version = "error-version"
 		Expect(option.Complete()).Should(HaveOccurred())
 
-		option.version = "bad-version"
+		option.name = addonName
+		option.version = ""
+		option.source = "not-existed"
 		Expect(option.Complete()).Should(HaveOccurred())
 	})
 

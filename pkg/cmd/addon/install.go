@@ -34,6 +34,7 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
+	"k8s.io/kubectl/pkg/util/templates"
 
 	extensionsv1alpha1 "github.com/apecloud/kubeblocks/apis/extensions/v1alpha1"
 	"github.com/apecloud/kubeblocks/pkg/constant"
@@ -42,6 +43,20 @@ import (
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
 )
+
+var addonInstallExample = templates.Examples(`
+	# install an addon from default index
+	kbcli addon install apecloud-mysql 
+
+	# install an addon from default index and skip KubeBlocks version compatibility check
+	kbcli addon install apecloud-mysql --force
+
+	# install an addon from a specified index
+	kbcli addon install apecloud-mysql --source my-index
+
+	# install an addon with a specified version default index
+	kbcli addon install apecloud-mysql --version 0.7.0
+`)
 
 type baseOption struct {
 	Factory cmdutil.Factory
@@ -97,6 +112,28 @@ func newInstallOption(f cmdutil.Factory, streams genericiooptions.IOStreams) *in
 	}
 }
 
+func newInstallCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
+	o := newInstallOption(f, streams)
+	cmd := &cobra.Command{
+		Use:     "install",
+		Short:   "install KubeBlocks addon",
+		Args:    cobra.ExactArgs(1),
+		Example: addonInstallExample,
+		Run: func(cmd *cobra.Command, args []string) {
+			o.name = args[0]
+			util.CheckErr(o.Complete())
+			util.CheckErr(o.Validate())
+			util.CheckErr(o.Run())
+		},
+	}
+	cmd.Flags().BoolVar(&o.force, "force", false, "force install the addon and ignore the version check")
+	cmd.Flags().StringVar(&o.version, "version", "", "specify the addon version")
+	cmd.Flags().StringVar(&o.source, "source", types.DefaultIndexName, "specify the addon index source, use 'kubeblocks' by default")
+
+	return cmd
+}
+
+// Complete will finalize the basic K8s client configuration and find the corresponding addon from the index
 func (o *installOption) Complete() error {
 	var err error
 	if err = o.baseOption.complete(); err != nil {
@@ -127,7 +164,7 @@ func (o *installOption) Complete() error {
 	sort.Slice(addons, func(i, j int) bool {
 		vi, _ := semver.NewVersion(getVersion(addons[i].addon))
 		vj, _ := semver.NewVersion(getVersion(addons[j].addon))
-		return vi.LessThan(vj)
+		return vi.GreaterThan(vj)
 
 	})
 	// descending order of versions
@@ -149,26 +186,7 @@ func (o *installOption) Complete() error {
 	return nil
 }
 
-func newInstallCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := newInstallOption(f, streams)
-	cmd := &cobra.Command{
-		Use:   "install",
-		Short: "install KubeBlocks addon",
-		Args:  cobra.ExactArgs(1),
-		Run: func(cmd *cobra.Command, args []string) {
-			o.name = args[0]
-			util.CheckErr(o.Complete())
-			util.CheckErr(o.Validate())
-			util.CheckErr(o.Run())
-		},
-	}
-	cmd.Flags().BoolVar(&o.force, "force", false, "force install the addon and ignore the version check")
-	cmd.Flags().StringVar(&o.version, "version", "", "specify the addon version")
-	cmd.Flags().StringVar(&o.source, "source", types.DefaultIndexName, "specify the addon index source, use 'kubeblocks' by default")
-
-	return cmd
-}
-
+// Validate will check if the KubeBlocks environment meets the requirements that the installing addon need
 func (o *installOption) Validate() error {
 	var (
 		err error
@@ -198,6 +216,7 @@ It will automatically skip version checks, which may result in the cluster not r
 
 }
 
+// Run will apply the addon.yaml to K8s
 func (o *installOption) Run() error {
 	item, err := runtime.DefaultUnstructuredConverter.ToUnstructured(o.addon)
 	if err != nil {
@@ -211,6 +230,7 @@ func (o *installOption) Run() error {
 	return nil
 }
 
+// validateVersion will check if the kbVersion meets the version constraint defined by annotations
 func validateVersion(annotations, kbVersion string) (bool, error) {
 	constraint, err := semver.NewConstraint(annotations)
 	if err != nil {
