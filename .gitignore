@@ -52,7 +52,8 @@ bin/
 tmp/
 
 # cli embed chart directory
-pkg/cli/cluster/charts/
+# exclude embed charts for go package
+!pkg/cluster/charts/*.tgz
 
 # ignore the addons that clone from apecloud/kubeblocks-addons
 addons/
