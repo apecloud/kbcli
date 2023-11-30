@@ -22,7 +22,6 @@ package addon
 import (
 	"context"
 	"fmt"
-	"github.com/apecloud/kubeblocks/pkg/constant"
 	"sort"
 
 	"github.com/Masterminds/semver/v3"
@@ -31,13 +30,13 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 
 	extensionsv1alpha1 "github.com/apecloud/kubeblocks/apis/extensions/v1alpha1"
+	"github.com/apecloud/kubeblocks/pkg/constant"
 
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
@@ -98,7 +97,7 @@ func newInstallOption(f cmdutil.Factory, streams genericiooptions.IOStreams) *in
 	}
 }
 
-func (o *installOption) complete() error {
+func (o *installOption) Complete() error {
 	var err error
 	if err = o.baseOption.complete(); err != nil {
 		return err
@@ -153,16 +152,19 @@ func newInstallCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			o.name = args[0]
-			util.CheckErr(o.complete())
-			util.CheckErr(o.validate())
-			util.CheckErr(o.run())
+			util.CheckErr(o.Complete())
+			util.CheckErr(o.Validate())
+			util.CheckErr(o.Run())
 		},
 	}
+	cmd.Flags().BoolVar(&o.force, "force", false, "force install the addon and ignore the version check")
+	cmd.Flags().StringVar(&o.version, "version", "", "specify the addon version")
+	cmd.Flags().StringVar(&o.source, "source", types.DefaultIndexName, "specify the addon index source, use 'kubeblocks' by default")
 
 	return cmd
 }
 
-func (o *installOption) validate() error {
+func (o *installOption) Validate() error {
 	var (
 		err error
 		ok  bool
@@ -176,12 +178,12 @@ func (o *installOption) validate() error {
 		return fmt.Errorf("KubeBlocks is not yet installed，please install it first")
 	}
 	if o.force {
-		fmt.Fprintf(o.Out, printer.BoldYellow(fmt.Sprintf("Warning: --force flag will skip version checks, which may result in the cluster not running correctly.")))
+		fmt.Fprint(o.Out, printer.BoldYellow("Warning: --force flag will skip version checks, which may result in the cluster not running correctly."))
 		return nil
 	}
 
 	if o.addon.Annotations == nil || len(o.addon.Annotations[types.KBVersionValidateAnnotationKey]) == 0 {
-		fmt.Fprintf(o.Out, printer.BoldYellow(fmt.Sprintf(`Warning: The addon %s is missing annotations to validate KubeBlocks versions.
+		fmt.Fprint(o.Out, printer.BoldYellow(fmt.Sprintf(`Warning: The addon %s is missing annotations to validate KubeBlocks versions.
 It will automatically skip version checks, which may result in the cluster not running correctly.`, o.name)))
 	} else if ok, err = validateVersion(o.addon.Annotations[types.KBVersionValidateAnnotationKey], v.KubeBlocks); err == nil && !ok {
 		return fmt.Errorf("KubeBlocks version %s does not meet the requirements for addon installation", v.KubeBlocks)
@@ -191,7 +193,7 @@ It will automatically skip version checks, which may result in the cluster not r
 
 }
 
-func (o *installOption) run() error {
+func (o *installOption) Run() error {
 	item, err := runtime.DefaultUnstructuredConverter.ToUnstructured(o.addon)
 	if err != nil {
 		return err
@@ -204,18 +206,15 @@ func (o *installOption) run() error {
 	return nil
 }
 
-func validateVersion(annotations, KBVersion string) (bool, error) {
+func validateVersion(annotations, kbVersion string) (bool, error) {
 	constraint, err := semver.NewConstraint(annotations)
 	if err != nil {
 		return false, err
 	}
-	v, err := semver.NewVersion(KBVersion)
+	v, err := semver.NewVersion(kbVersion)
 	if err != nil {
 		return false, err
 	}
-	validate, errors := constraint.Validate(v)
-	if len(errors) != 0 {
-		return false, utilerrors.NewAggregate(errors)
-	}
+	validate, _ := constraint.Validate(v)
 	return validate, nil
 }
