@@ -68,29 +68,6 @@ func getResource(res corev1.ResourceRequirements, name corev1.ResourceName) inte
 var _ = Describe("create", func() {
 	var clsMgr = &class.Manager{}
 
-	Context("setMonitor", func() {
-		var components []map[string]interface{}
-		BeforeEach(func() {
-			var component appsv1alpha1.ClusterComponentSpec
-			component.Monitor = true
-			components = generateComponents(component, 3)
-		})
-
-		It("set monitoring interval to 0 to disable monitor", func() {
-			setMonitor(0, components)
-			for _, c := range components {
-				Expect(c[monitorKey]).ShouldNot(BeTrue())
-			}
-		})
-
-		It("set monitoring interval to 15 to enable monitor", func() {
-			setMonitor(15, components)
-			for _, c := range components {
-				Expect(c[monitorKey]).Should(BeTrue())
-			}
-		})
-	})
-
 	Context("setEnableAllLogs Test", func() {
 		var cluster *appsv1alpha1.Cluster
 		var clusterDef *appsv1alpha1.ClusterDefinition
@@ -170,7 +147,7 @@ var _ = Describe("create", func() {
 	It("build default cluster component without environment", func() {
 		dynamic := testing.FakeDynamicClient(testing.FakeClusterDef())
 		cd, _ := cluster.GetClusterDefByName(dynamic, testing.ClusterDefName)
-		comps, err := buildClusterComp(cd, nil, clsMgr, false)
+		comps, err := buildClusterComp(cd, nil, clsMgr, 15, false)
 		Expect(err).ShouldNot(HaveOccurred())
 		checkComponent(comps, "20Gi", 1, "1", "1Gi", "", 0)
 	})
@@ -182,7 +159,7 @@ var _ = Describe("create", func() {
 		viper.Set(types.CfgKeyClusterDefaultMemory, "2Gi")
 		dynamic := testing.FakeDynamicClient(testing.FakeClusterDef())
 		cd, _ := cluster.GetClusterDefByName(dynamic, testing.ClusterDefName)
-		comps, err := buildClusterComp(cd, nil, clsMgr, false)
+		comps, err := buildClusterComp(cd, nil, clsMgr, 15, false)
 		Expect(err).ShouldNot(HaveOccurred())
 		checkComponent(comps, "5Gi", 1, "2", "2Gi", "", 0)
 	})
@@ -199,13 +176,13 @@ var _ = Describe("create", func() {
 				keyStorageClass: "test",
 			},
 		}
-		comps, err := buildClusterComp(cd, setsMap, clsMgr, false)
+		comps, err := buildClusterComp(cd, setsMap, clsMgr, 0, false)
 		Expect(err).Should(Succeed())
 		checkComponent(comps, "10Gi", 10, "10", "2Gi", "test", 0)
 
 		setsMap[testing.ComponentDefName][keySwitchPolicy] = "invalid"
 		cd.Spec.ComponentDefs[0].WorkloadType = appsv1alpha1.Replication
-		_, err = buildClusterComp(cd, setsMap, clsMgr, false)
+		_, err = buildClusterComp(cd, setsMap, clsMgr, 0, false)
 		Expect(err).Should(HaveOccurred())
 	})
 
@@ -227,13 +204,13 @@ var _ = Describe("create", func() {
 				keyStorageClass: "test-other",
 			},
 		}
-		comps, err := buildClusterComp(cd, setsMap, clsMgr, false)
+		comps, err := buildClusterComp(cd, setsMap, clsMgr, 15, false)
 		Expect(err).Should(Succeed())
 		checkComponent(comps, "10Gi", 10, "10", "2Gi", "test", 0)
 		checkComponent(comps, "5Gi", 5, "5", "1Gi", "test-other", 1)
 		setsMap[testing.ComponentDefName][keySwitchPolicy] = "invalid"
 		cd.Spec.ComponentDefs[0].WorkloadType = appsv1alpha1.Replication
-		_, err = buildClusterComp(cd, setsMap, clsMgr, false)
+		_, err = buildClusterComp(cd, setsMap, clsMgr, 15, false)
 		Expect(err).Should(HaveOccurred())
 	})
 
@@ -674,7 +651,7 @@ var _ = Describe("create", func() {
 	})
 
 	It("rebuild clusterComponentSpec VolumeClaimTemplates by --pvc", func() {
-		comps, err := buildClusterComp(mockCD([]string{"comp1", "comp2"}), nil, clsMgr, false)
+		comps, err := buildClusterComp(mockCD([]string{"comp1", "comp2"}), nil, clsMgr, 0, false)
 
 		Expect(err).Should(Succeed())
 		Expect(comps).ShouldNot(BeNil())
