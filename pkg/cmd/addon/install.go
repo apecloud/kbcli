@@ -103,6 +103,11 @@ func (o *installOption) Complete() error {
 		return err
 	}
 	// search specified addon and match its index
+
+	if _, err = semver.NewVersion(o.version); err != nil && o.version != "" {
+		return fmt.Errorf("the version %s does not comply with the standards", o.version)
+	}
+
 	dir, err := util.GetCliAddonDir()
 	if err != nil {
 		return err

@@ -23,6 +23,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	clientfake "k8s.io/client-go/rest/fake"
 	cmdtesting "k8s.io/kubectl/pkg/cmd/testing"
@@ -30,6 +31,7 @@ import (
 	extensionsv1alpha1 "github.com/apecloud/kubeblocks/apis/extensions/v1alpha1"
 
 	"github.com/apecloud/kbcli/pkg/testing"
+	"github.com/apecloud/kbcli/pkg/types"
 )
 
 var _ = Describe("index test", func() {
@@ -54,7 +56,6 @@ var _ = Describe("index test", func() {
 	It("test baseOption complete", func() {
 		option := newInstallOption(tf, streams)
 		Expect(option).ShouldNot(BeNil())
-
 		Expect(option.baseOption.complete()).Should(Succeed())
 	})
 
@@ -71,6 +72,9 @@ var _ = Describe("index test", func() {
 		option.name = "apecloud-mysql"
 		option.version = ""
 		option.source = "not-existed"
+		Expect(option.Complete()).Should(HaveOccurred())
+
+		option.version = "bad-version"
 		Expect(option.Complete()).Should(HaveOccurred())
 	})
 
@@ -109,7 +113,24 @@ var _ = Describe("index test", func() {
 			ok, err = validateVersion(">=0.7.0 || <=0.5.0", "0.3.0")
 			Expect(err).Should(BeNil())
 			Expect(ok).Should(BeTrue())
+
+			ok, err = validateVersion("", "0.3.0")
+			Expect(err).Should(HaveOccurred())
+			Expect(ok).Should(BeFalse())
+
+			ok, err = validateVersion(">=0.7.0", "")
+			Expect(err).Should(HaveOccurred())
+			Expect(ok).Should(BeFalse())
 		})
 
+		By("validate --force")
+		option.addon = &extensionsv1alpha1.Addon{
+			ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{
+				types.KBVersionValidateAnnotationKey: "0.8.0",
+			}},
+		}
+		option.Client = testing.FakeClientSet(testing.FakeKBDeploy("0.7.0"))
+		option.force = true
+		Expect(option.Validate()).Should(Succeed())
 	})
 })
