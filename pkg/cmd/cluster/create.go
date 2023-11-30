@@ -236,11 +236,13 @@ type CreateOptions struct {
 	Tolerations       []interface{}            `json:"tolerations,omitempty"`
 	ComponentSpecs    []map[string]interface{} `json:"componentSpecs"`
 	Annotations       map[string]string        `json:"annotations,omitempty"`
-	SetFile           string                   `json:"-"`
-	Values            []string                 `json:"-"`
-	RBACEnabled       bool                     `json:"-"`
-	Storages          []string                 `json:"-"`
-	ServiceRef        []string                 `json:"-"`
+	// create components exclusively configured in 'set'.
+	CreateOnlySet bool     `json:"-"`
+	SetFile       string   `json:"-"`
+	Values        []string `json:"-"`
+	RBACEnabled   bool     `json:"-"`
+	Storages      []string `json:"-"`
+	ServiceRef    []string `json:"-"`
 
 	// backup name to restore in creation
 	Backup              string `json:"backup,omitempty"`
@@ -275,6 +277,7 @@ func NewCreateCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.
 	cmd.Flags().StringVar(&o.ClusterVersionRef, "cluster-version", "", "Specify cluster version, run \"kbcli cv list\" to show all available cluster versions, use the latest version if not specified")
 	cmd.Flags().StringVarP(&o.SetFile, "set-file", "f", "", "Use yaml file, URL, or stdin to set the cluster resource")
 	cmd.Flags().StringArrayVar(&o.Values, "set", []string{}, "Set the cluster resource including cpu, memory, replicas and storage, each set corresponds to a component.(e.g. --set cpu=1,memory=1Gi,replicas=3,storage=20Gi or --set class=general-1c1g)")
+	cmd.Flags().BoolVar(&o.CreateOnlySet, "create-only-set", false, "Create components exclusively configured in 'set'")
 	cmd.Flags().StringArrayVar(&o.Storages, "pvc", []string{}, "Set the cluster detail persistent volume claim, each '--pvc' corresponds to a component, and will override the simple configurations about storage by --set (e.g. --pvc type=mysql,name=data,mode=ReadWriteOnce,size=20Gi --pvc type=mysql,name=log,mode=ReadWriteOnce,size=1Gi)")
 	cmd.Flags().StringArrayVar(&o.ServiceRef, "service-reference", []string{}, "Set the other KubeBlocks cluster dependencies, each '--service-reference' corresponds to a cluster service. (e.g --service-reference name=pulsarZookeeper,cluster=zookeeper,namespace=default)")
 
@@ -583,7 +586,7 @@ func (o *CreateOptions) buildComponents(clusterCompSpecs []appsv1alpha1.ClusterC
 	}
 
 	if clusterCompSpecs != nil {
-		setsCompSpecs, err := buildClusterComp(cd, compSets, clsMgr)
+		setsCompSpecs, err := buildClusterComp(cd, compSets, clsMgr, o.CreateOnlySet)
 		if err != nil {
 			return nil, err
 		}
@@ -597,7 +600,7 @@ func (o *CreateOptions) buildComponents(clusterCompSpecs []appsv1alpha1.ClusterC
 			compSpecs = append(compSpecs, &comp)
 		}
 	} else {
-		compSpecs, err = buildClusterComp(cd, compSets, clsMgr)
+		compSpecs, err = buildClusterComp(cd, compSets, clsMgr, o.CreateOnlySet)
 		if err != nil {
 			return nil, err
 		}
@@ -938,7 +941,7 @@ func setEnableAllLogs(c *appsv1alpha1.Cluster, cd *appsv1alpha1.ClusterDefinitio
 	}
 }
 
-func buildClusterComp(cd *appsv1alpha1.ClusterDefinition, setsMap map[string]map[setKey]string, clsMgr *class.Manager) ([]*appsv1alpha1.ClusterComponentSpec, error) {
+func buildClusterComp(cd *appsv1alpha1.ClusterDefinition, setsMap map[string]map[setKey]string, clsMgr *class.Manager, createOnlySet bool) ([]*appsv1alpha1.ClusterComponentSpec, error) {
 	// get value from set values and environment variables, the second return value is
 	// true if the value is from environment variables
 	getVal := func(c *appsv1alpha1.ClusterComponentDefinition, key setKey, sets map[setKey]string) string {
@@ -1003,7 +1006,10 @@ func buildClusterComp(cd *appsv1alpha1.ClusterDefinition, setsMap map[string]map
 
 	var comps []*appsv1alpha1.ClusterComponentSpec
 	for i, c := range cd.Spec.ComponentDefs {
-		sets := setsMap[c.Name]
+		sets, ok := setsMap[c.Name]
+		if !ok && createOnlySet {
+			continue
+		}
 
 		// HACK: for apecloud-mysql cluster definition, if setsMap is empty, user
 		// does not specify any set, so we only build the first component.
