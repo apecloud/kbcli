@@ -32,7 +32,6 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
@@ -47,19 +46,19 @@ import (
 	"github.com/apecloud/kbcli/pkg/util"
 )
 
-func generateComponents(component appsv1alpha1.ClusterComponentSpec, count int) []map[string]interface{} {
-	var componentVals []map[string]interface{}
-	byteVal, err := json.Marshal(component)
-	Expect(err).ShouldNot(HaveOccurred())
-	for i := 0; i < count; i++ {
-		var componentVal map[string]interface{}
-		err = json.Unmarshal(byteVal, &componentVal)
-		Expect(err).ShouldNot(HaveOccurred())
-		componentVals = append(componentVals, componentVal)
-	}
-	Expect(len(componentVals)).To(Equal(count))
-	return componentVals
-}
+//func generateComponents(component appsv1alpha1.ClusterComponentSpec, count int) []map[string]interface{} {
+//	var componentVals []map[string]interface{}
+//	byteVal, err := json.Marshal(component)
+//	Expect(err).ShouldNot(HaveOccurred())
+//	for i := 0; i < count; i++ {
+//		var componentVal map[string]interface{}
+//		err = json.Unmarshal(byteVal, &componentVal)
+//		Expect(err).ShouldNot(HaveOccurred())
+//		componentVals = append(componentVals, componentVal)
+//	}
+//	Expect(len(componentVals)).To(Equal(count))
+//	return componentVals
+//}
 
 func getResource(res corev1.ResourceRequirements, name corev1.ResourceName) interface{} {
 	return res.Requests[name].ToUnstructured()

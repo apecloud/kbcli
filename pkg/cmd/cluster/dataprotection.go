@@ -50,15 +50,16 @@ import (
 	"k8s.io/kubectl/pkg/util/templates"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
+	dpv1alpha1 "github.com/apecloud/kubeblocks/apis/dataprotection/v1alpha1"
+	"github.com/apecloud/kubeblocks/pkg/constant"
+	dptypes "github.com/apecloud/kubeblocks/pkg/dataprotection/types"
+
 	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/cluster"
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
-	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
-	dpv1alpha1 "github.com/apecloud/kubeblocks/apis/dataprotection/v1alpha1"
-	"github.com/apecloud/kubeblocks/pkg/constant"
-	dptypes "github.com/apecloud/kubeblocks/pkg/dataprotection/types"
 )
 
 var (
