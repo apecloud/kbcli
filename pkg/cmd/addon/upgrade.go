@@ -20,10 +20,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package addon
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/spf13/cobra"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
@@ -67,10 +69,11 @@ func newUpgradeOption(f cmdutil.Factory, streams genericiooptions.IOStreams) *up
 func newUpgradeCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
 	o := newUpgradeOption(f, streams)
 	cmd := &cobra.Command{
-		Use:     "upgrade",
-		Short:   "Upgrade an existed addon to latest version or a specified version",
-		Args:    cobra.ExactArgs(1),
-		Example: addonUpgradeExample,
+		Use:               "upgrade",
+		Short:             "Upgrade an existed addon to latest version or a specified version",
+		Args:              cobra.ExactArgs(1),
+		Example:           addonUpgradeExample,
+		ValidArgsFunction: util.ResourceNameCompletionFunc(f, o.GVR),
 		Run: func(cmd *cobra.Command, args []string) {
 			o.name = args[0]
 			util.CheckErr(o.Complete())
@@ -89,7 +92,7 @@ func (o *upgradeOption) Complete() error {
 		return err
 	}
 	addon := extensionsv1alpha1.Addon{}
-	err := cluster.GetK8SClientObject(o.Dynamic, &addon, types.AddonGVR(), o.nameSpace, o.name)
+	err := cluster.GetK8SClientObject(o.Dynamic, &addon, o.GVR, "", o.name)
 	if err != nil {
 		return fmt.Errorf("addon %s not found. please use 'kbcli addon install %s' first", o.name, o.name)
 	}
@@ -112,4 +115,12 @@ func (o *upgradeOption) Validate() error {
 		return fmt.Errorf(`addon %s current version %s is either the latest or newer than the expected version %s. you can use 'kbcli addon index update' first and try upgrade again`, o.name, o.currentVersion, o.version)
 	}
 	return o.installOption.Validate()
+}
+
+func (o *upgradeOption) Run() error {
+	err := o.Dynamic.Resource(o.GVR).Delete(context.Background(), o.name, metav1.DeleteOptions{})
+	if err != nil {
+		return err
+	}
+	return o.installOption.Run()
 }

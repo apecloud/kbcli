@@ -757,8 +757,7 @@ func FakeAddon(name string) *extensionsv1alpha1.Addon {
 			Kind:       "Addon",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: Namespace,
+			Name: name,
 		},
 		Spec: extensionsv1alpha1.AddonSpec{
 			Installable: &extensionsv1alpha1.InstallableSpec{

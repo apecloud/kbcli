@@ -23,6 +23,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/spf13/cobra"
@@ -67,15 +68,10 @@ type baseOption struct {
 
 	// GVR is the GroupVersionResource of the resource to be created
 	GVR schema.GroupVersionResource
-
-	nameSpace string
 }
 
 func (o *baseOption) complete() error {
 	var err error
-	if o.nameSpace, _, err = o.Factory.ToRawKubeConfigLoader().Namespace(); err != nil {
-		return err
-	}
 	if o.Dynamic, err = o.Factory.DynamicClient(); err != nil {
 		return err
 	}
@@ -92,7 +88,7 @@ type installOption struct {
 	name string
 	// install the addon force
 	force bool
-	// the version w
+	// the addon version we want to install
 	version string
 	// the source index name, if not specified use `kubeblocks` default
 	source string
@@ -222,11 +218,13 @@ func (o *installOption) Run() error {
 	if err != nil {
 		return err
 	}
+	// todo(alal): here is a hack way to fix API serve `object is being deleted`, fix the addon CR name with version info
+	time.Sleep(5 * time.Second)
 	_, err = o.Dynamic.Resource(o.GVR).Create(context.Background(), &unstructured.Unstructured{Object: item}, metav1.CreateOptions{})
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(o.Out, "%s install successed", o.name)
+	fmt.Fprintf(o.Out, "%s install successed\n", o.name)
 	return nil
 }
 
