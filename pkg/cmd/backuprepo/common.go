@@ -33,14 +33,13 @@ const (
 	associatedBackupRepoKey = "dataprotection.kubeblocks.io/backup-repo-name"
 )
 
-func flagsToValues(fs *pflag.FlagSet, explicit bool) map[string]string {
-	values := make(map[string]string)
+func flagsToValues(fs *pflag.FlagSet, explicit bool) map[string]pflag.Value {
+	values := make(map[string]pflag.Value)
 	fs.VisitAll(func(f *pflag.Flag) {
 		if f.Name == "help" || (explicit && !f.Changed) {
 			return
 		}
-		val, _ := fs.GetString(f.Name)
-		values[f.Name] = val
+		values[f.Name] = f.Value
 	})
 	return values
 }
