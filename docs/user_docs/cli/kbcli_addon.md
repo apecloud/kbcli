@@ -44,6 +44,7 @@ Addon command.
 * [kbcli addon install](kbcli_addon_install.md)	 - install KubeBlocks addon
 * [kbcli addon list](kbcli_addon_list.md)	 - List addons.
 * [kbcli addon search](kbcli_addon_search.md)	 - search the addon from index
+* [kbcli addon uninstall](kbcli_addon_uninstall.md)	 - uninstall an existed addon
 * [kbcli addon upgrade](kbcli_addon_upgrade.md)	 - Upgrade an existed addon to latest version or a specified version
 
 #### Go Back to [CLI Overview](cli.md) Homepage.
