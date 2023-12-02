@@ -86,7 +86,7 @@ type createOptions struct {
 	repoName        string
 	config          map[string]string
 	credential      map[string]string
-	allValues       map[string]string
+	allValues       map[string]interface{}
 }
 
 var backupRepoCreateExamples = templates.Examples(`
@@ -235,7 +235,7 @@ func (o *createOptions) parseProviderFlags(cmd *cobra.Command, args []string, f 
 func (o *createOptions) complete(cmd *cobra.Command) error {
 	o.config = map[string]string{}
 	o.credential = map[string]string{}
-	o.allValues = map[string]string{}
+	o.allValues = map[string]interface{}{}
 	schema := o.providerObject.Spec.ParametersSchema
 	// Construct config and credential map from flags
 	if schema != nil && schema.OpenAPIV3Schema != nil {
@@ -249,9 +249,9 @@ func (o *createOptions) complete(cmd *cobra.Command) error {
 			if val, ok := fromFlags[flagName]; ok {
 				o.allValues[name] = val
 				if credMap[name] {
-					o.credential[name] = val
+					o.credential[name] = val.String()
 				} else {
-					o.config[name] = val
+					o.config[name] = val.String()
 				}
 			}
 		}

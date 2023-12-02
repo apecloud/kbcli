@@ -79,7 +79,7 @@ type updateOptions struct {
 	repoName        string
 	config          map[string]string
 	credential      map[string]string
-	allValues       map[string]string
+	allValues       map[string]interface{}
 }
 
 func newUpdateCommand(o *updateOptions, f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
@@ -231,7 +231,7 @@ func (o *updateOptions) parseFlags(cmd *cobra.Command, args []string, f cmdutil.
 func (o *updateOptions) complete(cmd *cobra.Command) error {
 	o.config = map[string]string{}
 	o.credential = map[string]string{}
-	o.allValues = map[string]string{}
+	o.allValues = map[string]interface{}{}
 	schema := o.providerObject.Spec.ParametersSchema
 	// Construct config and credential map from flags
 	if schema != nil && schema.OpenAPIV3Schema != nil {
@@ -246,9 +246,9 @@ func (o *updateOptions) complete(cmd *cobra.Command) error {
 			if val, ok := fromFlags[flagName]; ok {
 				o.allValues[name] = val
 				if credMap[name] {
-					o.credential[name] = val
+					o.credential[name] = val.String()
 				} else {
-					o.config[name] = val
+					o.config[name] = val.String()
 				}
 			}
 		}
