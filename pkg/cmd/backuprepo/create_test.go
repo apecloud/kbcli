@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"reflect"
 	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -37,6 +38,7 @@ import (
 	"k8s.io/client-go/dynamic/fake"
 	clientfake "k8s.io/client-go/rest/fake"
 	cmdtesting "k8s.io/kubectl/pkg/cmd/testing"
+	"k8s.io/utils/pointer"
 
 	"github.com/apecloud/kbcli/pkg/scheme"
 	"github.com/apecloud/kbcli/pkg/testing"
@@ -150,24 +152,30 @@ var _ = Describe("backuprepo create command", func() {
 				"--secret-access-key", "def",
 				"--region", "us-west-2",
 				"--bucket", "test-bucket",
+				"--batch-size", "4096",
+				"--no-cache", "true",
 			}, tf)
 			Expect(err).ShouldNot(HaveOccurred())
 			err = options.complete(cmd)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(options.repoName).Should(Equal("test-backuprepo"))
-			Expect(options.allValues).Should(Equal(map[string]string{
-				"accessKeyId":     "abc",
-				"secretAccessKey": "def",
-				"region":          "us-west-2",
-				"bucket":          "test-bucket",
-				"endpoint":        "",
-				"mountOptions":    "",
+			Expect(unwrap(options.allValues)).Should(Equal(map[string]interface{}{
+				"accessKeyId":     pointer.String("abc"),
+				"secretAccessKey": pointer.String("def"),
+				"region":          pointer.String("us-west-2"),
+				"bucket":          pointer.String("test-bucket"),
+				"endpoint":        pointer.String(""),
+				"mountOptions":    pointer.String(""),
+				"batchSize":       pointer.Int(4096),
+				"noCache":         pointer.Bool(true),
 			}))
 			Expect(options.config).Should(Equal(map[string]string{
 				"region":       "us-west-2",
 				"bucket":       "test-bucket",
 				"endpoint":     "",
 				"mountOptions": "",
+				"batchSize":    "4096",
+				"noCache":      "true",
 			}))
 			Expect(options.credential).Should(Equal(map[string]string{
 				"accessKeyId":     "abc",
@@ -281,3 +289,27 @@ var _ = Describe("backuprepo create command", func() {
 		})
 	})
 })
+
+func unwrap(m map[string]interface{}) map[string]interface{} {
+	types := []reflect.Type{
+		reflect.TypeOf((*string)(nil)),
+		reflect.TypeOf((*int)(nil)),
+		reflect.TypeOf((*bool)(nil)),
+	}
+	result := make(map[string]interface{}, len(m))
+	for k, v := range m {
+		rv := reflect.ValueOf(v)
+		ok := false
+		for _, t := range types {
+			if rv.CanConvert(t) {
+				result[k] = rv.Convert(t).Interface()
+				ok = true
+				break
+			}
+		}
+		if !ok {
+			panic(fmt.Sprintf("unsupported value: %+v", rv))
+		}
+	}
+	return result
+}

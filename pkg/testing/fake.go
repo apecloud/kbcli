@@ -1147,6 +1147,8 @@ mountOptions: {{ index .Parameters "mountOptions" | default "" }}
 						},
 						"endpoint":     {Type: "string"},
 						"mountOptions": {Type: "string"},
+						"batchSize":    {Type: "integer"},
+						"noCache":      {Type: "boolean"},
 					},
 					Required: []string{
 						"accessKeyId",

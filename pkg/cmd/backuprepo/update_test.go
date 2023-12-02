@@ -36,6 +36,7 @@ import (
 	"k8s.io/client-go/dynamic/fake"
 	clientfake "k8s.io/client-go/rest/fake"
 	cmdtesting "k8s.io/kubectl/pkg/cmd/testing"
+	"k8s.io/utils/pointer"
 
 	"github.com/apecloud/kbcli/pkg/scheme"
 	"github.com/apecloud/kbcli/pkg/testing"
@@ -154,9 +155,9 @@ var _ = Describe("backuprepo update command", func() {
 			err = options.complete(cmd)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(options.repoName).Should(Equal("test-backuprepo"))
-			Expect(options.allValues).Should(Equal(map[string]string{
-				"accessKeyId":     "",
-				"secretAccessKey": "def",
+			Expect(unwrap(options.allValues)).Should(Equal(map[string]interface{}{
+				"accessKeyId":     pointer.String(""),
+				"secretAccessKey": pointer.String("def"),
 			}))
 			Expect(options.credential).Should(Equal(map[string]string{
 				"accessKeyId":     "",
