@@ -155,9 +155,10 @@ var clusterCreateExample = templates.Examples(`
 `)
 
 const (
-	CueTemplateName = "cluster_template.cue"
-	monitorKey      = "monitor"
-	apeCloudMysql   = "apecloud-mysql"
+	CueTemplateName   = "cluster_template.cue"
+	monitorKey        = "monitor"
+	apeCloudMysql     = "apecloud-mysql"
+	defaultVolumeName = "data"
 )
 
 type setKey string
@@ -203,6 +204,11 @@ const (
 
 	storageKeyUnknown storageKey = "unknown"
 )
+
+// set the components volume names, key is the component type.
+var componentVolumes = map[string][]string{
+	"bookies": {"journal", "ledgers"},
+}
 
 // UpdatableFlags is the flags that cat be updated by update command
 type UpdatableFlags struct {
@@ -1005,8 +1011,11 @@ func buildClusterComp(cd *appsv1alpha1.ClusterDefinition,
 
 	var comps []*appsv1alpha1.ClusterComponentSpec
 	for i, c := range cd.Spec.ComponentDefs {
-		sets := setsMap[c.Name]
+		sets, ok := setsMap[c.Name]
 
+		if createOnlySet && !ok {
+			continue
+		}
 		// HACK: for apecloud-mysql cluster definition, if setsMap is empty, user
 		// does not specify any set, so we only build the first component.
 		// TODO(ldm): remove this hack and use helm chart to render the cluster.
@@ -1025,35 +1034,11 @@ func buildClusterComp(cd *appsv1alpha1.ClusterDefinition,
 		if setReplicas > math.MaxInt32 {
 			return nil, fmt.Errorf("repicas is illegal, exceed max. value (%d) ", math.MaxInt32)
 		}
-		replicas := int32(setReplicas)
-
-		// if replicas not set
-		if v := sets[keyReplicas]; len(v) > 0 {
-			// TODO(ct): hack for clickhouse, remove
-			if cd.Name == "clickhouse" && c.CharacterType == "zookeeper" {
-				if c.Name == "ch-keeper" {
-					replicas = 3
-				}
-				if c.Name == "zookeeper" {
-					replicas = 0
-				}
-			}
-
-			// TODO(ct): hack for pulsar, remove
-			if cd.Name == "pulsar" && c.CharacterType == "pulsar-proxy" {
-				replicas = 0
-			}
-		}
-
-		// only if replicas == 0 then createOnlySet will work
-		if createOnlySet && replicas == 0 {
-			continue
-		}
 
 		compObj := &appsv1alpha1.ClusterComponentSpec{
 			Name:            c.Name,
 			ComponentDefRef: c.Name,
-			Replicas:        replicas,
+			Replicas:        int32(setReplicas),
 		}
 
 		// class has higher priority than other resource related parameters
@@ -1090,23 +1075,30 @@ func buildClusterComp(cd *appsv1alpha1.ClusterDefinition,
 		}
 		storageSize := getVal(&c, keyStorage, sets)
 		if storageSize != "" {
-			compObj.VolumeClaimTemplates = []appsv1alpha1.ClusterComponentVolumeClaimTemplate{{
-				Name: "data",
-				Spec: appsv1alpha1.PersistentVolumeClaimSpec{
-					AccessModes: []corev1.PersistentVolumeAccessMode{
-						corev1.ReadWriteOnce,
-					},
-					Resources: corev1.ResourceRequirements{
-						Requests: corev1.ResourceList{
-							corev1.ResourceStorage: resource.MustParse(storageSize),
+			volumes := componentVolumes[c.Name]
+			if len(volumes) == 0 {
+				volumes = []string{defaultVolumeName}
+			}
+			for index := range volumes {
+				vct := appsv1alpha1.ClusterComponentVolumeClaimTemplate{
+					Name: volumes[index],
+					Spec: appsv1alpha1.PersistentVolumeClaimSpec{
+						AccessModes: []corev1.PersistentVolumeAccessMode{
+							corev1.ReadWriteOnce,
+						},
+						Resources: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceStorage: resource.MustParse(getVal(&c, keyStorage, sets)),
+							},
 						},
 					},
-				},
-			}}
-			storageClass := getVal(&c, keyStorageClass, sets)
-			if len(storageClass) != 0 {
-				// now the clusterdefinition components mostly have only one VolumeClaimTemplates in default
-				compObj.VolumeClaimTemplates[0].Spec.StorageClassName = &storageClass
+				}
+				storageClass := getVal(&c, keyStorageClass, sets)
+				if len(storageClass) != 0 {
+					// now the clusterdefinition components mostly have only one VolumeClaimTemplates in default
+					vct.Spec.StorageClassName = &storageClass
+				}
+				compObj.VolumeClaimTemplates = append(compObj.VolumeClaimTemplates, vct)
 			}
 		}
 		if err = buildSwitchPolicy(&c, compObj, sets); err != nil {
