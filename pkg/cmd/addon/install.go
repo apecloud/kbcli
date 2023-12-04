@@ -23,7 +23,6 @@ import (
 	"context"
 	"fmt"
 	"sort"
-	"time"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/spf13/cobra"
@@ -177,7 +176,11 @@ func (o *installOption) Complete() error {
 		}
 	}
 	if o.addon == nil {
-		return fmt.Errorf("addon '%s' not found in the index '%s'", o.name, o.index)
+		var addonInfo = o.name
+		if o.version != "" {
+			addonInfo += "-" + o.version
+		}
+		return fmt.Errorf("addon '%s' not found in the index '%s'", addonInfo, o.index)
 	}
 	return nil
 }
@@ -218,8 +221,6 @@ func (o *installOption) Run() error {
 	if err != nil {
 		return err
 	}
-	// todo(alal): here is a hack way to fix API serve `object is being deleted`, fix the addon CR name with version info
-	time.Sleep(5 * time.Second)
 	_, err = o.Dynamic.Resource(o.GVR).Create(context.Background(), &unstructured.Unstructured{Object: item}, metav1.CreateOptions{})
 	if err != nil {
 		return err

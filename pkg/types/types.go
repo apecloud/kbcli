@@ -212,6 +212,9 @@ const (
 
 	// AddonReleasePrefix is the prefix of addon release name
 	AddonReleasePrefix = "kb-addon"
+
+	// AddonResourceNamePrefix is the prefix of addon release name when the same addon have multiple version
+	AddonResourceNamePrefix = "ResourceNamePrefix"
 )
 
 var (

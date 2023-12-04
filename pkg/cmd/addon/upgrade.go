@@ -21,11 +21,13 @@ package addon
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-
 	"github.com/Masterminds/semver/v3"
+	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	ktypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
@@ -55,14 +57,22 @@ var addonUpgradeExample = templates.Examples(`
 // upgradeOption storage the info to upgrade an addon
 type upgradeOption struct {
 	*installOption
+
 	// currentVersion is the addon current version in KubeBlocks
 	currentVersion string
+	// if independent is true will retain the existing addon and reinstall the new version of the addon.
+	// otherwise the upgrade will be in-place
+	independent bool
+	// prefix is the name prefix to identify the same addon with different version when independent is true
+	prefix string
 }
 
 func newUpgradeOption(f cmdutil.Factory, streams genericiooptions.IOStreams) *upgradeOption {
 	return &upgradeOption{
 		installOption:  newInstallOption(f, streams),
 		currentVersion: "",
+		independent:    false,
+		prefix:         "",
 	}
 }
 
@@ -84,6 +94,8 @@ func newUpgradeCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 	cmd.Flags().BoolVar(&o.force, "force", false, "force upgrade the addon and ignore the version check")
 	cmd.Flags().StringVar(&o.version, "version", "", "specify the addon version")
 	cmd.Flags().StringVar(&o.index, "index", types.DefaultIndexName, "specify the addon index index, use 'kubeblocks' by default")
+	cmd.Flags().BoolVar(&o.independent, "independent", false, "when independent is true, it will retain the existing addon and reinstall the new version of the addon, otherwise the upgrade will be in-place")
+	cmd.Flags().StringVar(&o.prefix, "prefix", "", "prefix is the name prefix to identify the same addon with different version when independent is true")
 	return cmd
 }
 
@@ -102,8 +114,13 @@ func (o *upgradeOption) Complete() error {
 
 // Validate will check if the current version is already the latest version compared to installOption.Validate()
 func (o *upgradeOption) Validate() error {
-	targetV := o.addon.Labels[constant.AppVersionLabelKey]
-	target, err := semver.NewVersion(targetV)
+	if o.independent && o.prefix == "" {
+		return fmt.Errorf("--prefix is required to identify the same addon with different version when --independent is set")
+	}
+	if o.version == "" {
+		o.version = o.addon.Labels[constant.AppVersionLabelKey]
+	}
+	target, err := semver.NewVersion(o.version)
 	if err != nil {
 		return err
 	}
@@ -112,15 +129,31 @@ func (o *upgradeOption) Validate() error {
 		return err
 	}
 	if !target.GreaterThan(current) {
-		return fmt.Errorf(`addon %s current version %s is either the latest or newer than the expected version %s. you can use 'kbcli addon index update' first and try upgrade again`, o.name, o.currentVersion, o.version)
+		fmt.Printf(`%s addon %s current version %s is either the latest or newer than the expected version %s.`, printer.BoldYellow("Warn:"), o.name, o.currentVersion, o.version)
 	}
 	return o.installOption.Validate()
 }
 
 func (o *upgradeOption) Run() error {
-	err := o.Dynamic.Resource(o.GVR).Delete(context.Background(), o.name, metav1.DeleteOptions{})
+	if o.independent {
+		if o.addon.Spec.Helm.InstallValues.SetValues != nil {
+			o.addon.Spec.Helm.InstallValues.SetValues = append(o.addon.Spec.Helm.InstallValues.SetValues, fmt.Sprintf("%s=%s", types.AddonResourceNamePrefix, o.prefix))
+		}
+		o.addon.Spec.Helm.InstallValues.SetValues = []string{fmt.Sprintf("%s=%s", types.AddonResourceNamePrefix, o.prefix)}
+		err := o.installOption.Run()
+		if err == nil {
+			fmt.Printf("Addon %s-%s upgrade successed.", o.name, o.version)
+		}
+		return err
+	}
+	// in-place upgrade
+	newData, err := json.Marshal(o.addon)
 	if err != nil {
 		return err
 	}
-	return o.installOption.Run()
+	_, err = o.Dynamic.Resource(o.GVR).Patch(context.Background(), o.name, ktypes.MergePatchType, newData, metav1.PatchOptions{})
+	if err == nil {
+		fmt.Printf("Addon %s-%s upgrade successed.", o.name, o.version)
+	}
+	return err
 }
