@@ -79,7 +79,7 @@ var _ = Describe("index test", func() {
 
 		option.name = addonName
 		option.version = ""
-		option.source = "not-existed"
+		option.index = "not-existed"
 		Expect(option.Complete()).Should(HaveOccurred())
 	})
 

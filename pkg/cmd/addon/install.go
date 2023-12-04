@@ -53,7 +53,7 @@ var addonInstallExample = templates.Examples(`
 	kbcli addon install apecloud-mysql --force
 
 	# install an addon from a specified index
-	kbcli addon install apecloud-mysql --source my-index
+	kbcli addon install apecloud-mysql --index my-index
 
 	# install an addon with a specified version default index
 	kbcli addon install apecloud-mysql --version 0.7.0
@@ -90,8 +90,8 @@ type installOption struct {
 	force bool
 	// the addon version we want to install
 	version string
-	// the source index name, if not specified use `kubeblocks` default
-	source string
+	// the index name, if not specified use `kubeblocks` default
+	index string
 
 	addon *extensionsv1alpha1.Addon
 }
@@ -103,8 +103,8 @@ func newInstallOption(f cmdutil.Factory, streams genericiooptions.IOStreams) *in
 			IOStreams: streams,
 			GVR:       types.AddonGVR(),
 		},
-		force:  false,
-		source: types.DefaultIndexName,
+		force: false,
+		index: types.DefaultIndexName,
 	}
 }
 
@@ -124,7 +124,7 @@ func newInstallCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 	}
 	cmd.Flags().BoolVar(&o.force, "force", false, "force install the addon and ignore the version check")
 	cmd.Flags().StringVar(&o.version, "version", "", "specify the addon version")
-	cmd.Flags().StringVar(&o.source, "source", types.DefaultIndexName, "specify the addon index source, use 'kubeblocks' by default")
+	cmd.Flags().StringVar(&o.index, "index", types.DefaultIndexName, "specify the addon index index, use 'kubeblocks' by default")
 
 	return cmd
 }
@@ -165,7 +165,7 @@ func (o *installOption) Complete() error {
 	})
 	// descending order of versions
 	for _, item := range addons {
-		if item.index.name == o.source {
+		if item.index.name == o.index {
 			// if the version not specified, use the latest version
 			if o.version == "" {
 				o.addon = item.addon
@@ -177,7 +177,7 @@ func (o *installOption) Complete() error {
 		}
 	}
 	if o.addon == nil {
-		return fmt.Errorf("addon '%s' not found in the index '%s'", o.name, o.source)
+		return fmt.Errorf("addon '%s' not found in the index '%s'", o.name, o.index)
 	}
 	return nil
 }
@@ -205,7 +205,7 @@ func (o *installOption) Validate() error {
 		fmt.Fprint(o.Out, printer.BoldYellow(fmt.Sprintf(`Warning: The addon %s is missing annotations to validate KubeBlocks versions.
 It will automatically skip version checks, which may result in the cluster not running correctly.`, o.name)))
 	} else if ok, err = validateVersion(o.addon.Annotations[types.KBVersionValidateAnnotationKey], v.KubeBlocks); err == nil && !ok {
-		return fmt.Errorf("KubeBlocks version %s does not meet the requirements for addon installation", v.KubeBlocks)
+		return fmt.Errorf("KubeBlocks version %s does not meet the requirements for addon installation\nUse --force option to skip this check", v.KubeBlocks)
 	}
 
 	return err

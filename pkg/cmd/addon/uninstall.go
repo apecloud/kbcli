@@ -37,7 +37,7 @@ var addonUninstallExample = templates.Examples(`
 	# uninstall an addon 
 	kbcli addon uninstall apecloud-mysql 
 
-	# upgrade an addon with a specified version default index 
+	# uninstall an addon with a specified version
 	kbcli addon uninstall apecloud-mysql --version 0.7.0
 `)
 

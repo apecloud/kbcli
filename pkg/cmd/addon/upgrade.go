@@ -46,7 +46,7 @@ var addonUpgradeExample = templates.Examples(`
 	kbcli addon upgrade apecloud-mysql --force
 
 	# upgrade an addon to latest version from a specified index
-	kbcli addon upgrade apecloud-mysql --source my-index
+	kbcli addon upgrade apecloud-mysql --index my-index
 
 	# upgrade an addon with a specified version default index 
 	kbcli addon upgrade apecloud-mysql --version 0.7.0
@@ -83,7 +83,7 @@ func newUpgradeCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 	}
 	cmd.Flags().BoolVar(&o.force, "force", false, "force upgrade the addon and ignore the version check")
 	cmd.Flags().StringVar(&o.version, "version", "", "specify the addon version")
-	cmd.Flags().StringVar(&o.source, "source", types.DefaultIndexName, "specify the addon index source, use 'kubeblocks' by default")
+	cmd.Flags().StringVar(&o.index, "index", types.DefaultIndexName, "specify the addon index index, use 'kubeblocks' by default")
 	return cmd
 }
 
