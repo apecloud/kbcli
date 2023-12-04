@@ -23,6 +23,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
 	"github.com/Masterminds/semver/v3"
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/spf13/cobra"

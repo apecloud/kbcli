@@ -22,7 +22,6 @@ package cluster
 import (
 	"encoding/json"
 	"fmt"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"strings"
 
 	jsonpatch "github.com/evanphx/json-patch"
@@ -229,7 +228,7 @@ func (o *LabelOptions) run() error {
 			helper := resource.NewHelper(client, mapping).
 				DryRun(o.dryRunStrategy == cmdutil.DryRunServer)
 			if createPatch {
-				_, err = helper.Patch(namespace, name, ktypes.MergePatchType, patchBytes, &metav1.PatchOptions{})
+				_, err = helper.Patch(namespace, name, ktypes.MergePatchType, patchBytes, nil)
 			} else {
 				_, err = helper.Replace(namespace, name, false, obj)
 			}
