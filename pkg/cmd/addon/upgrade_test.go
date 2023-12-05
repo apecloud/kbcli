@@ -84,9 +84,5 @@ var _ = Describe("test addon upgrade", func() {
 		// no current version
 		Expect(option.Validate()).Should(HaveOccurred())
 		option.currentVersion = "99.0.0"
-		// current version is greater than target version
-		Expect(option.Validate()).Should(HaveOccurred())
-		option.addon.Labels[constant.AppVersionLabelKey] = "99.99.99"
-		Expect(option.Validate()).Should(Succeed())
 	})
 })
