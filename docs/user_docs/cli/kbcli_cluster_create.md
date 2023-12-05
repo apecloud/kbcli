@@ -112,6 +112,7 @@ kbcli cluster create [NAME] [flags]
       --edit                                   Edit the API resource before creating
       --enable-all-logs                        Enable advanced application all log extraction, set to true will ignore enabledLogs of component level, default is false
   -h, --help                                   help for create
+      --label stringArray                      Set labels for cluster resources
       --monitoring-interval uint8              The monitoring interval of cluster, 0 is disabled, the unit is second, any non-zero value means enabling monitoring.
       --node-labels stringToString             Node label selector (default [])
   -o, --output format                          Prints the output in the specified format. Allowed values: JSON and YAML (default yaml)
