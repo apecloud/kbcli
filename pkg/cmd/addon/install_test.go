@@ -95,37 +95,38 @@ var _ = Describe("index test", func() {
 				ok  bool
 				err error
 			)
-			ok, err = validateVersion("0.7.0", "0.7.1")
-			Expect(err).Should(BeNil())
-			Expect(ok).Should(BeFalse())
+			testCases := []struct {
+				constraint string
+				kbVersion  string
+				success    bool
+				result     bool
+			}{
+				{"0.7.0", "0.7.1", true, false},
+				{"0.7.0", "0.7.0", true, true},
+				{">=0.7.0", "0.7.1", true, true},
+				{">=0.7.0", "0.6.0", true, false},
+				{">=0.7.0,<=0.8.0", "0.9.0", true, false},
+				{">=0.7.0 || <=0.5.0", "0.3.0", true, true},
+				{"", "0.7.1", false, false},
+				{"0.7.0", "", false, false},
+				{">=0.7.0", "0.8.0-alpha.0", true, false},
+				{">=0.7.0", "0.8.0-beta.0", true, false},
+				// todo(al): fix blocks-index addon.yaml version constraint annotations
+				{">=0.7.0-beta.0", "0.8.0-beta.0", true, true},
+				{">=0.7.0-beta.0", "0.8.0-alpha.11", true, true},
+				{">=0.8.0-beta.0", "0.8.0-alpha.11", true, false},
+				{">=0.8.0-alpha.11", "0.8.0-beta.0", true, true},
+			}
 
-			ok, err = validateVersion("0.7.0", "0.7.0")
-			Expect(err).Should(BeNil())
-			Expect(ok).Should(BeTrue())
-
-			ok, err = validateVersion(">=0.7.0", "0.7.1")
-			Expect(err).Should(BeNil())
-			Expect(ok).Should(BeTrue())
-
-			ok, err = validateVersion(">=0.7.0", "0.6.0")
-			Expect(err).Should(BeNil())
-			Expect(ok).Should(BeFalse())
-
-			ok, err = validateVersion(">=0.7.0,<=0.8.0", "0.9.0")
-			Expect(err).Should(BeNil())
-			Expect(ok).Should(BeFalse())
-
-			ok, err = validateVersion(">=0.7.0 || <=0.5.0", "0.3.0")
-			Expect(err).Should(BeNil())
-			Expect(ok).Should(BeTrue())
-
-			ok, err = validateVersion("", "0.3.0")
-			Expect(err).Should(HaveOccurred())
-			Expect(ok).Should(BeFalse())
-
-			ok, err = validateVersion(">=0.7.0", "")
-			Expect(err).Should(HaveOccurred())
-			Expect(ok).Should(BeFalse())
+			for _, c := range testCases {
+				ok, err = validateVersion(c.constraint, c.kbVersion)
+				if c.success {
+					Expect(err).Should(Succeed())
+					Expect(ok).Should(Equal(c.result))
+				} else {
+					Expect(err).Should(HaveOccurred())
+				}
+			}
 		})
 
 		By("validate --force")

@@ -127,7 +127,7 @@ func (o *upgradeOption) Validate() error {
 	}
 	if !o.inplace && o.rename == "" {
 		o.rename = fmt.Sprintf("%s-%s", o.name, o.version)
-		fmt.Printf("--name is not specified by user when upgrade is non-inplace, use \"%s\" by default", o.rename)
+		fmt.Printf("--name is not specified by user when upgrade is non-inplace, use \"%s\" by default\n", o.rename)
 	}
 	target, err := semver.NewVersion(o.version)
 	if err != nil {
@@ -138,7 +138,7 @@ func (o *upgradeOption) Validate() error {
 		return err
 	}
 	if !target.GreaterThan(current) {
-		fmt.Printf(`%s addon %s current version %s is either the latest or newer than the expected version %s.`, printer.BoldYellow("Warn:"), o.name, o.currentVersion, o.version)
+		fmt.Printf("%s addon %s current version %s is either the latest or newer than the expected version %s.\n", printer.BoldYellow("Warn:"), o.name, o.currentVersion, o.version)
 	}
 	return o.installOption.Validate()
 }
@@ -149,9 +149,10 @@ func (o *upgradeOption) Run() error {
 			o.addon.Spec.Helm.InstallValues.SetValues = append(o.addon.Spec.Helm.InstallValues.SetValues, fmt.Sprintf("%s=%s", types.AddonResourceNamePrefix, o.rename))
 		}
 		o.addon.Spec.Helm.InstallValues.SetValues = []string{fmt.Sprintf("%s=%s", types.AddonResourceNamePrefix, o.rename)}
+		o.addon.Name = o.rename
 		err := o.installOption.Run()
 		if err == nil {
-			fmt.Printf("Addon %s-%s upgrade successed.", o.name, o.version)
+			fmt.Printf("Addon %s-%s upgrade successed.\n", o.rename, o.version)
 		}
 		return err
 	}

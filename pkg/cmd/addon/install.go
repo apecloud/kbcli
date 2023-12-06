@@ -119,6 +119,8 @@ func newInstallCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 			util.CheckErr(o.Complete())
 			util.CheckErr(o.Validate())
 			util.CheckErr(o.Run())
+			// avoid unnecessary messages for upgrade
+			fmt.Fprintf(o.Out, "%s install successed\n", o.name)
 		},
 	}
 	cmd.Flags().BoolVar(&o.force, "force", false, "force install the addon and ignore the version check")
@@ -200,13 +202,14 @@ func (o *installOption) Validate() error {
 		return fmt.Errorf("KubeBlocks is not yet installed，please install it first")
 	}
 	if o.force {
-		fmt.Fprint(o.Out, printer.BoldYellow("Warning: --force flag will skip version checks, which may result in the cluster not running correctly."))
+		fmt.Fprint(o.Out, printer.BoldYellow("Warning: --force flag will skip version checks, which may result in the cluster not running correctly.\n"))
 		return nil
 	}
 
 	if o.addon.Annotations == nil || len(o.addon.Annotations[types.KBVersionValidateAnnotationKey]) == 0 {
 		fmt.Fprint(o.Out, printer.BoldYellow(fmt.Sprintf(`Warning: The addon %s is missing annotations to validate KubeBlocks versions.
-It will automatically skip version checks, which may result in the cluster not running correctly.`, o.name)))
+It will automatically skip version checks, which may result in the cluster not running correctly.
+`, o.name)))
 	} else if ok, err = validateVersion(o.addon.Annotations[types.KBVersionValidateAnnotationKey], v.KubeBlocks); err == nil && !ok {
 		return fmt.Errorf("KubeBlocks version %s does not meet the requirements for addon installation\nUse --force option to skip this check", v.KubeBlocks)
 	}
@@ -225,7 +228,6 @@ func (o *installOption) Run() error {
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(o.Out, "%s install successed\n", o.name)
 	return nil
 }
 
