@@ -53,6 +53,12 @@ var addonUpgradeExample = templates.Examples(`
 
 	# upgrade an addon with a specified version default index 
 	kbcli addon upgrade apecloud-mysql --version 0.7.0
+
+	# non-inplace upgrade an addon with a specified version
+	kbcli addon upgrade apecloud-mysql  --inplace=false --version 0.7.0
+
+	# non-inplace upgrade an addon with a specified addon name
+	kbcli addon upgrade apecloud-mysql --inplace=false --name apecloud-mysql-0.7.0
 `)
 
 // upgradeOption storage the info to upgrade an addon
@@ -61,19 +67,20 @@ type upgradeOption struct {
 
 	// currentVersion is the addon current version in KubeBlocks
 	currentVersion string
-	// if independent is true will retain the existing addon and reinstall the new version of the addon.
-	// otherwise the upgrade will be in-place
-	independent bool
-	// prefix is the name prefix to identify the same addon with different version when independent is true
-	prefix string
+	// if inplace is false will retain the existing addon and reinstall the new version of the addon.
+	// otherwise the upgrade will be in-place. It's true in default
+	inplace bool
+	// rename is the new version addon name need to set by user when inplace is false, it also will be used as resourceNamePrefix of an addon with multiple version.
+	// If it's not be specified by user, use `addon-version` by default
+	rename string
 }
 
 func newUpgradeOption(f cmdutil.Factory, streams genericiooptions.IOStreams) *upgradeOption {
 	return &upgradeOption{
 		installOption:  newInstallOption(f, streams),
 		currentVersion: "",
-		independent:    false,
-		prefix:         "",
+		inplace:        true,
+		rename:         "",
 	}
 }
 
@@ -95,8 +102,8 @@ func newUpgradeCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 	cmd.Flags().BoolVar(&o.force, "force", false, "force upgrade the addon and ignore the version check")
 	cmd.Flags().StringVar(&o.version, "version", "", "specify the addon version")
 	cmd.Flags().StringVar(&o.index, "index", types.DefaultIndexName, "specify the addon index index, use 'kubeblocks' by default")
-	cmd.Flags().BoolVar(&o.independent, "independent", false, "when independent is true, it will retain the existing addon and reinstall the new version of the addon, otherwise the upgrade will be in-place")
-	cmd.Flags().StringVar(&o.prefix, "prefix", "", "prefix is the name prefix to identify the same addon with different version when independent is true")
+	cmd.Flags().BoolVar(&o.inplace, "inplace", true, "when inplace is false, it will retain the existing addon and reinstall the new version of the addon, otherwise the upgrade will be in-place. The default is true.")
+	cmd.Flags().StringVar(&o.rename, "name", "", "name is the new version addon name need to set by user when inplace is false, it also will be used as resourceNamePrefix of an addon with multiple version.")
 	return cmd
 }
 
@@ -115,11 +122,12 @@ func (o *upgradeOption) Complete() error {
 
 // Validate will check if the current version is already the latest version compared to installOption.Validate()
 func (o *upgradeOption) Validate() error {
-	if o.independent && o.prefix == "" {
-		return fmt.Errorf("--prefix is required to identify the same addon with different version when --independent is set")
-	}
 	if o.version == "" {
 		o.version = o.addon.Labels[constant.AppVersionLabelKey]
+	}
+	if !o.inplace && o.rename == "" {
+		o.rename = fmt.Sprintf("%s-%s", o.name, o.version)
+		fmt.Printf("--name is not specified by user when upgrade is non-inplace, use \"%s\" by default", o.rename)
 	}
 	target, err := semver.NewVersion(o.version)
 	if err != nil {
@@ -136,11 +144,11 @@ func (o *upgradeOption) Validate() error {
 }
 
 func (o *upgradeOption) Run() error {
-	if o.independent {
+	if !o.inplace {
 		if o.addon.Spec.Helm.InstallValues.SetValues != nil {
-			o.addon.Spec.Helm.InstallValues.SetValues = append(o.addon.Spec.Helm.InstallValues.SetValues, fmt.Sprintf("%s=%s", types.AddonResourceNamePrefix, o.prefix))
+			o.addon.Spec.Helm.InstallValues.SetValues = append(o.addon.Spec.Helm.InstallValues.SetValues, fmt.Sprintf("%s=%s", types.AddonResourceNamePrefix, o.rename))
 		}
-		o.addon.Spec.Helm.InstallValues.SetValues = []string{fmt.Sprintf("%s=%s", types.AddonResourceNamePrefix, o.prefix)}
+		o.addon.Spec.Helm.InstallValues.SetValues = []string{fmt.Sprintf("%s=%s", types.AddonResourceNamePrefix, o.rename)}
 		err := o.installOption.Run()
 		if err == nil {
 			fmt.Printf("Addon %s-%s upgrade successed.", o.name, o.version)
