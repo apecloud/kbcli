@@ -143,7 +143,10 @@ const (
 	ServiceHAVIPTypeAnnotationValue = "private-ip"
 	ServiceFloatingIPAnnotationKey  = "service.kubernetes.io/kubeblocks-havip-floating-ip"
 
-	ClassProviderLabelKey        = "class.kubeblocks.io/provider"
+	ClassProviderLabelKey = "class.kubeblocks.io/provider"
+	AddonProviderLabelKey = "addon.kubeblocks.io/provider"
+	// ProviderLabelKey was used as the label for addon providers before version 0.8.0
+	ProviderLabelKey             = "kubeblocks.io/provider"
 	ReloadConfigMapAnnotationKey = "kubeblocks.io/reload-configmap" // mark an annotation to load configmap
 
 	KBVersionValidateAnnotationKey = "addon.kubeblocks.io/kubeblocks-version"
@@ -214,7 +217,7 @@ const (
 	AddonReleasePrefix = "kb-addon"
 
 	// AddonResourceNamePrefix is the prefix for the names of all K8s resources rendered by the addon.
-	AddonResourceNamePrefix = "ResourceNamePrefix"
+	AddonResourceNamePrefix = "resourceNamePrefix"
 )
 
 var (

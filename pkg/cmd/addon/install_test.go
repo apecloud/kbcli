@@ -111,7 +111,8 @@ var _ = Describe("index test", func() {
 				{"0.7.0", "", false, false},
 				{">=0.7.0", "0.8.0-alpha.0", true, false},
 				{">=0.7.0", "0.8.0-beta.0", true, false},
-				// todo(al): fix blocks-index addon.yaml version constraint annotations
+				// support prerelease constraint should add "-0" in the string end
+				{">=0.7.0-0", "0.8.0-beta.0", true, true},
 				{">=0.7.0-beta.0", "0.8.0-beta.0", true, true},
 				{">=0.7.0-beta.0", "0.8.0-alpha.11", true, true},
 				{">=0.8.0-beta.0", "0.8.0-alpha.11", true, false},
