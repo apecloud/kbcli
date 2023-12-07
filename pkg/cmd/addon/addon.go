@@ -102,6 +102,9 @@ func NewAddonCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.C
 		newDisableCmd(f, streams),
 		newIndexCmd(streams),
 		newSearchCmd(streams),
+		newInstallCmd(f, streams),
+		newUninstallCmd(f, streams),
+		newUpgradeCmd(f, streams),
 	)
 	return cmd
 }
@@ -826,7 +829,10 @@ func addonListRun(o *action.ListOptions) error {
 				autoInstall = addon.Spec.Installable.AutoInstall
 			}
 			label := obj.GetLabels()
-			provider := label[constant.AddonProviderLabelKey]
+			provider := label[types.AddonProviderLabelKey]
+			if provider == "" {
+				provider = label[types.ProviderLabelKey]
+			}
 			if o.Format == printer.Wide {
 				tbl.AddRow(addon.Name,
 					addon.Spec.Type,

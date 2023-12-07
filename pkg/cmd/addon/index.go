@@ -269,7 +269,7 @@ func addDefaultIndex() error {
 	}
 
 	// check if the default index is already added
-	defaultIndexDir := path.Join(addonDir, types.KubeBlocksReleaseName)
+	defaultIndexDir := path.Join(addonDir, types.DefaultIndexName)
 	if _, err := os.Stat(defaultIndexDir); os.IsNotExist(err) {
 		if err = util.EnsureCloned(types.DefaultAddonIndexURL, defaultIndexDir); err != nil {
 			return err

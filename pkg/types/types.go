@@ -55,6 +55,9 @@ const (
 	// AddonIndexDirEnv defines kbcli addon index dir
 	AddonIndexDirEnv = "KBCLI_ADDON_INDEX_DIR"
 
+	// DefaultIndexName defines the kbcli addon default index name
+	DefaultIndexName = "kubeblocks"
+
 	// DefaultNamespace is the namespace where kubeblocks is installed if
 	// no other namespace is specified
 	DefaultNamespace = "kb-system"
@@ -140,8 +143,13 @@ const (
 	ServiceHAVIPTypeAnnotationValue = "private-ip"
 	ServiceFloatingIPAnnotationKey  = "service.kubernetes.io/kubeblocks-havip-floating-ip"
 
-	ClassProviderLabelKey        = "class.kubeblocks.io/provider"
+	ClassProviderLabelKey = "class.kubeblocks.io/provider"
+	AddonProviderLabelKey = "addon.kubeblocks.io/provider"
+	// ProviderLabelKey was used as the label for addon providers before version 0.8.0
+	ProviderLabelKey             = "kubeblocks.io/provider"
 	ReloadConfigMapAnnotationKey = "kubeblocks.io/reload-configmap" // mark an annotation to load configmap
+
+	KBVersionValidateAnnotationKey = "addon.kubeblocks.io/kubeblocks-version"
 )
 
 // DataProtection API group
@@ -207,6 +215,9 @@ const (
 
 	// AddonReleasePrefix is the prefix of addon release name
 	AddonReleasePrefix = "kb-addon"
+
+	// AddonResourceNamePrefix is the prefix for the names of all K8s resources rendered by the addon.
+	AddonResourceNamePrefix = "resourceNamePrefix"
 )
 
 var (
