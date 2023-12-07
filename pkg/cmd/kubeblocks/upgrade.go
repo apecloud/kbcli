@@ -99,6 +99,7 @@ func (o *InstallOptions) Upgrade() error {
 		o.HelmCfg.SetNamespace(ns)
 	}
 
+	o.Version = util.TrimVersionPrefix(o.Version)
 	// check flags already been set
 	if o.Version == "" && helm.ValueOptsIsEmpty(&o.ValueOpts) {
 		fmt.Fprint(o.Out, "Nothing to upgrade, --set, --version should be specified.\n")

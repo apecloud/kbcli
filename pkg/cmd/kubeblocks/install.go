@@ -227,6 +227,7 @@ func (o *InstallOptions) PreCheck() error {
 		return err
 	}
 
+	o.Version = util.TrimVersionPrefix(o.Version)
 	if err = o.checkVersion(v); err != nil {
 		return err
 	}

@@ -328,4 +328,35 @@ var _ = Describe("util", func() {
 		Expect(podAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution[0].Weight).ShouldNot(BeNil())
 		Expect(podAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution[0].PodAffinityTerm.TopologyKey).Should(Equal(topologyKey))
 	})
+
+	It("test trim version prefix", func() {
+		testCases := []struct {
+			version  string
+			expected string
+		}{
+			{
+				version:  "v1.20.0",
+				expected: "1.20.0",
+			},
+			{
+				version:  "v1.20.0-beta.0",
+				expected: "1.20.0-beta.0",
+			},
+			{
+				version:  "V1.20.0",
+				expected: "1.20.0",
+			},
+			{
+				version:  "1.20.0",
+				expected: "1.20.0",
+			},
+			{
+				version:  "",
+				expected: "",
+			},
+		}
+		for _, tc := range testCases {
+			Expect(TrimVersionPrefix(tc.version)).Should(Equal(tc.expected))
+		}
+	})
 })

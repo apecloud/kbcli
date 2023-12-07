@@ -1043,3 +1043,11 @@ func RandRFC1123String(n int) string {
 	}
 	return string(b)
 }
+
+func TrimVersionPrefix(version string) string {
+	version = strings.TrimSpace(version)
+	if len(version) > 0 && (version[0] == 'v' || version[0] == 'V') {
+		return version[1:]
+	}
+	return version
+}
