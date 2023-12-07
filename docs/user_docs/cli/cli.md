@@ -32,6 +32,7 @@ Manage alert receiver, include add, list and delete receiver.
 BackupRepo command.
 
 * [kbcli backuprepo create](kbcli_backuprepo_create.md)	 - Create a backup repo
+* [kbcli backuprepo delete](kbcli_backuprepo_delete.md)	 - Delete a backup repository.
 * [kbcli backuprepo describe](kbcli_backuprepo_describe.md)	 - Describe a backup repository.
 * [kbcli backuprepo list](kbcli_backuprepo_list.md)	 - List Backup Repositories.
 * [kbcli backuprepo update](kbcli_backuprepo_update.md)	 - Update a backup repository.

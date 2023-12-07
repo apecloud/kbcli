@@ -140,6 +140,22 @@ func testDynamicResources() []*restmapper.APIGroupResources {
 		},
 		{
 			Group: metav1.APIGroup{
+				Name: "dataprotection.kubeblocks.io",
+				Versions: []metav1.GroupVersionForDiscovery{
+					{GroupVersion: "dataprotection.kubeblocks.io/v1alpha1", Version: "v1alpha1"},
+				},
+				PreferredVersion: metav1.GroupVersionForDiscovery{
+					GroupVersion: "dataprotection.kubeblocks.io/v1alpha1",
+					Version:      "v1alpha1"},
+			},
+			VersionedResources: map[string][]metav1.APIResource{
+				"v1alpha1": {
+					{Name: "backuprepos", Namespaced: false, Kind: "BackupRepo"},
+				},
+			},
+		},
+		{
+			Group: metav1.APIGroup{
 				Name: "chaos-mesh.org",
 				Versions: []metav1.GroupVersionForDiscovery{
 					{GroupVersion: "chaos-mesh.org/v1alpha1", Version: "v1alpha1"},
