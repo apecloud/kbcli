@@ -39,7 +39,6 @@ import (
 
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 
-	"github.com/apecloud/kbcli/pkg/cluster"
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
@@ -154,7 +153,7 @@ func (o *describeOpsOptions) run() error {
 // describeOps gets the OpsRequest by name and describes it.
 func (o *describeOpsOptions) describeOps(name string) error {
 	opsRequest := &appsv1alpha1.OpsRequest{}
-	if err := cluster.GetK8SClientObject(o.dynamic, opsRequest, o.gvr, o.namespace, name); err != nil {
+	if err := util.GetK8SClientObject(o.dynamic, opsRequest, o.gvr, o.namespace, name); err != nil {
 		return err
 	}
 	return o.printOpsRequest(opsRequest)

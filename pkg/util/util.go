@@ -46,6 +46,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 	"github.com/pmezard/go-difflib/difflib"
+	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh"
 	corev1 "k8s.io/api/core/v1"
 	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -510,6 +511,20 @@ func GetConfigTemplateListWithResource(cComponents []appsv1alpha1.ClusterCompone
 		}
 	}
 	return validConfigSpecs, nil
+}
+
+// GetK8SClientObject gets the client object of k8s,
+// obj must be a struct pointer so that obj can be updated with the response.
+func GetK8SClientObject(dynamic dynamic.Interface,
+	obj client.Object,
+	gvr schema.GroupVersionResource,
+	namespace,
+	name string) error {
+	unstructuredObj, err := dynamic.Resource(gvr).Namespace(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+	return apiruntime.DefaultUnstructuredConverter.FromUnstructured(unstructuredObj.UnstructuredContent(), obj)
 }
 
 // GetResourceObjectFromGVR queries the resource object using GVR.
@@ -1062,4 +1077,15 @@ func TrimVersionPrefix(version string) string {
 		return version[1:]
 	}
 	return version
+}
+
+func GetClusterNameFromArgsOrFlag(cmd *cobra.Command, args []string) string {
+	clusterName, _ := cmd.Flags().GetString("cluster")
+	if clusterName != "" {
+		return clusterName
+	}
+	if len(args) > 0 {
+		return args[0]
+	}
+	return ""
 }

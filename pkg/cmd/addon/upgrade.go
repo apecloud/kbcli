@@ -25,7 +25,6 @@ import (
 	"fmt"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ktypes "k8s.io/apimachinery/pkg/types"
@@ -33,10 +32,11 @@ import (
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
 
+	"github.com/apecloud/kbcli/pkg/printer"
+
 	extensionsv1alpha1 "github.com/apecloud/kubeblocks/apis/extensions/v1alpha1"
 	"github.com/apecloud/kubeblocks/pkg/constant"
 
-	"github.com/apecloud/kbcli/pkg/cluster"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
 )
@@ -112,7 +112,7 @@ func (o *upgradeOption) Complete() error {
 		return err
 	}
 	addon := extensionsv1alpha1.Addon{}
-	err := cluster.GetK8SClientObject(o.Dynamic, &addon, o.GVR, "", o.name)
+	err := util.GetK8SClientObject(o.Dynamic, &addon, o.GVR, "", o.name)
 	if err != nil {
 		return fmt.Errorf("addon %s not found. please use 'kbcli addon install %s' first", o.name, o.name)
 	}

@@ -31,7 +31,7 @@ import (
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
 
-	"github.com/apecloud/kubeblocks/pkg/class"
+	"github.com/apecloud/kubeblocks/pkg/controller/component"
 
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/util"
@@ -73,7 +73,7 @@ func (o *ListOptions) complete(f cmdutil.Factory) error {
 }
 
 func (o *ListOptions) run() error {
-	clsMgr, err := GetManager(o.dynamic, o.ClusterDefRef)
+	clsMgr, _, err := GetManager(o.dynamic, o.ClusterDefRef)
 	if err != nil {
 		return err
 	}
@@ -83,10 +83,10 @@ func (o *ListOptions) run() error {
 	return nil
 }
 
-func (o *ListOptions) printClass(compName string, classes []*class.ComponentClassWithRef) {
+func (o *ListOptions) printClass(compName string, classes []*component.ComponentClassWithRef) {
 	tbl := printer.NewTablePrinter(o.Out)
 	tbl.SetHeader("COMPONENT", "CLASS", "CPU", "MEMORY")
-	sort.Sort(class.ByClassResource(classes))
+	sort.Sort(component.ByClassResource(classes))
 	for _, cls := range classes {
 		tbl.AddRow(compName, cls.Name, cls.CPU.String(), normalizeMemory(cls.Memory))
 	}

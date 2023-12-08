@@ -23,40 +23,41 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/apecloud/kubeblocks/pkg/controller/component"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
 
 	"github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
-	"github.com/apecloud/kubeblocks/pkg/class"
 	"github.com/apecloud/kubeblocks/pkg/constant"
 
 	"github.com/apecloud/kbcli/pkg/types"
 )
 
 // GetManager gets a class manager which manages default classes and user custom classes
-func GetManager(client dynamic.Interface, cdName string) (*class.Manager, error) {
+func GetManager(client dynamic.Interface, cdName string) (*component.Manager, *v1alpha1.ComponentResourceConstraintList, error) {
 	selector := fmt.Sprintf("%s=%s,%s", constant.ClusterDefLabelKey, cdName, types.ClassProviderLabelKey)
 	classObjs, err := client.Resource(types.ComponentClassDefinitionGVR()).Namespace("").List(context.TODO(), metav1.ListOptions{
 		LabelSelector: selector,
 	})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	var classDefinitionList v1alpha1.ComponentClassDefinitionList
 	if err = runtime.DefaultUnstructuredConverter.FromUnstructured(classObjs.UnstructuredContent(), &classDefinitionList); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	constraintObjs, err := client.Resource(types.ComponentResourceConstraintGVR()).Namespace("").List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	var resourceConstraintList v1alpha1.ComponentResourceConstraintList
 	if err = runtime.DefaultUnstructuredConverter.FromUnstructured(constraintObjs.UnstructuredContent(), &resourceConstraintList); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return class.NewManager(classDefinitionList, resourceConstraintList)
+	mgr, err := component.NewManager(classDefinitionList, resourceConstraintList)
+	return mgr, &resourceConstraintList, err
 }
 
 // GetResourceConstraints gets all resource constraints
@@ -81,4 +82,49 @@ func GetResourceConstraints(dynamic dynamic.Interface) (map[string]*v1alpha1.Com
 		result[cf.GetName()] = &cf
 	}
 	return result, nil
+}
+
+// GetCustomClassObjectName returns the name of the ComponentClassDefinition object containing the custom classes
+func GetCustomClassObjectName(cdName string, componentName string) string {
+	return fmt.Sprintf("kb.classes.custom.%s.%s", cdName, componentName)
+}
+
+func ValidateResources(clsMGR *component.Manager,
+	resourceConstraintList *v1alpha1.ComponentResourceConstraintList,
+	clusterDefRef string,
+	comp *v1alpha1.ClusterComponentSpec) error {
+	if comp.ClassDefRef != nil && comp.ClassDefRef.Class != "" {
+		if clsMGR.HasClass(comp.ComponentDefRef, *comp.ClassDefRef) {
+			return nil
+		}
+		return fmt.Errorf("class not found")
+	}
+
+	var rules []v1alpha1.ResourceConstraintRule
+	for _, constraint := range resourceConstraintList.Items {
+		rules = append(rules, constraint.FindRules(clusterDefRef, comp.ComponentDefRef)...)
+	}
+	if len(rules) == 0 {
+		return nil
+	}
+
+	for _, rule := range rules {
+		if !rule.ValidateResources(comp.Resources.Requests) {
+			continue
+		}
+
+		// validate volume
+		match := true
+		// all volumes should match the rules
+		for _, volume := range comp.VolumeClaimTemplates {
+			if !rule.ValidateStorage(volume.Spec.Resources.Requests.Storage()) {
+				match = false
+				break
+			}
+		}
+		if match {
+			return nil
+		}
+	}
+	return fmt.Errorf("resource is not conform to the constraints, please check the ComponentResourceConstraint API")
 }

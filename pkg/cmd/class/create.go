@@ -40,8 +40,8 @@ import (
 	"k8s.io/kubectl/pkg/util/templates"
 
 	"github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
-	"github.com/apecloud/kubeblocks/pkg/class"
 	"github.com/apecloud/kubeblocks/pkg/constant"
+	"github.com/apecloud/kubeblocks/pkg/controller/component"
 
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
@@ -129,7 +129,7 @@ func (o *CreateOptions) complete(f cmdutil.Factory) error {
 }
 
 func (o *CreateOptions) run() error {
-	clsMgr, err := GetManager(o.dynamic, o.ClusterDefRef)
+	clsMgr, _, err := GetManager(o.dynamic, o.ClusterDefRef)
 	if err != nil {
 		return err
 	}
@@ -155,7 +155,7 @@ func (o *CreateOptions) run() error {
 		classDefinition := v1alpha1.ComponentClassDefinition{
 			Spec: v1alpha1.ComponentClassDefinitionSpec{Groups: componentClassGroups},
 		}
-		newClasses, err := class.ParseComponentClasses(classDefinition)
+		newClasses, err := component.ParseComponentClasses(classDefinition)
 		if err != nil {
 			return err
 		}
@@ -184,7 +184,7 @@ func (o *CreateOptions) run() error {
 		objName    = o.objectName
 	)
 	if objName == "" {
-		objName = class.GetCustomClassObjectName(o.ClusterDefRef, o.ComponentType)
+		objName = GetCustomClassObjectName(o.ClusterDefRef, o.ComponentType)
 	}
 
 	var rules []v1alpha1.ResourceConstraintRule
@@ -242,7 +242,7 @@ func (o *CreateOptions) run() error {
 				APIVersion: gvr.Group + "/" + gvr.Version,
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name: class.GetCustomClassObjectName(o.ClusterDefRef, o.ComponentType),
+				Name: GetCustomClassObjectName(o.ClusterDefRef, o.ComponentType),
 				Labels: map[string]string{
 					constant.ClusterDefLabelKey:           o.ClusterDefRef,
 					types.ClassProviderLabelKey:           "user",
