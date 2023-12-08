@@ -208,6 +208,10 @@ const (
 // set the components volume names, key is the component type.
 var componentVolumes = map[string][]string{
 	"bookies": {"journal", "ledgers"},
+	// kafka controller
+	"controller":   {"metadata"},
+	"kafka-broker": {"metadata", "data"},
+	"kafka-server": {"metadata", "data"},
 }
 
 // UpdatableFlags is the flags that cat be updated by update command
