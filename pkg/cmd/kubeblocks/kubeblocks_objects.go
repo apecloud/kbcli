@@ -83,24 +83,27 @@ func getKBObjects(dynamic dynamic.Interface, namespace string, addons []*extensi
 	crds, err := dynamic.Resource(types.CRDGVR()).List(ctx, metav1.ListOptions{})
 	appendErr(err)
 	kbObjs[types.CRDGVR()] = &unstructured.UnstructuredList{}
-	for i, crd := range crds.Items {
-		if !strings.Contains(crd.GetName(), constant.APIGroup) {
-			continue
-		}
-		crdObjs := kbObjs[types.CRDGVR()]
-		crdObjs.Items = append(crdObjs.Items, crds.Items[i])
 
-		// get built-in CRs belonging to this CRD
-		gvr, err := getGVRByCRD(&crd)
-		if err != nil {
-			appendErr(err)
-			continue
-		}
-		if crs, err := dynamic.Resource(*gvr).List(ctx, metav1.ListOptions{}); err != nil {
-			appendErr(err)
-			continue
-		} else {
-			kbObjs[*gvr] = crs
+	if crds != nil {
+		for i, crd := range crds.Items {
+			if !strings.Contains(crd.GetName(), constant.APIGroup) {
+				continue
+			}
+			crdObjs := kbObjs[types.CRDGVR()]
+			crdObjs.Items = append(crdObjs.Items, crds.Items[i])
+
+			// get built-in CRs belonging to this CRD
+			gvr, err := getGVRByCRD(&crd)
+			if err != nil {
+				appendErr(err)
+				continue
+			}
+			if crs, err := dynamic.Resource(*gvr).List(ctx, metav1.ListOptions{}); err != nil {
+				appendErr(err)
+				continue
+			} else {
+				kbObjs[*gvr] = crs
+			}
 		}
 	}
 
@@ -147,15 +150,18 @@ func getKBObjects(dynamic dynamic.Interface, namespace string, addons []*extensi
 		target.Items = append(target.Items, *obj)
 		klog.V(1).Infof("\tget object: %s, %s, %s", obj.GetNamespace(), obj.GetKind(), obj.GetName())
 	}
+
 	// get RBAC resources, such as ClusterRole, ClusterRoleBinding, Role, RoleBinding, ServiceAccount
 	getObjectsByLabels(buildKubeBlocksSelectorLabels(), types.ClusterRoleGVR(), ResourceScopeGlobal)
 	getObjectsByLabels(buildKubeBlocksSelectorLabels(), types.ClusterRoleBindingGVR(), ResourceScopeGlobal)
 	getObjectsByLabels(buildKubeBlocksSelectorLabels(), types.RoleGVR(), ResourceScopeLocal)
 	getObjectsByLabels(buildKubeBlocksSelectorLabels(), types.RoleBindingGVR(), ResourceScopeLocal)
 	getObjectsByLabels(buildKubeBlocksSelectorLabels(), types.ServiceAccountGVR(), ResourceScopeLocal)
+
 	// get webhooks
 	getObjectsByLabels(buildKubeBlocksSelectorLabels(), types.ValidatingWebhookConfigurationGVR(), ResourceScopeGlobal)
 	getObjectsByLabels(buildKubeBlocksSelectorLabels(), types.MutatingWebhookConfigurationGVR(), ResourceScopeGlobal)
+
 	// get configmap for config template
 	getObjectsByLabels(buildConfigTypeSelectorLabels(), types.ConfigmapGVR(), ResourceScopeLocal)
 	getObjectsByLabels(buildKubeBlocksSelectorLabels(), types.ConfigmapGVR(), ResourceScopeLocal)
