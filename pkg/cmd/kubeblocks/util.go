@@ -287,15 +287,15 @@ func createOrUpdateCRDS(dynamic dynamic.Interface, kbVersion string) error {
 	if kbVersion == "" {
 		kbVersion = version.GetVersion()
 	}
-	crdsUrl := util.GetKubeBlocksCRDsUrl(kbVersion)
-	resp, err := http.Get(crdsUrl)
+	crdsURL := util.GetKubeBlocksCRDsURL(kbVersion)
+	resp, err := http.Get(crdsURL)
 	if err != nil {
 		return err
 	}
 	if resp.StatusCode == http.StatusNotFound {
 		return nil
 	} else if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("can not download %s", crdsUrl)
+		return fmt.Errorf("can not download %s", crdsURL)
 	}
 	defer resp.Body.Close()
 	d := yaml.NewYAMLToJSONDecoder(resp.Body)
