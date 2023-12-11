@@ -271,6 +271,10 @@ func (o *InstallOptions) CompleteInstallOptions() error {
 
 func (o *InstallOptions) Install() error {
 	var err error
+	// create or update crds
+	if err = createOrUpdateCRDS(o.Dynamic, o.Version); err != nil {
+		return fmt.Errorf("install crds failed: %s", err.Error())
+	}
 	// add helm repo
 	s := spinner.New(o.Out, spinnerMsg("Add and update repo "+types.KubeBlocksRepoName))
 	defer s.Fail()
