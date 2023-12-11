@@ -689,6 +689,18 @@ func GetKubeBlocksNamespace(client kubernetes.Interface) (string, error) {
 	return "", errors.New("failed to get KubeBlocks installation namespace")
 }
 
+// GetKubeBlocksCRDsUrl gets the crds url by IP region.
+func GetKubeBlocksCRDsUrl(kbVersion string) string {
+	kbVersion = TrimVersionPrefix(kbVersion)
+	location, _ := GetIPLocation()
+	crdsUrl := fmt.Sprintf("https://github.com/apecloud/kubeblocks/releases/download/v%s/kubeblocks_crds.yaml", kbVersion)
+	if location == "CN" || location == "" {
+		crdsUrl = fmt.Sprintf("https://jihulab.com/api/v4/projects/85948/packages/generic/kubeblocks/v%s/kubeblocks_crds.yaml", kbVersion)
+	}
+	klog.V(1).Infof("CRDs url: %s", crdsUrl)
+	return crdsUrl
+}
+
 // GetKubeBlocksNamespaceByDynamic gets namespace of KubeBlocks installation, infer namespace from helm secrets
 func GetKubeBlocksNamespaceByDynamic(dynamic dynamic.Interface) (string, error) {
 	list, err := dynamic.Resource(types.SecretGVR()).List(context.TODO(), metav1.ListOptions{LabelSelector: types.KubeBlocksHelmLabel})
