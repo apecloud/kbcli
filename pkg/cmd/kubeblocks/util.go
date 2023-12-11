@@ -23,6 +23,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/http"
 	"sort"
 	"strings"
 
@@ -34,6 +35,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/yaml"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 
 	extensionsv1alpha1 "github.com/apecloud/kubeblocks/apis/extensions/v1alpha1"
@@ -44,6 +47,7 @@ import (
 	"github.com/apecloud/kbcli/pkg/util"
 	"github.com/apecloud/kbcli/pkg/util/helm"
 	"github.com/apecloud/kbcli/pkg/util/prompt"
+	"github.com/apecloud/kbcli/version"
 )
 
 func getGVRByCRD(crd *unstructured.Unstructured) (*schema.GroupVersionResource, error) {
@@ -276,4 +280,49 @@ func newHelmRepoEntry() *repo.Entry {
 		Name: types.KubeBlocksChartName,
 		URL:  util.GetHelmChartRepoURL(),
 	}
+}
+
+// createOrUpdateCRDS creates or updates the kubeBlocks crds.
+func createOrUpdateCRDS(dynamic dynamic.Interface, kbVersion string) error {
+	if kbVersion == "" {
+		kbVersion = version.GetVersion()
+	}
+	crdsUrl := util.GetKubeBlocksCRDsUrl(kbVersion)
+	resp, err := http.Get(crdsUrl)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode == http.StatusNotFound {
+		return nil
+	} else if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("can not download %s", crdsUrl)
+	}
+	defer resp.Body.Close()
+	d := yaml.NewYAMLToJSONDecoder(resp.Body)
+	var objs []unstructured.Unstructured
+	for {
+		var obj unstructured.Unstructured
+		if err = d.Decode(&obj); err != nil {
+			if err == io.EOF {
+				break
+			}
+			return err
+		}
+		objs = append(objs, obj)
+	}
+	ctx := context.Background()
+	for _, obj := range objs {
+		if _, err = dynamic.Resource(types.CustomResourceDefinitionGVR()).Get(ctx, obj.GetName(), metav1.GetOptions{}); err != nil {
+			// update crd
+			if _, err = dynamic.Resource(types.CustomResourceDefinitionGVR()).Create(ctx, &obj, metav1.CreateOptions{}); err != nil {
+				return err
+			}
+		} else {
+			// create crd
+			if _, err = dynamic.Resource(types.CustomResourceDefinitionGVR()).Update(ctx, &obj, metav1.UpdateOptions{}); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
