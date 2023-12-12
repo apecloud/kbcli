@@ -82,7 +82,7 @@ func (o *CreateUserOptions) Run(cmd *cobra.Command, f cmdutil.Factory, streams g
 		return err
 	}
 
-	err = lorryClient.CreateUser(context.Background(), o.userName, o.password)
+	err = lorryClient.CreateUser(context.Background(), o.userName, o.password, "")
 	if err != nil {
 		o.printGeneralInfo("fail", err.Error())
 		return err

@@ -20,20 +20,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package flags
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
+	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	"github.com/spf13/cobra"
 	"github.com/stoewer/go-strcase"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/dynamic"
 	"k8s.io/kube-openapi/pkg/validation/spec"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	utilcomp "k8s.io/kubectl/pkg/util/completion"
-
-	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
@@ -217,20 +212,6 @@ func AddComponentsFlag(f cmdutil.Factory, cmd *cobra.Command, p *[]string, usage
 }
 
 func autoCompleteClusterComponent(cmd *cobra.Command, f cmdutil.Factory, flag string) error {
-	// getClusterByNames is a hack way to eliminate circular import, combining functions from the cluster.GetK8SClientObject and cluster.GetClusterByName
-	getClusterByName := func(dynamic dynamic.Interface, name string, namespace string) (*appsv1alpha1.Cluster, error) {
-		cluster := &appsv1alpha1.Cluster{}
-
-		unstructuredObj, err := dynamic.Resource(types.ClusterGVR()).Namespace(namespace).Get(context.TODO(), name, metav1.GetOptions{})
-		if err != nil {
-			return nil, err
-		}
-		if err = runtime.DefaultUnstructuredConverter.FromUnstructured(unstructuredObj.UnstructuredContent(), cluster); err != nil {
-			return nil, err
-		}
-		return cluster, nil
-	}
-
 	autoComplete := func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		var components []string
 		if len(args) == 0 {
@@ -238,7 +219,8 @@ func autoCompleteClusterComponent(cmd *cobra.Command, f cmdutil.Factory, flag st
 		}
 		namespace, _, _ := f.ToRawKubeConfigLoader().Namespace()
 		dynamic, _ := f.DynamicClient()
-		cluster, _ := getClusterByName(dynamic, args[0], namespace)
+		cluster := &appsv1alpha1.Cluster{}
+		_ = util.GetK8SClientObject(dynamic, cluster, types.ClusterGVR(), util.GetClusterNameFromArgsOrFlag(cmd, args), namespace)
 		for _, comp := range cluster.Spec.ComponentSpecs {
 			if strings.HasPrefix(comp.Name, toComplete) {
 				components = append(components, comp.Name)

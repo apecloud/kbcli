@@ -27,6 +27,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -46,6 +47,7 @@ var _ = Describe("operations", func() {
 		clusterName            = "cluster-ops"
 		clusterName1           = "cluster-ops1"
 		clusterNameWithCompDef = "cluster-ops-with-comp-def"
+		opsDefName             = "test-ops-def"
 	)
 	var (
 		streams genericiooptions.IOStreams
@@ -90,12 +92,30 @@ var _ = Describe("operations", func() {
 		}
 		clusterWithCompDef.Spec.ComponentSpecs[0].ComponentDef = testing.CompDefName
 
+		// init opsDefinition
+		opsDef := &appsv1alpha1.OpsDefinition{
+			ObjectMeta: metav1.ObjectMeta{Name: opsDefName},
+			Spec: appsv1alpha1.OpsDefinitionSpec{
+				ComponentDefinitionRefs: []appsv1alpha1.ComponentDefinitionRef{
+					{Name: testing.CompDefName},
+				},
+				ParametersSchema: &appsv1alpha1.ParametersSchema{
+					OpenAPIV3Schema: &apiextensionsv1.JSONSchemaProps{
+						Properties: map[string]apiextensionsv1.JSONSchemaProps{
+							"p1": {Type: "string"},
+							"p2": {Type: "integer"},
+						},
+						Required: []string{"p1"},
+					},
+				},
+			},
+		}
 		pods := testing.FakePods(2, clusterWithOneComp.Namespace, clusterName1)
 		podsWithCompDef := testing.FakePods(2, clusterWithCompDef.Namespace, clusterNameWithCompDef)
 		tf.Client = &clientfake.RESTClient{}
 		tf.FakeDynamicClient = testing.FakeDynamicClient(testing.FakeClusterDef(),
 			testing.FakeClusterVersion(), testing.FakeCompDef(), clusterWithTwoComps, clusterWithOneComp, clusterWithCompDef,
-			classDef, &pods.Items[0], &pods.Items[1], &podsWithCompDef.Items[0], &podsWithCompDef.Items[1], resourceConstraint)
+			classDef, &pods.Items[0], &pods.Items[1], &podsWithCompDef.Items[0], &podsWithCompDef.Items[1], resourceConstraint, opsDef)
 	})
 
 	AfterEach(func() {
@@ -427,5 +447,39 @@ var _ = Describe("operations", func() {
 		Expect(o.Validate()).ShouldNot(Succeed())
 		fmt.Println(o.Validate().Error())
 		Expect(testing.ContainExpectStrings(o.Validate().Error(), "is invalid")).Should(BeTrue())
+	})
+
+	It("Custom ops base on component definition", func() {
+		o := initCommonOperationOps(appsv1alpha1.CustomType, clusterNameWithCompDef, false)
+		customOperations := &customOperations{
+			OperationsOptions: o,
+		}
+		cmd := NewCustomOpsCmd(tf, streams)
+
+		By("expect an error if opsDefinition is not found")
+		err := customOperations.parseOpsDefinitionAndParams(cmd, []string{clusterNameWithCompDef})
+		Expect(err).Should(HaveOccurred())
+		Expect(err.Error()).Should(ContainSubstring(fmt.Sprintf(`OpsDefintion "%s" is not found`, clusterNameWithCompDef)))
+
+		By("test clusterName and p1 of opsDefinition params are required")
+		err = customOperations.parseOpsDefinitionAndParams(cmd, []string{opsDefName})
+		Expect(err).Should(HaveOccurred())
+		Expect(err.Error()).Should(ContainSubstring(`required flag(s) "cluster", "p1" not set`))
+
+		By("test auto-complete the component name flag")
+		cmd1 := NewCustomOpsCmd(tf, streams)
+		validArgs := []string{opsDefName, "--cluster", clusterNameWithCompDef, "--p1", "test"}
+		err = customOperations.parseOpsDefinitionAndParams(cmd1, validArgs)
+		Expect(err).Should(Succeed())
+		Expect(customOperations.validateAndCompleteComponentName()).Should(Succeed())
+		Expect(customOperations.Component).Should(Equal(testing.ComponentName))
+
+		By("expect to create custom ops successfully")
+		cmd2 := NewCustomOpsCmd(tf, streams)
+		done := testing.Capture()
+		_ = cmd1.RunE(cmd2, validArgs)
+		capturedOutput, _ := done()
+		Expect(testing.ContainExpectStrings(capturedOutput, "kbcli cluster describe-ops")).Should(BeTrue())
+
 	})
 })

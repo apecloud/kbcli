@@ -56,7 +56,6 @@ import (
 	dptypes "github.com/apecloud/kubeblocks/pkg/dataprotection/types"
 
 	"github.com/apecloud/kbcli/pkg/action"
-	"github.com/apecloud/kbcli/pkg/cluster"
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
@@ -177,12 +176,8 @@ func (o *CreateBackupOptions) Validate() error {
 	}
 
 	// check if backup policy exists
-	backupPolicyObj, err := o.Dynamic.Resource(types.BackupPolicyGVR()).Namespace(o.Namespace).Get(context.TODO(), o.BackupSpec.BackupPolicyName, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
 	backupPolicy := &dpv1alpha1.BackupPolicy{}
-	if err := runtime.DefaultUnstructuredConverter.FromUnstructured(backupPolicyObj.Object, backupPolicy); err != nil {
+	if err := util.GetK8SClientObject(o.Dynamic, backupPolicy, types.BackupPolicyGVR(), o.Namespace, o.BackupSpec.BackupPolicyName); err != nil {
 		return err
 	}
 
@@ -201,12 +196,8 @@ func (o *CreateBackupOptions) Validate() error {
 
 	// check if parent backup exists
 	if o.BackupSpec.ParentBackupName != "" {
-		parentBackupObj, err := o.Dynamic.Resource(types.BackupGVR()).Namespace(o.Namespace).Get(context.TODO(), o.BackupSpec.ParentBackupName, metav1.GetOptions{})
-		if err != nil {
-			return err
-		}
 		parentBackup := &dpv1alpha1.Backup{}
-		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(parentBackupObj.Object, parentBackup); err != nil {
+		if err := util.GetK8SClientObject(o.Dynamic, parentBackup, types.BackupGVR(), o.Namespace, o.BackupSpec.ParentBackupName); err != nil {
 			return err
 		}
 		if parentBackup.Status.Phase != dpv1alpha1.BackupPhaseCompleted {
@@ -308,16 +299,6 @@ func NewCreateBackupCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *
 	return cmd
 }
 func (o *CreateBackupOptions) RegisterBackupFlagCompletionFunc(cmd *cobra.Command, f cmdutil.Factory) {
-	getClusterName := func(cmd *cobra.Command, args []string) string {
-		clusterName, _ := cmd.Flags().GetString("cluster")
-		if clusterName != "" {
-			return clusterName
-		}
-		if len(args) > 0 {
-			return args[0]
-		}
-		return ""
-	}
 	util.CheckErr(cmd.RegisterFlagCompletionFunc(
 		"deletion-policy",
 		func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
@@ -327,7 +308,7 @@ func (o *CreateBackupOptions) RegisterBackupFlagCompletionFunc(cmd *cobra.Comman
 	util.CheckErr(cmd.RegisterFlagCompletionFunc(
 		"policy",
 		func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-			label := fmt.Sprintf("%s=%s", constant.AppInstanceLabelKey, getClusterName(cmd, args))
+			label := fmt.Sprintf("%s=%s", constant.AppInstanceLabelKey, util.GetClusterNameFromArgsOrFlag(cmd, args))
 			return util.CompGetResourceWithLabels(f, cmd, util.GVRToString(types.BackupPolicyGVR()), []string{label}, toComplete), cobra.ShellCompDirectiveNoFileComp
 		}))
 
@@ -340,7 +321,7 @@ func (o *CreateBackupOptions) RegisterBackupFlagCompletionFunc(cmd *cobra.Comman
 			}
 			var (
 				labelSelector string
-				clusterName   = getClusterName(cmd, args)
+				clusterName   = util.GetClusterNameFromArgsOrFlag(cmd, args)
 			)
 			if clusterName != "" {
 				labelSelector = fmt.Sprintf("%s=%s", constant.AppInstanceLabelKey, clusterName)
@@ -1046,7 +1027,7 @@ func (o *DescribeBackupOptions) Complete(args []string) error {
 func (o *DescribeBackupOptions) Run() error {
 	for _, name := range o.names {
 		backupObj := &dpv1alpha1.Backup{}
-		if err := cluster.GetK8SClientObject(o.dynamic, backupObj, o.Gvr, o.namespace, name); err != nil {
+		if err := util.GetK8SClientObject(o.dynamic, backupObj, o.Gvr, o.namespace, name); err != nil {
 			return err
 		}
 		if err := o.printBackupObj(backupObj); err != nil {

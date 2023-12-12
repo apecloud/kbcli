@@ -43,7 +43,6 @@ import (
 	dptypes "github.com/apecloud/kubeblocks/pkg/dataprotection/types"
 
 	"github.com/apecloud/kbcli/pkg/action"
-	"github.com/apecloud/kbcli/pkg/cluster"
 	"github.com/apecloud/kbcli/pkg/testing"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
@@ -282,7 +281,7 @@ var _ = Describe("DataProtection", func() {
 		_ = cmdRestore.Flags().Set("backup", backupName)
 		cmdRestore.Run(nil, []string{newClusterName})
 		newRestoreOps := &appsv1alpha1.OpsRequest{}
-		Expect(cluster.GetK8SClientObject(tf.FakeDynamicClient, newRestoreOps, types.OpsGVR(), testing.Namespace, newClusterName)).Should(Succeed())
+		Expect(util.GetK8SClientObject(tf.FakeDynamicClient, newRestoreOps, types.OpsGVR(), testing.Namespace, newClusterName)).Should(Succeed())
 		Expect(clusterObj.Spec.ComponentSpecs[0].Replicas).Should(Equal(int32(1)))
 	})
 

@@ -21,11 +21,11 @@ package backuprepo
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,7 +35,6 @@ import (
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/kube-openapi/pkg/validation/spec"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	utilcomp "k8s.io/kubectl/pkg/util/completion"
 	"k8s.io/kubectl/pkg/util/templates"
@@ -162,74 +161,44 @@ func (o *createOptions) init(f cmdutil.Factory) error {
 
 func (o *createOptions) parseProviderFlags(cmd *cobra.Command, args []string, f cmdutil.Factory) error {
 	// Since we disabled the flag parsing of the cmd, we need to parse it from args
-	help := false
-	tmpFlags := pflag.NewFlagSet("tmp", pflag.ContinueOnError)
-	tmpFlags.StringVar(&o.storageProvider, providerFlagName, "", "")
-	tmpFlags.BoolVarP(&help, "help", "h", false, "") // eat --help and -h
-	tmpFlags.ParseErrorsWhitelist.UnknownFlags = true
-	_ = tmpFlags.Parse(args)
-	if o.storageProvider == "" {
-		if help {
+	t := flags.NewTmpFlagSet()
+	t.StringVar(&o.storageProvider, providerFlagName, "", "")
+	err := t.Check(args, func() error {
+		if o.storageProvider != "" {
+			return nil
+		}
+		if t.Help {
 			cmd.Long = templates.LongDesc(`
-                Note: This help information only shows the common flags for creating a 
-                backup repository, to show provider-specific flags, please specify 
-                the --provider flag. For example:
+		                Note: This help information only shows the common flags for creating a
+		                backup repository, to show provider-specific flags, please specify
+		                the --provider flag. For example:
 
-                    kbcli backuprepo create --provider s3 --help
-            `)
+		                    kbcli backuprepo create --provider s3 --help
+		            `)
 			return pflag.ErrHelp
 		}
 		return fmt.Errorf("please specify the --%s flag", providerFlagName)
-	}
-
-	// Get provider info from API server
-	obj, err := o.dynamic.Resource(types.StorageProviderGVR()).Get(
-		context.Background(), o.storageProvider, metav1.GetOptions{})
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			return fmt.Errorf("storage provider \"%s\" is not found", o.storageProvider)
-		}
-		return err
-	}
-	provider := &storagev1alpha1.StorageProvider{}
-	err = runtime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, provider)
+	})
 	if err != nil {
 		return err
 	}
-	o.providerObject = provider
-
-	// Build flags by schema
-	if provider.Spec.ParametersSchema != nil &&
-		provider.Spec.ParametersSchema.OpenAPIV3Schema != nil {
-		// Convert apiextensionsv1.JSONSchemaProps to spec.Schema
-		schemaData, err := json.Marshal(provider.Spec.ParametersSchema.OpenAPIV3Schema)
+	return flags.BuildFlagsWithOpenAPISchema(cmd, args, func() (*v1.JSONSchemaProps, error) {
+		// Get provider info from API server
+		provider := &storagev1alpha1.StorageProvider{}
+		err := util.GetK8SClientObject(o.dynamic, provider, types.StorageProviderGVR(), "", o.storageProvider)
 		if err != nil {
-			return err
+			if apierrors.IsNotFound(err) {
+				return nil, fmt.Errorf("storage provider \"%s\" is not found", o.storageProvider)
+			}
+			return nil, err
 		}
-		schema := &spec.Schema{}
-		if err = json.Unmarshal(schemaData, schema); err != nil {
-			return err
+		o.providerObject = provider
+		parametersSchema := provider.Spec.ParametersSchema
+		if parametersSchema == nil {
+			return nil, nil
 		}
-		if err = flags.BuildFlagsBySchema(cmd, schema); err != nil {
-			return err
-		}
-	}
-
-	// Parse dynamic flags
-	cmd.DisableFlagParsing = false
-	err = cmd.ParseFlags(args)
-	if err != nil {
-		return err
-	}
-	helpFlag := cmd.Flags().Lookup("help")
-	if helpFlag != nil && helpFlag.Value.String() == "true" {
-		return pflag.ErrHelp
-	}
-	if err := cmd.ValidateRequiredFlags(); err != nil {
-		return err
-	}
-
-	return nil
+		return parametersSchema.OpenAPIV3Schema, nil
+	})
 }
 
 func (o *createOptions) complete(cmd *cobra.Command) error {
@@ -243,7 +212,7 @@ func (o *createOptions) complete(cmd *cobra.Command) error {
 		for _, x := range schema.CredentialFields {
 			credMap[x] = true
 		}
-		fromFlags := flagsToValues(cmd.LocalNonPersistentFlags(), false)
+		fromFlags := flags.FlagsToValues(cmd.LocalNonPersistentFlags(), false)
 		for name := range schema.OpenAPIV3Schema.Properties {
 			flagName := strcase.KebabCase(name)
 			if val, ok := fromFlags[flagName]; ok {

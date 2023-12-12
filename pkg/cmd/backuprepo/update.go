@@ -21,7 +21,6 @@ package backuprepo
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
@@ -33,12 +32,10 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/kube-openapi/pkg/validation/spec"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
 
@@ -128,14 +125,14 @@ func (o *updateOptions) init(f cmdutil.Factory) error {
 
 func (o *updateOptions) parseFlags(cmd *cobra.Command, args []string, f cmdutil.Factory) error {
 	// Since we disabled the flag parsing of the cmd, we need to parse it from args
-	help := false
-	tmpFlags := pflag.NewFlagSet("tmp", pflag.ContinueOnError)
-	tmpFlags.BoolVarP(&help, "help", "h", false, "") // eat --help and -h
-	tmpFlags.ParseErrorsWhitelist.UnknownFlags = true
-	_ = tmpFlags.Parse(args)
-	tmpArgs := tmpFlags.Args()
-	if len(tmpArgs) == 0 {
-		if help {
+	t := flags.NewTmpFlagSet()
+	var tmpArgs []string
+	if err := t.Check(args, func() error {
+		tmpArgs = t.Args()
+		if len(tmpArgs) != 0 {
+			return nil
+		}
+		if t.Help {
 			cmd.Long = templates.LongDesc(`
                 Note: This help information only shows the common flags for updating a
                 backup repository, to show provider-specific flags, please specify
@@ -146,86 +143,44 @@ func (o *updateOptions) parseFlags(cmd *cobra.Command, args []string, f cmdutil.
 			return pflag.ErrHelp
 		}
 		return fmt.Errorf("please specify the name of the backup repository to update")
-	}
-
-	o.repoName = tmpArgs[0]
-
-	// Get the backup repo from API server
-	obj, err := o.dynamic.Resource(types.BackupRepoGVR()).Get(
-		context.Background(), o.repoName, metav1.GetOptions{})
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			return fmt.Errorf("backup repository \"%s\" is not found", o.repoName)
-		}
+	}); err != nil {
 		return err
 	}
-	repo := &dpv1alpha1.BackupRepo{}
-	err = runtime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, repo)
-	if err != nil {
-		return err
-	}
-	o.repo = repo
-
-	// Get provider info from API server
-	o.storageProvider = repo.Spec.StorageProviderRef
-	obj, err = o.dynamic.Resource(types.StorageProviderGVR()).Get(
-		context.Background(), o.storageProvider, metav1.GetOptions{})
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			return fmt.Errorf("storage provider \"%s\" is not found", o.storageProvider)
+	return flags.BuildFlagsWithOpenAPISchema(cmd, args, func() (*apiextensionsv1.JSONSchemaProps, error) {
+		// Get the backup repo from API server
+		o.repoName = tmpArgs[0]
+		repo := &dpv1alpha1.BackupRepo{}
+		if err := util.GetK8SClientObject(o.dynamic, repo, types.BackupRepoGVR(), "", o.repoName); err != nil {
+			if apierrors.IsNotFound(err) {
+				return nil, fmt.Errorf("backup repository \"%s\" is not found", o.repoName)
+			}
+			return nil, err
 		}
-		return err
-	}
-	provider := &storagev1alpha1.StorageProvider{}
-	err = runtime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, provider)
-	if err != nil {
-		return err
-	}
-	o.providerObject = provider
-
-	// Filter out non-credential fields
-	filtered := map[string]apiextensionsv1.JSONSchemaProps{}
-	for _, name := range provider.Spec.ParametersSchema.CredentialFields {
-		if s, ok := provider.Spec.ParametersSchema.OpenAPIV3Schema.Properties[name]; ok {
-			filtered[name] = s
+		o.repo = repo
+		// Get provider info from API server
+		o.storageProvider = repo.Spec.StorageProviderRef
+		provider := &storagev1alpha1.StorageProvider{}
+		if err := util.GetK8SClientObject(o.dynamic, provider, types.StorageProviderGVR(), "", o.storageProvider); err != nil {
+			if apierrors.IsNotFound(err) {
+				return nil, fmt.Errorf("storage provider \"%s\" is not found", o.storageProvider)
+			}
+			return nil, err
 		}
-	}
-	provider.Spec.ParametersSchema.OpenAPIV3Schema.Properties = filtered
-	provider.Spec.ParametersSchema.OpenAPIV3Schema.Required = nil // all fields are optional when doing update
-
-	// Build flags by schema
-	if provider.Spec.ParametersSchema != nil &&
-		provider.Spec.ParametersSchema.OpenAPIV3Schema != nil {
-		// Convert apiextensionsv1.JSONSchemaProps to spec.Schema
-		schemaData, err := json.Marshal(provider.Spec.ParametersSchema.OpenAPIV3Schema)
-		if err != nil {
-			return err
+		o.providerObject = provider
+		// Filter out non-credential fields
+		filtered := map[string]apiextensionsv1.JSONSchemaProps{}
+		for _, name := range provider.Spec.ParametersSchema.CredentialFields {
+			if s, ok := provider.Spec.ParametersSchema.OpenAPIV3Schema.Properties[name]; ok {
+				filtered[name] = s
+			}
 		}
-		schema := &spec.Schema{}
-		if err = json.Unmarshal(schemaData, schema); err != nil {
-			return err
+		provider.Spec.ParametersSchema.OpenAPIV3Schema.Properties = filtered
+		provider.Spec.ParametersSchema.OpenAPIV3Schema.Required = nil // all fields are optional when doing update
+		if provider.Spec.ParametersSchema == nil {
+			return nil, nil
 		}
-		if err = flags.BuildFlagsBySchema(cmd, schema); err != nil {
-			return err
-		}
-	}
-
-	// Parse dynamic flags
-	cmd.DisableFlagParsing = false
-	err = cmd.ParseFlags(args)
-	if err != nil {
-		return err
-	}
-	helpFlag := cmd.Flags().Lookup("help")
-	if helpFlag != nil && helpFlag.Value.String() == trueVal {
-		return pflag.ErrHelp
-	}
-	defaultFlag := cmd.Flags().Lookup("default")
-	if defaultFlag != nil && defaultFlag.Changed {
-		o.hasDefaultFlag = true
-	}
-
-	return nil
+		return provider.Spec.ParametersSchema.OpenAPIV3Schema, nil
+	})
 }
 
 func (o *updateOptions) complete(cmd *cobra.Command) error {
@@ -240,7 +195,7 @@ func (o *updateOptions) complete(cmd *cobra.Command) error {
 			credMap[x] = true
 		}
 		// Collect flags explicitly set by user
-		fromFlags := flagsToValues(cmd.LocalNonPersistentFlags(), true)
+		fromFlags := flags.FlagsToValues(cmd.LocalNonPersistentFlags(), true)
 		for name := range schema.OpenAPIV3Schema.Properties {
 			flagName := strcase.KebabCase(name)
 			if val, ok := fromFlags[flagName]; ok {
