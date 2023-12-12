@@ -980,7 +980,7 @@ func NewCustomOpsCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cob
 	flags.AddComponentFlag(f, cmd, &o.Component, "Specify the component name of the cluster. if not specified, using the first component which referenced the defined componentDefinition.")
 	cmd.Flags().BoolVar(&o.autoApprove, "auto-approve", false, "Skip interactive approval before promote the instance")
 	cmd.Flags().StringVar(&o.Name, "cluster", "", "Specify the cluster name")
-	cmd.MarkFlagRequired("cluster")
+	_ = cmd.MarkFlagRequired("cluster")
 	return cmd
 }
 
