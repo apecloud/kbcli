@@ -24,15 +24,13 @@ import (
 	"fmt"
 	"strings"
 
+	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
+	"github.com/apecloud/kubeblocks/pkg/constant"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
-	"github.com/apecloud/kubeblocks/pkg/constant"
 
 	"github.com/apecloud/kbcli/pkg/testing"
 	"github.com/apecloud/kbcli/pkg/types"
@@ -231,23 +229,9 @@ func GetExternalAddr(svc *corev1.Service) string {
 	return svc.GetAnnotations()[types.ServiceFloatingIPAnnotationKey]
 }
 
-// GetK8SClientObject gets the client object of k8s,
-// obj must be a struct pointer so that obj can be updated with the response.
-func GetK8SClientObject(dynamic dynamic.Interface,
-	obj client.Object,
-	gvr schema.GroupVersionResource,
-	namespace,
-	name string) error {
-	unstructuredObj, err := dynamic.Resource(gvr).Namespace(namespace).Get(context.TODO(), name, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-	return runtime.DefaultUnstructuredConverter.FromUnstructured(unstructuredObj.UnstructuredContent(), obj)
-}
-
 func GetClusterDefByName(dynamic dynamic.Interface, name string) (*appsv1alpha1.ClusterDefinition, error) {
 	clusterDef := &appsv1alpha1.ClusterDefinition{}
-	if err := GetK8SClientObject(dynamic, clusterDef, types.ClusterDefGVR(), "", name); err != nil {
+	if err := util.GetK8SClientObject(dynamic, clusterDef, types.ClusterDefGVR(), "", name); err != nil {
 		return nil, err
 	}
 	return clusterDef, nil
@@ -262,7 +246,7 @@ func GetDefaultCompName(cd *appsv1alpha1.ClusterDefinition) (string, error) {
 
 func GetClusterByName(dynamic dynamic.Interface, name string, namespace string) (*appsv1alpha1.Cluster, error) {
 	cluster := &appsv1alpha1.Cluster{}
-	if err := GetK8SClientObject(dynamic, cluster, types.ClusterGVR(), namespace, name); err != nil {
+	if err := util.GetK8SClientObject(dynamic, cluster, types.ClusterGVR(), namespace, name); err != nil {
 		return nil, err
 	}
 	return cluster, nil
@@ -429,7 +413,7 @@ func GetPodComponentName(pod *corev1.Pod) string {
 
 func GetConfigMapByName(dynamic dynamic.Interface, namespace, name string) (*corev1.ConfigMap, error) {
 	cmObj := &corev1.ConfigMap{}
-	if err := GetK8SClientObject(dynamic, cmObj, types.ConfigmapGVR(), namespace, name); err != nil {
+	if err := util.GetK8SClientObject(dynamic, cmObj, types.ConfigmapGVR(), namespace, name); err != nil {
 		return nil, err
 	}
 	return cmObj, nil
@@ -437,7 +421,7 @@ func GetConfigMapByName(dynamic dynamic.Interface, namespace, name string) (*cor
 
 func GetConfigConstraintByName(dynamic dynamic.Interface, name string) (*appsv1alpha1.ConfigConstraint, error) {
 	ccObj := &appsv1alpha1.ConfigConstraint{}
-	if err := GetK8SClientObject(dynamic, ccObj, types.ConfigConstraintGVR(), "", name); err != nil {
+	if err := util.GetK8SClientObject(dynamic, ccObj, types.ConfigConstraintGVR(), "", name); err != nil {
 		return nil, err
 	}
 	return ccObj, nil

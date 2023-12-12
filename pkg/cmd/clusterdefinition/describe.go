@@ -109,15 +109,10 @@ func (o *describeOptions) run() error {
 
 func (o *describeOptions) describeClusterDef(name string) error {
 	// get cluster definition
-	clusterDefObject, err := o.dynamic.Resource(types.ClusterDefGVR()).Get(context.TODO(), name, metav1.GetOptions{})
-	if err != nil {
+	clusterDef := &v1alpha1.ClusterDefinition{}
+	if err := util.GetK8SClientObject(o.dynamic, clusterDef, types.ClusterDefGVR(), "", name); err != nil {
 		return err
 	}
-	clusterDef := v1alpha1.ClusterDefinition{}
-	if err := runtime.DefaultUnstructuredConverter.FromUnstructured(clusterDefObject.Object, &clusterDef); err != nil {
-		return err
-	}
-
 	// get backup policy templates of the cluster definition
 	opts := metav1.ListOptions{
 		LabelSelector: fmt.Sprintf("%s=%s", constant.ClusterDefLabelKey, name),
@@ -135,7 +130,7 @@ func (o *describeOptions) describeClusterDef(name string) error {
 		backupPolicyTemplates = append(backupPolicyTemplates, &backupTemplate)
 	}
 
-	showClusterDef(&clusterDef, o.Out)
+	showClusterDef(clusterDef, o.Out)
 
 	showBackupConfig(backupPolicyTemplates, o.Out)
 

@@ -28,6 +28,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/apecloud/kubeblocks/pkg/controller/component"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -36,7 +37,6 @@ import (
 
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	"github.com/apecloud/kubeblocks/apis/dataprotection/v1alpha1"
-	"github.com/apecloud/kubeblocks/pkg/class"
 	"github.com/apecloud/kubeblocks/pkg/dataprotection/utils/boolptr"
 	viper "github.com/apecloud/kubeblocks/pkg/viperx"
 
@@ -65,7 +65,7 @@ func getResource(res corev1.ResourceRequirements, name corev1.ResourceName) inte
 }
 
 var _ = Describe("create", func() {
-	var clsMgr = &class.Manager{}
+	var clsMgr = &component.Manager{}
 
 	Context("setEnableAllLogs Test", func() {
 		var cluster *appsv1alpha1.Cluster

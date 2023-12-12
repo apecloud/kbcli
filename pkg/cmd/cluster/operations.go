@@ -21,17 +21,22 @@ package cluster
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
+	"github.com/apecloud/kubeblocks/pkg/common"
 	jsonpatch "github.com/evanphx/json-patch"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
+	"github.com/stoewer/go-strcase"
 	"golang.org/x/exp/slices"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	apitypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
@@ -242,7 +247,7 @@ func (o *OperationsOptions) validateVScale(cluster *appsv1alpha1.Cluster) error 
 		return fmt.Errorf("class or cpu/memory must be specified")
 	}
 
-	clsMgr, err := classutil.GetManager(o.Dynamic, cluster.Spec.ClusterDefRef)
+	clsMgr, resourceConstraintList, err := classutil.GetManager(o.Dynamic, cluster.Spec.ClusterDefRef)
 	if err != nil {
 		return err
 	}
@@ -287,10 +292,11 @@ func (o *OperationsOptions) validateVScale(cluster *appsv1alpha1.Cluster) error 
 			if comp.Name != name {
 				continue
 			}
-			if err = fillClassParams(&comp); err != nil {
+			if err := fillClassParams(&comp); err != nil {
 				return err
 			}
-			if err = clsMgr.ValidateResources(cluster.Spec.ClusterDefRef, &comp); err != nil {
+			// validate component classes
+			if err = classutil.ValidateResources(clsMgr, resourceConstraintList, cluster.Spec.ClusterDefRef, &comp); err != nil {
 				return err
 			}
 		}
@@ -304,14 +310,9 @@ func (o *OperationsOptions) Validate() error {
 	if o.Name == "" {
 		return makeMissingClusterNameErr()
 	}
-
 	// check if cluster exist
-	obj, err := o.Dynamic.Resource(types.ClusterGVR()).Namespace(o.Namespace).Get(context.TODO(), o.Name, metav1.GetOptions{})
+	cluster, err := cluster.GetClusterByName(o.Dynamic, o.Name, o.Namespace)
 	if err != nil {
-		return err
-	}
-	var cluster appsv1alpha1.Cluster
-	if err = runtime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, &cluster); err != nil {
 		return err
 	}
 
@@ -330,7 +331,7 @@ func (o *OperationsOptions) Validate() error {
 			return err
 		}
 	case appsv1alpha1.VerticalScalingType:
-		if err = o.validateVScale(&cluster); err != nil {
+		if err = o.validateVScale(cluster); err != nil {
 			return err
 		}
 	case appsv1alpha1.ExposeType:
@@ -338,7 +339,7 @@ func (o *OperationsOptions) Validate() error {
 			return err
 		}
 	case appsv1alpha1.SwitchoverType:
-		if err = o.validatePromote(&cluster); err != nil {
+		if err = o.validatePromote(cluster); err != nil {
 			return err
 		}
 	}
@@ -535,16 +536,10 @@ func (o *OperationsOptions) fillExpose() error {
 		return err
 	}
 
-	gvr := schema.GroupVersionResource{Group: types.AppsAPIGroup, Version: types.AppsAPIVersion, Resource: types.ResourceClusters}
-	unstructuredObj, err := o.Dynamic.Resource(gvr).Namespace(o.Namespace).Get(context.TODO(), o.Name, metav1.GetOptions{})
+	cluster, err := cluster.GetClusterByName(o.Dynamic, o.Name, o.Namespace)
 	if err != nil {
 		return err
 	}
-	cluster := appsv1alpha1.Cluster{}
-	if err = runtime.DefaultUnstructuredConverter.FromUnstructured(unstructuredObj.UnstructuredContent(), &cluster); err != nil {
-		return err
-	}
-
 	compMap := make(map[string]appsv1alpha1.ClusterComponentSpec)
 	for _, compSpec := range cluster.Spec.ComponentSpecs {
 		compMap[compSpec.Name] = compSpec
@@ -839,7 +834,7 @@ var cancelExample = templates.Examples(`
 
 func cancelOps(o *OperationsOptions) error {
 	opsRequest := &appsv1alpha1.OpsRequest{}
-	if err := cluster.GetK8SClientObject(o.Dynamic, opsRequest, o.GVR, o.Namespace, o.Name); err != nil {
+	if err := util.GetK8SClientObject(o.Dynamic, opsRequest, o.GVR, o.Namespace, o.Name); err != nil {
 		return err
 	}
 	notSupportedPhases := []appsv1alpha1.OpsPhase{appsv1alpha1.OpsFailedPhase, appsv1alpha1.OpsSucceedPhase, appsv1alpha1.OpsCancelledPhase}
@@ -926,9 +921,170 @@ func NewPromoteCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 			cmdutil.CheckErr(o.Run())
 		},
 	}
-	cmd.Flags().StringVar(&o.Component, "component", "", "Specify the component name of the cluster, if the cluster has multiple components, you need to specify a component")
+	flags.AddComponentFlag(f, cmd, &o.Component, "Specify the component name of the cluster, if the cluster has multiple components, you need to specify a component")
 	cmd.Flags().StringVar(&o.Instance, "instance", "", "Specify the instance name as the new primary or leader of the cluster, you can get the instance name by running \"kbcli cluster list-instances\"")
 	cmd.Flags().BoolVar(&o.autoApprove, "auto-approve", false, "Skip interactive approval before promote the instance")
 	o.addCommonFlags(cmd, f)
 	return cmd
+}
+
+var customOpsExample = templates.Examples(`
+        # custom ops cli format
+        kbcli cluster custom-ops <opsDefName> --cluster <clusterName> <your params of this opsDef>
+
+		# example for kafka topic
+		kbcli cluster custom-ops kafka-topic --cluster mycluster --type create --topic test --partition 3 --replicas 3
+
+		# example for kafka acl
+		kbcli cluster custom-ops kafka-user-acl --cluster mycluster --type add --operations "Read,Writer,Delete,Alter,Describe" --allowUsers client --topic "*"
+
+		# example for kafka quota
+        kbcli cluster custom-ops kafka-quota --cluster mycluster --user client --producerByteRate 1024 --consumerByteRate 2048
+`)
+
+type customOperations struct {
+	*OperationsOptions
+	OpsDefinitionName string              `json:"opsDefinitionName"`
+	Params            []map[string]string `json:"params"`
+	SchemaProperties  *apiextensionsv1.JSONSchemaProps
+}
+
+func NewCustomOpsCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
+	o := &customOperations{
+		OperationsOptions: newBaseOperationsOptions(f, streams, "Custom", false),
+	}
+	// set options to build cue struct
+	o.CreateOptions.Options = o
+	cmd := &cobra.Command{
+		Use:                "custom-ops OpsDef --cluster <clusterName> <your custom params>",
+		Example:            customOpsExample,
+		ValidArgsFunction:  util.ResourceNameCompletionFunc(f, types.OpsDefinitionGVR()),
+		DisableFlagParsing: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			o.Args = args
+			cmdutil.BehaviorOnFatal(printer.FatalWithRedColor)
+			cmdutil.CheckErr(o.init())
+			err := o.parseOpsDefinitionAndParams(cmd, args)
+			if errors.Is(err, pflag.ErrHelp) {
+				return err
+			} else {
+				util.CheckErr(err)
+			}
+			cmdutil.CheckErr(o.validateAndCompleteComponentName())
+			cmdutil.CheckErr(o.completeCustomSpec(cmd))
+			cmdutil.CheckErr(o.Run())
+			return nil
+		},
+	}
+	o.addCommonFlags(cmd, f)
+	flags.AddComponentFlag(f, cmd, &o.Component, "Specify the component name of the cluster. if not specified, using the first component which referenced the defined componentDefinition.")
+	cmd.Flags().BoolVar(&o.autoApprove, "auto-approve", false, "Skip interactive approval before promote the instance")
+	cmd.Flags().StringVar(&o.Name, "cluster", "", "Specify the cluster name")
+	_ = cmd.MarkFlagRequired("cluster")
+	return cmd
+}
+
+func (o *customOperations) init() error {
+	var err error
+	if o.Namespace, _, err = o.Factory.ToRawKubeConfigLoader().Namespace(); err != nil {
+		return err
+	}
+	if o.Dynamic, err = o.Factory.DynamicClient(); err != nil {
+		return err
+	}
+	if o.Client, err = o.Factory.KubernetesClientSet(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (o *customOperations) validateAndCompleteComponentName() error {
+	if o.Name == "" {
+		return makeMissingClusterNameErr()
+	}
+	clusterObj, err := cluster.GetClusterByName(o.Dynamic, o.Name, o.Namespace)
+	if err != nil {
+		return err
+	}
+	opsDef := &appsv1alpha1.OpsDefinition{}
+	if err = util.GetK8SClientObject(o.Dynamic, opsDef, types.OpsDefinitionGVR(), "", o.OpsDefinitionName); err != nil {
+		return err
+	}
+	// check if the custom ops supports the component or complete the component for the cluster
+	supportedComponentDefs := map[string]struct{}{}
+	for _, v := range opsDef.Spec.ComponentDefinitionRefs {
+		supportedComponentDefs[v.Name] = struct{}{}
+	}
+	inputComponent := o.Component
+	o.Component = ""
+	for _, v := range clusterObj.Spec.ComponentSpecs {
+		if v.ComponentDef == "" {
+			continue
+		}
+		if _, ok := supportedComponentDefs[v.ComponentDef]; ok {
+			if inputComponent == "" {
+				o.Component = v.Name
+				break
+			} else if inputComponent == v.Name {
+				o.Component = inputComponent
+				break
+			}
+		}
+	}
+	if o.Component != "" {
+		return nil
+	}
+	if inputComponent != "" {
+		return fmt.Errorf(`this custom ops "%s" not supports the component "%s"`, o.OpsDefinitionName, inputComponent)
+	}
+	return fmt.Errorf(`can not found any component in the cluster "%s" for this custom ops "%s"`, o.Name, o.OpsDefinitionName)
+}
+
+func (o *customOperations) parseOpsDefinitionAndParams(cmd *cobra.Command, args []string) error {
+	fmt.Printf("args: %v\n", args)
+	if len(args) == 0 {
+		return fmt.Errorf("please specify the custom ops which you want to do")
+	}
+	_ = flags.NewTmpFlagSet()
+	return flags.BuildFlagsWithOpenAPISchema(cmd, args, func() (*v1.JSONSchemaProps, error) {
+		o.OpsDefinitionName = args[0]
+		// Get ops Definition from API server
+		opsDef := &appsv1alpha1.OpsDefinition{}
+		if err := util.GetK8SClientObject(o.Dynamic, opsDef, types.OpsDefinitionGVR(), "", o.OpsDefinitionName); err != nil {
+			if apierrors.IsNotFound(err) {
+				return nil, fmt.Errorf("OpsDefintion \"%s\" is not found", o.OpsDefinitionName)
+			}
+			return nil, err
+		}
+		parametersSchema := opsDef.Spec.ParametersSchema
+		if parametersSchema == nil {
+			return nil, nil
+		}
+		o.SchemaProperties = parametersSchema.OpenAPIV3Schema
+		return parametersSchema.OpenAPIV3Schema, nil
+	})
+}
+
+func (o *customOperations) completeCustomSpec(cmd *cobra.Command) error {
+	param := map[string]string{}
+	// Construct config and credential map from flags
+	if o.SchemaProperties != nil {
+		fromFlags := flags.FlagsToValues(cmd.LocalNonPersistentFlags(), true)
+		for name := range o.SchemaProperties.Properties {
+			flagName := strcase.KebabCase(name)
+			if val, ok := fromFlags[flagName]; ok {
+				param[name] = val.String()
+			}
+		}
+		// validate if flags values are legal.
+		data, err := common.CoverStringToInterfaceBySchemaType(o.SchemaProperties, param)
+		if err != nil {
+			return err
+		}
+		if err = common.ValidateDataWithSchema(o.SchemaProperties, data); err != nil {
+			return err
+		}
+	}
+	o.Params = []map[string]string{param}
+	return nil
 }

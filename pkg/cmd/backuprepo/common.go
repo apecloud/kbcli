@@ -23,7 +23,6 @@ import (
 	"encoding/json"
 
 	jsonpatch "github.com/evanphx/json-patch"
-	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -32,17 +31,6 @@ const (
 
 	associatedBackupRepoKey = "dataprotection.kubeblocks.io/backup-repo-name"
 )
-
-func flagsToValues(fs *pflag.FlagSet, explicit bool) map[string]pflag.Value {
-	values := make(map[string]pflag.Value)
-	fs.VisitAll(func(f *pflag.Flag) {
-		if f.Name == "help" || (explicit && !f.Changed) {
-			return
-		}
-		values[f.Name] = f.Value
-	})
-	return values
-}
 
 func createPatchData(oldObj, newObj runtime.Object) ([]byte, error) {
 	oldData, err := json.Marshal(oldObj)

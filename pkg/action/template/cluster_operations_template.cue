@@ -47,6 +47,11 @@ options: {
 			annotations: {...}
 		},
 	]
+	params: [
+	  ...{
+	    [string]: {string | null}
+	  },
+	]
 	...
 }
 
@@ -168,5 +173,12 @@ content: {
 				}
 			}]
 		}
+		if options.type == "Custom" {
+			customSpec: {
+				componentName: options.component
+				opsDefinitionRef: options.opsDefinitionName
+				params: options.params
+		   }
+	    }
 	}
 }

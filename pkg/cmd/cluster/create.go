@@ -31,6 +31,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/apecloud/kubeblocks/pkg/controller/component"
 	"github.com/ghodss/yaml"
 	"github.com/robfig/cron/v3"
 	"github.com/spf13/cobra"
@@ -54,7 +55,6 @@ import (
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	dpv1alpha1 "github.com/apecloud/kubeblocks/apis/dataprotection/v1alpha1"
 
-	"github.com/apecloud/kubeblocks/pkg/class"
 	"github.com/apecloud/kubeblocks/pkg/constant"
 	"github.com/apecloud/kubeblocks/pkg/dataprotection/restore"
 	dptypes "github.com/apecloud/kubeblocks/pkg/dataprotection/types"
@@ -353,7 +353,7 @@ func getBackupObjectFromRestoreArgs(o *CreateOptions, backup *dpv1alpha1.Backup)
 	if o.Backup == "" {
 		return nil
 	}
-	if err := cluster.GetK8SClientObject(o.Dynamic, backup, types.BackupGVR(), o.Namespace, o.Backup); err != nil {
+	if err := util.GetK8SClientObject(o.Dynamic, backup, types.BackupGVR(), o.Namespace, o.Backup); err != nil {
 		return err
 	}
 	return nil
@@ -399,7 +399,7 @@ func setBackup(o *CreateOptions, components []map[string]interface{}) error {
 		return nil
 	}
 	backup := &dpv1alpha1.Backup{}
-	if err := cluster.GetK8SClientObject(o.Dynamic, backup, types.BackupGVR(), o.Namespace, backupName); err != nil {
+	if err := util.GetK8SClientObject(o.Dynamic, backup, types.BackupGVR(), o.Namespace, backupName); err != nil {
 		return err
 	}
 	if backup.Status.Phase != dpv1alpha1.BackupPhaseCompleted &&
@@ -568,7 +568,7 @@ func (o *CreateOptions) buildComponents(clusterCompSpecs []appsv1alpha1.ClusterC
 	if err != nil {
 		return nil, err
 	}
-	clsMgr, err := classutil.GetManager(o.Dynamic, o.ClusterDefRef)
+	clsMgr, resourceConstraintList, err := classutil.GetManager(o.Dynamic, o.ClusterDefRef)
 	if err != nil {
 		return nil, err
 	}
@@ -647,7 +647,7 @@ func (o *CreateOptions) buildComponents(clusterCompSpecs []appsv1alpha1.ClusterC
 	var comps []map[string]interface{}
 	for _, compSpec := range compSpecs {
 		// validate component classes
-		if err = clsMgr.ValidateResources(o.ClusterDefRef, compSpec); err != nil {
+		if err = classutil.ValidateResources(clsMgr, resourceConstraintList, o.ClusterDefRef, compSpec); err != nil {
 			return nil, err
 		}
 
@@ -985,7 +985,7 @@ func setEnableAllLogs(c *appsv1alpha1.Cluster, cd *appsv1alpha1.ClusterDefinitio
 
 func buildClusterComp(cd *appsv1alpha1.ClusterDefinition,
 	setsMap map[string]map[setKey]string,
-	clsMgr *class.Manager,
+	clsMgr *component.Manager,
 	monitoringInterval uint8,
 	createOnlySet bool) ([]*appsv1alpha1.ClusterComponentSpec, error) {
 	// get value from set values and environment variables, the second return value is
@@ -1087,7 +1087,7 @@ func buildClusterComp(cd *appsv1alpha1.ClusterDefinition,
 
 		// class has higher priority than other resource related parameters
 		resourceList := make(corev1.ResourceList)
-		if clsMgr.HasClass(compObj.ComponentDefRef, class.Any) {
+		if clsMgr.HasClass(compObj.ComponentDefRef, component.Any) {
 			if className := getVal(&c, keyClass, sets); className != "" {
 				clsDefRef := appsv1alpha1.ClassDefRef{}
 				parts := strings.SplitN(className, ":", 2)
