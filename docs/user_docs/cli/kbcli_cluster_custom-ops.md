@@ -1,39 +1,39 @@
 ---
-title: kbcli cluster configure
+title: kbcli cluster custom-ops
 ---
 
-Configure parameters with the specified components in the cluster.
+
 
 ```
-kbcli cluster configure NAME --set key=value[,key=value] [--components=component1-name,component2-name] [--config-spec=config-spec-name] [--config-file=config-file] [flags]
+kbcli cluster custom-ops OpsDef --cluster <clusterName> <your custom params> [flags]
 ```
 
 ### Examples
 
 ```
-  # update component params
-  kbcli cluster configure mycluster --component=mysql --config-spec=mysql-3node-tpl --config-file=my.cnf --set max_connections=1000,general_log=OFF
+  # custom ops cli format
+  kbcli cluster custom-ops <opsDefName> --cluster <clusterName> <your params of this opsDef>
   
-  # if only one component, and one config spec, and one config file, simplify the searching process of configure. e.g:
-  # update mysql max_connections, cluster name is mycluster
-  kbcli cluster configure mycluster --set max_connections=2000
+  # example for kafka topic
+  kbcli cluster custom-ops kafka-topic --cluster mycluster --type create --topic test --partition 3 --replicas 3
+  
+  # example for kafka acl
+  kbcli cluster custom-ops kafka-user-acl --cluster mycluster --type add --operations "Read,Writer,Delete,Alter,Describe" --allowUsers client --topic "*"
+  
+  # example for kafka quota
+  kbcli cluster custom-ops kafka-quota --cluster mycluster --user client --producerByteRate 1024 --consumerByteRate 2048
 ```
 
 ### Options
 
 ```
-      --auto-approve                   Skip interactive approval before reconfiguring the cluster
-      --components strings             Component names to this operations
-      --config-file string             Specify the name of the configuration file to be updated (e.g. for mysql: --config-file=my.cnf). For available templates and configs, refer to: 'kbcli cluster describe-config'.
-      --config-spec string             Specify the name of the configuration template to be updated (e.g. for apecloud-mysql: --config-spec=mysql-3node-tpl). For available templates and configs, refer to: 'kbcli cluster describe-config'.
+      --auto-approve                   Skip interactive approval before promote the instance
+      --cluster string                 Specify the cluster name
+      --component string               Specify the component name of the cluster. if not specified, using the first component which referenced the defined componentDefinition.
       --dry-run string[="unchanged"]   Must be "client", or "server". If with client strategy, only print the object that would be sent, and no data is actually sent. If with server strategy, submit the server-side request, but no data is persistent. (default "none")
-      --force-restart                  Boolean flag to restart component. Default with false.
-  -h, --help                           help for configure
-      --local-file string              Specify the local configuration file to be updated.
+  -h, --help                           help for custom-ops
       --name string                    OpsRequest name. if not specified, it will be randomly generated 
   -o, --output format                  Prints the output in the specified format. Allowed values: JSON and YAML (default yaml)
-      --replace                        Boolean flag to enable replacing config file. Default with false.
-      --set strings                    Specify parameters list to be updated. For more details, refer to 'kbcli cluster describe-config'.
       --ttlSecondsAfterSucceed int     Time to live after the OpsRequest succeed
 ```
 
@@ -47,7 +47,6 @@ kbcli cluster configure NAME --set key=value[,key=value] [--components=component
       --certificate-authority string   Path to a cert file for the certificate authority
       --client-certificate string      Path to a client certificate file for TLS
       --client-key string              Path to a client key file for TLS
-      --cluster string                 The name of the kubeconfig cluster to use
       --context string                 The name of the kubeconfig context to use
       --disable-compression            If true, opt-out of response compression for all requests to the server
       --insecure-skip-tls-verify       If true, the server's certificate will not be checked for validity. This will make your HTTPS connections insecure
