@@ -54,12 +54,12 @@ var _ = Describe("cluster update", func() {
 	})
 
 	Context("complete", func() {
-		var o *updateOptions
+		var o *UpdateOptions
 		var cmd *cobra.Command
 		var args []string
 		BeforeEach(func() {
 			cmd = NewUpdateCmd(tf, streams)
-			o = &updateOptions{PatchOptions: action.NewPatchOptions(tf, streams, types.ClusterGVR())}
+			o = &UpdateOptions{PatchOptions: action.NewPatchOptions(tf, streams, types.ClusterGVR())}
 			args = []string{"c1"}
 
 		})

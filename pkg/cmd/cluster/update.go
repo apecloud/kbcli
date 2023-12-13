@@ -101,23 +101,31 @@ var clusterUpdateExample = templates.Examples(`
 	kbcli cluster update mycluster --pitr-enabled=true
 `)
 
-type updateOptions struct {
+type UpdateOptions struct {
 	namespace string
 	dynamic   dynamic.Interface
 	cluster   *appsv1alpha1.Cluster
+	ValMap    map[string]interface{}
 
 	UpdatableFlags
 	*action.PatchOptions
 }
 
-func NewUpdateCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := &updateOptions{PatchOptions: action.NewPatchOptions(f, streams, types.ClusterGVR())}
+func NewUpdateOptions(f cmdutil.Factory, streams genericiooptions.IOStreams) *UpdateOptions {
+	o := &UpdateOptions{PatchOptions: action.NewPatchOptions(f, streams, types.ClusterGVR())}
 	o.PatchOptions.OutputOperation = func(didPatch bool) string {
 		if didPatch {
 			return "updated"
 		}
 		return "updated (no change)"
 	}
+	o.ValMap = make(map[string]interface{})
+	return o
+}
+
+func NewUpdateCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
+
+	o := NewUpdateOptions(f, streams)
 
 	cmd := &cobra.Command{
 		Use:               "update NAME",
@@ -125,8 +133,8 @@ func NewUpdateCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.
 		Example:           clusterUpdateExample,
 		ValidArgsFunction: util.ResourceNameCompletionFunc(f, o.GVR),
 		Run: func(cmd *cobra.Command, args []string) {
-			util.CheckErr(o.complete(cmd, args))
-			util.CheckErr(o.Run(cmd))
+			util.CheckErr(o.CmdComplete(cmd, args))
+			util.CheckErr(o.Exec())
 		},
 	}
 	o.UpdatableFlags.addFlags(cmd)
@@ -135,14 +143,8 @@ func NewUpdateCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.
 	return cmd
 }
 
-func (o *updateOptions) complete(cmd *cobra.Command, args []string) error {
-	var err error
-	if len(args) == 0 {
-		return makeMissingClusterNameErr()
-	}
-	if len(args) > 1 {
-		return fmt.Errorf("only support to update one cluster")
-	}
+func (o *UpdateOptions) CmdComplete(cmd *cobra.Command, args []string) error {
+
 	o.Names = args
 
 	// record the flags that been set by user
@@ -156,20 +158,8 @@ func (o *updateOptions) complete(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	if o.namespace, _, err = o.Factory.ToRawKubeConfigLoader().Namespace(); err != nil {
-		return err
-	}
-	if o.dynamic, err = o.Factory.DynamicClient(); err != nil {
-		return err
-	}
-	return o.buildPatch(flags)
-}
-
-func (o *updateOptions) buildPatch(flags []*pflag.Flag) error {
-	var err error
-	type buildFn func(obj map[string]interface{}, v pflag.Value, field string) error
-
-	buildFlagObj := func(obj map[string]interface{}, v pflag.Value, field string) error {
+	for _, flag := range flags {
+		v := flag.Value
 		var val interface{}
 		switch v.Type() {
 		case "string":
@@ -195,10 +185,57 @@ func (o *updateOptions) buildPatch(flags []*pflag.Flag) error {
 			}
 			val = valMap
 		}
+		o.ValMap[flag.Name] = val
+	}
+
+	o.PatchOptions.CmdComplete(cmd)
+
+	return nil
+}
+
+func (o *UpdateOptions) Validate() error {
+	if len(o.Names) == 0 {
+		return makeMissingClusterNameErr()
+	}
+	if len(o.Names) > 1 {
+		return fmt.Errorf("only support to update one cluster")
+	}
+	return nil
+}
+
+func (o *UpdateOptions) Exec() error {
+	if err := o.Validate(); err != nil {
+		return err
+	}
+	if err := o.Complete(); err != nil {
+		return err
+	}
+	if err := o.Run(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (o *UpdateOptions) Complete() error {
+	var err error
+	if o.namespace, _, err = o.Factory.ToRawKubeConfigLoader().Namespace(); err != nil {
+		return err
+	}
+	if o.dynamic, err = o.Factory.DynamicClient(); err != nil {
+		return err
+	}
+	return o.buildPatch()
+}
+
+func (o *UpdateOptions) buildPatch() error {
+	var err error
+	type buildFn func(obj map[string]interface{}, val interface{}, field string) error
+
+	buildFlagObj := func(obj map[string]interface{}, val interface{}, field string) error {
 		return unstructured.SetNestedField(obj, val, field)
 	}
 
-	buildTolObj := func(obj map[string]interface{}, v pflag.Value, field string) error {
+	buildTolObj := func(obj map[string]interface{}, val interface{}, field string) error {
 		tolerations, err := util.BuildTolerations(o.TolerationsRaw)
 		if err != nil {
 			return err
@@ -206,12 +243,20 @@ func (o *updateOptions) buildPatch(flags []*pflag.Flag) error {
 		return unstructured.SetNestedField(obj, tolerations, field)
 	}
 
-	buildComps := func(obj map[string]interface{}, v pflag.Value, field string) error {
-		return o.buildComponents(field, v.String())
+	buildComps := func(obj map[string]interface{}, val interface{}, field string) error {
+		v, ok := val.(string)
+		if !ok {
+			return fmt.Errorf("val is not a string")
+		}
+		return o.buildComponents(field, v)
 	}
 
-	buildBackup := func(obj map[string]interface{}, v pflag.Value, field string) error {
-		return o.buildBackup(field, v.String())
+	buildBackup := func(obj map[string]interface{}, val interface{}, field string) error {
+		v, ok := val.(string)
+		if !ok {
+			return fmt.Errorf("val is not a string")
+		}
+		return o.buildBackup(field, v)
 	}
 
 	spec := map[string]interface{}{}
@@ -246,9 +291,9 @@ func (o *updateOptions) buildPatch(flags []*pflag.Flag) error {
 		"pitr-enabled":                     {field: "pitrEnabled", obj: nil, fn: buildBackup},
 	}
 
-	for _, flag := range flags {
-		if f, ok := flagFieldMapping[flag.Name]; ok {
-			if err = f.fn(f.obj, flag.Value, f.field); err != nil {
+	for name, val := range o.ValMap {
+		if f, ok := flagFieldMapping[name]; ok {
+			if err = f.fn(f.obj, val, f.field); err != nil {
 				return err
 			}
 		}
@@ -313,7 +358,7 @@ func (o *updateOptions) buildPatch(flags []*pflag.Flag) error {
 	return nil
 }
 
-func (o *updateOptions) buildComponents(field string, val string) error {
+func (o *UpdateOptions) buildComponents(field string, val string) error {
 	if o.cluster == nil {
 		c, err := cluster.GetClusterByName(o.dynamic, o.Names[0], o.namespace)
 		if err != nil {
@@ -332,7 +377,7 @@ func (o *updateOptions) buildComponents(field string, val string) error {
 	}
 }
 
-func (o *updateOptions) buildBackup(field string, val string) error {
+func (o *UpdateOptions) buildBackup(field string, val string) error {
 	if o.cluster == nil {
 		c, err := cluster.GetClusterByName(o.dynamic, o.Names[0], o.namespace)
 		if err != nil {
@@ -364,7 +409,7 @@ func (o *updateOptions) buildBackup(field string, val string) error {
 	}
 }
 
-func (o *updateOptions) updateEnabledLog(val string) error {
+func (o *UpdateOptions) updateEnabledLog(val string) error {
 	boolVal, err := strconv.ParseBool(val)
 	if err != nil {
 		return err
@@ -397,7 +442,7 @@ const topTPLLogsObject = "component"
 const defaultSectionName = "default"
 
 // reconfigureLogVariables reconfigures the log variables of cluster
-func (o *updateOptions) reconfigureLogVariables(c *appsv1alpha1.Cluster, cd *appsv1alpha1.ClusterDefinition) error {
+func (o *UpdateOptions) reconfigureLogVariables(c *appsv1alpha1.Cluster, cd *appsv1alpha1.ClusterDefinition) error {
 	var (
 		err        error
 		configSpec *appsv1alpha1.ComponentConfigSpec
@@ -552,7 +597,7 @@ func buildLogsReconfiguringOps(clusterName, namespace, compName, configName, key
 	return opsRequest
 }
 
-func (o *updateOptions) updateMonitor(val string) error {
+func (o *UpdateOptions) updateMonitor(val string) error {
 	intVal, err := strconv.ParseInt(val, 10, 32)
 	if err != nil {
 		return err
@@ -564,7 +609,7 @@ func (o *updateOptions) updateMonitor(val string) error {
 	return nil
 }
 
-func (o *updateOptions) updateBackupEnabled(val string) error {
+func (o *UpdateOptions) updateBackupEnabled(val string) error {
 	boolVal, err := strconv.ParseBool(val)
 	if err != nil {
 		return err
@@ -573,7 +618,7 @@ func (o *updateOptions) updateBackupEnabled(val string) error {
 	return nil
 }
 
-func (o *updateOptions) updateBackupRetentionPeriod(val string) error {
+func (o *UpdateOptions) updateBackupRetentionPeriod(val string) error {
 	// if val is empty, do nothing
 	if len(val) == 0 {
 		return nil
@@ -589,13 +634,13 @@ func (o *updateOptions) updateBackupRetentionPeriod(val string) error {
 	return nil
 }
 
-func (o *updateOptions) updateBackupMethod(val string) error {
+func (o *UpdateOptions) updateBackupMethod(val string) error {
 	// TODO(ldm): validate backup method are defined in the backup policy.
 	o.cluster.Spec.Backup.Method = val
 	return nil
 }
 
-func (o *updateOptions) updateBackupCronExpression(val string) error {
+func (o *UpdateOptions) updateBackupCronExpression(val string) error {
 	// judge whether val is a valid cron expression
 	if _, err := cron.ParseStandard(val); err != nil {
 		return fmt.Errorf("invalid cron expression: %s, please see https://en.wikipedia.org/wiki/Cron", val)
@@ -605,7 +650,7 @@ func (o *updateOptions) updateBackupCronExpression(val string) error {
 	return nil
 }
 
-func (o *updateOptions) updateBackupStartingDeadlineMinutes(val string) error {
+func (o *UpdateOptions) updateBackupStartingDeadlineMinutes(val string) error {
 	intVal, err := strconv.ParseInt(val, 10, 64)
 	if err != nil {
 		return err
@@ -614,12 +659,12 @@ func (o *updateOptions) updateBackupStartingDeadlineMinutes(val string) error {
 	return nil
 }
 
-func (o *updateOptions) updateBackupRepoName(val string) error {
+func (o *UpdateOptions) updateBackupRepoName(val string) error {
 	o.cluster.Spec.Backup.RepoName = val
 	return nil
 }
 
-func (o *updateOptions) updateBackupPitrEnabled(val string) error {
+func (o *UpdateOptions) updateBackupPitrEnabled(val string) error {
 	boolVal, err := strconv.ParseBool(val)
 	if err != nil {
 		return err
