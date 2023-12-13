@@ -184,6 +184,8 @@ func (o *UpdateOptions) CmdComplete(cmd *cobra.Command, args []string) error {
 				}
 			}
 			val = valMap
+		default:
+			val = v.String()
 		}
 		o.ValMap[flag.Name] = val
 	}
