@@ -37,6 +37,7 @@ import (
 
 	viper "github.com/apecloud/kubeblocks/pkg/viperx"
 
+	"github.com/apecloud/kbcli/pkg/cmd/addon"
 	"github.com/apecloud/kbcli/pkg/cmd/alert"
 	"github.com/apecloud/kbcli/pkg/cmd/auth"
 	"github.com/apecloud/kbcli/pkg/cmd/backuprepo"
@@ -204,6 +205,7 @@ A Command Line Interface for KubeBlocks`,
 		clusterdefinition.NewClusterDefinitionCmd(f, ioStreams),
 		class.NewClassCommand(f, ioStreams),
 		alert.NewAlertCmd(f, ioStreams),
+		addon.NewAddonCmd(f, ioStreams),
 		migration.NewMigrationCmd(f, ioStreams),
 		plugin.NewPluginCmd(ioStreams),
 		fault.NewFaultCmd(f, ioStreams),
