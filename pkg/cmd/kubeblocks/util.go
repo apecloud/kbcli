@@ -312,13 +312,14 @@ func createOrUpdateCRDS(dynamic dynamic.Interface, kbVersion string) error {
 	}
 	ctx := context.Background()
 	for _, obj := range objs {
-		if _, err = dynamic.Resource(types.CustomResourceDefinitionGVR()).Get(ctx, obj.GetName(), metav1.GetOptions{}); err != nil {
-			// update crd
+		if structObj, err := dynamic.Resource(types.CustomResourceDefinitionGVR()).Get(ctx, obj.GetName(), metav1.GetOptions{}); err != nil {
+			// create crd
 			if _, err = dynamic.Resource(types.CustomResourceDefinitionGVR()).Create(ctx, &obj, metav1.CreateOptions{}); err != nil {
 				return err
 			}
 		} else {
-			// create crd
+			// update crd
+			obj.SetResourceVersion(structObj.GetResourceVersion())
 			if _, err = dynamic.Resource(types.CustomResourceDefinitionGVR()).Update(ctx, &obj, metav1.UpdateOptions{}); err != nil {
 				return err
 			}
