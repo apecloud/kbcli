@@ -190,7 +190,9 @@ func (o *UpdateOptions) CmdComplete(cmd *cobra.Command, args []string) error {
 		o.ValMap[flag.Name] = val
 	}
 
-	o.PatchOptions.CmdComplete(cmd)
+	if err := o.PatchOptions.CmdComplete(cmd); err != nil {
+		return err
+	}
 
 	return nil
 }
