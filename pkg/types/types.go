@@ -220,6 +220,8 @@ const (
 
 	// AddonResourceNamePrefix is the prefix for the names of all K8s resources rendered by the addon.
 	AddonResourceNamePrefix = "resourceNamePrefix"
+	// ImageRegistryKey is the image registry key in KB resource helm chart values.yaml
+	ImageRegistryKey = "image.registry"
 )
 
 var (
