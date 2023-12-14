@@ -46,6 +46,7 @@ import (
 	"k8s.io/kubectl/pkg/util/templates"
 
 	extensionsv1alpha1 "github.com/apecloud/kubeblocks/apis/extensions/v1alpha1"
+	viper "github.com/apecloud/kubeblocks/pkg/viperx"
 
 	"github.com/apecloud/kbcli/pkg/spinner"
 	"github.com/apecloud/kbcli/pkg/types"
@@ -290,6 +291,14 @@ func (o *InstallOptions) Install() error {
 	if err = o.installChart(); err != nil {
 		return err
 	}
+	// save KB image.registry config
+	for _, s := range o.ValueOpts.Values {
+		if split := strings.Split(s, "="); split[0] == types.ImageRegistryKey && len(split) == 2 {
+			viper.Set(types.CfgKeyImageRegistry, split[1])
+			break
+		}
+	}
+
 	s.Success()
 
 	// wait for auto-install addons to be ready

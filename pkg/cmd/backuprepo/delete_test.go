@@ -23,8 +23,6 @@ import (
 	"bytes"
 	"net/http"
 
-	"github.com/apecloud/kbcli/pkg/scheme"
-	"github.com/apecloud/kbcli/pkg/testing"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -34,10 +32,12 @@ import (
 	clientfake "k8s.io/client-go/rest/fake"
 	cmdtesting "k8s.io/kubectl/pkg/cmd/testing"
 
-	"github.com/apecloud/kbcli/pkg/action"
-	clitesting "github.com/apecloud/kbcli/pkg/testing"
-	"github.com/apecloud/kbcli/pkg/types"
 	dpv1alpha1 "github.com/apecloud/kubeblocks/apis/dataprotection/v1alpha1"
+
+	"github.com/apecloud/kbcli/pkg/action"
+	"github.com/apecloud/kbcli/pkg/scheme"
+	"github.com/apecloud/kbcli/pkg/testing"
+	"github.com/apecloud/kbcli/pkg/types"
 )
 
 var _ = Describe("backuprepo delete command", func() {
@@ -65,7 +65,7 @@ var _ = Describe("backuprepo delete command", func() {
 			}),
 		}
 
-		tf.FakeDynamicClient = clitesting.FakeDynamicClient(append([]runtime.Object{repoObj}, otherObjs...)...)
+		tf.FakeDynamicClient = testing.FakeDynamicClient(append([]runtime.Object{repoObj}, otherObjs...)...)
 		tf.Client = tf.UnstructuredClient
 	}
 
