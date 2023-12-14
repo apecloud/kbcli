@@ -20,7 +20,6 @@
 package utils
 
 const (
-	DefaultBaseURL = "https://apecloud.authing.cn/oidc"
-	APIPathV1      = "api/v1"
-	APIPathV2      = "api/v2"
+	APIPathV1 = "api/v1"
+	APIPathV2 = "api/v2"
 )

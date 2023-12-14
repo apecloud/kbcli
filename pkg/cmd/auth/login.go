@@ -300,9 +300,9 @@ func getAuthURL(region string) string {
 	var authURL string
 	switch region {
 	case "jp":
-		authURL = utils.DefaultBaseURL
+		authURL = viper.GetString(types.CfgKeyAuthURL)
 	default:
-		authURL = utils.DefaultBaseURL
+		authURL = viper.GetString(types.CfgKeyAuthURL)
 	}
 	return authURL
 }
