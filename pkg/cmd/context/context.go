@@ -27,6 +27,7 @@ import (
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
 
+	"github.com/apecloud/kbcli/pkg/cmd/auth/utils"
 	"github.com/apecloud/kbcli/pkg/cmd/organization"
 	"github.com/apecloud/kbcli/pkg/types"
 )
@@ -174,7 +175,7 @@ func (o *ContextOptions) complete(args []string) error {
 				OrgName:      currentOrgAndContext.CurrentOrganization,
 				IOStreams:    o.IOStreams,
 				APIURL:       viper.GetString(types.CfgKeyOpenAPIServer),
-				APIPath:      organization.APIPath,
+				APIPath:      utils.APIPathV1,
 				OutputFormat: o.OutputFormat,
 			}
 		}

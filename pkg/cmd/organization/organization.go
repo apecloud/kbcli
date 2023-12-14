@@ -33,6 +33,7 @@ import (
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
 
+	"github.com/apecloud/kbcli/pkg/cmd/auth/utils"
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
 )
@@ -47,10 +48,6 @@ var organizationExample = templates.Examples(`
 	// Switch to organization org2.
 	kbcli org switch org2
 `)
-
-const (
-	APIPath = "api/v1"
-)
 
 type Organizations struct {
 	Items []OrgItem `json:"items"`
@@ -200,7 +197,7 @@ func (o *OrganizationOption) complete(args []string) error {
 		o.Organization = &CloudOrganization{
 			Token:   token,
 			APIURL:  viper.GetString(types.CfgKeyOpenAPIServer),
-			APIPath: APIPath,
+			APIPath: utils.APIPathV1,
 		}
 	}
 

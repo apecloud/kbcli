@@ -27,6 +27,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 
+	"github.com/apecloud/kbcli/pkg/cmd/auth/utils"
 	"github.com/apecloud/kbcli/pkg/cmd/organization"
 )
 
@@ -84,7 +85,7 @@ var _ = ginkgo_context.Describe("Test Cloud Context", func() {
 			ContextName: "test_context",
 			OrgName:     "test_org",
 			APIURL:      server.URL,
-			APIPath:     organization.APIPath,
+			APIPath:     utils.APIPathV1,
 		}
 	})
 

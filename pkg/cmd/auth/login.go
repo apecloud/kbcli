@@ -146,7 +146,7 @@ func (o *LoginOptions) loginWithOrg(ctx context.Context) error {
 		Organization: &organization.CloudOrganization{
 			Token:   token,
 			APIURL:  viper.GetString(types.CfgKeyOpenAPIServer),
-			APIPath: organization.APIPath,
+			APIPath: utils.APIPathV1,
 		},
 	}
 	if ok, err := org.Organization.IsValidOrganization(o.OrgName); !ok {
@@ -222,7 +222,7 @@ func getFirstOrg(token string) string {
 		Organization: &organization.CloudOrganization{
 			Token:   token,
 			APIURL:  viper.GetString(types.CfgKeyOpenAPIServer),
-			APIPath: organization.APIPath,
+			APIPath: utils.APIPathV1,
 		},
 	}
 	organizations, err := org.Organization.GetOrganizations()
@@ -241,7 +241,7 @@ func getFirstContext(token string, orgName string) string {
 		OrgName: orgName,
 		Token:   token,
 		APIURL:  viper.GetString(types.CfgKeyOpenAPIServer),
-		APIPath: organization.APIPath,
+		APIPath: utils.APIPathV1,
 	}
 	contexts, err := c.GetContexts()
 	if err != nil {
