@@ -138,7 +138,7 @@ type CloudContextResponse struct {
 func (c *CloudContext) showContext() error {
 	cloudContext, err := c.GetContext()
 	if err != nil {
-		return errors.Wrapf(err, "Failed to get context %s", c.ContextName)
+		return errors.Wrapf(err, "Failed to get environment %s", c.ContextName)
 	}
 
 	switch strings.ToLower(c.OutputFormat) {
@@ -213,7 +213,7 @@ func (c *CloudContext) printTable(ctxRes *CloudContextResponse) error {
 func (c *CloudContext) showContexts() error {
 	cloudContexts, err := c.GetContexts()
 	if err != nil {
-		return errors.Wrapf(err, "Failed to get contexts, please check your organization name")
+		return errors.Wrapf(err, "Failed to get environments, please check your organization name")
 	}
 
 	tbl := printer.NewTablePrinter(c.Out)
@@ -252,7 +252,7 @@ func (c *CloudContext) showContexts() error {
 	tbl.Print()
 
 	if ok := writeContexts(cloudContexts); ok != nil {
-		return errors.Wrapf(err, "Failed to write contexts.")
+		return errors.Wrapf(err, "Failed to write environments.")
 	}
 	return nil
 }
@@ -260,29 +260,29 @@ func (c *CloudContext) showContexts() error {
 func (c *CloudContext) showCurrentContext() error {
 	currentContext, err := c.getCurrentContext()
 	if err != nil {
-		return errors.Wrapf(err, "Failed to get current context.")
+		return errors.Wrapf(err, "Failed to get current environment.")
 	}
 
-	fmt.Fprintf(c.Out, "Current context: %s\n", currentContext)
+	fmt.Fprintf(c.Out, "Current environment: %s\n", currentContext)
 	return nil
 }
 
 func (c *CloudContext) showUseContext() error {
 	oldContextName, err := c.useContext(c.ContextName)
 	if err != nil {
-		return errors.Wrapf(err, "Failed to switch context to %s.", c.ContextName)
+		return errors.Wrapf(err, "Failed to switch environment to %s.", c.ContextName)
 	}
 
-	fmt.Fprintf(c.Out, "Successfully switched from %s to context %s.\n", oldContextName, c.ContextName)
+	fmt.Fprintf(c.Out, "Successfully switched from %s to environment %s.\n", oldContextName, c.ContextName)
 	return nil
 }
 
 func (c *CloudContext) showRemoveContext() error {
 	if err := c.removeContext(); err != nil {
-		return errors.Wrapf(err, "Failed to remove context %s.", c.ContextName)
+		return errors.Wrapf(err, "Failed to remove environment %s.", c.ContextName)
 	}
 
-	fmt.Fprintf(c.Out, "Context %s removed.\n", c.ContextName)
+	fmt.Fprintf(c.Out, "Environment %s removed.\n", c.ContextName)
 	return nil
 }
 
@@ -296,7 +296,7 @@ func (c *CloudContext) GetContext() (*CloudContextResponse, error) {
 	var context CloudContextResponse
 	err = json.Unmarshal(response, &context)
 	if err != nil {
-		return nil, errors.Wrapf(err, "Failed to unmarshal context %s.", c.ContextName)
+		return nil, errors.Wrapf(err, "Failed to unmarshal environment %s.", c.ContextName)
 	}
 
 	return &context, nil
@@ -312,7 +312,7 @@ func (c *CloudContext) GetContexts() ([]CloudContextResponse, error) {
 	var contexts []CloudContextResponse
 	err = json.Unmarshal(response, &contexts)
 	if err != nil {
-		return nil, errors.Wrap(err, "Failed to unmarshal contexts.")
+		return nil, errors.Wrap(err, "Failed to unmarshal environments.")
 	}
 
 	return contexts, nil
@@ -321,7 +321,7 @@ func (c *CloudContext) GetContexts() ([]CloudContextResponse, error) {
 func (c *CloudContext) getCurrentContext() (string, error) {
 	currentOrgAndContext, err := organization.GetCurrentOrgAndContext()
 	if err != nil {
-		return "", errors.Wrap(err, "Failed to get current context.")
+		return "", errors.Wrap(err, "Failed to get current environment.")
 	}
 
 	if ok, err := c.isValidContext(currentOrgAndContext.CurrentContext); !ok {
@@ -338,13 +338,13 @@ func (c *CloudContext) useContext(contextName string) (string, error) {
 
 	currentOrgAndContext, err := organization.GetCurrentOrgAndContext()
 	if err != nil {
-		return "", errors.Wrap(err, "Failed to get current context.")
+		return "", errors.Wrap(err, "Failed to get current environment.")
 	}
 
 	oldContextName := currentOrgAndContext.CurrentContext
 	currentOrgAndContext.CurrentContext = contextName
 	if err = organization.SetCurrentOrgAndContext(currentOrgAndContext); err != nil {
-		return "", errors.Wrapf(err, "Failed to switch context to %s.", contextName)
+		return "", errors.Wrapf(err, "Failed to switch environment to %s.", contextName)
 	}
 
 	return oldContextName, nil
@@ -364,11 +364,11 @@ func (c *CloudContext) removeContext() error {
 func (c *CloudContext) isValidContext(contextName string) (bool, error) {
 	cloudContexts, err := c.GetContexts()
 	if err != nil {
-		return false, errors.Wrap(err, "Failed to get contexts.")
+		return false, errors.Wrap(err, "Failed to get environments.")
 	}
 
 	if len(cloudContexts) == 0 {
-		return false, errors.Wrap(err, "No context found, please create a context on cloud.")
+		return false, errors.Wrap(err, "No environment found, please create a environment on cloud.")
 	}
 
 	for _, item := range cloudContexts {
@@ -377,7 +377,7 @@ func (c *CloudContext) isValidContext(contextName string) (bool, error) {
 		}
 	}
 
-	return false, errors.Errorf("Context %s does not exist.", contextName)
+	return false, errors.Errorf("Environment %s does not exist.", contextName)
 }
 
 func writeContexts(contexts []CloudContextResponse) error {
