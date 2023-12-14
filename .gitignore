@@ -16,6 +16,8 @@ bin
 testbin/*
 __debug_bin
 
+pkg/cluster/charts/*.tgz
+
 output
 helm-output
 
