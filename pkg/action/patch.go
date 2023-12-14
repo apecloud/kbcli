@@ -91,15 +91,19 @@ func (o *PatchOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVar(&o.EditBeforeUpdate, "edit", o.EditBeforeUpdate, "Edit the API resource")
 }
 
-func (o *PatchOptions) complete(cmd *cobra.Command) error {
+func (o *PatchOptions) CmdComplete(cmd *cobra.Command) error {
 	var err error
-	if len(o.Names) == 0 {
-		return fmt.Errorf("missing %s name", o.GVR.Resource)
-	}
-
 	o.dryRunStrategy, err = cmdutil.GetDryRunStrategy(cmd)
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+func (o *PatchOptions) complete() error {
+	var err error
+	if len(o.Names) == 0 {
+		return fmt.Errorf("missing %s name", o.GVR.Resource)
 	}
 
 	cmdutil.PrintFlagsWithDryRunStrategy(o.PrintFlags, o.dryRunStrategy)
@@ -118,8 +122,8 @@ func (o *PatchOptions) complete(cmd *cobra.Command) error {
 	return nil
 }
 
-func (o *PatchOptions) Run(cmd *cobra.Command) error {
-	if err := o.complete(cmd); err != nil {
+func (o *PatchOptions) Run() error {
+	if err := o.complete(); err != nil {
 		return err
 	}
 

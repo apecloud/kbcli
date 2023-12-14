@@ -30,9 +30,7 @@ import (
 
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 
-	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/testing"
-	"github.com/apecloud/kbcli/pkg/types"
 )
 
 var _ = Describe("cluster update", func() {
@@ -54,32 +52,35 @@ var _ = Describe("cluster update", func() {
 	})
 
 	Context("complete", func() {
-		var o *updateOptions
+		var o *UpdateOptions
 		var cmd *cobra.Command
 		var args []string
 		BeforeEach(func() {
 			cmd = NewUpdateCmd(tf, streams)
-			o = &updateOptions{PatchOptions: action.NewPatchOptions(tf, streams, types.ClusterGVR())}
+			o = NewUpdateOptions(tf, streams)
 			args = []string{"c1"}
 
 		})
 
 		It("args is empty", func() {
-			Expect(o.complete(cmd, nil)).Should(HaveOccurred())
+			Expect(o.CmdComplete(cmd, nil)).Should(Succeed())
+			Expect(o.Validate()).Should(HaveOccurred())
 		})
 
 		It("the length of args greater than 1", func() {
-			Expect(o.complete(cmd, []string{"c1", "c2"})).Should(HaveOccurred())
+			Expect(o.CmdComplete(cmd, []string{"c1", "c2"})).Should(Succeed())
+			Expect(o.Validate()).Should(HaveOccurred())
 		})
 
 		It("args only contains one cluster name", func() {
-			Expect(o.complete(cmd, args)).Should(Succeed())
+			Expect(o.CmdComplete(cmd, args)).Should(Succeed())
 			Expect(o.Names[0]).Should(Equal("c1"))
 		})
 
 		It("set termination-policy", func() {
 			Expect(cmd.Flags().Set("termination-policy", "Delete")).Should(Succeed())
-			Expect(o.complete(cmd, args)).Should(Succeed())
+			Expect(o.CmdComplete(cmd, args)).Should(Succeed())
+			Expect(o.Complete()).Should(Succeed())
 			Expect(o.namespace).Should(Equal("default"))
 			Expect(o.dynamic).ShouldNot(BeNil())
 			Expect(o.Patch).Should(ContainSubstring("terminationPolicy"))
@@ -89,7 +90,8 @@ var _ = Describe("cluster update", func() {
 			fakeCluster := testing.FakeCluster("c1", "default")
 			tf.FakeDynamicClient = testing.FakeDynamicClient(fakeCluster)
 			Expect(cmd.Flags().Set("monitoring-interval", "15")).Should(Succeed())
-			Expect(o.complete(cmd, args)).Should(Succeed())
+			Expect(o.CmdComplete(cmd, args)).Should(Succeed())
+			Expect(o.Complete()).Should(Succeed())
 			Expect(o.Patch).Should(ContainSubstring("\"monitor\":true"))
 		})
 
@@ -97,14 +99,16 @@ var _ = Describe("cluster update", func() {
 			fakeCluster := testing.FakeCluster("c1", "default")
 			tf.FakeDynamicClient = testing.FakeDynamicClient(fakeCluster)
 			Expect(cmd.Flags().Set("enable-all-logs", "false")).Should(Succeed())
-			Expect(o.complete(cmd, args)).Should(Succeed())
+			Expect(o.CmdComplete(cmd, args)).Should(Succeed())
+			Expect(o.Complete()).Should(Succeed())
 		})
 
 		It("set node-labels", func() {
 			fakeCluster := testing.FakeCluster("c1", "default")
 			tf.FakeDynamicClient = testing.FakeDynamicClient(fakeCluster)
 			Expect(cmd.Flags().Set("node-labels", "k1=v1,k2=v2")).Should(Succeed())
-			Expect(o.complete(cmd, args)).Should(Succeed())
+			Expect(o.CmdComplete(cmd, args)).Should(Succeed())
+			Expect(o.Complete()).Should(Succeed())
 			Expect(o.Patch).Should(ContainSubstring("k1"))
 		})
 	})

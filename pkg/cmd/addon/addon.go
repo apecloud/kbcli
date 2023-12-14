@@ -204,7 +204,8 @@ func newEnableCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.
 			util.CheckErr(o.fetchAddonObj())
 			util.CheckErr(o.validate())
 			util.CheckErr(o.complete(o, cmd, args))
-			util.CheckErr(o.Run(cmd))
+			util.CheckErr(o.CmdComplete(cmd))
+			util.CheckErr(o.Run())
 		},
 	}
 	cmd.Flags().StringArrayVar(&o.addonEnableFlags.MemorySets, "memory", []string{},
@@ -257,7 +258,8 @@ func newDisableCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 			util.CheckErr(o.init(args))
 			util.CheckErr(o.fetchAddonObj())
 			util.CheckErr(o.complete(o, cmd, args))
-			util.CheckErr(o.Run(cmd))
+			util.CheckErr(o.CmdComplete(cmd))
+			util.CheckErr(o.Run())
 		},
 	}
 	o.PatchOptions.AddFlags(cmd)
