@@ -20,24 +20,27 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package context
 
 import (
+	viper "github.com/apecloud/kubeblocks/pkg/viperx"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
 
+	"github.com/apecloud/kbcli/pkg/cmd/auth/utils"
 	"github.com/apecloud/kbcli/pkg/cmd/organization"
+	"github.com/apecloud/kbcli/pkg/types"
 )
 
 var contextExample = templates.Examples(`
-	// Get the context name currently used by the user.
-	kbcli context current 
-	// List all contexts created by the current user.
-	kbcli context list
-	// Get the description information of context context1.
-	kbcli context describe context1
-	// Switch to context context2.
-	kbcli context use context2
+	// Get the environment name currently used by the user.
+	kbcli environment current 
+	// List all environments created by the current user.
+	kbcli environment list
+	// Get the description information of environment environment1.
+	kbcli environment describe environment1
+	// Switch to environment environment2.
+	kbcli environment use environment2
 `)
 
 const (
@@ -62,9 +65,10 @@ type ContextOptions struct {
 
 func NewContextCmd(streams genericiooptions.IOStreams) *cobra.Command {
 	cmd := &cobra.Command{
-		Use: "context",
-		Short: "kbcli context allows you to manage cloud context. This command is currently only applicable to cloud," +
-			" and currently does not support switching the context of the local k8s cluster.",
+		Use:     "environment",
+		Aliases: []string{"env"},
+		Short: "kbcli environment allows you to manage cloud environment. This command is currently only applicable to cloud," +
+			" and currently does not support switching the environment of the local k8s cluster.",
 		Example: contextExample,
 	}
 	cmd.AddCommand(
@@ -81,7 +85,7 @@ func newContextListCmd(streams genericiooptions.IOStreams) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "list",
-		Short: "List all created contexts.",
+		Short: "List all created environments.",
 		Run: func(cmd *cobra.Command, args []string) {
 			cmdutil.CheckErr(o.complete(args))
 			cmdutil.CheckErr(o.validate(cmd))
@@ -96,7 +100,7 @@ func newContextCurrentCmd(streams genericiooptions.IOStreams) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "current",
-		Short: "Get the currently used context.",
+		Short: "Get the currently used environment.",
 		Run: func(cmd *cobra.Command, args []string) {
 			cmdutil.CheckErr(o.complete(args))
 			cmdutil.CheckErr(o.validate(cmd))
@@ -111,7 +115,7 @@ func newContextDescribeCmd(streams genericiooptions.IOStreams) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "describe",
-		Short: "Get the description information of a context.",
+		Short: "Get the description information of a environment.",
 		Run: func(cmd *cobra.Command, args []string) {
 			cmdutil.CheckErr(o.complete(args))
 			cmdutil.CheckErr(o.validate(cmd))
@@ -129,7 +133,7 @@ func newContextUseCmd(streams genericiooptions.IOStreams) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "use",
-		Short: "Use another context that you have already created.",
+		Short: "Use another environment that you have already created.",
 		Run: func(cmd *cobra.Command, args []string) {
 			cmdutil.CheckErr(o.complete(args))
 			cmdutil.CheckErr(o.validate(cmd))
@@ -143,7 +147,7 @@ func newContextUseCmd(streams genericiooptions.IOStreams) *cobra.Command {
 func (o *ContextOptions) validate(cmd *cobra.Command) error {
 	if cmd.Name() == "describe" || cmd.Name() == "use" {
 		if o.ContextName == "" {
-			return errors.New("context name is required")
+			return errors.New("environment name is required")
 		}
 	}
 
@@ -171,8 +175,8 @@ func (o *ContextOptions) complete(args []string) error {
 				Token:        token,
 				OrgName:      currentOrgAndContext.CurrentOrganization,
 				IOStreams:    o.IOStreams,
-				APIURL:       organization.APIURL,
-				APIPath:      organization.APIPath,
+				APIURL:       viper.GetString(types.CfgKeyOpenAPIServer),
+				APIPath:      utils.APIPathV1,
 				OutputFormat: o.OutputFormat,
 			}
 		}

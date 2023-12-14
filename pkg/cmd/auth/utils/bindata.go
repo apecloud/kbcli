@@ -29,6 +29,10 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	viper "github.com/apecloud/kubeblocks/pkg/viperx"
+
+	"github.com/apecloud/kbcli/pkg/types"
 )
 
 type asset struct {
@@ -73,13 +77,9 @@ func (fi bindataFileInfo) Sys() interface{} {
 	return nil
 }
 
-const clientID = "64e42ca02df49bffa50719a9"
-
-var clientIDJSON = fmt.Sprintf(`{"client_id": "%s"}`, clientID)
-
 func configConfigEnc() (*asset, error) {
 	info := bindataFileInfo{name: "config/config.enc", size: 53, mode: os.FileMode(0420), modTime: time.Unix(1688544460, 0)}
-	a := &asset{bytes: []byte(clientIDJSON), info: info}
+	a := &asset{bytes: []byte(fmt.Sprintf(`{"client_id": "%s"}`, viper.GetString(types.CfgKeyClientID))), info: info}
 	return a, nil
 }
 

@@ -27,6 +27,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+
+	"github.com/apecloud/kbcli/pkg/cmd/auth/utils"
 )
 
 func mockServer() *httptest.Server {
@@ -92,7 +94,7 @@ var _ = Describe("Test Cloud Organization", func() {
 	)
 	BeforeEach(func() {
 		server := mockServer()
-		o = &CloudOrganization{Token: "test_token", APIURL: server.URL, APIPath: APIPath}
+		o = &CloudOrganization{Token: "test_token", APIURL: server.URL, APIPath: utils.APIPathV1}
 		os.Setenv("TEST_ENV", "true")
 	})
 

@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"strings"
 
+	viper "github.com/apecloud/kubeblocks/pkg/viperx"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -32,7 +33,9 @@ import (
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
 
+	"github.com/apecloud/kbcli/pkg/cmd/auth/utils"
 	"github.com/apecloud/kbcli/pkg/printer"
+	"github.com/apecloud/kbcli/pkg/types"
 )
 
 var organizationExample = templates.Examples(`
@@ -45,11 +48,6 @@ var organizationExample = templates.Examples(`
 	// Switch to organization org2.
 	kbcli org switch org2
 `)
-
-const (
-	APIURL  = "https://cloudapi.apecloud.cn"
-	APIPath = "api/v1"
-)
 
 type Organizations struct {
 	Items []OrgItem `json:"items"`
@@ -198,8 +196,8 @@ func (o *OrganizationOption) complete(args []string) error {
 	if o.Organization == nil {
 		o.Organization = &CloudOrganization{
 			Token:   token,
-			APIURL:  APIURL,
-			APIPath: APIPath,
+			APIURL:  viper.GetString(types.CfgKeyOpenAPIServer),
+			APIPath: utils.APIPathV1,
 		}
 	}
 
