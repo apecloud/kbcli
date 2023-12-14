@@ -259,6 +259,7 @@ func initConfig() {
 	//cloud
 	viper.SetDefault(types.CfgKeyOpenAPIServer, "https://cloudapi.apecloud.cn")
 	viper.SetDefault(types.CfgKeyAuthURL, "https://apecloud.authing.cn/oidc")
+	viper.SetDefault(types.CfgKeyClientID, "64e42ca02df49bffa50719a9")
 }
 
 func registerCompletionFuncForGlobalFlags(cmd *cobra.Command, f cmdutil.Factory) {

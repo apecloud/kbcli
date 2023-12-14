@@ -29,4 +29,5 @@ const (
 	CfgKeyImageRegistry             = "IMAGE_REGISTRY"
 	CfgKeyOpenAPIServer             = "OPENAPI_SERVER"
 	CfgKeyAuthURL                   = "AUTH_URL"
+	CfgKeyClientID                  = "CLIENT_ID"
 )
