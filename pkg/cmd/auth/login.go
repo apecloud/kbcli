@@ -26,6 +26,7 @@ import (
 	"io"
 	"net/http"
 
+	viper "github.com/apecloud/kubeblocks/pkg/viperx"
 	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
@@ -33,6 +34,7 @@ import (
 	"github.com/apecloud/kbcli/pkg/cmd/auth/utils"
 	cloudctx "github.com/apecloud/kbcli/pkg/cmd/context"
 	"github.com/apecloud/kbcli/pkg/cmd/organization"
+	"github.com/apecloud/kbcli/pkg/types"
 )
 
 type LoginOptions struct {
@@ -143,7 +145,7 @@ func (o *LoginOptions) loginWithOrg(ctx context.Context) error {
 	org := &organization.OrganizationOption{
 		Organization: &organization.CloudOrganization{
 			Token:   token,
-			APIURL:  organization.APIURL,
+			APIURL:  viper.GetString(types.CfgKeyOpenAPIServer),
 			APIPath: organization.APIPath,
 		},
 	}
@@ -219,7 +221,7 @@ func getFirstOrg(token string) string {
 	org := &organization.OrganizationOption{
 		Organization: &organization.CloudOrganization{
 			Token:   token,
-			APIURL:  organization.APIURL,
+			APIURL:  viper.GetString(types.CfgKeyOpenAPIServer),
 			APIPath: organization.APIPath,
 		},
 	}
@@ -238,7 +240,7 @@ func getFirstContext(token string, orgName string) string {
 	c := &cloudctx.CloudContext{
 		OrgName: orgName,
 		Token:   token,
-		APIURL:  organization.APIURL,
+		APIURL:  viper.GetString(types.CfgKeyOpenAPIServer),
 		APIPath: organization.APIPath,
 	}
 	contexts, err := c.GetContexts()
@@ -271,7 +273,7 @@ func IsLoggedIn() bool {
 
 // CheckTokenAvailable Check whether the token is available by getting user info.
 func checkTokenAvailable(token string) bool {
-	URL := fmt.Sprintf("https://%s/api/v1/user", utils.OpenAPIHost)
+	URL := fmt.Sprintf("%s/api/v1/user", viper.GetString(types.CfgKeyOpenAPIServer))
 	req, err := utils.NewFullRequest(context.TODO(), URL, http.MethodGet, map[string]string{
 		"Authorization": "Bearer " + token,
 	}, "")

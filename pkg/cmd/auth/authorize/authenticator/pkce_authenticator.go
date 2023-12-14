@@ -31,11 +31,13 @@ import (
 	"path"
 	"strings"
 
+	viper "github.com/apecloud/kubeblocks/pkg/viperx"
 	"github.com/benbjohnson/clock"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/pkg/errors"
 
 	"github.com/apecloud/kbcli/pkg/cmd/auth/utils"
+	"github.com/apecloud/kbcli/pkg/types"
 )
 
 type OIDCWellKnownEndpoints struct {
@@ -195,7 +197,7 @@ func (p *PKCEAuthenticator) GetToken(ctx context.Context, authorization interfac
 }
 
 func (p *PKCEAuthenticator) GetUserInfo(ctx context.Context, token string) (*UserInfoResponse, error) {
-	URL := fmt.Sprintf("https://%s/api/v1/user", utils.OpenAPIHost)
+	URL := fmt.Sprintf("%s/api/v1/user", viper.GetString(types.CfgKeyOpenAPIServer))
 	req, err := utils.NewFullRequest(ctx, URL, http.MethodGet, map[string]string{
 		"Authorization": "Bearer " + token,
 	}, "")

@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"strings"
 
+	viper "github.com/apecloud/kubeblocks/pkg/viperx"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -33,6 +34,7 @@ import (
 	"k8s.io/kubectl/pkg/util/templates"
 
 	"github.com/apecloud/kbcli/pkg/printer"
+	"github.com/apecloud/kbcli/pkg/types"
 )
 
 var organizationExample = templates.Examples(`
@@ -47,7 +49,6 @@ var organizationExample = templates.Examples(`
 `)
 
 const (
-	APIURL  = "https://cloudapi.apecloud.cn"
 	APIPath = "api/v1"
 )
 
@@ -198,7 +199,7 @@ func (o *OrganizationOption) complete(args []string) error {
 	if o.Organization == nil {
 		o.Organization = &CloudOrganization{
 			Token:   token,
-			APIURL:  APIURL,
+			APIURL:  viper.GetString(types.CfgKeyOpenAPIServer),
 			APIPath: APIPath,
 		}
 	}

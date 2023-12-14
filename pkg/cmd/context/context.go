@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package context
 
 import (
+	viper "github.com/apecloud/kubeblocks/pkg/viperx"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
@@ -27,6 +28,7 @@ import (
 	"k8s.io/kubectl/pkg/util/templates"
 
 	"github.com/apecloud/kbcli/pkg/cmd/organization"
+	"github.com/apecloud/kbcli/pkg/types"
 )
 
 var contextExample = templates.Examples(`
@@ -171,7 +173,7 @@ func (o *ContextOptions) complete(args []string) error {
 				Token:        token,
 				OrgName:      currentOrgAndContext.CurrentOrganization,
 				IOStreams:    o.IOStreams,
-				APIURL:       organization.APIURL,
+				APIURL:       viper.GetString(types.CfgKeyOpenAPIServer),
 				APIPath:      organization.APIPath,
 				OutputFormat: o.OutputFormat,
 			}
