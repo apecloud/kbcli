@@ -256,7 +256,7 @@ func initConfig() {
 		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
 	}
 
-	//cloud
+	// cloud
 	viper.SetDefault(types.CfgKeyOpenAPIServer, "https://cloudapi.apecloud.cn")
 	viper.SetDefault(types.CfgKeyAuthURL, "https://apecloud.authing.cn/oidc")
 	viper.SetDefault(types.CfgKeyClientID, "64e42ca02df49bffa50719a9")
