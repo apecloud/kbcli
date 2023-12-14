@@ -63,9 +63,9 @@ kbcli [flags]
 * [kbcli cluster](kbcli_cluster.md)	 - Cluster command.
 * [kbcli clusterdefinition](kbcli_clusterdefinition.md)	 - ClusterDefinition command.
 * [kbcli clusterversion](kbcli_clusterversion.md)	 - ClusterVersion command.
-* [kbcli context](kbcli_context.md)	 - kbcli context allows you to manage cloud context. This command is currently only applicable to cloud, and currently does not support switching the context of the local k8s cluster.
 * [kbcli dashboard](kbcli_dashboard.md)	 - List and open the KubeBlocks dashboards.
 * [kbcli dataprotection](kbcli_dataprotection.md)	 - Data protection command.
+* [kbcli environment](kbcli_environment.md)	 - kbcli environment allows you to manage cloud environment. This command is currently only applicable to cloud, and currently does not support switching the environment of the local k8s cluster.
 * [kbcli fault](kbcli_fault.md)	 - Inject faults to pod.
 * [kbcli infra](kbcli_infra.md)	 - infra command
 * [kbcli kubeblocks](kbcli_kubeblocks.md)	 - KubeBlocks operation commands.
