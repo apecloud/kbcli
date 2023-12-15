@@ -48,9 +48,9 @@ options: {
 		},
 	]
 	params: [
-	  ...{
-	    [string]: {string | null}
-	  },
+		...{
+			[string]: {string | null}
+		},
 	]
 	...
 }
@@ -72,6 +72,10 @@ content: {
 			name: options.opsRequestName
 		}
 		namespace: options.namespace
+		labels: {
+			"app.kubernetes.io/instance":   options.name
+			"app.kubernetes.io/managed-by": "kubeblocks"
+		}
 	}
 	spec: {
 		clusterRef:             options.name
@@ -200,10 +204,10 @@ content: {
 		}
 		if options.type == "Custom" {
 			customSpec: {
-				componentName: options.component
+				componentName:    options.component
 				opsDefinitionRef: options.opsDefinitionName
-				params: options.params
-		   }
-	    }
+				params:           options.params
+			}
+		}
 	}
 }
