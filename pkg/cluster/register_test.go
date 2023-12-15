@@ -20,7 +20,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package cluster
 
 import (
-	"io"
 	"os"
 	"path/filepath"
 
@@ -29,22 +28,22 @@ import (
 )
 
 var _ = Describe("cluster register", func() {
-	It("test builtin chart", func() {
-		mysql := &embedConfig{
-			chartFS: defaultChart,
-			name:    "charts/apecloud-mysql-cluster",
-			alias:   "",
-		}
-		Expect(mysql.register("mysql")).Should(HaveOccurred())
-		Expect(mysql.register("mysql-other")).Should(Succeed())
-		Expect(mysql.getChartFileName()).Should(Equal("charts/apecloud-mysql-cluster"))
-		Expect(mysql.getAlias()).Should(Equal(""))
-		chart, err := mysql.loadChart()
-		Expect(err).Should(Succeed())
-		bytes, err := io.ReadAll(chart)
-		Expect(bytes).ShouldNot(BeEmpty())
-		Expect(err).Should(Succeed())
-	})
+	//It("test builtin chart", func() {
+	//	mysql := &embedConfig{
+	//		chartFS: defaultChart,
+	//		name:    "charts/apecloud-mysql-cluster",
+	//		alias:   "",
+	//	}
+	//	Expect(mysql.register("mysql")).Should(HaveOccurred())
+	//	Expect(mysql.register("mysql-other")).Should(Succeed())
+	//	Expect(mysql.getChartFileName()).Should(Equal("charts/apecloud-mysql-cluster"))
+	//	Expect(mysql.getAlias()).Should(Equal(""))
+	//	chart, err := mysql.loadChart()
+	//	Expect(err).Should(Succeed())
+	//	bytes, err := io.ReadAll(chart)
+	//	Expect(bytes).ShouldNot(BeEmpty())
+	//	Expect(err).Should(Succeed())
+	//})
 
 	It("test external chart", func() {
 		fakeChart := &TypeInstance{

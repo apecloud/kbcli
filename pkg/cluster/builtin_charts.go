@@ -72,7 +72,8 @@ var (
 	//llmChart embed.FS
 	////go:embed charts/xinference-cluster.tgz
 	//xinferenceChart embed.FS
-	//go:embed charts
+	// must add all: to include files start with _, such as _helpers.tpl
+	//go:embed all:charts
 	defaultChart embed.FS
 )
 
