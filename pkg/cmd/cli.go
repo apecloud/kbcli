@@ -250,7 +250,6 @@ func initConfig() {
 	viper.SetDefault(types.CfgKeyClusterDefaultMemory, "1Gi")
 
 	viper.SetDefault(types.CfgKeyHelmRepoURL, "")
-	viper.SetDefault(types.CfgKeyImageRegistry, "infracreate-registry.cn-zhangjiakou.cr.aliyuncs.com")
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())

@@ -58,8 +58,6 @@ const (
 	// DefaultIndexName defines the kbcli addon default index name
 	DefaultIndexName = "kubeblocks"
 
-	// PrivateProvider define the private addon provider means apecloud manage the addon image
-	PrivateProvider = "apecloud"
 	// DefaultNamespace is the namespace where kubeblocks is installed if
 	// no other namespace is specified
 	DefaultNamespace = "kb-system"

@@ -704,9 +704,7 @@ func (o *addonCmdOpts) buildHelmPatch(result map[string]interface{}) error {
 		helmSpec.InstallValues.SetValues = o.addonEnableFlags.SetValues
 	}
 	// set resource registry
-	if strings.ToLower(o.addon.Labels[types.ProviderLabelKey]) == types.PrivateProvider || strings.ToLower(o.addon.Labels[types.AddonProviderLabelKey]) == types.PrivateProvider {
-		helmSpec.InstallValues.SetValues = append(helmSpec.InstallValues.SetValues, fmt.Sprintf("%s=%s", types.ImageRegistryKey, viper.Get(types.CfgKeyImageRegistry)))
-	}
+	helmSpec.InstallValues.SetValues = append(helmSpec.InstallValues.SetValues, fmt.Sprintf("%s=%s", types.ImageRegistryKey, viper.Get(types.CfgKeyImageRegistry)))
 
 	b, err := json.Marshal(&helmSpec)
 	if err != nil {
