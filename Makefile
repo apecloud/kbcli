@@ -209,18 +209,18 @@ endif
 
 .PHONY: build-kbcli-embed-chart
 build-kbcli-embed-chart: helmtool fetch-addons create-kbcli-embed-charts-dir \
-	build-single-kbcli-embed-chart.apecloud-mysql-cluster \
-	build-single-kbcli-embed-chart.redis-cluster \
-	build-single-kbcli-embed-chart.postgresql-cluster \
-	build-single-kbcli-embed-chart.kafka-cluster \
-	build-single-kbcli-embed-chart.mongodb-cluster \
-	build-single-kbcli-embed-chart.llm-cluster \
-	build-single-kbcli-embed-chart.xinference-cluster \
-	build-single-kbcli-embed-chart.neon-cluster \
-	build-single-kbcli-embed-chart.clickhouse-cluster \
-	build-single-kbcli-embed-chart.milvus-cluster \
-	build-single-kbcli-embed-chart.qdrant-cluster \
-	build-single-kbcli-embed-chart.weaviate-cluster
+#	build-single-kbcli-embed-chart.apecloud-mysql-cluster \
+#	build-single-kbcli-embed-chart.redis-cluster \
+#	build-single-kbcli-embed-chart.postgresql-cluster \
+#	build-single-kbcli-embed-chart.kafka-cluster \
+#	build-single-kbcli-embed-chart.mongodb-cluster \
+#	build-single-kbcli-embed-chart.llm-cluster \
+#	build-single-kbcli-embed-chart.xinference-cluster \
+#	build-single-kbcli-embed-chart.neon-cluster \
+#	build-single-kbcli-embed-chart.clickhouse-cluster \
+#	build-single-kbcli-embed-chart.milvus-cluster \
+#	build-single-kbcli-embed-chart.qdrant-cluster \
+#	build-single-kbcli-embed-chart.weaviate-cluster
 
 .PHONY: kbcli
 kbcli: build-checks kbcli-fast ## Build bin/kbcli.
