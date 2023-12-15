@@ -58,92 +58,120 @@ func (e *embedConfig) getChartFileName() string {
 
 var (
 	// run `make generate` to generate this embed file
-	//go:embed charts/apecloud-mysql-cluster.tgz
-	mysqlChart embed.FS
-	//go:embed charts/postgresql-cluster.tgz
-	postgresqlChart embed.FS
-	//go:embed charts/kafka-cluster.tgz
-	kafkaChart embed.FS
-	//go:embed charts/redis-cluster.tgz
-	redisChart embed.FS
-	//go:embed charts/mongodb-cluster.tgz
-	mongodbChart embed.FS
-	//go:embed charts/llm-cluster.tgz
-	llmChart embed.FS
-	//go:embed charts/xinference-cluster.tgz
-	xinferenceChart embed.FS
+	////go:embed charts/apecloud-mysql-cluster.tgz
+	//mysqlChart embed.FS
+	////go:embed charts/postgresql-cluster.tgz
+	//postgresqlChart embed.FS
+	////go:embed charts/kafka-cluster.tgz
+	//kafkaChart embed.FS
+	////go:embed charts/redis-cluster.tgz
+	//redisChart embed.FS
+	////go:embed charts/mongodb-cluster.tgz
+	//mongodbChart embed.FS
+	////go:embed charts/llm-cluster.tgz
+	//llmChart embed.FS
+	////go:embed charts/xinference-cluster.tgz
+	//xinferenceChart embed.FS
 	//go:embed charts
 	defaultChart embed.FS
 )
 
+var builtinClusterTypes = []ClusterType{
+	"mysql",
+	"postgresql",
+	"kafka",
+	"redis",
+	"mongodb",
+	"llm",
+	"xinference",
+}
+
+var builtinChartMap = map[ClusterType]string{
+	"mysql": "apecloud-mysql",
+}
+
 func IsbuiltinCharts(chart string) bool {
-	return chart == "mysql" || chart == "postgresql" || chart == "kafka" || chart == "redis" || chart == "mongodb" || chart == "llm"
+	for _, c := range builtinClusterTypes {
+		if chart == string(c) {
+			return true
+		}
+	}
+	return false
+}
+
+func getChartName(t ClusterType) string {
+	name, ok := builtinChartMap[t]
+	if !ok {
+		// if not found in map, return original name
+		return string(t)
+	}
+	return name
 }
 
 // internal_chart registers embed chart
 
 func init() {
 
-	mysql := &embedConfig{
-		chartFS: mysqlChart,
-		name:    "apecloud-mysql-cluster.tgz",
-		alias:   "",
-	}
-	if err := mysql.register("mysql"); err != nil {
-		fmt.Println(err.Error())
-	}
-
-	postgresql := &embedConfig{
-		chartFS: postgresqlChart,
-		name:    "postgresql-cluster.tgz",
-		alias:   "",
-	}
-	if err := postgresql.register("postgresql"); err != nil {
-		fmt.Println(err.Error())
-	}
-
-	kafka := &embedConfig{
-		chartFS: kafkaChart,
-		name:    "kafka-cluster.tgz",
-		alias:   "",
-	}
-	if err := kafka.register("kafka"); err != nil {
-		fmt.Println(err.Error())
-	}
-
-	redis := &embedConfig{
-		chartFS: redisChart,
-		name:    "redis-cluster.tgz",
-		alias:   "",
-	}
-	if err := redis.register("redis"); err != nil {
-		fmt.Println(err.Error())
-	}
-
-	mongodb := &embedConfig{
-		chartFS: mongodbChart,
-		name:    "mongodb-cluster.tgz",
-		alias:   "",
-	}
-	if err := mongodb.register("mongodb"); err != nil {
-		fmt.Println(err.Error())
-	}
-
-	llm := &embedConfig{
-		chartFS: llmChart,
-		name:    "llm-cluster.tgz",
-		alias:   "",
-	}
-	if err := llm.register("llm"); err != nil {
-		fmt.Println(err.Error())
-	}
-
-	xinference := &embedConfig{
-		chartFS: xinferenceChart,
-		name:    "xinference-cluster.tgz",
-		alias:   "",
-	}
-	if err := xinference.register("xinference"); err != nil {
-		fmt.Println(err.Error())
-	}
+	//mysql := &embedConfig{
+	//	chartFS: mysqlChart,
+	//	name:    "apecloud-mysql-cluster.tgz",
+	//	alias:   "",
+	//}
+	//if err := mysql.register("mysql"); err != nil {
+	//	fmt.Println(err.Error())
+	//}
+	//
+	//postgresql := &embedConfig{
+	//	chartFS: postgresqlChart,
+	//	name:    "postgresql-cluster.tgz",
+	//	alias:   "",
+	//}
+	//if err := postgresql.register("postgresql"); err != nil {
+	//	fmt.Println(err.Error())
+	//}
+	//
+	//kafka := &embedConfig{
+	//	chartFS: kafkaChart,
+	//	name:    "kafka-cluster.tgz",
+	//	alias:   "",
+	//}
+	//if err := kafka.register("kafka"); err != nil {
+	//	fmt.Println(err.Error())
+	//}
+	//
+	//redis := &embedConfig{
+	//	chartFS: redisChart,
+	//	name:    "redis-cluster.tgz",
+	//	alias:   "",
+	//}
+	//if err := redis.register("redis"); err != nil {
+	//	fmt.Println(err.Error())
+	//}
+	//
+	//mongodb := &embedConfig{
+	//	chartFS: mongodbChart,
+	//	name:    "mongodb-cluster.tgz",
+	//	alias:   "",
+	//}
+	//if err := mongodb.register("mongodb"); err != nil {
+	//	fmt.Println(err.Error())
+	//}
+	//
+	//llm := &embedConfig{
+	//	chartFS: llmChart,
+	//	name:    "llm-cluster.tgz",
+	//	alias:   "",
+	//}
+	//if err := llm.register("llm"); err != nil {
+	//	fmt.Println(err.Error())
+	//}
+	//
+	//xinference := &embedConfig{
+	//	chartFS: xinferenceChart,
+	//	name:    "xinference-cluster.tgz",
+	//	alias:   "",
+	//}
+	//if err := xinference.register("xinference"); err != nil {
+	//	fmt.Println(err.Error())
+	//}
 }

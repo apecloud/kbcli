@@ -25,11 +25,9 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
-	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/chartutil"
 	"helm.sh/helm/v3/pkg/releaseutil"
 	"k8s.io/apimachinery/pkg/util/json"
@@ -219,22 +217,14 @@ func ValidateValues(c *ChartInfo, values map[string]interface{}) error {
 }
 
 func loadHelmChart(ci *ChartInfo, t ClusterType) error {
-	// cf references cluster config
-	cf, ok := ClusterTypeCharts[t]
-	if !ok {
-		cf = &embedConfig{
-			chartFS: defaultChart,
-			name:    fmt.Sprintf("%s-cluster.tgz", t),
-			alias:   "",
-		}
+	chartName := getChartName(t)
+	cf := &embedConfig{
+		chartFS: defaultChart,
+		name:    fmt.Sprintf("charts/%s-cluster", chartName),
+		alias:   "",
 	}
-	file, err := cf.loadChart()
-	if err != nil {
-		return err
-	}
-	defer file.Close()
 
-	c, err := loader.LoadArchive(file)
+	c, err := helm.LoadChartFromSource(defaultChart, fmt.Sprintf("charts/%s-cluster", chartName))
 	if err != nil {
 		if err == gzip.ErrHeader {
 			return fmt.Errorf("file '%s' does not appear to be a valid chart file (details: %s)", cf.getChartFileName(), err)
@@ -242,7 +232,7 @@ func loadHelmChart(ci *ChartInfo, t ClusterType) error {
 	}
 
 	if c == nil {
-		return fmt.Errorf("failed to load cluster helm chart %s", t)
+		return fmt.Errorf("failed to load cluster helm chart %s", chartName)
 	}
 
 	ci.Chart = c
@@ -251,7 +241,7 @@ func loadHelmChart(ci *ChartInfo, t ClusterType) error {
 }
 
 func SupportedTypes() []ClusterType {
-	types := maps.Keys(ClusterTypeCharts)
+	types := builtinClusterTypes
 	slices.SortFunc(types, func(i, j ClusterType) bool {
 		return i.String() < j.String()
 	})
