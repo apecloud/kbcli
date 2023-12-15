@@ -108,6 +108,7 @@ const (
 	ResourceOpsRequests                 = "opsrequests"
 	ResourceOpsDefinitions              = "opsdefinitions"
 	ResourceConfigConstraintVersions    = "configconstraints"
+	ResourceConfigurationVersions       = "configurations"
 	ResourceComponentResourceConstraint = "componentresourceconstraints"
 	ResourceComponentClassDefinition    = "componentclassdefinitions"
 	KindCluster                         = "Cluster"
@@ -318,6 +319,10 @@ func BackupRepoGVR() schema.GroupVersionResource {
 
 func RestoreGVR() schema.GroupVersionResource {
 	return schema.GroupVersionResource{Group: DPAPIGroup, Version: DPAPIVersion, Resource: ResourceRestores}
+}
+
+func ConfigurationGVR() schema.GroupVersionResource {
+	return schema.GroupVersionResource{Group: AppsAPIGroup, Version: DPAPIVersion, Resource: ResourceConfigurationVersions}
 }
 
 func AddonGVR() schema.GroupVersionResource {
