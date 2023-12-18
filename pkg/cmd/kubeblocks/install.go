@@ -24,6 +24,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -32,6 +33,7 @@ import (
 	"github.com/replicatedhq/troubleshoot/pkg/preflight"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
 	"golang.org/x/exp/maps"
 	"helm.sh/helm/v3/pkg/cli/values"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -46,7 +48,7 @@ import (
 	"k8s.io/kubectl/pkg/util/templates"
 
 	extensionsv1alpha1 "github.com/apecloud/kubeblocks/apis/extensions/v1alpha1"
-	viper "github.com/apecloud/kubeblocks/pkg/viperx"
+	viperx "github.com/apecloud/kubeblocks/pkg/viperx"
 
 	"github.com/apecloud/kbcli/pkg/spinner"
 	"github.com/apecloud/kbcli/pkg/types"
@@ -292,10 +294,25 @@ func (o *InstallOptions) Install() error {
 		return err
 	}
 	// save KB image.registry config
+	writeImageRegistryKey := func(registry string) error {
+		viperx.Set(types.CfgKeyImageRegistry, registry)
+		v := viperx.GetViper()
+		err := v.WriteConfig()
+		if errors.As(err, &viper.ConfigFileNotFoundError{}) {
+			dir, err := util.GetCliHomeDir()
+			if err != nil {
+				return err
+			}
+			return viper.WriteConfigAs(filepath.Join(dir, "config.yaml"))
+		}
+		return err
+	}
+
 	for _, s := range o.ValueOpts.Values {
 		if split := strings.Split(s, "="); split[0] == types.ImageRegistryKey && len(split) == 2 {
-			viper.Set(types.CfgKeyImageRegistry, split[1])
-			break
+			if err := writeImageRegistryKey(split[1]); err != nil {
+				return err
+			}
 		}
 	}
 
