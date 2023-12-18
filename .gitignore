@@ -16,8 +16,6 @@ bin
 testbin/*
 __debug_bin
 
-pkg/cluster/charts/*.tgz
-
 output
 helm-output
 
@@ -54,8 +52,8 @@ bin/
 tmp/
 
 # cli embed chart directory
-# exclude embed charts for go package
-!pkg/cluster/charts/*.tgz
+# exclude embed charts for go package, such as kblib
+!pkg/cluster/charts/**/*.tgz
 
 # ignore the addons that clone from apecloud/kubeblocks-addons
 addons/
