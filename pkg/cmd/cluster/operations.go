@@ -33,7 +33,6 @@ import (
 	"golang.org/x/exp/slices"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -1046,7 +1045,7 @@ func (o *customOperations) parseOpsDefinitionAndParams(cmd *cobra.Command, args 
 		return fmt.Errorf("please specify the custom ops which you want to do")
 	}
 	_ = flags.NewTmpFlagSet()
-	return flags.BuildFlagsWithOpenAPISchema(cmd, args, func() (*v1.JSONSchemaProps, error) {
+	return flags.BuildFlagsWithOpenAPISchema(cmd, args, func() (*apiextensionsv1.JSONSchemaProps, error) {
 		o.OpsDefinitionName = args[0]
 		// Get ops Definition from API server
 		opsDef := &appsv1alpha1.OpsDefinition{}
