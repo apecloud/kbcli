@@ -3,4 +3,4 @@ dependencies:
   repository: file://../kblib
   version: 0.1.0
 digest: sha256:6894d645e270bae072e3334549187801abc343630044c9da70e7a22e2ebfc55b
-generated: "2023-12-14T18:18:23.429917+08:00"
+generated: "2023-12-15T18:19:53.704343+08:00"

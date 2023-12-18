@@ -207,8 +207,12 @@ else
 endif
 	mv $(chart)-*.tgz pkg/cluster/charts/$(chart).tgz
 
+cp-embed-charts:
+	cp -r addons/addons/*-cluster pkg/cluster/charts/
+
 .PHONY: build-kbcli-embed-chart
 build-kbcli-embed-chart: helmtool fetch-addons create-kbcli-embed-charts-dir \
+    cp-embed-charts
 #	build-single-kbcli-embed-chart.apecloud-mysql-cluster \
 #	build-single-kbcli-embed-chart.redis-cluster \
 #	build-single-kbcli-embed-chart.postgresql-cluster \
