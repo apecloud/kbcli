@@ -207,24 +207,25 @@ else
 endif
 	mv $(chart)-*.tgz pkg/cluster/charts/$(chart).tgz
 
-cp-embed-charts:
-	cp -r addons/addons/*-cluster pkg/cluster/charts/
+cp-embed-charts.%: chart=$(word 2,$(subst ., ,$@))
+	# cp -r addons/addons/*-cluster pkg/cluster/charts/
+cp-embed-charts.%:
+	cp -r addons/addons/$(chart) pkg/cluster/charts/
 
 .PHONY: build-kbcli-embed-chart
 build-kbcli-embed-chart: helmtool fetch-addons create-kbcli-embed-charts-dir \
-    cp-embed-charts
-#	build-single-kbcli-embed-chart.apecloud-mysql-cluster \
-#	build-single-kbcli-embed-chart.redis-cluster \
-#	build-single-kbcli-embed-chart.postgresql-cluster \
-#	build-single-kbcli-embed-chart.kafka-cluster \
-#	build-single-kbcli-embed-chart.mongodb-cluster \
-#	build-single-kbcli-embed-chart.llm-cluster \
-#	build-single-kbcli-embed-chart.xinference-cluster \
-#	build-single-kbcli-embed-chart.neon-cluster \
-#	build-single-kbcli-embed-chart.clickhouse-cluster \
-#	build-single-kbcli-embed-chart.milvus-cluster \
-#	build-single-kbcli-embed-chart.qdrant-cluster \
-#	build-single-kbcli-embed-chart.weaviate-cluster
+	cp-embed-charts.apecloud-mysql-cluster \
+	cp-embed-charts.redis-cluster \
+	cp-embed-charts.postgresql-cluster \
+	cp-embed-charts.kafka-cluster \
+	cp-embed-charts.mongodb-cluster \
+	cp-embed-charts.llm-cluster \
+	cp-embed-charts.xinference-cluster \
+	cp-embed-charts.neon-cluster \
+	cp-embed-charts.clickhouse-cluster \
+	cp-embed-charts.milvus-cluster \
+	cp-embed-charts.qdrant-cluster \
+	cp-embed-charts.weaviate-cluster
 
 .PHONY: kbcli
 kbcli: build-checks kbcli-fast ## Build bin/kbcli.
