@@ -603,7 +603,7 @@ func NewRestartCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 }
 
 var upgradeExample = templates.Examples(`
-		# upgrade the cluster to the target version 
+		# upgrade the cluster to the target version
 		kbcli cluster upgrade mycluster --cluster-version=ac-mysql-8.0.30
 `)
 
@@ -632,7 +632,7 @@ func NewUpgradeCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 
 var verticalScalingExample = templates.Examples(`
 		# scale the computing resources of specified components, separate with commas for multiple components
-		kbcli cluster vscale mycluster --components=mysql --cpu=500m --memory=500Mi 
+		kbcli cluster vscale mycluster --components=mysql --cpu=500m --memory=500Mi
 
 		# scale the computing resources of specified components by class, run command 'kbcli class list --cluster-definition cluster-definition-name' to get available classes
 		kbcli cluster vscale mycluster --components=mysql --class=general-2c4g
@@ -734,7 +734,7 @@ var (
 
 		# Expose a cluster to public internet
 		kbcli cluster expose mycluster --type internet --enable=true
-		
+
 		# Stop exposing a cluster
 		kbcli cluster expose mycluster --type vpc --enable=false
 	`)

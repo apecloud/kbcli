@@ -59,6 +59,7 @@ func GetSimpleInstanceInfosForComponent(dynamic dynamic.Interface, name, compone
 }
 
 // getInstancesInfoFromCluster gets instances info from cluster status
+// Deprecated: getInstanceInfoFromStatus is deprecated. getInstanceInfoByList should be used instead.
 func getInstanceInfoFromStatus(dynamic dynamic.Interface, name, componentName, namespace string) []*InstanceInfo {
 	var infos []*InstanceInfo
 	cluster, err := GetClusterByName(dynamic, name, namespace)
