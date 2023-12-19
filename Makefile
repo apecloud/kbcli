@@ -205,7 +205,13 @@ ifeq ($(VERSION), latest)
 else
 	$(HELM) package addons/addons/$(chart) --version $(VERSION)
 endif
-	mv $(chart)-*.tgz pkg/cluster/charts/$(chart).tgz
+	- bash -c "diff <($(HELM) template $(chart)-*.tgz) <($(HELM) template pkg/cluster/charts/$(chart).tgz)" > chart.diff
+	@if [ -s chart.diff ]; then \
+ 	  mv $(chart)-*.tgz pkg/cluster/charts/$(chart).tgz; \
+ 	else \
+ 	  rm $(chart)-*.tgz; \
+	fi
+	rm chart.diff
 
 .PHONY: build-kbcli-embed-chart
 build-kbcli-embed-chart: helmtool fetch-addons create-kbcli-embed-charts-dir \
