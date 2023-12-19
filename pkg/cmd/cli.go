@@ -252,7 +252,7 @@ func initConfig() {
 	viper.SetDefault(types.CfgKeyHelmRepoURL, "")
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
-		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
+		klog.V(2).Infof("Using config file: %s", viper.ConfigFileUsed())
 	}
 
 	// cloud
