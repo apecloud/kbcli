@@ -33,7 +33,6 @@ import (
 	"golang.org/x/exp/slices"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -604,7 +603,7 @@ func NewRestartCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 }
 
 var upgradeExample = templates.Examples(`
-		# upgrade the cluster to the target version 
+		# upgrade the cluster to the target version
 		kbcli cluster upgrade mycluster --cluster-version=ac-mysql-8.0.30
 `)
 
@@ -633,7 +632,7 @@ func NewUpgradeCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 
 var verticalScalingExample = templates.Examples(`
 		# scale the computing resources of specified components, separate with commas for multiple components
-		kbcli cluster vscale mycluster --components=mysql --cpu=500m --memory=500Mi 
+		kbcli cluster vscale mycluster --components=mysql --cpu=500m --memory=500Mi
 
 		# scale the computing resources of specified components by class, run command 'kbcli class list --cluster-definition cluster-definition-name' to get available classes
 		kbcli cluster vscale mycluster --components=mysql --class=general-2c4g
@@ -735,7 +734,7 @@ var (
 
 		# Expose a cluster to public internet
 		kbcli cluster expose mycluster --type internet --enable=true
-		
+
 		# Stop exposing a cluster
 		kbcli cluster expose mycluster --type vpc --enable=false
 	`)
@@ -1046,7 +1045,7 @@ func (o *customOperations) parseOpsDefinitionAndParams(cmd *cobra.Command, args 
 		return fmt.Errorf("please specify the custom ops which you want to do")
 	}
 	_ = flags.NewTmpFlagSet()
-	return flags.BuildFlagsWithOpenAPISchema(cmd, args, func() (*v1.JSONSchemaProps, error) {
+	return flags.BuildFlagsWithOpenAPISchema(cmd, args, func() (*apiextensionsv1.JSONSchemaProps, error) {
 		o.OpsDefinitionName = args[0]
 		// Get ops Definition from API server
 		opsDef := &appsv1alpha1.OpsDefinition{}
