@@ -162,7 +162,7 @@ func (o *upgradeOption) Run() error {
 	}
 	_, err = o.Dynamic.Resource(o.GVR).Patch(context.Background(), o.name, ktypes.MergePatchType, newData, metav1.PatchOptions{})
 	if err == nil {
-		fmt.Printf("Addon %s-%s upgrade successed.", o.name, o.version)
+		fmt.Printf("Addon %s-%s upgrade successed.\n", o.name, o.version)
 	}
 	return err
 }

@@ -251,7 +251,7 @@ func deleteIndex(index string) error {
 		if err = os.RemoveAll(indexDir); err != nil {
 			return err
 		}
-		fmt.Printf("Index \"%s\" have been deleted", index)
+		fmt.Printf("Index \"%s\" have been deleted\n", index)
 		return nil
 	} else {
 		if os.IsNotExist(err) {

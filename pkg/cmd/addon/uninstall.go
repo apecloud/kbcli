@@ -84,6 +84,6 @@ func (o *uninstallOption) Run() error {
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(o.Out, "%s uninstall succssed", o.name)
+	fmt.Fprintf(o.Out, "%s uninstall succssed\n", o.name)
 	return nil
 }
