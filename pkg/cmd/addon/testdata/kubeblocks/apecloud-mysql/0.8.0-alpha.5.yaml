@@ -6,8 +6,8 @@ metadata:
   labels:
     addon.kubeblocks.io/model: RDBMS
     addon.kubeblocks.io/provider: apecloud
-    app.kubernetes.io/name: apecloud-mysql
-    app.kubernetes.io/version: 0.8.0-alpha.5
+    addon.kubeblocks.io/name: apecloud-mysql
+    addon.kubeblocks.io/version: 0.8.0-alpha.5
   name: apecloud-mysql
 spec:
   defaultInstallValues:
