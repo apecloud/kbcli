@@ -34,7 +34,6 @@ import (
 	"k8s.io/klog/v2"
 
 	extensionsv1alpha1 "github.com/apecloud/kubeblocks/apis/extensions/v1alpha1"
-	"github.com/apecloud/kubeblocks/pkg/constant"
 
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/util"
@@ -76,8 +75,7 @@ func search(args []string, out io.Writer) error {
 		return nil
 	}
 	for _, res := range results {
-		label := res.addon.Labels
-		tbl.AddRow(res.addon.Name, label[constant.AppVersionLabelKey], res.index.name)
+		tbl.AddRow(res.addon.Name, getAddonVersion(res.addon), res.index.name)
 	}
 	tbl.Print()
 	return nil

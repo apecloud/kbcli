@@ -30,6 +30,7 @@ import (
 	"k8s.io/klog/v2"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 
+	"github.com/apecloud/kubeblocks/pkg/constant"
 	lorryutil "github.com/apecloud/kubeblocks/pkg/lorry/util"
 
 	"github.com/apecloud/kbcli/pkg/action"
@@ -122,9 +123,15 @@ func (o *AccountBaseOptions) Complete() error {
 	o.CharType = compInfo.ComponentDef.CharacterType
 
 	if len(o.PodName) == 0 {
-		if o.PodName, err = compInfo.InferPodName(); err != nil {
-			return err
+
+		// podName not set, find the default pod of cluster
+		infos := clusterutil.GetSimpleInstanceInfosForComponent(o.Dynamic, o.ClusterName, o.ComponentName, o.Namespace)
+		if len(infos) == 0 || infos[0].Name == constant.ComponentStatusDefaultPodName {
+			return fmt.Errorf("failed to find the default instance, please check cluster status")
 		}
+		// first element is the default instance to connect
+		o.PodName = infos[0].Name
+
 		// get pod by name
 		o.Pod, err = o.ExecOptions.Client.CoreV1().Pods(o.Namespace).Get(ctx, o.PodName, metav1.GetOptions{})
 		if err != nil {
