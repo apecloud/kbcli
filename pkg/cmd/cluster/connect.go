@@ -91,8 +91,12 @@ type ConnectOptions struct {
 	targetCluster    *appsv1alpha1.Cluster
 	targetClusterDef *appsv1alpha1.ClusterDefinition
 
-	userName   string
-	userPasswd string
+	// componentDefV2 refer to the *appsv1alpha1.Component
+	componentDefV2 *appsv1alpha1.ComponentDefinition
+
+	characterType string
+	userName      string
+	userPasswd    string
 
 	*action.ExecOptions
 }
@@ -233,8 +237,8 @@ func (o *ConnectOptions) complete() error {
 	}
 
 	// 2.3 get character type
-	if o.componentDef = o.targetClusterDef.GetComponentDefByName(o.component.ComponentDefRef); o.componentDef == nil {
-		return fmt.Errorf("failed to get component def :%s", o.component.ComponentDefRef)
+	if err = o.getClusterCharacterType(); err != nil {
+		return fmt.Errorf("failed to get component def form cluster definition and component def, %s", err.Error())
 	}
 
 	// 2.4. get pod to connect, make sure o.clusterName, o.componentName are set before this step
@@ -251,13 +255,9 @@ func (o *ConnectOptions) complete() error {
 
 // connect creates connection string and connects to cluster
 func (o *ConnectOptions) connect() error {
-	if o.componentDef == nil {
-		return fmt.Errorf("component def is not initialized")
-	}
-
 	var err error
 
-	if o.engine, err = register.NewClusterCommands(o.componentDef.CharacterType); err != nil {
+	if o.engine, err = register.NewClusterCommands(o.characterType); err != nil {
 		return err
 	}
 
@@ -288,6 +288,7 @@ func (o *ConnectOptions) getAuthInfo() (*engines.AuthInfo, error) {
 			WithClusterDef: true,
 			WithService:    true,
 			WithSecret:     true,
+			WithCompDef:    true,
 		},
 	}
 
@@ -296,7 +297,7 @@ func (o *ConnectOptions) getAuthInfo() (*engines.AuthInfo, error) {
 		return nil, err
 	}
 
-	if user, passwd, err := getUserAndPassword(objs.ClusterDef, objs.Secrets); err != nil {
+	if user, passwd, err := getUserAndPassword(objs.ClusterDef, o.componentDefV2, objs.Secrets); err != nil {
 		return nil, err
 	} else {
 		return &engines.AuthInfo{
@@ -344,7 +345,7 @@ func (o *ConnectOptions) getTargetPod() error {
 
 func (o *ConnectOptions) getConnectionInfo() (*engines.ConnectionInfo, error) {
 	// make sure component and componentDef are set before this step
-	if o.component == nil || o.componentDef == nil {
+	if o.component == nil && o.componentDef == nil {
 		return nil, fmt.Errorf("failed to get component or component def")
 	}
 
@@ -370,7 +371,7 @@ func (o *ConnectOptions) getConnectionInfo() (*engines.ConnectionInfo, error) {
 	info.ComponentName = o.componentName
 	info.HeadlessEndpoint = getOneHeadlessEndpoint(objs.ClusterDef, objs.Secrets)
 	// get username and password
-	if info.User, info.Password, err = getUserAndPassword(objs.ClusterDef, objs.Secrets); err != nil {
+	if info.User, info.Password, err = getUserAndPassword(objs.ClusterDef, o.componentDefV2, objs.Secrets); err != nil {
 		return nil, err
 	}
 	if !o.showPassword {
@@ -398,7 +399,7 @@ func (o *ConnectOptions) getConnectionInfo() (*engines.ConnectionInfo, error) {
 		// find no endpoints
 		return nil, fmt.Errorf("failed to find any cluster endpoints")
 	}
-	if o.engine, err = register.NewClusterCommands(o.componentDef.CharacterType); err != nil {
+	if o.engine, err = register.NewClusterCommands(o.characterType); err != nil {
 		return nil, err
 	}
 
@@ -407,7 +408,7 @@ func (o *ConnectOptions) getConnectionInfo() (*engines.ConnectionInfo, error) {
 
 // getUserAndPassword gets cluster user and password from secrets
 // TODO:@shanshanying, should use admin user and password. Use root credential for now.
-func getUserAndPassword(clusterDef *appsv1alpha1.ClusterDefinition, secrets *corev1.SecretList) (string, string, error) {
+func getUserAndPassword(clusterDef *appsv1alpha1.ClusterDefinition, compDef *appsv1alpha1.ComponentDefinition, secrets *corev1.SecretList) (string, string, error) {
 	var (
 		user, password = "", ""
 		err            error
@@ -435,20 +436,42 @@ func getUserAndPassword(clusterDef *appsv1alpha1.ClusterDefinition, secrets *cor
 	}
 
 	// now, we only use the first secret
-	var secret corev1.Secret
+	var secret *corev1.Secret
 	for i, s := range secrets.Items {
 		if strings.Contains(s.Name, "conn-credential") {
-			secret = secrets.Items[i]
+			secret = &secrets.Items[i]
 			break
 		}
 	}
-	user, err = getSecretVal(&secret, "username")
+	// 0.8 API connect
+	if secret == nil && compDef != nil {
+		for i := range compDef.Spec.SystemAccounts {
+			if compDef.Spec.SystemAccounts[i].InitAccount {
+				for j, s := range secrets.Items {
+					if strings.Contains(s.Name, compDef.Spec.SystemAccounts[j].Name) {
+						secret = &secrets.Items[j]
+						break
+					}
+				}
+			}
+			if secret != nil {
+				break
+			}
+		}
+		user, err = getSecretVal(secret, "username")
+		if err != nil {
+			return user, password, err
+		}
+		password, err = getSecretVal(secret, "password")
+		return user, password, err
+	}
+	user, err = getSecretVal(secret, "username")
 	if err != nil {
 		return user, password, err
 	}
 
 	passwordKey := getPasswordKey(clusterDef.Spec.ConnectionCredential)
-	password, err = getSecretVal(&secret, passwordKey)
+	password, err = getSecretVal(secret, passwordKey)
 	return user, password, err
 }
 
@@ -462,4 +485,23 @@ func getOneHeadlessEndpoint(clusterDef *appsv1alpha1.ClusterDefinition, secrets 
 		return ""
 	}
 	return string(val)
+}
+
+// getClusterCharacterType will get the cluster character type compatible with 0.7
+// If both componentDefRef and componentDef are provided, the componentDef will take precedence over componentDefRef.
+func (o *ConnectOptions) getClusterCharacterType() error {
+	if o.component.ComponentDef != "" {
+		o.componentDefV2 = &appsv1alpha1.ComponentDefinition{}
+		if err := util.GetK8SClientObject(o.Dynamic, o.componentDefV2, types.CompDefGVR(), "", o.component.ComponentDef); err != nil {
+			return err
+		}
+		o.characterType = o.componentDefV2.Spec.ServiceKind
+		return nil
+	}
+	o.componentDef = o.targetClusterDef.GetComponentDefByName(o.component.ComponentDefRef)
+	if o.componentDef == nil {
+		return fmt.Errorf("failed to get component def :%s", o.component.ComponentDefRef)
+	}
+	o.characterType = o.componentDef.CharacterType
+	return nil
 }

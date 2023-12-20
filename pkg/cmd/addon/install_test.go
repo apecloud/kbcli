@@ -64,7 +64,7 @@ var _ = Describe("index test", func() {
 		option.name = "not-existed"
 		Expect(option.Complete()).Should(HaveOccurred())
 
-		Expect(addDefaultIndex()).Should(BeNil())
+		Expect(addDefaultIndex()).Should(Succeed())
 		option.name = addonName
 		option.version = "0.7.0"
 		Expect(option.Complete()).Should(Succeed())
