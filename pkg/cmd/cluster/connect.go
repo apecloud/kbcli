@@ -458,6 +458,12 @@ func getUserAndPassword(clusterDef *appsv1alpha1.ClusterDefinition, compDef *app
 				break
 			}
 		}
+		user, err = getSecretVal(secret, "username")
+		if err != nil {
+			return user, password, err
+		}
+		password, err = getSecretVal(secret, "password")
+		return user, password, err
 	}
 	user, err = getSecretVal(secret, "username")
 	if err != nil {
