@@ -25,8 +25,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/apecloud/kubeblocks/pkg/constant"
-
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 )
 
@@ -75,7 +73,7 @@ var _ = Describe("search test", func() {
 			Expect(result[i].index.name).Should(Equal(expect[i].index))
 			Expect(result[i].addon.Name).Should(Equal(expect[i].addonName))
 			Expect(result[i].addon.Kind).Should(Equal(expect[i].kind))
-			Expect(result[i].addon.Labels[constant.AppVersionLabelKey]).Should(Equal(expect[i].version))
+			Expect(getAddonVersion(result[i].addon)).Should(Equal(expect[i].version))
 		}
 	})
 

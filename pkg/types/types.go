@@ -145,13 +145,20 @@ const (
 	ServiceHAVIPTypeAnnotationValue = "private-ip"
 	ServiceFloatingIPAnnotationKey  = "service.kubernetes.io/kubeblocks-havip-floating-ip"
 
-	ClassProviderLabelKey = "class.kubeblocks.io/provider"
-	AddonProviderLabelKey = "addon.kubeblocks.io/provider"
-	// ProviderLabelKey was used as the label for addon providers before version 0.8.0
-	ProviderLabelKey             = "kubeblocks.io/provider"
 	ReloadConfigMapAnnotationKey = "kubeblocks.io/reload-configmap" // mark an annotation to load configmap
 
 	KBVersionValidateAnnotationKey = "addon.kubeblocks.io/kubeblocks-version"
+)
+
+// Labels
+const (
+	ClassProviderLabelKey = "class.kubeblocks.io/provider"
+
+	AddonProviderLabelKey = "addon.kubeblocks.io/provider"
+	// ProviderLabelKey was used as the label for addon providers before version 0.8.0
+	ProviderLabelKey     = "kubeblocks.io/provider"
+	AddonVersionLabelKey = "addon.kubeblocks.io/version"
+	AddonNameLabelKey    = "addon.kubeblocks.io/name"
 )
 
 // DataProtection API group

@@ -37,7 +37,6 @@ import (
 	"k8s.io/kubectl/pkg/util/templates"
 
 	extensionsv1alpha1 "github.com/apecloud/kubeblocks/apis/extensions/v1alpha1"
-	"github.com/apecloud/kubeblocks/pkg/constant"
 
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
@@ -151,19 +150,12 @@ func (o *installOption) Complete() error {
 		return err
 	}
 
-	getVersion := func(item *extensionsv1alpha1.Addon) string {
-		if item.Labels == nil {
-			return ""
-		}
-		return item.Labels[constant.AppVersionLabelKey]
-	}
-
 	sort.Slice(addons, func(i, j int) bool {
-		vi, _ := semver.NewVersion(getVersion(addons[i].addon))
-		vj, _ := semver.NewVersion(getVersion(addons[j].addon))
+		vi, _ := semver.NewVersion(getAddonVersion(addons[i].addon))
+		vj, _ := semver.NewVersion(getAddonVersion(addons[j].addon))
 		return vi.GreaterThan(vj)
-
 	})
+
 	// descending order of versions
 	for _, item := range addons {
 		if item.index.name == o.index {
@@ -171,7 +163,7 @@ func (o *installOption) Complete() error {
 			if o.version == "" {
 				o.addon = item.addon
 				break
-			} else if o.version == getVersion(item.addon) {
+			} else if o.version == getAddonVersion(item.addon) {
 				o.addon = item.addon
 				break
 			}
@@ -215,7 +207,6 @@ It will automatically skip version checks, which may result in the cluster not r
 	}
 
 	return err
-
 }
 
 // Run will apply the addon.yaml to K8s

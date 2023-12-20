@@ -35,7 +35,6 @@ import (
 	"github.com/apecloud/kbcli/pkg/printer"
 
 	extensionsv1alpha1 "github.com/apecloud/kubeblocks/apis/extensions/v1alpha1"
-	"github.com/apecloud/kubeblocks/pkg/constant"
 
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
@@ -116,14 +115,14 @@ func (o *upgradeOption) Complete() error {
 	if err != nil {
 		return fmt.Errorf("addon %s not found. please use 'kbcli addon install %s' first", o.name, o.name)
 	}
-	o.currentVersion = addon.Labels[constant.AppVersionLabelKey]
+	o.currentVersion = getAddonVersion(&addon)
 	return nil
 }
 
 // Validate will check if the current version is already the latest version compared to installOption.Validate()
 func (o *upgradeOption) Validate() error {
 	if o.version == "" {
-		o.version = o.addon.Labels[constant.AppVersionLabelKey]
+		o.version = getAddonVersion(o.addon)
 	}
 	if !o.inplace && o.rename == "" {
 		o.rename = fmt.Sprintf("%s-%s", o.name, o.version)
