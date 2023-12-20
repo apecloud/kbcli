@@ -345,7 +345,7 @@ func (o *ConnectOptions) getTargetPod() error {
 
 func (o *ConnectOptions) getConnectionInfo() (*engines.ConnectionInfo, error) {
 	// make sure component and componentDef are set before this step
-	if o.component == nil || o.componentDef == nil {
+	if o.component == nil && o.componentDef == nil {
 		return nil, fmt.Errorf("failed to get component or component def")
 	}
 
