@@ -153,6 +153,9 @@ func (o *installOption) Complete() error {
 	sort.Slice(addons, func(i, j int) bool {
 		vi, _ := semver.NewVersion(getAddonVersion(addons[i].addon))
 		vj, _ := semver.NewVersion(getAddonVersion(addons[j].addon))
+		if vi == nil || vj == nil {
+			return false
+		}
 		return vi.GreaterThan(vj)
 	})
 
