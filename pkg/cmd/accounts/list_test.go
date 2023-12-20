@@ -118,7 +118,7 @@ var _ = Describe("List Account Options", func() {
 			Expect(o).ShouldNot(BeNil())
 			o.PodName = pods.Items[0].Name
 			o.ClusterName = clusterName
-			Expect(o.Complete(tf)).Should(Succeed())
+			Expect(o.Complete()).Should(Succeed())
 
 			Expect(o.Client).ShouldNot(BeNil())
 			Expect(o.Dynamic).ShouldNot(BeNil())

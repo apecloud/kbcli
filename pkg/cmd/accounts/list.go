@@ -27,13 +27,12 @@ import (
 	"k8s.io/klog/v2"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 
-	"github.com/spf13/cobra"
-
 	"github.com/apecloud/kubeblocks/pkg/lorry/client"
 )
 
 type ListUserOptions struct {
 	*AccountBaseOptions
+	UsersInfo []map[string]interface{}
 }
 
 func NewListUserOptions(f cmdutil.Factory, streams genericiooptions.IOStreams) *ListUserOptions {
@@ -45,11 +44,11 @@ func (o ListUserOptions) Validate(args []string) error {
 	return o.AccountBaseOptions.Validate(args)
 }
 
-func (o *ListUserOptions) Complete(f cmdutil.Factory) error {
-	return o.AccountBaseOptions.Complete(f)
+func (o *ListUserOptions) Complete() error {
+	return o.AccountBaseOptions.Complete()
 }
 
-func (o *ListUserOptions) Run(cmd *cobra.Command, f cmdutil.Factory, streams genericiooptions.IOStreams) error {
+func (o *ListUserOptions) Run() error {
 	klog.V(1).Info(fmt.Sprintf("connect to cluster %s, component %s, instance %s\n", o.ClusterName, o.ComponentName, o.PodName))
 	lorryClient, err := client.NewK8sExecClientWithPod(o.Pod)
 	if err != nil {
@@ -61,6 +60,17 @@ func (o *ListUserOptions) Run(cmd *cobra.Command, f cmdutil.Factory, streams gen
 		o.printGeneralInfo("fail", err.Error())
 		return err
 	}
+	o.UsersInfo = users
 	o.printUserInfo(users)
+	return nil
+}
+
+func (o *ListUserOptions) Exec() error {
+	if err := o.Complete(); err != nil {
+		return err
+	}
+	if err := o.Run(); err != nil {
+		return err
+	}
 	return nil
 }

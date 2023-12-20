@@ -92,20 +92,21 @@ var _ = Describe("Delete Account Options", func() {
 			o := NewDeleteUserOptions(tf, streams)
 			Expect(o).ShouldNot(BeNil())
 			args := []string{}
-			Expect(o.Validate(args)).Should(MatchError(errClusterNameorInstName))
+			Expect(o.AccountBaseOptions.Validate(args)).Should(MatchError(errClusterNameorInstName))
 
 			// add one element
 			By("add one more args, should fail")
 			args = []string{clusterName}
-			Expect(o.Validate(args)).Should(MatchError(errMissingUserName))
+			Expect(o.AccountBaseOptions.Validate(args)).Should(Succeed())
+			Expect(o.Validate()).Should(MatchError(errMissingUserName))
 
 			// set user name
-			o.userName = "lilei"
+			o.UserName = "lilei"
 			_, _ = in.Write([]byte("hanmeimei\n"))
-			Expect(o.Validate(args)).Should(HaveOccurred())
+			Expect(o.Validate()).Should(HaveOccurred())
 			in.Reset()
-			_, _ = in.Write([]byte(o.userName + "\n"))
-			Expect(o.Validate(args)).Should(Succeed())
+			_, _ = in.Write([]byte(o.UserName + "\n"))
+			Expect(o.Validate()).Should(Succeed())
 		})
 
 		It("complete options", func() {
@@ -114,9 +115,9 @@ var _ = Describe("Delete Account Options", func() {
 
 			o.PodName = pods.Items[0].Name
 			o.ClusterName = clusterName
-			o.userName = "lily"
+			o.UserName = "lily"
 
-			Expect(o.Complete(tf)).Should(Succeed())
+			Expect(o.Complete()).Should(Succeed())
 		})
 	})
 })

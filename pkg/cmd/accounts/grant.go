@@ -36,8 +36,8 @@ import (
 
 type GrantOptions struct {
 	*AccountBaseOptions
-	userName string
-	roleName string
+	UserName string
+	RoleName string
 }
 
 func NewGrantOptions(f cmdutil.Factory, streams genericiooptions.IOStreams) *GrantOptions {
@@ -48,20 +48,17 @@ func NewGrantOptions(f cmdutil.Factory, streams genericiooptions.IOStreams) *Gra
 
 func (o *GrantOptions) AddFlags(cmd *cobra.Command) {
 	o.AccountBaseOptions.AddFlags(cmd)
-	cmd.Flags().StringVar(&o.userName, "name", "", "Required user name, please specify it.")
-	cmd.Flags().StringVarP(&o.roleName, "role", "r", "", "Role name should be one of [SUPERUSER, READWRITE, READONLY].")
+	cmd.Flags().StringVar(&o.UserName, "name", "", "Required user name, please specify it.")
+	cmd.Flags().StringVarP(&o.RoleName, "role", "r", "", "Role name should be one of [SUPERUSER, READWRITE, READONLY].")
 	_ = cmd.MarkFlagRequired("name")
 	_ = cmd.MarkFlagRequired("role")
 }
 
-func (o *GrantOptions) Validate(args []string) error {
-	if err := o.AccountBaseOptions.Validate(args); err != nil {
-		return err
-	}
-	if len(o.userName) == 0 {
+func (o *GrantOptions) Validate() error {
+	if len(o.UserName) == 0 {
 		return errMissingUserName
 	}
-	if len(o.roleName) == 0 {
+	if len(o.RoleName) == 0 {
 		return errMissingRoleName
 	}
 	if err := o.validRoleName(); err != nil {
@@ -72,32 +69,45 @@ func (o *GrantOptions) Validate(args []string) error {
 
 func (o *GrantOptions) validRoleName() error {
 	candidates := []string{string(lorryutil.SuperUserRole), string(lorryutil.ReadWriteRole), string(lorryutil.ReadOnlyRole)}
-	if slices.Contains(candidates, strings.ToLower(o.roleName)) {
+	if slices.Contains(candidates, strings.ToLower(o.RoleName)) {
 		return nil
 	}
 	return errInvalidRoleName
 }
 
-func (o *GrantOptions) Complete(f cmdutil.Factory) error {
+func (o *GrantOptions) Complete() error {
 	var err error
-	if err = o.AccountBaseOptions.Complete(f); err != nil {
+	if err = o.AccountBaseOptions.Complete(); err != nil {
 		return err
 	}
 	return err
 }
 
-func (o *GrantOptions) Run(cmd *cobra.Command, f cmdutil.Factory, streams genericiooptions.IOStreams) error {
+func (o *GrantOptions) Run() error {
 	klog.V(1).Info(fmt.Sprintf("connect to cluster %s, component %s, instance %s\n", o.ClusterName, o.ComponentName, o.PodName))
 	lorryClient, err := client.NewK8sExecClientWithPod(o.Pod)
 	if err != nil {
 		return err
 	}
 
-	err = lorryClient.GrantUserRole(context.Background(), o.userName, o.roleName)
+	err = lorryClient.GrantUserRole(context.Background(), o.UserName, o.RoleName)
 	if err != nil {
 		o.printGeneralInfo("fail", err.Error())
 		return err
 	}
 	o.printGeneralInfo("success", "")
+	return nil
+}
+
+func (o *GrantOptions) Exec() error {
+	if err := o.Validate(); err != nil {
+		return err
+	}
+	if err := o.Complete(); err != nil {
+		return err
+	}
+	if err := o.Run(); err != nil {
+		return err
+	}
 	return nil
 }

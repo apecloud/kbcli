@@ -89,21 +89,22 @@ var _ = Describe("Grant Account Options", func() {
 			o := NewGrantOptions(tf, streams)
 			Expect(o).ShouldNot(BeNil())
 			args := []string{}
-			Expect(o.Validate(args)).Should(MatchError(errClusterNameorInstName))
+			Expect(o.AccountBaseOptions.Validate(args)).Should(MatchError(errClusterNameorInstName))
 
 			// add one element
 			By("add one more args, should fail")
 			args = []string{"foo"}
-			Expect(o.Validate(args)).Should(MatchError(errMissingUserName))
+			Expect(o.AccountBaseOptions.Validate(args)).Should(Succeed())
+			Expect(o.Validate()).Should(MatchError(errMissingUserName))
 
-			o.userName = "foo"
-			Expect(o.Validate(args)).Should(MatchError(errMissingRoleName))
+			o.UserName = "foo"
+			Expect(o.Validate()).Should(MatchError(errMissingRoleName))
 
-			o.roleName = "bar"
-			Expect(o.Validate(args)).Should(MatchError(errInvalidRoleName))
+			o.RoleName = "bar"
+			Expect(o.Validate()).Should(MatchError(errInvalidRoleName))
 			for _, r := range []string{"readonly", "readwrite", "superuser"} {
-				o.roleName = r
-				Expect(o.Validate(args)).Should(Succeed())
+				o.RoleName = r
+				Expect(o.Validate()).Should(Succeed())
 			}
 		})
 
@@ -112,9 +113,9 @@ var _ = Describe("Grant Account Options", func() {
 			Expect(o).ShouldNot(BeNil())
 			o.PodName = pods.Items[0].Name
 			o.ClusterName = clusterName
-			o.userName = "alice"
-			o.roleName = "readonly"
-			Expect(o.Complete(tf)).Should(Succeed())
+			o.UserName = "alice"
+			o.RoleName = "readonly"
+			Expect(o.Complete()).Should(Succeed())
 
 			Expect(o.Client).ShouldNot(BeNil())
 			Expect(o.Dynamic).ShouldNot(BeNil())
