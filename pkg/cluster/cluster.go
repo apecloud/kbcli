@@ -57,6 +57,7 @@ type GetOptions struct {
 	WithPod            bool
 	WithEvent          bool
 	WithDataProtection bool
+	WithCompDef        bool
 }
 
 type ObjectsGetter struct {
@@ -71,6 +72,7 @@ func NewClusterObjects() *ClusterObjects {
 	return &ClusterObjects{
 		Cluster: &appsv1alpha1.Cluster{},
 		Nodes:   []*corev1.Node{},
+		CompDef: []*appsv1alpha1.ComponentDefinition{},
 	}
 }
 
@@ -255,6 +257,21 @@ func (o *ObjectsGetter) Get() (*ClusterObjects, error) {
 			sourceClusterUID := v.Labels[dptypes.ClusterUIDLabelKey]
 			if sourceClusterUID == "" || sourceClusterUID == string(objs.Cluster.UID) {
 				objs.Backups = append(objs.Backups, v)
+			}
+		}
+	}
+
+	if o.WithCompDef {
+		comps := []*appsv1alpha1.ComponentDefinition{}
+		if err = listResources(o.Dynamic, types.CompDefGVR(), "", metav1.ListOptions{}, &comps); err != nil {
+			return nil, err
+		}
+		for _, compSpec := range objs.Cluster.Spec.ComponentSpecs {
+			for _, comp := range comps {
+				if compSpec.ComponentDef == comp.Name {
+					objs.CompDef = append(objs.CompDef, comp)
+					break
+				}
 			}
 		}
 	}
