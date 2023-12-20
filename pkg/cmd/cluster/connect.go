@@ -91,7 +91,7 @@ type ConnectOptions struct {
 	targetCluster    *appsv1alpha1.Cluster
 	targetClusterDef *appsv1alpha1.ClusterDefinition
 
-	// componentV2 refer to the *appsv1alpha1.Component
+	// componentDefV2 refer to the *appsv1alpha1.Component
 	componentDefV2 *appsv1alpha1.ComponentDefinition
 
 	characterType string
