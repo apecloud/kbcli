@@ -147,8 +147,7 @@ func NewListAccountsCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *
 		ValidArgsFunction: util.ResourceNameCompletionFunc(f, types.ClusterGVR()),
 		Run: func(cmd *cobra.Command, args []string) {
 			cmdutil.CheckErr(o.Validate(args))
-			cmdutil.CheckErr(o.Complete(f))
-			cmdutil.CheckErr(o.Run(cmd, f, streams))
+			cmdutil.CheckErr(o.Exec())
 		},
 	}
 	o.AddFlags(cmd)
