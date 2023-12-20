@@ -119,7 +119,7 @@ var _ = Describe("Base Account Options", func() {
 			o.ClusterName = clusterName
 			Expect(o.ComponentName).Should(BeEmpty())
 
-			Expect(o.Complete(tf)).Should(Succeed())
+			Expect(o.Complete()).Should(Succeed())
 			Expect(o.ComponentName).ShouldNot(BeEmpty())
 			Expect(o.Client).ShouldNot(BeNil())
 			Expect(o.Dynamic).ShouldNot(BeNil())
