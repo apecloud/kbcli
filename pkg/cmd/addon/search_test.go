@@ -46,7 +46,7 @@ var _ = Describe("search test", func() {
 	It("test search", func() {
 		cmd := newSearchCmd(streams)
 		cmd.Run(cmd, []string{testAddonNotExisted})
-		Expect(out.String()).Should(Equal("fake-addon addon not found. Please update your index or check the addon name"))
+		Expect(out.String()).Should(Equal("fake-addon addon not found. Please update your index or check the addon name\n"))
 	})
 
 	It("test addon search", func() {
