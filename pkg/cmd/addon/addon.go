@@ -848,9 +848,10 @@ func addonListRun(o *action.ListOptions) error {
 			if provider == "" {
 				provider = label[types.ProviderLabelKey]
 			}
+			version := getAddonVersion(addon)
 			if o.Format == printer.Wide {
 				tbl.AddRow(addon.Name,
-					addon.Spec.Type,
+					version,
 					provider,
 					addon.Status.Phase,
 					autoInstall,
@@ -859,7 +860,7 @@ func addonListRun(o *action.ListOptions) error {
 				)
 			} else {
 				tbl.AddRow(addon.Name,
-					addon.Spec.Type,
+					version,
 					provider,
 					addon.Status.Phase,
 					autoInstall,
@@ -871,12 +872,12 @@ func addonListRun(o *action.ListOptions) error {
 
 	if o.Format == printer.Wide {
 		if err = printer.PrintTable(o.Out, nil, printRows,
-			"NAME", "TYPE", "PROVIDER", "STATUS", "AUTO-INSTALL", "AUTO-INSTALLABLE-SELECTOR", "EXTRAS"); err != nil {
+			"NAME", "VERSION", "PROVIDER", "STATUS", "AUTO-INSTALL", "AUTO-INSTALLABLE-SELECTOR", "EXTRAS"); err != nil {
 			return err
 		}
 	} else {
 		if err = printer.PrintTable(o.Out, nil, printRows,
-			"NAME", "TYPE", "PROVIDER", "STATUS", "AUTO-INSTALL"); err != nil {
+			"NAME", "VERSION", "PROVIDER", "STATUS", "AUTO-INSTALL"); err != nil {
 			return err
 		}
 	}
