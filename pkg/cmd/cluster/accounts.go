@@ -94,9 +94,8 @@ func NewCreateAccountCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) 
 		Example:           createUserExamples,
 		ValidArgsFunction: util.ResourceNameCompletionFunc(f, types.ClusterGVR()),
 		Run: func(cmd *cobra.Command, args []string) {
-			cmdutil.CheckErr(o.Validate(args))
-			cmdutil.CheckErr(o.Complete(f))
-			cmdutil.CheckErr(o.Run(cmd, f, streams))
+			cmdutil.CheckErr(o.AccountBaseOptions.Validate(args))
+			cmdutil.CheckErr(o.Exec())
 		},
 	}
 	o.AddFlags(cmd)
@@ -111,9 +110,8 @@ func NewDeleteAccountCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) 
 		Example:           deleteUserExamples,
 		ValidArgsFunction: util.ResourceNameCompletionFunc(f, types.ClusterGVR()),
 		Run: func(cmd *cobra.Command, args []string) {
-			cmdutil.CheckErr(o.Validate(args))
-			cmdutil.CheckErr(o.Complete(f))
-			cmdutil.CheckErr(o.Run(cmd, f, streams))
+			cmdutil.CheckErr(o.AccountBaseOptions.Validate(args))
+			cmdutil.CheckErr(o.Exec())
 		},
 	}
 	o.AddFlags(cmd)

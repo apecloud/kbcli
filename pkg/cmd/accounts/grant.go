@@ -80,7 +80,7 @@ func (o *GrantOptions) validRoleName() error {
 
 func (o *GrantOptions) Complete(f cmdutil.Factory) error {
 	var err error
-	if err = o.AccountBaseOptions.Complete(f); err != nil {
+	if err = o.AccountBaseOptions.Complete(); err != nil {
 		return err
 	}
 	return err

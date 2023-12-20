@@ -46,7 +46,7 @@ func (o ListUserOptions) Validate(args []string) error {
 }
 
 func (o *ListUserOptions) Complete(f cmdutil.Factory) error {
-	return o.AccountBaseOptions.Complete(f)
+	return o.AccountBaseOptions.Complete()
 }
 
 func (o *ListUserOptions) Run(cmd *cobra.Command, f cmdutil.Factory, streams genericiooptions.IOStreams) error {

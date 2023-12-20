@@ -80,7 +80,7 @@ func (o *RevokeOptions) validRoleName() error {
 
 func (o *RevokeOptions) Complete(f cmdutil.Factory) error {
 	var err error
-	if err = o.AccountBaseOptions.Complete(f); err != nil {
+	if err = o.AccountBaseOptions.Complete(); err != nil {
 		return err
 	}
 	return err

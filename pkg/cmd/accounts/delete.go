@@ -36,7 +36,7 @@ import (
 type DeleteUserOptions struct {
 	*AccountBaseOptions
 	AutoApprove bool
-	userName    string
+	UserName    string
 }
 
 func NewDeleteUserOptions(f cmdutil.Factory, streams genericiooptions.IOStreams) *DeleteUserOptions {
@@ -47,46 +47,56 @@ func NewDeleteUserOptions(f cmdutil.Factory, streams genericiooptions.IOStreams)
 
 func (o *DeleteUserOptions) AddFlags(cmd *cobra.Command) {
 	o.AccountBaseOptions.AddFlags(cmd)
-	cmd.Flags().StringVar(&o.userName, "name", "", "Required user name, please specify it.")
+	cmd.Flags().StringVar(&o.UserName, "name", "", "Required user name, please specify it.")
 	_ = cmd.MarkFlagRequired("name")
 }
 
-func (o *DeleteUserOptions) Validate(args []string) error {
-	if err := o.AccountBaseOptions.Validate(args); err != nil {
-		return err
-	}
-	if len(o.userName) == 0 {
+func (o *DeleteUserOptions) Validate() error {
+	if len(o.UserName) == 0 {
 		return errMissingUserName
 	}
 	if o.AutoApprove {
 		return nil
 	}
-	if err := prompt.Confirm([]string{o.userName}, o.In, "", ""); err != nil {
+	if err := prompt.Confirm([]string{o.UserName}, o.In, "", ""); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (o *DeleteUserOptions) Complete(f cmdutil.Factory) error {
+func (o *DeleteUserOptions) Complete() error {
 	var err error
-	if err = o.AccountBaseOptions.Complete(f); err != nil {
+	if err = o.AccountBaseOptions.Complete(); err != nil {
 		return err
 	}
 	return err
 }
 
-func (o *DeleteUserOptions) Run(cmd *cobra.Command, f cmdutil.Factory, streams genericiooptions.IOStreams) error {
+func (o *DeleteUserOptions) Run() error {
 	klog.V(1).Info(fmt.Sprintf("connect to cluster %s, component %s, instance %s\n", o.ClusterName, o.ComponentName, o.PodName))
 	lorryClient, err := client.NewK8sExecClientWithPod(o.Pod)
 	if err != nil {
 		return err
 	}
 
-	err = lorryClient.DeleteUser(context.Background(), o.userName)
+	err = lorryClient.DeleteUser(context.Background(), o.UserName)
 	if err != nil {
 		o.printGeneralInfo("fail", err.Error())
 		return err
 	}
 	o.printGeneralInfo("success", "")
+	return nil
+}
+
+func (o *DeleteUserOptions) Exec() error {
+	if err := o.Validate(); err != nil {
+		return err
+	}
+	if err := o.Complete(); err != nil {
+		return err
+	}
+	if err := o.Run(); err != nil {
+		return err
+	}
 	return nil
 }

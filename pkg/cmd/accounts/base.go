@@ -90,7 +90,7 @@ func (o *AccountBaseOptions) Validate(args []string) error {
 	return nil
 }
 
-func (o *AccountBaseOptions) Complete(f cmdutil.Factory) error {
+func (o *AccountBaseOptions) Complete() error {
 	var err error
 	err = o.ExecOptions.Complete()
 	if err != nil {
