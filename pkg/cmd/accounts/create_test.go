@@ -90,24 +90,25 @@ var _ = Describe("Create Account Options", func() {
 			o := NewCreateUserOptions(tf, streams)
 			Expect(o).ShouldNot(BeNil())
 			args := []string{}
-			Expect(o.Validate(args)).Should(MatchError(errClusterNameorInstName))
+			Expect(o.AccountBaseOptions.Validate(args)).Should(MatchError(errClusterNameorInstName))
 
 			// add two elements
 			By("add two args")
 			args = []string{"foo", "bar"}
-			Expect(o.Validate(args)).Should(MatchError(errClusterNameNum))
+			Expect(o.AccountBaseOptions.Validate(args)).Should(MatchError(errClusterNameNum))
 
 			// add one element
 			By("add one more args, should fail")
 			args = []string{clusterName}
-			Expect(o.Validate(args)).Should(MatchError(errMissingUserName))
+			Expect(o.AccountBaseOptions.Validate(args)).Should(Succeed())
+			Expect(o.Validate()).Should(MatchError(errMissingUserName))
 
 			// set user name
-			o.userName = "fooUser"
-			Expect(o.Validate(args)).Should(Succeed())
+			o.UserName = "fooUser"
+			Expect(o.Validate()).Should(Succeed())
 			// set password
-			o.password = "fooPwd"
-			Expect(o.Validate(args)).Should(Succeed())
+			o.Password = "fooPwd"
+			Expect(o.Validate()).Should(Succeed())
 		})
 
 		It("complete options", func() {
@@ -115,11 +116,11 @@ var _ = Describe("Create Account Options", func() {
 			Expect(o).ShouldNot(BeNil())
 			o.PodName = pods.Items[0].Name
 			o.ClusterName = clusterName
-			o.userName = "foo-user"
+			o.UserName = "foo-user"
 
-			Expect(o.password).Should(HaveLen(0))
-			Expect(o.Complete(tf)).Should(Succeed())
-			Expect(o.password).ShouldNot(BeEmpty())
+			Expect(o.Password).Should(HaveLen(0))
+			Expect(o.Complete()).Should(Succeed())
+			Expect(o.Password).ShouldNot(BeEmpty())
 		})
 	})
 })
