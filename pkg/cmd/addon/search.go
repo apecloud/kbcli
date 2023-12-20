@@ -71,7 +71,7 @@ func search(args []string, out io.Writer) error {
 		return err
 	}
 	if len(results) == 0 {
-		fmt.Fprintf(out, "%s addon not found. Please update your index or check the addon name", args[0])
+		fmt.Fprintf(out, "%s addon not found. Please update your index or check the addon name\n", args[0])
 		return nil
 	}
 	for _, res := range results {
