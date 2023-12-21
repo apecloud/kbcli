@@ -413,15 +413,13 @@ func FakeCompDef() *appsv1alpha1.ComponentDefinition {
 			},
 		},
 		LifecycleActions: &appsv1alpha1.ComponentLifecycleActions{
-			PostStart: nil,
-			PreStop:   nil,
-			RoleProbe: &appsv1alpha1.RoleProbeSpec{
+			RoleProbe: &appsv1alpha1.RoleProbe{
 				LifecycleActionHandler: *defaultLifecycleActionHandler,
 				FailureThreshold:       3,
 				PeriodSeconds:          1,
 				TimeoutSeconds:         5,
 			},
-			Switchover: &appsv1alpha1.ComponentSwitchoverSpec{
+			Switchover: &appsv1alpha1.ComponentSwitchover{
 				WithCandidate: &appsv1alpha1.Action{
 					Image: commandExecutorEnvItem.Image,
 					Env:   commandExecutorEnvItem.Env,
