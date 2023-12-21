@@ -98,6 +98,7 @@ kbcli cluster create [NAME] [flags]
 ### Options
 
 ```
+      --annotation stringArray                 Set annotations for cluster
       --backup string                          Set a source backup to restore data
       --backup-cron-expression string          the cron expression for schedule, the timezone is in UTC. see https://en.wikipedia.org/wiki/Cron.
       --backup-enabled                         Specify whether enabled automated backup
