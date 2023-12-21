@@ -413,6 +413,8 @@ func FakeCompDef() *appsv1alpha1.ComponentDefinition {
 			},
 		},
 		LifecycleActions: &appsv1alpha1.ComponentLifecycleActions{
+			PostProvision: nil,
+			PreTerminate:  nil,
 			RoleProbe: &appsv1alpha1.RoleProbe{
 				LifecycleActionHandler: *defaultLifecycleActionHandler,
 				FailureThreshold:       3,

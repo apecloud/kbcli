@@ -68,7 +68,7 @@ func (o *DescribeUserOptions) Complete(f cmdutil.Factory) error {
 
 func (o *DescribeUserOptions) Run(cmd *cobra.Command, f cmdutil.Factory, streams genericiooptions.IOStreams) error {
 	klog.V(1).Info(fmt.Sprintf("connect to cluster %s, component %s, instance %s\n", o.ClusterName, o.ComponentName, o.PodName))
-	lorryClient, err := client.NewK8sExecClientWithPod(o.Pod)
+	lorryClient, err := client.NewK8sExecClientWithPod(o.Config, o.Pod)
 	if err != nil {
 		return err
 	}
