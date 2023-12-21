@@ -66,6 +66,9 @@ type ChartInfo struct {
 	// ClusterDef is the cluster definition
 	ClusterDef string
 
+	// ComponentDef refer cluster component.spec[x].ComponentDef
+	ComponentDef []string
+
 	// Chart is the cluster helm chart object
 	Chart *chart.Chart
 

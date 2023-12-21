@@ -142,7 +142,7 @@ func GetChartCacheFiles() []fs.DirEntry {
 }
 
 func ClearCharts(c ClusterType) {
-	// if the fail clusterType is from external config, remove the config and the elated charts
+	// if the fail clusterType is from external config, remove the config and the related charts
 	if GlobalClusterChartConfig.RemoveConfig(c) {
 		if err := GlobalClusterChartConfig.WriteConfigs(CliClusterChartConfig); err != nil {
 			klog.V(2).Info(fmt.Sprintf("Warning: auto clear %s config fail due to: %s\n", c, err.Error()))
