@@ -257,6 +257,7 @@ type CreateOptions struct {
 	Storages            []string `json:"-"`
 	ServiceRef          []string `json:"-"`
 	LabelStrs           []string `json:"-"`
+	AnnotationStrs      []string `json:"-"`
 	CPUOversellRatio    float64  `json:"-"`
 	MemoryOversellRatio float64  `json:"-"`
 
@@ -296,6 +297,7 @@ func NewCreateCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.
 	cmd.Flags().BoolVar(&o.CreateOnlySet, "create-only-set", false, "Create components exclusively configured in 'set'")
 	cmd.Flags().StringArrayVar(&o.Storages, "pvc", []string{}, "Set the cluster detail persistent volume claim, each '--pvc' corresponds to a component, and will override the simple configurations about storage by --set (e.g. --pvc type=mysql,name=data,mode=ReadWriteOnce,size=20Gi --pvc type=mysql,name=log,mode=ReadWriteOnce,size=1Gi)")
 	cmd.Flags().StringArrayVar(&o.ServiceRef, "service-reference", []string{}, "Set the other KubeBlocks cluster dependencies, each '--service-reference' corresponds to a cluster service. (e.g --service-reference name=pulsarZookeeper,cluster=zookeeper,namespace=default)")
+	cmd.Flags().StringArrayVar(&o.AnnotationStrs, "annotation", []string{}, "Set annotations for cluster")
 	cmd.Flags().StringArrayVar(&o.LabelStrs, "label", []string{}, "Set labels for cluster resources")
 	cmd.Flags().Float64Var(&o.CPUOversellRatio, "cpu-oversell-ratio", 1, "Set oversell ratio of CPU, set to 10 means 10 times oversell")
 	cmd.Flags().Float64Var(&o.MemoryOversellRatio, "memory-oversell-ratio", 1, "Set oversell ratio of memory, set to 10 means 10 times oversell")
@@ -492,6 +494,19 @@ func (o *CreateOptions) Complete() error {
 
 	// build annotation
 	o.buildAnnotation(cls)
+
+	if len(o.AnnotationStrs) > 0 {
+		if o.Annotations == nil {
+			o.Annotations = make(map[string]string)
+		}
+		for _, annotationStr := range o.AnnotationStrs {
+			kv := strings.Split(annotationStr, "=")
+			if len(kv) != 2 {
+				return fmt.Errorf("label format error, should be key=value")
+			}
+			o.Annotations[kv[0]] = kv[1]
+		}
+	}
 
 	// build labels
 	if cls != nil && len(cls.Labels) > 0 {
