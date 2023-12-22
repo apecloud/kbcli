@@ -90,16 +90,17 @@ var _ = Describe("Describe Account Options", func() {
 			o := NewDescribeUserOptions(tf, streams)
 			Expect(o).ShouldNot(BeNil())
 			args := []string{}
-			Expect(o.Validate(args)).Should(MatchError(errClusterNameorInstName))
+			Expect(o.AccountBaseOptions.Validate(args)).Should(MatchError(errClusterNameorInstName))
 
 			// add one element
 			By("add one more args, should fail")
 			args = []string{clusterName}
-			Expect(o.Validate(args)).Should(MatchError(errMissingUserName))
+			Expect(o.AccountBaseOptions.Validate(args)).Should(Succeed())
+			Expect(o.Validate()).Should(MatchError(errMissingUserName))
 
 			// set user name
-			o.userName = "like"
-			Expect(o.Validate(args)).Should(Succeed())
+			o.UserName = "like"
+			Expect(o.Validate()).Should(Succeed())
 		})
 
 		It("complete options", func() {
@@ -107,9 +108,9 @@ var _ = Describe("Describe Account Options", func() {
 			Expect(o).ShouldNot(BeNil())
 			o.ClusterName = clusterName
 			o.PodName = pods.Items[0].Name
-			o.userName = "you"
+			o.UserName = "you"
 
-			Expect(o.Complete(tf)).Should(Succeed())
+			Expect(o.Complete()).Should(Succeed())
 		})
 	})
 })
