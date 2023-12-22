@@ -34,6 +34,7 @@ import (
 type DescribeUserOptions struct {
 	*AccountBaseOptions
 	UserName string
+	User     map[string]interface{}
 }
 
 func NewDescribeUserOptions(f cmdutil.Factory, streams genericiooptions.IOStreams) *DescribeUserOptions {
@@ -75,6 +76,7 @@ func (o *DescribeUserOptions) Run() error {
 		o.printGeneralInfo("fail", err.Error())
 		return err
 	}
+	o.User = user
 	o.printRoleInfo([]map[string]any{user})
 	return nil
 }
