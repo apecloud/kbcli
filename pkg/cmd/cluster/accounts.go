@@ -127,9 +127,10 @@ func NewDescAccountCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *c
 		Example:           descUserExamples,
 		ValidArgsFunction: util.ResourceNameCompletionFunc(f, types.ClusterGVR()),
 		Run: func(cmd *cobra.Command, args []string) {
-			cmdutil.CheckErr(o.Validate(args))
-			cmdutil.CheckErr(o.Complete(f))
-			cmdutil.CheckErr(o.Run(cmd, f, streams))
+			cmdutil.CheckErr(o.AccountBaseOptions.Validate(args))
+			cmdutil.CheckErr(o.Validate())
+			cmdutil.CheckErr(o.Complete())
+			cmdutil.CheckErr(o.Run())
 		},
 	}
 	o.AddFlags(cmd)
