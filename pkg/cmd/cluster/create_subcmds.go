@@ -133,11 +133,23 @@ func (o *CreateSubCmdsOptions) complete(cmd *cobra.Command) error {
 	if !ok {
 		return fmt.Errorf("cannot find spec in cluster object")
 	}
-	clusterDef, ok := spec["clusterDefinitionRef"].(string)
-	if !ok {
-		return fmt.Errorf("cannot find clusterDefinitionRef in cluster spec")
+	if compSpec, ok := spec["componentSpecs"].([]interface{}); ok {
+		if o.chartInfo.ComponentDef == nil {
+			o.chartInfo.ComponentDef = []string{}
+		}
+		for i := range compSpec {
+			comp := compSpec[i].(map[string]interface{})
+			if compDef, ok := comp["componentDef"]; ok {
+				o.chartInfo.ComponentDef = append(o.chartInfo.ComponentDef, compDef.(string))
+			}
+		}
 	}
-	o.chartInfo.ClusterDef = clusterDef
+	if clusterDef, ok := spec["clusterDefinitionRef"].(string); ok {
+		o.chartInfo.ClusterDef = clusterDef
+	}
+	if o.chartInfo.ClusterDef == "" && len(o.chartInfo.ComponentDef) == 0 {
+		return fmt.Errorf("cannot find clusterDefinitionRef in cluster spec or componentDef in componentSpecs")
+	}
 
 	return nil
 }
@@ -232,16 +244,24 @@ func (o *CreateSubCmdsOptions) validateVersion() error {
 	var err error
 	cv, ok := o.Values[cluster.VersionSchemaProp.String()].(string)
 	if ok && cv != "" {
-		if err = cluster.ValidateClusterVersion(o.Dynamic, o.chartInfo.ClusterDef, cv); err != nil {
-			return fmt.Errorf("cluster version \"%s\" does not exist, run following command to get the available cluster versions\n\tkbcli cv list --cluster-definition=%s",
-				cv, o.chartInfo.ClusterDef)
+		if err = cluster.ValidateClusterVersion(o.Dynamic, o.chartInfo.ClusterDef, cv); err == nil {
+			return nil
 		}
-		return nil
+		if err = cluster.ValidateClusterVersionByComponentDef(o.Dynamic, o.chartInfo.ComponentDef, cv); err == nil {
+			return nil
+		}
+		return fmt.Errorf("cluster version \"%s\" does not exist", cv)
 	}
-
-	cv, err = cluster.GetDefaultVersion(o.Dynamic, o.chartInfo.ClusterDef)
-	if err != nil {
-		return err
+	if o.chartInfo.ClusterDef != "" {
+		cv, err = cluster.GetDefaultVersion(o.Dynamic, o.chartInfo.ClusterDef)
+		if err != nil {
+			return err
+		}
+	} else {
+		cv, err = cluster.GetDefaultVersionByCompDefs(o.Dynamic, o.chartInfo.ComponentDef)
+		if err != nil {
+			return err
+		}
 	}
 	// set cluster version
 	o.Values[cluster.VersionSchemaProp.String()] = cv
@@ -259,6 +279,7 @@ func (o *CreateSubCmdsOptions) validateVersion() error {
 	return nil
 }
 
+// getObjectsInfo returns all objects in helm charts along with their GVK information.
 func (o *CreateSubCmdsOptions) getObjectsInfo() ([]*objectInfo, error) {
 	// move values that belong to sub chart to sub map
 	values := buildHelmValues(o.chartInfo, o.Values)

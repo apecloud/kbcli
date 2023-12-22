@@ -450,3 +450,23 @@ func GetDefaultServiceRef(cd *appsv1alpha1.ClusterDefinition) (string, error) {
 	}
 	return serviceRefs[0], nil
 }
+
+func GetDefaultVersionByCompDefs(dynamic dynamic.Interface, compDefs []string) (string, error) {
+	cv := ""
+	for _, compDef := range compDefs {
+		comp, err := dynamic.Resource(types.CompDefGVR()).Get(context.Background(), compDef, metav1.GetOptions{})
+		if err != nil {
+			return "", fmt.Errorf("fail to get cluster version due to: %s", err.Error())
+		}
+		labels := comp.GetLabels()
+		kind := labels[constant.AppNameLabelKey]
+		version := labels[constant.AppVersionLabelKey]
+		// todo: fix cv like:  mongodb-sharding-5.0, ac-mysql-8.0.30-auditlog
+		if cv == "" {
+			cv = fmt.Sprintf("%s-%s", kind, version)
+		} else if cv != fmt.Sprintf("%s-%s", kind, version) {
+			return "", fmt.Errorf("can't get the same cluster version by component definition:[%s]", strings.Join(compDefs, ","))
+		}
+	}
+	return cv, nil
+}

@@ -172,32 +172,6 @@ func (c *ChartInfo) buildClusterSchema() error {
 	return nil
 }
 
-func (c *ChartInfo) buildClusterDef() error {
-	cht := c.Chart
-	// We use embed FS to read chart's tgz files. In embed FS, the file path format is compatible with Linux and does not change with the operating system.
-	// Therefore, we cannot use filepath.Join to generate different path formats for different systems,
-	// instead, we need to use a path format that is the same as Linux.
-	clusterFilePath := templatesDir + "/" + clusterFile
-	for _, tpl := range cht.Templates {
-		if tpl.Name != clusterFilePath {
-			continue
-		}
-
-		// get cluster definition from cluster.yaml
-		pattern := "  clusterDefinitionRef: "
-		str := string(tpl.Data)
-		start := strings.Index(str, pattern)
-		if start != -1 {
-			end := strings.IndexAny(str[start+len(pattern):], " \n")
-			if end != -1 {
-				c.ClusterDef = strings.TrimSpace(str[start+len(pattern) : start+len(pattern)+end])
-				return nil
-			}
-		}
-	}
-	return fmt.Errorf("failed to find the cluster definition of %s", cht.Name())
-}
-
 // ValidateValues validates the given values against the schema.
 func ValidateValues(c *ChartInfo, values map[string]interface{}) error {
 	validateFn := func(s *spec.Schema, values map[string]interface{}) error {

@@ -128,8 +128,8 @@ func (o *ListLogsOptions) Run() error {
 		Name:      o.clusterName,
 		Namespace: o.namespace,
 		GetOptions: cluster.GetOptions{
-			WithClusterDef: true,
-			WithPod:        true,
+			WithClusterDef: cluster.Maybe,
+			WithPod:        cluster.Need,
 		},
 	}
 	dataObj, err := clusterGetter.Get()

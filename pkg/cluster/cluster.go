@@ -47,17 +47,25 @@ import (
 // ConditionsError cluster displays this status on list cmd when the status of ApplyResources or ProvisioningStarted condition is "False".
 const ConditionsError = "ConditionsError"
 
+type TypeNeed int
+
+const (
+	NoNeed = iota
+	Need
+	Maybe
+)
+
 type GetOptions struct {
-	WithClusterDef     bool
-	WithClusterVersion bool
-	WithConfigMap      bool
-	WithPVC            bool
-	WithService        bool
-	WithSecret         bool
-	WithPod            bool
-	WithEvent          bool
-	WithDataProtection bool
-	WithCompDef        bool
+	WithClusterDef     TypeNeed
+	WithClusterVersion TypeNeed
+	WithConfigMap      TypeNeed
+	WithPVC            TypeNeed
+	WithService        TypeNeed
+	WithSecret         TypeNeed
+	WithPod            TypeNeed
+	WithEvent          TypeNeed
+	WithDataProtection TypeNeed
+	WithCompDef        TypeNeed
 }
 
 type ObjectsGetter struct {
@@ -132,7 +140,7 @@ func (o *ObjectsGetter) Get() (*ClusterObjects, error) {
 		objs.Cluster.Status.Phase = ConditionsError
 	}
 	// get cluster definition
-	if o.WithClusterDef {
+	if o.WithClusterDef == Need {
 		cd := &appsv1alpha1.ClusterDefinition{}
 		if err = getResource(types.ClusterDefGVR(), objs.Cluster.Spec.ClusterDefRef, "", cd); err != nil {
 			return nil, err
@@ -141,7 +149,7 @@ func (o *ObjectsGetter) Get() (*ClusterObjects, error) {
 	}
 
 	// get cluster version
-	if o.WithClusterVersion {
+	if o.WithClusterVersion == Need {
 		v := &appsv1alpha1.ClusterVersion{}
 		if err = getResource(types.ClusterVersionGVR(), objs.Cluster.Spec.ClusterVersionRef, "", v); err != nil {
 			return nil, err
@@ -150,35 +158,35 @@ func (o *ObjectsGetter) Get() (*ClusterObjects, error) {
 	}
 
 	// get services
-	if o.WithService {
+	if o.WithService == Need {
 		if objs.Services, err = client.Services(o.Namespace).List(ctx, listOpts()); err != nil {
 			return nil, err
 		}
 	}
 
 	// get secrets
-	if o.WithSecret {
+	if o.WithSecret == Need {
 		if objs.Secrets, err = client.Secrets(o.Namespace).List(ctx, listOpts()); err != nil {
 			return nil, err
 		}
 	}
 
 	// get configmaps
-	if o.WithConfigMap {
+	if o.WithConfigMap == Need {
 		if objs.ConfigMaps, err = client.ConfigMaps(o.Namespace).List(ctx, listOpts()); err != nil {
 			return nil, err
 		}
 	}
 
 	// get PVCs
-	if o.WithPVC {
+	if o.WithPVC == Need {
 		if objs.PVCs, err = client.PersistentVolumeClaims(o.Namespace).List(ctx, listOpts()); err != nil {
 			return nil, err
 		}
 	}
 
 	// get pods
-	if o.WithPod {
+	if o.WithPod == Need {
 		if objs.Pods, err = client.Pods(o.Namespace).List(ctx, listOpts()); err != nil {
 			return nil, err
 		}
@@ -217,7 +225,7 @@ func (o *ObjectsGetter) Get() (*ClusterObjects, error) {
 	}
 
 	// get events
-	if o.WithEvent {
+	if o.WithEvent == Need {
 		// get all events of cluster
 		if objs.Events, err = client.Events(o.Namespace).Search(scheme.Scheme, objs.Cluster); err != nil {
 			return nil, err
@@ -237,7 +245,7 @@ func (o *ObjectsGetter) Get() (*ClusterObjects, error) {
 		}
 	}
 
-	if o.WithDataProtection {
+	if o.WithDataProtection == Need {
 		dpListOpts := metav1.ListOptions{
 			LabelSelector: fmt.Sprintf("%s=%s",
 				constant.AppInstanceLabelKey, o.Name),
@@ -261,7 +269,7 @@ func (o *ObjectsGetter) Get() (*ClusterObjects, error) {
 		}
 	}
 
-	if o.WithCompDef {
+	if o.WithCompDef == Need {
 		comps := []*appsv1alpha1.ComponentDefinition{}
 		if err = listResources(o.Dynamic, types.CompDefGVR(), "", metav1.ListOptions{}, &comps); err != nil {
 			return nil, err
@@ -275,6 +283,28 @@ func (o *ObjectsGetter) Get() (*ClusterObjects, error) {
 			}
 		}
 	}
+	// get cluster definition
+	if o.WithClusterDef == Maybe {
+		cd := &appsv1alpha1.ClusterDefinition{}
+		if err = getResource(types.ClusterDefGVR(), objs.Cluster.Spec.ClusterDefRef, "", cd); err == nil {
+			objs.ClusterDef = cd
+		}
+	}
+
+	if o.WithCompDef == Maybe {
+		comps := []*appsv1alpha1.ComponentDefinition{}
+		if err = listResources(o.Dynamic, types.CompDefGVR(), "", metav1.ListOptions{}, &comps); err == nil {
+			for _, compSpec := range objs.Cluster.Spec.ComponentSpecs {
+				for _, comp := range comps {
+					if compSpec.ComponentDef == comp.Name {
+						objs.CompDef = append(objs.CompDef, comp)
+						break
+					}
+				}
+			}
+		}
+	}
+
 	return objs, nil
 }
 
