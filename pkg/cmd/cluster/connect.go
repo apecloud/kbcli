@@ -447,9 +447,9 @@ func getUserAndPassword(clusterDef *appsv1alpha1.ClusterDefinition, compDef *app
 	if secret == nil && compDef != nil {
 		for _, account := range compDef.Spec.SystemAccounts {
 			if account.InitAccount {
-				for _, s := range secrets.Items {
+				for i, s := range secrets.Items {
 					if s.Name == fmt.Sprintf("%s-%s-account-%s", cluster, compDef.Name, account.Name) {
-						secret = &s
+						secret = &secrets.Items[i]
 						break
 					}
 				}
