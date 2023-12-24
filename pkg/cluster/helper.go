@@ -453,6 +453,9 @@ func GetDefaultServiceRef(cd *appsv1alpha1.ClusterDefinition) (string, error) {
 
 func GetDefaultVersionByCompDefs(dynamic dynamic.Interface, compDefs []string) (string, error) {
 	cv := ""
+	if compDefs == nil {
+		return "", fmt.Errorf("failed to find default cluster version referencing the nil compDefs")
+	}
 	for _, compDef := range compDefs {
 		comp, err := dynamic.Resource(types.CompDefGVR()).Get(context.Background(), compDef, metav1.GetOptions{})
 		if err != nil {

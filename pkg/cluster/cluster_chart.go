@@ -40,11 +40,6 @@ import (
 	"github.com/apecloud/kbcli/pkg/util/helm"
 )
 
-const (
-	templatesDir = "templates"
-	clusterFile  = "cluster.yaml"
-)
-
 type SchemaPropName string
 
 // the common schema property name

@@ -253,16 +253,15 @@ func (o *CreateSubCmdsOptions) validateVersion() error {
 		return fmt.Errorf("cluster version \"%s\" does not exist", cv)
 	}
 	if o.chartInfo.ClusterDef != "" {
-		cv, err = cluster.GetDefaultVersion(o.Dynamic, o.chartInfo.ClusterDef)
-		if err != nil {
-			return err
-		}
-	} else {
-		cv, err = cluster.GetDefaultVersionByCompDefs(o.Dynamic, o.chartInfo.ComponentDef)
-		if err != nil {
-			return err
-		}
+		cv, _ = cluster.GetDefaultVersion(o.Dynamic, o.chartInfo.ClusterDef)
 	}
+	if len(o.chartInfo.ComponentDef) != 0 {
+		cv, _ = cluster.GetDefaultVersionByCompDefs(o.Dynamic, o.chartInfo.ComponentDef)
+	}
+	if cv == "" {
+		return fmt.Errorf(": failed to find default cluster version referencing cluster definition or component definition")
+	}
+
 	// set cluster version
 	o.Values[cluster.VersionSchemaProp.String()] = cv
 
