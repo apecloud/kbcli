@@ -435,6 +435,13 @@ func getUserAndPassword(clusterDef *appsv1alpha1.ClusterDefinition, compDef *app
 		return string(val), nil
 	}
 
+	getSecretCluster := func(secret *corev1.Secret) (string, error) {
+		labels := secret.GetLabels()
+		if labels == nil {
+			return "", fmt.Errorf("secret %s don't have label to get the secret cluster", secret.Name)
+		}
+		return labels[constant.AppInstanceLabelKey], nil
+	}
 	// now, we only use the first secret
 	var secret *corev1.Secret
 	for i, s := range secrets.Items {
@@ -448,7 +455,11 @@ func getUserAndPassword(clusterDef *appsv1alpha1.ClusterDefinition, compDef *app
 		for i := range compDef.Spec.SystemAccounts {
 			if compDef.Spec.SystemAccounts[i].InitAccount {
 				for j, s := range secrets.Items {
-					if strings.Contains(s.Name, compDef.Spec.SystemAccounts[j].Name) {
+					secretCluster, err := getSecretCluster(&s)
+					if err != nil {
+						continue
+					}
+					if s.Name == fmt.Sprintf("%s-%s-account-%s", secretCluster, compDef.Name, compDef.Spec.SystemAccounts[i].Name) {
 						secret = &secrets.Items[j]
 						break
 					}
