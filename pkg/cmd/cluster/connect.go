@@ -297,7 +297,7 @@ func (o *ConnectOptions) getAuthInfo() (*engines.AuthInfo, error) {
 		return nil, err
 	}
 
-	if user, passwd, err := getUserAndPassword(objs.ClusterDef, o.componentDefV2, objs.Secrets); err != nil {
+	if user, passwd, err := getUserAndPassword(objs.ClusterDef, o.componentDefV2, objs.Secrets, objs.Cluster.Name); err != nil {
 		return nil, err
 	} else {
 		return &engines.AuthInfo{
@@ -371,7 +371,7 @@ func (o *ConnectOptions) getConnectionInfo() (*engines.ConnectionInfo, error) {
 	info.ComponentName = o.componentName
 	info.HeadlessEndpoint = getOneHeadlessEndpoint(objs.ClusterDef, objs.Secrets)
 	// get username and password
-	if info.User, info.Password, err = getUserAndPassword(objs.ClusterDef, o.componentDefV2, objs.Secrets); err != nil {
+	if info.User, info.Password, err = getUserAndPassword(objs.ClusterDef, o.componentDefV2, objs.Secrets, objs.Cluster.Name); err != nil {
 		return nil, err
 	}
 	if !o.showPassword {
@@ -408,7 +408,7 @@ func (o *ConnectOptions) getConnectionInfo() (*engines.ConnectionInfo, error) {
 
 // getUserAndPassword gets cluster user and password from secrets
 // TODO:@shanshanying, should use admin user and password. Use root credential for now.
-func getUserAndPassword(clusterDef *appsv1alpha1.ClusterDefinition, compDef *appsv1alpha1.ComponentDefinition, secrets *corev1.SecretList) (string, string, error) {
+func getUserAndPassword(clusterDef *appsv1alpha1.ClusterDefinition, compDef *appsv1alpha1.ComponentDefinition, secrets *corev1.SecretList, cluster string) (string, string, error) {
 	var (
 		user, password = "", ""
 		err            error
@@ -435,13 +435,6 @@ func getUserAndPassword(clusterDef *appsv1alpha1.ClusterDefinition, compDef *app
 		return string(val), nil
 	}
 
-	getSecretCluster := func(secret *corev1.Secret) (string, error) {
-		labels := secret.GetLabels()
-		if labels == nil {
-			return "", fmt.Errorf("secret %s don't have label to get the secret cluster", secret.Name)
-		}
-		return labels[constant.AppInstanceLabelKey], nil
-	}
 	// now, we only use the first secret
 	var secret *corev1.Secret
 	for i, s := range secrets.Items {
@@ -452,15 +445,11 @@ func getUserAndPassword(clusterDef *appsv1alpha1.ClusterDefinition, compDef *app
 	}
 	// 0.8 API connect
 	if secret == nil && compDef != nil {
-		for i := range compDef.Spec.SystemAccounts {
-			if compDef.Spec.SystemAccounts[i].InitAccount {
-				for j, s := range secrets.Items {
-					secretCluster, err := getSecretCluster(&s)
-					if err != nil {
-						continue
-					}
-					if s.Name == fmt.Sprintf("%s-%s-account-%s", secretCluster, compDef.Name, compDef.Spec.SystemAccounts[i].Name) {
-						secret = &secrets.Items[j]
+		for _, account := range compDef.Spec.SystemAccounts {
+			if account.InitAccount {
+				for _, s := range secrets.Items {
+					if s.Name == fmt.Sprintf("%s-%s-account-%s", cluster, compDef.Name, account.Name) {
+						secret = &s
 						break
 					}
 				}
