@@ -323,7 +323,7 @@ func (o *UpdateOptions) buildPatch() error {
 				return err
 			}
 
-			defaultBackupMethod, backupMethodMap, err := utils.GetBackupMethodsFromBackupPolicy(backupPolicyList, "")
+			defaultBackupMethod, backupMethodMap := utils.GetBackupMethodsFromBackupPolicy(backupPolicyList, "")
 			if err != nil {
 				return err
 			}

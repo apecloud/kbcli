@@ -20,6 +20,7 @@ VERSION ?= 0.9.0-alpha.0
 GITHUB_PROXY ?=
 GIT_COMMIT  = $(shell git rev-list -1 HEAD)
 GIT_VERSION = $(shell git describe --always --abbrev=0 --tag)
+ADDON_BRANCH ?= main
 
 # Go setup
 export GO111MODULE = auto
@@ -182,7 +183,7 @@ bin/kbcli.%: ## Cross build bin/kbcli.$(OS).$(ARCH).
 .PHONY: fetch-addons
 fetch-addons: ## fetch addons helm charts, if addons dir not exist, clone it, else pull it.
 	@if [ ! -d "addons" ]; then \
-		git clone https://github.com/apecloud/kubeblocks-addons.git -b main addons;\
+		git clone https://github.com/apecloud/kubeblocks-addons.git -b ${ADDON_BRANCH} addons;\
 	else \
 		cd addons && git pull ;\
 	fi
