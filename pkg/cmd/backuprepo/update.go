@@ -72,7 +72,6 @@ type updateOptions struct {
 	storageProvider string
 	providerObject  *storagev1alpha1.StorageProvider
 	isDefault       bool
-	hasDefaultFlag  bool
 	repoName        string
 	config          map[string]string
 	credential      map[string]string
@@ -285,10 +284,6 @@ func (o *updateOptions) updateCredentialSecret() error {
 }
 
 func (o *updateOptions) updateDefaultAnnotation() error {
-	if !o.hasDefaultFlag {
-		// nothing to update
-		return nil
-	}
 	original := o.repo.DeepCopy()
 	if o.isDefault {
 		if o.repo.Annotations == nil {
