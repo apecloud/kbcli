@@ -415,7 +415,7 @@ func setBackup(o *CreateOptions, components []map[string]interface{}) error {
 	var componentSpecs []appsv1alpha1.ClusterComponentSpec
 	for _, v := range components {
 		compSpec := appsv1alpha1.ClusterComponentSpec{}
-		runtime.DefaultUnstructuredConverter.FromUnstructured(v, &compSpec)
+		_ = runtime.DefaultUnstructuredConverter.FromUnstructured(v, &compSpec)
 		componentSpecs = append(componentSpecs, compSpec)
 	}
 	restoreAnnotation, err := restore.GetRestoreFromBackupAnnotation(backup, componentSpecs, o.VolumeRestorePolicy, restoreTimeStr, false)
