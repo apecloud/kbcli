@@ -381,10 +381,11 @@ var _ = Describe("operations", func() {
 		By("validate failed because there are multi-components in cluster and not specify the component")
 		Expect(o.CompleteComponentsFlag()).Should(Succeed())
 		Expect(o.Validate()).ShouldNot(Succeed())
-		Expect(testing.ContainExpectStrings(o.Validate().Error(), "there are multiple components in cluster, please use --component to specify the component for promote")).Should(BeTrue())
+		Expect(testing.ContainExpectStrings(o.CompletePromoteOps().Error(), "there are multiple components in cluster, please use --component to specify the component for promote")).Should(BeTrue())
 
 		By("validate failed because o.Instance is illegal ")
 		o.Name = clusterName1
+		o.Component = testing.ComponentName
 		o.Instance = fmt.Sprintf("%s-%s-%d", clusterName1, testing.ComponentName, 5)
 		Expect(o.Validate()).ShouldNot(Succeed())
 		Expect(testing.ContainExpectStrings(o.Validate().Error(), "not found")).Should(BeTrue())
@@ -422,7 +423,7 @@ var _ = Describe("operations", func() {
 		By("validate failed because there are multi-components in cluster and not specify the component")
 		Expect(o.CompleteComponentsFlag()).Should(Succeed())
 		Expect(o.Validate()).ShouldNot(Succeed())
-		Expect(testing.ContainExpectStrings(o.Validate().Error(), "there are multiple components in cluster, please use --component to specify the component for promote")).Should(BeTrue())
+		Expect(testing.ContainExpectStrings(o.CompletePromoteOps().Error(), "there are multiple components in cluster, please use --component to specify the component for promote")).Should(BeTrue())
 
 		By("validate failed because o.Instance is illegal ")
 		o.Name = clusterNameWithCompDef
@@ -437,6 +438,7 @@ var _ = Describe("operations", func() {
 
 		By("validate failed because o.Instance does not belong to the current component")
 		o.Instance = fmt.Sprintf("%s-pod-%d", clusterNameWithCompDef, 1)
+		o.Component = testing.ComponentName
 		Expect(o.Validate()).ShouldNot(Succeed())
 		Expect(testing.ContainExpectStrings(o.Validate().Error(), "does not belong to the current component")).Should(BeTrue())
 
