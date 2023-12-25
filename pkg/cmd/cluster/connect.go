@@ -91,8 +91,10 @@ type ConnectOptions struct {
 	targetCluster    *appsv1alpha1.Cluster
 	targetClusterDef *appsv1alpha1.ClusterDefinition
 
-	// componentDefV2 refer to the *appsv1alpha1.Component
+	// componentDefV2 refer to the *appsv1alpha1.ComponentDefinition
 	componentDefV2 *appsv1alpha1.ComponentDefinition
+	// componentV2 refer to the *appsv1alpha1.Component
+	componentV2 *appsv1alpha1.Component
 
 	characterType string
 	userName      string
@@ -289,6 +291,7 @@ func (o *ConnectOptions) getAuthInfo() (*engines.AuthInfo, error) {
 			WithService:    true,
 			WithSecret:     true,
 			WithCompDef:    true,
+			WithComp:       true,
 		},
 	}
 
@@ -296,8 +299,10 @@ func (o *ConnectOptions) getAuthInfo() (*engines.AuthInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	if user, passwd, err := getUserAndPassword(objs.ClusterDef, o.componentDefV2, objs.Secrets, objs.Cluster.Name); err != nil {
+	if o.componentDefV2 != nil {
+		o.componentV2 = getClusterCompByCompDef(objs.Components, o.componentDefV2.Name)
+	}
+	if user, passwd, err := getUserAndPassword(objs.ClusterDef, o.componentDefV2, o.componentV2, objs.Secrets); err != nil {
 		return nil, err
 	} else {
 		return &engines.AuthInfo{
@@ -371,7 +376,10 @@ func (o *ConnectOptions) getConnectionInfo() (*engines.ConnectionInfo, error) {
 	info.ComponentName = o.componentName
 	info.HeadlessEndpoint = getOneHeadlessEndpoint(objs.ClusterDef, objs.Secrets)
 	// get username and password
-	if info.User, info.Password, err = getUserAndPassword(objs.ClusterDef, o.componentDefV2, objs.Secrets, objs.Cluster.Name); err != nil {
+	if o.componentDefV2 != nil {
+		o.componentV2 = getClusterCompByCompDef(objs.Components, o.componentDefV2.Name)
+	}
+	if info.User, info.Password, err = getUserAndPassword(objs.ClusterDef, o.componentDefV2, o.componentV2, objs.Secrets); err != nil {
 		return nil, err
 	}
 	if !o.showPassword {
@@ -408,7 +416,7 @@ func (o *ConnectOptions) getConnectionInfo() (*engines.ConnectionInfo, error) {
 
 // getUserAndPassword gets cluster user and password from secrets
 // TODO:@shanshanying, should use admin user and password. Use root credential for now.
-func getUserAndPassword(clusterDef *appsv1alpha1.ClusterDefinition, compDef *appsv1alpha1.ComponentDefinition, secrets *corev1.SecretList, cluster string) (string, string, error) {
+func getUserAndPassword(clusterDef *appsv1alpha1.ClusterDefinition, compDef *appsv1alpha1.ComponentDefinition, comp *appsv1alpha1.Component, secrets *corev1.SecretList) (string, string, error) {
 	var (
 		user, password = "", ""
 		err            error
@@ -450,7 +458,7 @@ func getUserAndPassword(clusterDef *appsv1alpha1.ClusterDefinition, compDef *app
 				continue
 			}
 			for i, s := range secrets.Items {
-				if s.Name == fmt.Sprintf("%s-%s-account-%s", cluster, compDef.Name, account.Name) {
+				if s.Name == fmt.Sprintf("%s-account-%s", comp.Name, account.Name) {
 					secret = &secrets.Items[i]
 					break
 				}
@@ -458,6 +466,9 @@ func getUserAndPassword(clusterDef *appsv1alpha1.ClusterDefinition, compDef *app
 			if secret != nil {
 				break
 			}
+		}
+		if secret == nil {
+			return "", "", fmt.Errorf("failed to get the username and password by cluster component definition")
 		}
 		user, err = getSecretVal(secret, "username")
 		if err != nil {
@@ -504,5 +515,23 @@ func (o *ConnectOptions) getClusterCharacterType() error {
 		return fmt.Errorf("failed to get component def :%s", o.component.ComponentDefRef)
 	}
 	o.characterType = o.componentDef.CharacterType
+	return nil
+}
+
+func getClusterCompByCompDef(comps []*appsv1alpha1.Component, compDefName string) *appsv1alpha1.Component {
+	// get 0.8 API component
+	if len(comps) == 0 {
+		return nil
+	}
+	for i, comp := range comps {
+		labels := comp.Labels
+		if labels == nil {
+			continue
+		}
+		if name := labels[constant.ComponentDefinitionLabelKey]; name == compDefName {
+			return comps[i]
+		}
+	}
+
 	return nil
 }

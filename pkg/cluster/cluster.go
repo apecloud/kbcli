@@ -58,6 +58,7 @@ type GetOptions struct {
 	WithEvent          bool
 	WithDataProtection bool
 	WithCompDef        bool
+	WithComp           bool
 }
 
 type ObjectsGetter struct {
@@ -70,9 +71,9 @@ type ObjectsGetter struct {
 
 func NewClusterObjects() *ClusterObjects {
 	return &ClusterObjects{
-		Cluster: &appsv1alpha1.Cluster{},
-		Nodes:   []*corev1.Node{},
-		CompDef: []*appsv1alpha1.ComponentDefinition{},
+		Cluster:  &appsv1alpha1.Cluster{},
+		Nodes:    []*corev1.Node{},
+		CompDefs: []*appsv1alpha1.ComponentDefinition{},
 	}
 }
 
@@ -262,19 +263,28 @@ func (o *ObjectsGetter) Get() (*ClusterObjects, error) {
 	}
 
 	if o.WithCompDef {
-		comps := []*appsv1alpha1.ComponentDefinition{}
-		if err = listResources(o.Dynamic, types.CompDefGVR(), "", metav1.ListOptions{}, &comps); err != nil {
+		compDefs := []*appsv1alpha1.ComponentDefinition{}
+		if err = listResources(o.Dynamic, types.CompDefGVR(), "", metav1.ListOptions{}, &compDefs); err != nil {
 			return nil, err
 		}
 		for _, compSpec := range objs.Cluster.Spec.ComponentSpecs {
-			for _, comp := range comps {
+			for _, comp := range compDefs {
 				if compSpec.ComponentDef == comp.Name {
-					objs.CompDef = append(objs.CompDef, comp)
+					objs.CompDefs = append(objs.CompDefs, comp)
 					break
 				}
 			}
 		}
 	}
+
+	if o.WithComp {
+		comps := []*appsv1alpha1.Component{}
+		if err = listResources(o.Dynamic, types.ComponentGVR(), o.Namespace, metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", constant.AppInstanceLabelKey, objs.Cluster.Name)}, &comps); err != nil {
+			return nil, err
+		}
+		objs.Components = comps
+	}
+
 	return objs, nil
 }
 
