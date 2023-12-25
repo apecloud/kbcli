@@ -412,7 +412,13 @@ func setBackup(o *CreateOptions, components []map[string]interface{}) error {
 	if err != nil {
 		return err
 	}
-	restoreAnnotation, err := restore.GetRestoreFromBackupAnnotation(backup, o.VolumeRestorePolicy, len(components), components[0]["name"].(string), restoreTimeStr)
+	var componentSpecs []appsv1alpha1.ClusterComponentSpec
+	for _, v := range components {
+		compSpec := appsv1alpha1.ClusterComponentSpec{}
+		runtime.DefaultUnstructuredConverter.FromUnstructured(v, &compSpec)
+		componentSpecs = append(componentSpecs, compSpec)
+	}
+	restoreAnnotation, err := restore.GetRestoreFromBackupAnnotation(backup, componentSpecs, o.VolumeRestorePolicy, restoreTimeStr, false)
 	if err != nil {
 		return err
 	}
