@@ -41,13 +41,12 @@ jobs:
               git commit -a -m "chore: auto update kbcli embed chart changes"
           fi
           echo file_changes=$FILE_CHANGES >> $GITHUB_OUTPUT
-
-      - name: push tag ${{ inputs.release_version }}
-        uses: mathieudutour/github-tag-action@v6.1
-        with:
-          custom_tag: ${{ inputs.release_version }}
-          github_token: ${{ env.GITHUB_TOKEN }}
-          tag_prefix: ""
+          
+          COMMIT_SHA_LATEST=${{ github.sha }}
+          if [[ "${{ github.ref_name }}" != "main" ]]; then
+              COMMIT_SHA_LATEST=$(git rev-parse HEAD)
+          fi
+          echo commit_sha_latest=$COMMIT_SHA_LATEST >> $GITHUB_OUTPUT
 
       - name: push kbcli embed chart changes
         uses: ad-m/github-push-action@master
@@ -55,6 +54,14 @@ jobs:
         with:
           github_token: ${{ env.GITHUB_TOKEN }}
           branch: ${{ github.ref }}
+
+      - name: push tag ${{ inputs.release_version }}
+        uses: mathieudutour/github-tag-action@v6.1
+        with:
+          custom_tag: ${{ inputs.release_version }}
+          github_token: ${{ env.GITHUB_TOKEN }}
+          commit_sha: ${{ steps.build-kbcli-embed-chart.outputs.commit_sha_latest }}
+          tag_prefix: ""
 
   send-message:
     needs: [ release-tag ]
