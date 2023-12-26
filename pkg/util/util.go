@@ -710,7 +710,7 @@ func GetKubeBlocksCRDsURL(kbVersion string) string {
 	location, _ := GetIPLocation()
 	crdsURL := fmt.Sprintf("https://github.com/apecloud/kubeblocks/releases/download/v%s/kubeblocks_crds.yaml", kbVersion)
 	if location == "CN" || location == "" {
-		crdsURL = fmt.Sprintf("https://jihulab.com/api/v4/projects/85948/packages/generic/kubeblocks/v%s/kubeblocks_crds.yaml", kbVersion)
+		crdsURL = fmt.Sprintf("https://jihulab.com/api/v4/projects/98723/packages/generic/kubeblocks/v%s/kubeblocks_crds.yaml", kbVersion)
 	}
 	klog.V(1).Infof("CRDs url: %s", crdsURL)
 	return crdsURL

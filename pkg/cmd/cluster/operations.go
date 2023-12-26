@@ -36,6 +36,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	apitypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
@@ -45,6 +46,7 @@ import (
 
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	"github.com/apecloud/kubeblocks/pkg/constant"
+	lorryclient "github.com/apecloud/kubeblocks/pkg/lorry/client"
 
 	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/cluster"
@@ -55,6 +57,8 @@ import (
 	"github.com/apecloud/kbcli/pkg/util/flags"
 	"github.com/apecloud/kbcli/pkg/util/prompt"
 )
+
+const oceanbase = "oceanbase"
 
 type OperationsOptions struct {
 	action.CreateOptions  `json:"-"`
@@ -102,8 +106,12 @@ type OperationsOptions struct {
 	Services      []appsv1alpha1.ClusterComponentService `json:"services,omitempty"`
 
 	// Switchover options
-	Component string `json:"component"`
-	Instance  string `json:"instance"`
+	Component      string      `json:"component"`
+	Instance       string      `json:"instance"`
+	Primary        string      `json:"-"`
+	CharacterType  string      `json:"-"`
+	LorryHAEnabled bool        `json:"-"`
+	ExecPod        *corev1.Pod `json:"-"`
 }
 
 func newBaseOperationsOptions(f cmdutil.Factory, streams genericiooptions.IOStreams,
@@ -187,6 +195,124 @@ func (o *OperationsOptions) CompleteComponentsFlag() error {
 		o.ComponentNames = []string{clusterObj.Spec.ComponentSpecs[0].Name}
 	}
 	return nil
+}
+
+func (o *OperationsOptions) CompletePromoteOps() error {
+	clusterObj, err := cluster.GetClusterByName(o.Dynamic, o.Name, o.Namespace)
+	if err != nil {
+		return err
+	}
+
+	if o.Component == "" {
+		if len(clusterObj.Spec.ComponentSpecs) > 1 {
+			return fmt.Errorf("there are multiple components in cluster, please use --component to specify the component for promote")
+		}
+		o.Component = clusterObj.Spec.ComponentSpecs[0].Name
+	}
+	o.CompleteHaEnabled()
+	return o.CompleteCharacterType(clusterObj)
+}
+
+// CompleteCharacterType will get the cluster character type compatible with 0.7
+// If both componentDefRef and componentDef are provided, the componentDef will take precedence over componentDefRef.
+func (o *OperationsOptions) CompleteCharacterType(clusterObj *appsv1alpha1.Cluster) error {
+	var primaryRoles []string
+	var componentSpec appsv1alpha1.ClusterComponentSpec
+	for _, compSpec := range clusterObj.Spec.ComponentSpecs {
+		if compSpec.Name == o.Component {
+			componentSpec = compSpec
+			break
+		}
+	}
+
+	if componentSpec.ComponentDef != "" {
+		componentDefV2 := &appsv1alpha1.ComponentDefinition{}
+		if err := util.GetK8SClientObject(o.Dynamic, componentDefV2, types.CompDefGVR(), "", componentSpec.ComponentDef); err != nil {
+			return err
+		}
+		o.CharacterType = componentDefV2.Spec.ServiceKind
+
+		primaryRole, _ := func(roles []appsv1alpha1.ReplicaRole) (string, error) {
+			targetRole := ""
+			if len(roles) == 0 {
+				return targetRole, fmt.Errorf("component has no roles definition, does not support switchover")
+			}
+			for _, role := range roles {
+				if role.Serviceable && role.Writable {
+					if targetRole != "" {
+						return targetRole, fmt.Errorf("componentDefinition has more than role is serviceable and writable, does not support switchover")
+					}
+					targetRole = role.Name
+				}
+			}
+			return targetRole, nil
+		}(componentDefV2.Spec.Roles)
+		primaryRoles = append(primaryRoles, primaryRole)
+	} else {
+		clusterDefObj := appsv1alpha1.ClusterDefinition{}
+		clusterDefKey := client.ObjectKey{
+			Namespace: "",
+			Name:      clusterObj.Spec.ClusterDefRef,
+		}
+		if err := util.GetResourceObjectFromGVR(types.ClusterDefGVR(), clusterDefKey, o.Dynamic, &clusterDefObj); err != nil {
+			return err
+		}
+
+		componentDef := clusterDefObj.GetComponentDefByName(componentSpec.ComponentDefRef)
+		if componentDef == nil {
+			return fmt.Errorf("failed to get component def :%s", componentSpec.ComponentDefRef)
+		}
+		o.CharacterType = componentDef.CharacterType
+		primaryRoles = []string{constant.Primary, constant.Leader}
+	}
+
+	if o.Instance != "" && o.CharacterType != oceanbase {
+		pod, err := o.Client.CoreV1().Pods(o.Namespace).Get(context.Background(), o.Instance, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		o.ExecPod = pod
+		return nil
+	}
+
+	if len(primaryRoles) == 0 {
+		return nil
+	}
+
+	labelsMap := map[string]string{
+		constant.AppInstanceLabelKey:    o.Name,
+		constant.AppManagedByLabelKey:   "kubeblocks",
+		constant.KBAppComponentLabelKey: o.Component,
+	}
+	selector := labels.SelectorFromSet(labelsMap)
+	podList, err := o.Client.CoreV1().Pods(o.Namespace).List(context.Background(), metav1.ListOptions{LabelSelector: selector.String()})
+	if err != nil {
+		return err
+	}
+	for _, pod := range podList.Items {
+		podRole, ok := pod.Labels[constant.RoleLabelKey]
+		for _, role := range primaryRoles {
+			if ok && podRole == role {
+				o.ExecPod = pod.DeepCopy()
+				o.Primary = pod.Name
+				break
+			}
+		}
+	}
+	return nil
+}
+
+func (o *OperationsOptions) CompleteHaEnabled() {
+	cmName := fmt.Sprintf("%s-%s-haconfig", o.Name, o.Component)
+
+	cm, err := o.Client.CoreV1().ConfigMaps(o.Namespace).Get(context.Background(), cmName, metav1.GetOptions{})
+	if err != nil {
+		return
+	}
+	enable, ok := cm.Annotations["enable"]
+	if ok && strings.EqualFold(enable, "true") {
+		o.LorryHAEnabled = true
+	}
 }
 
 func (o *OperationsOptions) validateUpgrade() error {
@@ -353,20 +479,11 @@ func (o *OperationsOptions) validatePromote(cluster *appsv1alpha1.Cluster) error
 		clusterDefObj = appsv1alpha1.ClusterDefinition{}
 		compDefObj    = appsv1alpha1.ComponentDefinition{}
 		podObj        = &corev1.Pod{}
-		componentName string
+		componentName = o.Component
 	)
 
 	if len(cluster.Spec.ComponentSpecs) == 0 {
 		return fmt.Errorf("cluster.Spec.ComponentSpecs cannot be empty")
-	}
-
-	if o.Component != "" {
-		componentName = o.Component
-	} else {
-		if len(cluster.Spec.ComponentSpecs) > 1 {
-			return fmt.Errorf("there are multiple components in cluster, please use --component to specify the component for promote")
-		}
-		componentName = cluster.Spec.ComponentSpecs[0].Name
 	}
 
 	// check clusterDefinition exist
@@ -380,7 +497,7 @@ func (o *OperationsOptions) validatePromote(cluster *appsv1alpha1.Cluster) error
 
 	getAndValidatePod := func(targetRoles ...string) error {
 		// if the instance is not specified, do not need to check the validity of the instance
-		if o.Instance == "" {
+		if o.Instance == "" || o.CharacterType == oceanbase {
 			return nil
 		}
 		// checks the validity of the instance whether it belongs to the current component and ensure it is not the primary or leader instance currently.
@@ -418,17 +535,19 @@ func (o *OperationsOptions) validatePromote(cluster *appsv1alpha1.Cluster) error
 		if clusterCompDefObj == nil {
 			return fmt.Errorf("cluster component %s is invalid", componentName)
 		}
-		if clusterCompDefObj.SwitchoverSpec == nil {
-			return fmt.Errorf("cluster component %s does not support switchover", componentName)
-		}
-		switch o.Instance {
-		case "":
-			if clusterCompDefObj.SwitchoverSpec.WithoutCandidate == nil {
-				return fmt.Errorf("cluster component %s does not support promote without specifying an instance. Please specify a specific instance for the promotion", componentName)
+		if !o.LorryHAEnabled && o.CharacterType != oceanbase {
+			if clusterCompDefObj.SwitchoverSpec == nil {
+				return fmt.Errorf("cluster component %s does not support switchover", componentName)
 			}
-		default:
-			if clusterCompDefObj.SwitchoverSpec.WithCandidate == nil {
-				return fmt.Errorf("cluster component %s does not support specifying an instance for promote. If you want to perform a promote operation, please do not specify an instance", componentName)
+			switch o.Instance {
+			case "":
+				if clusterCompDefObj.SwitchoverSpec.WithoutCandidate == nil {
+					return fmt.Errorf("cluster component %s does not support promote without specifying an instance. Please specify a specific instance for the promotion", componentName)
+				}
+			default:
+				if clusterCompDefObj.SwitchoverSpec.WithCandidate == nil {
+					return fmt.Errorf("cluster component %s does not support specifying an instance for promote. If you want to perform a promote operation, please do not specify an instance", componentName)
+				}
 			}
 		}
 		targetRoles := []string{constant.Primary, constant.Leader}
@@ -463,17 +582,19 @@ func (o *OperationsOptions) validatePromote(cluster *appsv1alpha1.Cluster) error
 		if err := util.GetResourceObjectFromGVR(types.CompDefGVR(), compDefKey, o.Dynamic, &compDefObj); err != nil {
 			return err
 		}
-		if compDefObj.Spec.LifecycleActions == nil || compDefObj.Spec.LifecycleActions.Switchover == nil {
-			return fmt.Errorf("this cluster component %s does not support switchover", componentName)
-		}
-		switch o.Instance {
-		case "":
-			if compDefObj.Spec.LifecycleActions.Switchover.WithoutCandidate == nil {
-				return fmt.Errorf("this cluster component %s does not support promote without specifying an instance. Please specify a specific instance for the promotion", componentName)
+		if !o.LorryHAEnabled && o.CharacterType != oceanbase {
+			if compDefObj.Spec.LifecycleActions == nil || compDefObj.Spec.LifecycleActions.Switchover == nil {
+				return fmt.Errorf("this cluster component %s does not support switchover", componentName)
 			}
-		default:
-			if compDefObj.Spec.LifecycleActions.Switchover.WithCandidate == nil {
-				return fmt.Errorf("this cluster component %s does not support specifying an instance for promote. If you want to perform a promote operation, please do not specify an instance", componentName)
+			switch o.Instance {
+			case "":
+				if compDefObj.Spec.LifecycleActions.Switchover.WithoutCandidate == nil {
+					return fmt.Errorf("this cluster component %s does not support promote without specifying an instance. Please specify a specific instance for the promotion", componentName)
+				}
+			default:
+				if compDefObj.Spec.LifecycleActions.Switchover.WithCandidate == nil {
+					return fmt.Errorf("this cluster component %s does not support specifying an instance for promote. If you want to perform a promote operation, please do not specify an instance", componentName)
+				}
 			}
 		}
 		targetRole, err := getTargetRole(compDefObj.Spec.Roles)
@@ -916,8 +1037,16 @@ func NewPromoteCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 			cmdutil.BehaviorOnFatal(printer.FatalWithRedColor)
 			cmdutil.CheckErr(o.Complete())
 			cmdutil.CheckErr(o.CompleteComponentsFlag())
+			cmdutil.CheckErr(o.CompletePromoteOps())
 			cmdutil.CheckErr(o.Validate())
-			cmdutil.CheckErr(o.Run())
+			if (o.LorryHAEnabled || o.CharacterType == oceanbase) && o.ExecPod != nil {
+				lorryCli, err := lorryclient.NewK8sExecClientWithPod(nil, o.ExecPod)
+				cmdutil.CheckErr(err)
+				cmdutil.CheckErr(lorryCli.Switchover(context.Background(), o.Primary, o.Instance))
+				fmt.Fprint(o.Out, "swichover task created\n")
+			} else {
+				cmdutil.CheckErr(o.Run())
+			}
 		},
 	}
 	flags.AddComponentFlag(f, cmd, &o.Component, "Specify the component name of the cluster, if the cluster has multiple components, you need to specify a component")
