@@ -51,7 +51,7 @@ jobs:
 
       - name: push kbcli embed chart changes
         uses: ad-m/github-push-action@master
-        if: ${{ steps.build-kbcli-embed-chart.outputs.file_changes }}
+        if: ${{ steps.build-kbcli-embed-chart.outputs.file_changes && github.ref_name != 'main' }}
         with:
           github_token: ${{ env.GITHUB_TOKEN }}
           branch: ${{ github.ref }}
