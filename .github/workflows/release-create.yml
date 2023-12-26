@@ -4,6 +4,9 @@ on:
   push:
     tags:
       - v*
+    tags-ignore:
+      - '*cloud*'
+
 
 jobs:
   release-create:
