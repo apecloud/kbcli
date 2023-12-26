@@ -140,12 +140,12 @@ func (o *PgBenchOptions) Complete(args []string) error {
 			Name:      o.ClusterName,
 			Namespace: o.namespace,
 			GetOptions: cluster.GetOptions{
-				WithClusterDef:     true,
-				WithService:        true,
-				WithPod:            true,
-				WithEvent:          true,
-				WithPVC:            true,
-				WithDataProtection: true,
+				WithClusterDef:     cluster.Maybe,
+				WithService:        cluster.Need,
+				WithPod:            cluster.Need,
+				WithEvent:          cluster.Need,
+				WithPVC:            cluster.Need,
+				WithDataProtection: cluster.Need,
 			},
 		}
 		if o.ClusterObjects, err = clusterGetter.Get(); err != nil {

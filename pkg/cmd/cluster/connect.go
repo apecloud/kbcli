@@ -221,8 +221,8 @@ func (o *ConnectOptions) complete() error {
 		return err
 	}
 	// get cluster def
-	if o.targetClusterDef, err = cluster.GetClusterDefByName(o.Dynamic, o.targetCluster.Spec.ClusterDefRef); err != nil {
-		return err
+	if tempClusterDef, err := cluster.GetClusterDefByName(o.Dynamic, o.targetCluster.Spec.ClusterDefRef); err == nil {
+		o.targetClusterDef = tempClusterDef
 	}
 
 	// 2.2 fill component name, use the first component by default
@@ -285,10 +285,10 @@ func (o *ConnectOptions) getAuthInfo() (*engines.AuthInfo, error) {
 		Name:      o.clusterName,
 		Namespace: o.Namespace,
 		GetOptions: cluster.GetOptions{
-			WithClusterDef: true,
-			WithService:    true,
-			WithSecret:     true,
-			WithCompDef:    true,
+			WithClusterDef: cluster.Maybe,
+			WithService:    cluster.Need,
+			WithSecret:     cluster.Need,
+			WithCompDef:    cluster.Maybe,
 		},
 	}
 
@@ -356,9 +356,9 @@ func (o *ConnectOptions) getConnectionInfo() (*engines.ConnectionInfo, error) {
 		Name:      o.clusterName,
 		Namespace: o.Namespace,
 		GetOptions: cluster.GetOptions{
-			WithClusterDef: true,
-			WithService:    true,
-			WithSecret:     true,
+			WithClusterDef: cluster.Maybe,
+			WithService:    cluster.Need,
+			WithSecret:     cluster.Need,
 		},
 	}
 

@@ -186,7 +186,7 @@ func (o *LogsOptions) complete(args []string) error {
 				Name:      o.clusterName,
 				Namespace: o.Namespace,
 				GetOptions: cluster.GetOptions{
-					WithClusterDef: true,
+					WithClusterDef: cluster.Maybe,
 				},
 			}
 			obj, err := clusterGetter.Get()

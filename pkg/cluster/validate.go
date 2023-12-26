@@ -20,9 +20,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package cluster
 
 import (
+	"context"
 	"fmt"
+	"strings"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/dynamic"
+
+	"github.com/apecloud/kbcli/pkg/types"
+	"github.com/apecloud/kubeblocks/pkg/constant"
 )
 
 // ValidateClusterVersion validates the cluster version.
@@ -38,6 +44,22 @@ func ValidateClusterVersion(dynamic dynamic.Interface, cd string, cv string) err
 			return nil
 		}
 	}
-
 	return fmt.Errorf("failed to find cluster version \"%s\"", cv)
+}
+
+func ValidateClusterVersionByComponentDef(dynamic dynamic.Interface, compDefs []string, cv string) error {
+	for _, compDef := range compDefs {
+		comp, err := dynamic.Resource(types.CompDefGVR()).Get(context.Background(), compDef, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		labels := comp.GetLabels()
+		cvSplit := strings.Split(cv, "-")
+		// todo: add cv label to compDef or remove cv in the future
+		if labels != nil && labels[constant.AppNameLabelKey] == cvSplit[0] && labels[constant.AppVersionLabelKey] == cvSplit[1] {
+			continue
+		}
+		return fmt.Errorf("failed to find cluster version referencing component definition %s", compDef)
+	}
+	return nil
 }
