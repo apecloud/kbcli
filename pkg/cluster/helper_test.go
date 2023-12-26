@@ -32,7 +32,8 @@ import (
 var _ = Describe("helper", func() {
 	It("Get instance info from cluster", func() {
 		cluster := testing.FakeCluster("test", "test")
-		dynamic := testing.FakeDynamicClient(cluster)
+		pod := testing.FakePods(1, "test", "test")
+		dynamic := testing.FakeDynamicClient(cluster, &pod.Items[0])
 		infos := GetSimpleInstanceInfos(dynamic, "test", "test")
 		Expect(len(infos) == 1).Should(BeTrue())
 	})
