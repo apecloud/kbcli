@@ -3,12 +3,12 @@ name: Releae Tag
 on:
   workflow_dispatch:
     inputs:
-      release_version:
+      VERSION:
         description: 'The version of release'
         required: true
         default: ''
 
-run-name: ref_name:${{ github.ref_name }} release_version:${{ inputs.release_version }}
+run-name: ref_name:${{ github.ref_name }} release_version:${{ inputs.VERSION }}
 
 env:
   GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
@@ -55,10 +55,10 @@ jobs:
           github_token: ${{ env.GITHUB_TOKEN }}
           branch: ${{ github.ref }}
 
-      - name: push tag ${{ inputs.release_version }}
+      - name: push tag ${{ inputs.VERSION }}
         uses: mathieudutour/github-tag-action@v6.1
         with:
-          custom_tag: ${{ inputs.release_version }}
+          custom_tag: ${{ inputs.VERSION }}
           github_token: ${{ env.GITHUB_TOKEN }}
           commit_sha: ${{ steps.build-kbcli-embed-chart.outputs.commit_sha_latest }}
           tag_prefix: ""
@@ -69,7 +69,7 @@ jobs:
     uses: apecloud/apecloud-cd/.github/workflows/feishui-message.yml@v0.1.49
     with:
       TYPE: "2"
-      CONTENT: "release tag ${{ inputs.release_version }} error"
+      CONTENT: "release tag ${{ inputs.VERSION }} error"
       APECD_REF: "v0.1.49"
     secrets: inherit
 
