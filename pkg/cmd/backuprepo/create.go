@@ -25,7 +25,7 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -89,7 +89,7 @@ type createOptions struct {
 }
 
 var backupRepoCreateExamples = templates.Examples(`
-    # Create a default backup repo using S3 as the backend
+    # Create a default backup repository using S3 as the backend
     kbcli backuprepo create \
       --provider s3 \
       --region us-west-1 \
@@ -98,13 +98,21 @@ var backupRepoCreateExamples = templates.Examples(`
       --secret-access-key <SECRET KEY> \
       --default
 
-    # Create a non-default backup repo with a specified name
+    # Create a non-default backup repository with a specified name
     kbcli backuprepo create my-backup-repo \
       --provider s3 \
       --region us-west-1 \
       --bucket test-kb-backup \
       --access-key-id <ACCESS KEY> \
       --secret-access-key <SECRET KEY>
+
+    # Create a backup repository with a FTP backend
+    kbcli backuprepo create \
+      --provider ftp \
+      --ftp-host=<HOST or IP> \
+      --ftp-port=21 \
+      --ftp-user=<FTP USER> \
+      --ftp-password=<PASSWORD>
 `)
 
 func newCreateCommand(o *createOptions, f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
@@ -114,7 +122,7 @@ func newCreateCommand(o *createOptions, f cmdutil.Factory, streams genericioopti
 	o.IOStreams = streams
 	cmd := &cobra.Command{
 		Use:     "create [NAME]",
-		Short:   "Create a backup repo",
+		Short:   "Create a backup repository",
 		Example: backupRepoCreateExamples,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			util.CheckErr(o.init(f))
@@ -135,11 +143,11 @@ func newCreateCommand(o *createOptions, f cmdutil.Factory, streams genericioopti
 		fmt.Sprintf("Specify the access method for the backup repository, \"Tool\" is preferred if not specified. options: %q", allowedAccessMethods))
 	cmd.Flags().StringVar(&o.storageProvider, providerFlagName, "", "Specify storage provider")
 	util.CheckErr(cmd.MarkFlagRequired(providerFlagName))
-	cmd.Flags().BoolVar(&o.isDefault, "default", false, "Specify whether to set the created backup repo as default")
+	cmd.Flags().BoolVar(&o.isDefault, "default", false, "Specify whether to set the created backup repository as default")
 	cmd.Flags().StringVar(&o.pvReclaimPolicy, "pv-reclaim-policy", "Retain",
-		`Specify the reclaim policy for PVs created by this backup repo, the value can be "Retain" or "Delete"`)
+		`Specify the reclaim policy for PVs created by this backup repository, the value can be "Retain" or "Delete". This option only takes effect when --access-method="Mount".`)
 	cmd.Flags().StringVar(&o.volumeCapacity, "volume-capacity", "100Gi",
-		`Specify the capacity of the new created PVC"`)
+		`Specify the capacity of the new created PVC. This option only takes effect when --access-method="Mount".`)
 
 	// register flag completion func
 	registerFlagCompletionFunc(cmd, f)
@@ -182,7 +190,9 @@ func (o *createOptions) parseProviderFlags(cmd *cobra.Command, args []string, f 
 	if err != nil {
 		return err
 	}
-	return flags.BuildFlagsWithOpenAPISchema(cmd, args, func() (*v1.JSONSchemaProps, error) {
+	// showing the default example is misleading when the provider flag is specified
+	cmd.Example = ""
+	return flags.BuildFlagsWithOpenAPISchema(cmd, args, func() (*apiextensionsv1.JSONSchemaProps, error) {
 		// Get provider info from API server
 		provider := &storagev1alpha1.StorageProvider{}
 		err := util.GetK8SClientObject(o.dynamic, provider, types.StorageProviderGVR(), "", o.storageProvider)
