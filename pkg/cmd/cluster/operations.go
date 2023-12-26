@@ -58,6 +58,8 @@ import (
 	"github.com/apecloud/kbcli/pkg/util/prompt"
 )
 
+const oceanbase = "oceanbase"
+
 type OperationsOptions struct {
 	action.CreateOptions  `json:"-"`
 	HasComponentNamesFlag bool `json:"-"`
@@ -264,7 +266,7 @@ func (o *OperationsOptions) CompleteCharacterType(clusterObj *appsv1alpha1.Clust
 		primaryRoles = []string{constant.Primary, constant.Leader}
 	}
 
-	if o.Instance != "" && o.CharacterType != "oceanbase" {
+	if o.Instance != "" && o.CharacterType != oceanbase {
 		pod, err := o.Client.CoreV1().Pods(o.Namespace).Get(context.Background(), o.Instance, metav1.GetOptions{})
 		if err != nil {
 			return err
@@ -495,7 +497,7 @@ func (o *OperationsOptions) validatePromote(cluster *appsv1alpha1.Cluster) error
 
 	getAndValidatePod := func(targetRoles ...string) error {
 		// if the instance is not specified, do not need to check the validity of the instance
-		if o.Instance == "" || o.CharacterType == "oceanbase" {
+		if o.Instance == "" || o.CharacterType == oceanbase {
 			return nil
 		}
 		// checks the validity of the instance whether it belongs to the current component and ensure it is not the primary or leader instance currently.
@@ -533,7 +535,7 @@ func (o *OperationsOptions) validatePromote(cluster *appsv1alpha1.Cluster) error
 		if clusterCompDefObj == nil {
 			return fmt.Errorf("cluster component %s is invalid", componentName)
 		}
-		if !o.LorryHAEnabled && o.CharacterType != "oceanbase" {
+		if !o.LorryHAEnabled && o.CharacterType != oceanbase {
 			if clusterCompDefObj.SwitchoverSpec == nil {
 				return fmt.Errorf("cluster component %s does not support switchover", componentName)
 			}
@@ -580,7 +582,7 @@ func (o *OperationsOptions) validatePromote(cluster *appsv1alpha1.Cluster) error
 		if err := util.GetResourceObjectFromGVR(types.CompDefGVR(), compDefKey, o.Dynamic, &compDefObj); err != nil {
 			return err
 		}
-		if !o.LorryHAEnabled && o.CharacterType != "oceanbase" {
+		if !o.LorryHAEnabled && o.CharacterType != oceanbase {
 			if compDefObj.Spec.LifecycleActions == nil || compDefObj.Spec.LifecycleActions.Switchover == nil {
 				return fmt.Errorf("this cluster component %s does not support switchover", componentName)
 			}
@@ -1037,7 +1039,7 @@ func NewPromoteCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 			cmdutil.CheckErr(o.CompleteComponentsFlag())
 			cmdutil.CheckErr(o.CompletePromoteOps())
 			cmdutil.CheckErr(o.Validate())
-			if (o.LorryHAEnabled || o.CharacterType == "oceanbase") && o.ExecPod != nil {
+			if (o.LorryHAEnabled || o.CharacterType == oceanbase) && o.ExecPod != nil {
 				lorryCli, err := lorryclient.NewK8sExecClientWithPod(nil, o.ExecPod)
 				cmdutil.CheckErr(err)
 				cmdutil.CheckErr(lorryCli.Switchover(context.Background(), o.Primary, o.Instance))
