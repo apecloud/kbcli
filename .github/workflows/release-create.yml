@@ -3,7 +3,8 @@ name: Release Create
 on:
   push:
     tags:
-      - v*
+      - 'v*'
+      - '!*cloud'
 
 jobs:
   release-create:
