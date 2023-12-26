@@ -49,72 +49,8 @@ func GetSimpleInstanceInfos(dynamic dynamic.Interface, name, namespace string) [
 
 // GetSimpleInstanceInfosForComponent returns simple instance info that only contains instance name and role for a component
 func GetSimpleInstanceInfosForComponent(dynamic dynamic.Interface, name, componentName, namespace string) []*InstanceInfo {
-	// first get instance info from status, using the status as a cache
-	if infos := getInstanceInfoFromStatus(dynamic, name, componentName, namespace); len(infos) > 0 {
-		return infos
-	}
-
 	// missed in the status, try to list all pods and build instance info
 	return getInstanceInfoByList(dynamic, name, componentName, namespace)
-}
-
-// getInstancesInfoFromCluster gets instances info from cluster status
-// Deprecated: getInstanceInfoFromStatus is deprecated. getInstanceInfoByList should be used instead.
-func getInstanceInfoFromStatus(dynamic dynamic.Interface, name, componentName, namespace string) []*InstanceInfo {
-	var infos []*InstanceInfo
-	cluster, err := GetClusterByName(dynamic, name, namespace)
-	if err != nil {
-		return nil
-	}
-	// traverse all components, check the workload type
-	for compName, c := range cluster.Status.Components {
-		// filter by component name
-		if len(componentName) > 0 && compName != componentName {
-			continue
-		}
-
-		var info *InstanceInfo
-		// workload type is Consensus
-		if c.ConsensusSetStatus != nil {
-			buildInfoByStatus := func(status *appsv1alpha1.ConsensusMemberStatus) {
-				if status == nil {
-					return
-				}
-				info = &InstanceInfo{Role: status.Name, Name: status.Pod}
-				infos = append(infos, info)
-			}
-
-			// leader must be first
-			buildInfoByStatus(&c.ConsensusSetStatus.Leader)
-
-			// followers
-			for _, f := range c.ConsensusSetStatus.Followers {
-				buildInfoByStatus(&f)
-			}
-
-			// learner
-			buildInfoByStatus(c.ConsensusSetStatus.Learner)
-		}
-
-		// workload type is Replication
-		if c.ReplicationSetStatus != nil {
-			buildInfoByStatus := func(status *appsv1alpha1.ReplicationMemberStatus) {
-				if status == nil {
-					return
-				}
-				info = &InstanceInfo{Name: status.Pod}
-				infos = append(infos, info)
-			}
-			// primary
-			buildInfoByStatus(&c.ReplicationSetStatus.Primary)
-
-			// secondaries
-			for _, f := range c.ReplicationSetStatus.Secondaries {
-				buildInfoByStatus(&f)
-			}
-		}
-	}
-	return infos
 }
 
 // getInstanceInfoByList gets instances info by listing all pods
