@@ -60,14 +60,14 @@ var _ = Describe("cluster util", func() {
 		testing.FakeClusterVersion())
 
 	getOptions := GetOptions{
-		WithClusterDef:     true,
-		WithClusterVersion: true,
-		WithConfigMap:      true,
-		WithService:        true,
-		WithSecret:         true,
-		WithPVC:            true,
-		WithPod:            true,
-		WithDataProtection: true,
+		WithClusterDef:     Need,
+		WithClusterVersion: Need,
+		WithConfigMap:      Need,
+		WithService:        Need,
+		WithSecret:         Need,
+		WithPVC:            Need,
+		WithPod:            Need,
+		WithDataProtection: Need,
 	}
 
 	It("get cluster objects", func() {

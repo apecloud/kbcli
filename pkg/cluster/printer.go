@@ -74,22 +74,22 @@ var mapTblInfo = map[PrintType]tblInfo{
 			}
 			tbl.AddRow(info...)
 		},
-		getOptions: GetOptions{WithClusterDef: true, WithService: true, WithPod: true},
+		getOptions: GetOptions{WithClusterDef: Maybe, WithService: Need, WithPod: Need},
 	},
 	PrintInstances: {
 		header:     []interface{}{"NAME", "NAMESPACE", "CLUSTER", "COMPONENT", "STATUS", "ROLE", "ACCESSMODE", "AZ", "CPU(REQUEST/LIMIT)", "MEMORY(REQUEST/LIMIT)", "STORAGE", "NODE", "CREATED-TIME"},
 		addRow:     AddInstanceRow,
-		getOptions: GetOptions{WithClusterDef: true, WithPod: true},
+		getOptions: GetOptions{WithClusterDef: Maybe, WithPod: Need},
 	},
 	PrintComponents: {
 		header:     []interface{}{"NAME", "NAMESPACE", "CLUSTER", "TYPE", "IMAGE"},
 		addRow:     AddComponentRow,
-		getOptions: GetOptions{WithClusterDef: true, WithPod: true},
+		getOptions: GetOptions{WithClusterDef: Maybe, WithPod: Need},
 	},
 	PrintEvents: {
 		header:     []interface{}{"NAMESPACE", "TIME", "TYPE", "REASON", "OBJECT", "MESSAGE"},
 		addRow:     AddEventRow,
-		getOptions: GetOptions{WithClusterDef: true, WithPod: true, WithEvent: true},
+		getOptions: GetOptions{WithClusterDef: Maybe, WithPod: Need, WithEvent: Need},
 	},
 	PrintLabels: {
 		header:     []interface{}{"NAME", "NAMESPACE"},
