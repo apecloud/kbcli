@@ -45,14 +45,14 @@ jobs:
           RELEASE_COMMIT="$(git rev-parse HEAD)"
           echo 'RELEASE_COMMIT='${RELEASE_COMMIT} >> $GITHUB_ENV
 
-      - name: push kbcli embed chart changes
+      - name: push kbcli embed chart changes to new branch
         if: ${{ steps.build-kbcli-embed-chart.outputs.file_changes && github.ref_name == 'main' }}
         uses: ad-m/github-push-action@master
         with:
           github_token: ${{ env.GITHUB_TOKEN }}
           branch: support/auto-update-kbcli-${{ env.RELEASE_COMMIT }}
 
-      - name: auto create pr
+      - name: auto create pr head new branch
         if: ${{ steps.build-kbcli-embed-chart.outputs.file_changes && github.ref_name == 'main' }}
         run: |
           gh pr create --head "support/auto-update-kbcli-${{ env.RELEASE_COMMIT }}" --title "chore: auto update kbcli embed chart changes" --body ""
