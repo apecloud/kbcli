@@ -142,7 +142,7 @@ func GetChartCacheFiles() []fs.DirEntry {
 }
 
 func ClearCharts(c ClusterType) {
-	// if the fail clusterType is from external config, remove the config and the elated charts
+	// if the fail clusterType is from external config, remove the config and the related charts
 	if GlobalClusterChartConfig.RemoveConfig(c) {
 		if err := GlobalClusterChartConfig.WriteConfigs(CliClusterChartConfig); err != nil {
 			klog.V(2).Info(fmt.Sprintf("Warning: auto clear %s config fail due to: %s\n", c, err.Error()))
@@ -166,6 +166,7 @@ type TypeInstance struct {
 
 // PreCheck is used by `cluster register` command
 func (h *TypeInstance) PreCheck() error {
+
 	chartInfo := &ChartInfo{}
 	// load helm chart from embed tgz file
 	{
@@ -188,16 +189,15 @@ func (h *TypeInstance) PreCheck() error {
 	if err := chartInfo.buildClusterSchema(); err != nil {
 		return err
 	}
-	if err := chartInfo.buildClusterDef(); err != nil {
-		return err
-	}
-
 	// pre-check build sub-command flags
 	if err := flags.BuildFlagsBySchema(&cobra.Command{}, chartInfo.Schema); err != nil {
 		return err
 	}
-
-	return flags.BuildFlagsBySchema(&cobra.Command{}, chartInfo.SubSchema)
+	err := flags.BuildFlagsBySchema(&cobra.Command{}, chartInfo.SubSchema)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (h *TypeInstance) loadChart() (io.ReadCloser, error) {

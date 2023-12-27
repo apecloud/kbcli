@@ -134,11 +134,12 @@ func (o *describeOptions) describeCluster(name string) error {
 		Name:      name,
 		Namespace: o.namespace,
 		GetOptions: cluster.GetOptions{
-			WithClusterDef:     true,
-			WithService:        true,
-			WithPod:            true,
-			WithPVC:            true,
-			WithDataProtection: true,
+			WithClusterDef:     cluster.Maybe,
+			WithCompDef:        cluster.Maybe,
+			WithService:        cluster.Need,
+			WithPod:            cluster.Need,
+			WithPVC:            cluster.Need,
+			WithDataProtection: cluster.Need,
 		},
 	}
 

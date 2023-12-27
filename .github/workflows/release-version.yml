@@ -3,25 +3,22 @@ name: Release Version
 on:
   workflow_dispatch:
     inputs:
-      VERSION:
+      release_version:
         description: 'The version of release'
-        required: true
+        required: false
+        default: ''
+      content:
+        description: 'The request content'
+        required: false
         default: ''
 
-run-name: ref_name:${{ github.ref_name }} release_version:${{ inputs.VERSION }}
-
-env:
-  GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+run-name: ref_name:${{ github.ref_name }} release_version:${{ inputs.release_version }} ${{ inputs.content }}
 
 jobs:
   release-version:
-    runs-on: ubuntu-latest
-    steps:
-      - name: checkout branch ${{ github.ref_name }}
-        uses: actions/checkout@v4
-      - name: push tag
-        uses: mathieudutour/github-tag-action@v6.1
-        with:
-          custom_tag: ${{ inputs.VERSION }}
-          github_token: ${{ env.GITHUB_TOKEN }}
-          tag_prefix: ""
+    uses: apecloud/apecloud-cd/.github/workflows/release-version.yml@v0.1.42
+    with:
+      RELEASE_VERSION: "${{ inputs.release_version }}"
+      CONTENT: "${{ inputs.content }}"
+      APECD_REF: "v0.1.42"
+    secrets: inherit

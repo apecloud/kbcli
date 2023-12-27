@@ -74,7 +74,7 @@ var _ = Describe("connection", func() {
 		}
 
 		tf.Client = tf.UnstructuredClient
-		tf.FakeDynamicClient = testing.FakeDynamicClient(cluster, testing.FakeClusterDef(), testing.FakeClusterVersion())
+		tf.FakeDynamicClient = testing.FakeDynamicClient(cluster, testing.FakeClusterDef(), testing.FakeClusterVersion(), &pods.Items[0], &pods.Items[1], &pods.Items[2])
 		streams = genericiooptions.NewTestIOStreamsDiscard()
 	})
 

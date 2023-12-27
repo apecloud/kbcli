@@ -181,12 +181,9 @@ bin/kbcli.%: ## Cross build bin/kbcli.$(OS).$(ARCH).
 	GOOS=$(word 2,$(subst ., ,$@)) GOARCH=$(word 3,$(subst ., ,$@)) $(GO) build -tags $(BUILD_TAGS) -ldflags=${CLI_LD_FLAGS} -o $@ cmd/cli/main.go
 
 .PHONY: fetch-addons
-fetch-addons: ## fetch addons helm charts, if addons dir not exist, clone it, else pull it.
-	@if [ ! -d "addons" ]; then \
-		git clone https://github.com/apecloud/kubeblocks-addons.git -b ${ADDON_BRANCH} addons;\
-	else \
-		cd addons && git pull ;\
-	fi
+fetch-addons: ## update addon submodule
+	git submodule update --init --recursive --remote
+	git submodule
 
 .PHONY: kbcli-fast
 kbcli-fast: OS=$(shell $(GO) env GOOS)

@@ -1,113 +1,44 @@
 name: Release Kbcli
 
 on:
-  workflow_call:
-    inputs:
-      KBCLI_REF:
-        description: "The ref of kbcli"
-        type: string
-        required: false
-        default: 'main'
+  release:
+    types:
+      - published
 
 env:
   GH_TOKEN: ${{ github.token }}
   GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-  TAG_NAME: ${{ github.ref_name }}
+  RELEASE_VERSION: ${{ github.ref_name }}
   GO_VERSION: "1.21"
   CLI_NAME: 'kbcli'
   CLI_REPO: 'apecloud/kbcli'
-  GITLAB_KBCLI_PROJECT_ID: 85948
-  GITLAB_ACCESS_TOKEN: ${{ secrets.GITLAB_ACCESS_TOKEN }}
+  JIHULAB_KBCLI_PROJECT_ID: 85948
+  JIHULAB_ACCESS_TOKEN: ${{ secrets.GITLAB_ACCESS_TOKEN }}
   FURY_TOKEN: ${{ secrets.FURY_UPLOAD_TOKEN }}
   FURY_ACCOUNT: ${{ secrets.FURY_ACCOUNT }}
   GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
   PASSPHRASE: ${{ secrets.PASSPHRASE }}
-  KUBEBLOCKS_CRDS: "kubeblocks_crds.yaml"
 
 jobs:
-  create-release-kbcli:
-    name: Create Release Kbcli
+  create-release-jihulab:
+    name: Create Release Kbcli Jihulab
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Kbcli Code
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ env.CLI_REPO }}
-          token: ${{ env.GITHUB_TOKEN }}
-          ref: ${{ inputs.KBCLI_REF }}
-          path: ./
-
-      - name: create release ${{ env.CLI_NAME }}
-        id: create_release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ env.TAG_NAME }}
-          name: KubeBlocks ${{ env.TAG_NAME }}
-          repository: ${{ env.CLI_REPO }}
-          token: ${{ env.GITHUB_TOKEN }}
-          prerelease: true
-
+      - uses: actions/checkout@v4
       - name: create gitlab release ${{ env.CLI_NAME }}
         run: |
           bash ${{ github.workspace }}/.github/utils/release_gitlab.sh \
             --type 1 \
-            --project-id ${{ env.GITLAB_KBCLI_PROJECT_ID }} \
-            --tag-name ${{ env.TAG_NAME }} \
-            --access-token ${{ env.GITLAB_ACCESS_TOKEN }}
-
-  upload-kubeblocks-crds:
-    needs: create-release-kbcli
-    name: Upload KubeBlocks crds
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: merge KubeBlocks crds
-        run: |
-          crds_path="deploy/helm/crds"
-          KUBEBLOCKS_CRDS=${{ env.KUBEBLOCKS_CRDS }}
-          touch $KUBEBLOCKS_CRDS
-          crds_list=$(ls $crds_path)
-          for crd in $(echo $crds_list); do
-              echo "---" >> $KUBEBLOCKS_CRDS
-              cat $crds_path/$crd >> $KUBEBLOCKS_CRDS
-          done
-
-      - name: upload KubeBlocks crds to jihulab
-        run: |
-          echo "Processing file: ${{ env.KUBEBLOCKS_CRDS }}"
-          bash ${{ github.workspace }}/.github/utils/release_gitlab.sh \
-              --type 2 \
-              --project-id ${{ env.GITLAB_KBCLI_PROJECT_ID }} \
-              --tag-name ${{ env.TAG_NAME }} \
-              --asset-path ${{ github.workspace }}/${{ env.KUBEBLOCKS_CRDS }} \
-              --asset-name ${{ env.KUBEBLOCKS_CRDS }} \
-              --access-token ${{ env.GITLAB_ACCESS_TOKEN }}
-
-      - name: Get release
-        id: get_release
-        uses: bruceadams/get-release@v1.3.2
-
-      - name: upload KubeBlocks crds to github
-        uses: actions/upload-release-asset@main
-        with:
-          upload_url: ${{ steps.get_release.outputs.upload_url }}
-          asset_path: ${{ github.workspace }}/${{ env.KUBEBLOCKS_CRDS }}
-          asset_name: ${{ env.KUBEBLOCKS_CRDS }}
-          asset_content_type: application/yaml
+            --project-id ${{ env.JIHULAB_KBCLI_PROJECT_ID }} \
+            --tag-name ${{ env.RELEASE_VERSION }} \
+            --access-token ${{ env.JIHULAB_ACCESS_TOKEN }}
 
   gorelease-assert:
-    needs: create-release-kbcli
+    needs: [ create-release-jihulab ]
     name: Upload and release kbcli
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Kbcli Code
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ env.CLI_REPO }}
-          token: ${{ env.GITHUB_TOKEN }}
-          ref: ${{ inputs.KBCLI_REF }}
-          path: ./
-
+      - uses: actions/checkout@v4
       - name: install lib
         run: |
           sudo apt-get update
@@ -140,22 +71,18 @@ jobs:
       - name: upload .rpm and .deb to fury.io
         run: |
           for file in $(find "${{ github.workspace }}/dist" -type f | grep -E '\.(deb|rpm)$'); do
-            echo "Processing file: $file"
-            curl -F package=@$file https://${{ env.FURY_TOKEN }}@push.fury.io/${{ env.FURY_ACCOUNT }}/
+              echo "Processing file: $file"
+              curl -F package=@$file https://${{ env.FURY_TOKEN }}@push.fury.io/${{ env.FURY_ACCOUNT }}/
           done
 
-      - name: get kbcli's release upload url
-        run: |
-          echo 'UPLOAD_URL='`bash ${{ github.workspace }}/.github/utils/utils.sh \
-            --tag-name ${{ env.TAG_NAME }} \
-            --type 3 \
-            --github-repo ${{ env.CLI_REPO }} \
-            --github-token ${{ env.GITHUB_TOKEN }}` >> $GITHUB_ENV
+      - name: Get release
+        id: get_release
+        uses: bruceadams/get-release@v1.3.2
 
       - name: upload kbcli.exe to kbcli's release page for winget
         uses: actions/upload-release-asset@main
         with:
-          upload_url: ${{ env.UPLOAD_URL }}
+          upload_url: ${{ steps.get_release.outputs.upload_url }}
           asset_path: ${{ github.workspace }}/dist/kbcli_windows_amd64_v1/${{ env.CLI_NAME }}.exe
           asset_name: ${{ env.CLI_NAME }}.exe
           asset_content_type: application/octet-stream
@@ -163,7 +90,7 @@ jobs:
       - name: Upload kbcli Artifact
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ env.TAG_NAME }}-kbcli
+          name: ${{ env.RELEASE_VERSION }}-kbcli
           path: |
             ./dist/*.tar.gz
             ./dist/*.zip
@@ -182,7 +109,7 @@ jobs:
       - name: Download Kbcli Artifact
         uses: actions/download-artifact@v3.0.2
         with:
-          name: ${{ env.TAG_NAME }}-kbcli
+          name: ${{ env.RELEASE_VERSION }}-kbcli
           path: ${{ github.workspace }}/dist
 
       - name: upload assets to gitlab
@@ -193,35 +120,13 @@ jobs:
                   filename=$(basename "$file")
                   bash ${{ github.workspace }}/.github/utils/release_gitlab.sh \
                   --type 2 \
-                  --project-id ${{ env.GITLAB_KBCLI_PROJECT_ID }} \
-                  --tag-name ${{ env.TAG_NAME }} \
+                  --project-id ${{ env.JIHULAB_KBCLI_PROJECT_ID }} \
+                  --tag-name ${{ env.RELEASE_VERSION }} \
                   --asset-path $file \
                   --asset-name $filename \
-                  --access-token ${{ env.GITLAB_ACCESS_TOKEN }}
+                  --access-token ${{ env.JIHULAB_ACCESS_TOKEN }}
               fi
           done
-
-      - name: Get release
-        id: get_release
-        uses: bruceadams/get-release@v1.3.2
-
-      - name: upload release asset ${{ matrix.os }}
-        if: ${{ matrix.os != 'windows-amd64' && matrix.os != 'windows-arm64' }}
-        uses: actions/upload-release-asset@main
-        with:
-          upload_url: ${{ steps.get_release.outputs.upload_url }}
-          asset_path: ${{ github.workspace }}/dist/${{ env.CLI_NAME }}-${{ matrix.os }}-${{ env.TAG_NAME }}.tar.gz
-          asset_name: ${{ env.CLI_NAME }}-${{ matrix.os }}-${{ env.TAG_NAME }}.tar.gz
-          asset_content_type: application/gzip
-
-      - name: upload release asset ${{ matrix.os }}
-        if: ${{ matrix.os == 'windows-amd64' || matrix.os == 'windows-arm64' }}
-        uses: actions/upload-release-asset@main
-        with:
-          upload_url: ${{ steps.get_release.outputs.upload_url }}
-          asset_path: ${{ github.workspace }}/dist/${{ env.CLI_NAME }}-${{ matrix.os }}-${{ env.TAG_NAME }}.zip
-          asset_name: ${{ env.CLI_NAME }}-${{ matrix.os }}-${{ env.TAG_NAME }}.zip
-          asset_content_type: application/zip
 
   remove-artifact:
     needs: upload-release-assert
@@ -230,4 +135,4 @@ jobs:
       - name: Remove kbcli Artifact
         uses: geekyeggo/delete-artifact@v2
         with:
-          name: ${{ env.TAG_NAME }}-kbcli
+          name: ${{ env.RELEASE_VERSION }}-kbcli

@@ -1,0 +1,75 @@
+name: Releae Tag
+
+on:
+  workflow_dispatch:
+    inputs:
+      VERSION:
+        description: 'The version of release'
+        required: true
+        default: ''
+
+run-name: ref_name:${{ github.ref_name }} release_version:${{ inputs.VERSION }}
+
+env:
+  GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+  HELM_VERSION: v3.13.1
+
+jobs:
+  release-tag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: ${{ env.HELM_VERSION }}
+
+      - name: checkout branch ${{ github.ref_name }}
+        uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+
+      - name: build kbcli embed chart
+        id: build-kbcli-embed-chart
+        run: |
+          make build-kbcli-embed-chart
+          git add pkg/cluster/charts
+          FILE_CHANGES=`git diff --name-only ${{ github.sha }}`
+          if [[ ! -z "$FILE_CHANGES" ]]; then
+              echo $FILE_CHANGES
+              git config --local user.name "$GITHUB_ACTOR"
+              git config --local user.email "$GITHUB_ACTOR@users.noreply.github.com"
+              git commit -a -m "chore: auto update kbcli embed chart changes"
+          fi
+          echo file_changes=$FILE_CHANGES >> $GITHUB_OUTPUT
+          
+          COMMIT_SHA_LATEST=${{ github.sha }}
+          if [[ "${{ github.ref_name }}" != "main" ]]; then
+              COMMIT_SHA_LATEST=$(git rev-parse HEAD)
+          fi
+          echo commit_sha_latest=$COMMIT_SHA_LATEST >> $GITHUB_OUTPUT
+
+      - name: push kbcli embed chart changes
+        uses: ad-m/github-push-action@master
+        if: ${{ steps.build-kbcli-embed-chart.outputs.file_changes && github.ref_name != 'main' }}
+        with:
+          github_token: ${{ env.GITHUB_TOKEN }}
+          branch: ${{ github.ref }}
+
+      - name: push tag ${{ inputs.VERSION }}
+        uses: mathieudutour/github-tag-action@v6.1
+        with:
+          custom_tag: ${{ inputs.VERSION }}
+          github_token: ${{ env.GITHUB_TOKEN }}
+          commit_sha: ${{ steps.build-kbcli-embed-chart.outputs.commit_sha_latest }}
+          tag_prefix: ""
+
+  send-message:
+    needs: [ release-tag ]
+    if: ${{ failure() || cancelled() }}
+    uses: apecloud/apecloud-cd/.github/workflows/feishui-message.yml@v0.1.49
+    with:
+      TYPE: "2"
+      CONTENT: "release tag ${{ inputs.VERSION }} error"
+      APECD_REF: "v0.1.49"
+    secrets: inherit
+
