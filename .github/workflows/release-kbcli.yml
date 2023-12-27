@@ -8,10 +8,9 @@ on:
 env:
   GH_TOKEN: ${{ github.token }}
   GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-  RELEASE_VERSION: ${{ github.ref_name }}
+  TAG_NAME: ${{ github.ref_name }}
   GO_VERSION: "1.21"
   CLI_NAME: 'kbcli'
-  CLI_REPO: 'apecloud/kbcli'
   JIHULAB_KBCLI_PROJECT_ID: 85948
   JIHULAB_ACCESS_TOKEN: ${{ secrets.GITLAB_ACCESS_TOKEN }}
   FURY_TOKEN: ${{ secrets.FURY_UPLOAD_TOKEN }}
@@ -30,7 +29,7 @@ jobs:
           bash ${{ github.workspace }}/.github/utils/release_gitlab.sh \
             --type 1 \
             --project-id ${{ env.JIHULAB_KBCLI_PROJECT_ID }} \
-            --tag-name ${{ env.RELEASE_VERSION }} \
+            --tag-name ${{ env.TAG_NAME }} \
             --access-token ${{ env.JIHULAB_ACCESS_TOKEN }}
 
   gorelease-assert:
@@ -75,14 +74,18 @@ jobs:
               curl -F package=@$file https://${{ env.FURY_TOKEN }}@push.fury.io/${{ env.FURY_ACCOUNT }}/
           done
 
-      - name: Get release
-        id: get_release
-        uses: bruceadams/get-release@v1.3.2
+      - name: get kbcli's release upload url
+        run: |
+          echo 'UPLOAD_URL='`bash ${{ github.workspace }}/.github/utils/utils.sh \
+            --tag-name ${{ env.TAG_NAME }} \
+            --type 3 \
+            --github-repo "${{ github.repository }}" \
+            --github-token ${{ env.GITHUB_TOKEN }}` >> $GITHUB_ENV
 
       - name: upload kbcli.exe to kbcli's release page for winget
         uses: actions/upload-release-asset@main
         with:
-          upload_url: ${{ steps.get_release.outputs.upload_url }}
+          upload_url: ${{ env.UPLOAD_URL }}
           asset_path: ${{ github.workspace }}/dist/kbcli_windows_amd64_v1/${{ env.CLI_NAME }}.exe
           asset_name: ${{ env.CLI_NAME }}.exe
           asset_content_type: application/octet-stream
@@ -90,7 +93,7 @@ jobs:
       - name: Upload kbcli Artifact
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ env.RELEASE_VERSION }}-kbcli
+          name: ${{ env.TAG_NAME }}-kbcli
           path: |
             ./dist/*.tar.gz
             ./dist/*.zip
@@ -109,7 +112,7 @@ jobs:
       - name: Download Kbcli Artifact
         uses: actions/download-artifact@v3.0.2
         with:
-          name: ${{ env.RELEASE_VERSION }}-kbcli
+          name: ${{ env.TAG_NAME }}-kbcli
           path: ${{ github.workspace }}/dist
 
       - name: upload assets to gitlab
@@ -121,7 +124,7 @@ jobs:
                   bash ${{ github.workspace }}/.github/utils/release_gitlab.sh \
                   --type 2 \
                   --project-id ${{ env.JIHULAB_KBCLI_PROJECT_ID }} \
-                  --tag-name ${{ env.RELEASE_VERSION }} \
+                  --tag-name ${{ env.TAG_NAME }} \
                   --asset-path $file \
                   --asset-name $filename \
                   --access-token ${{ env.JIHULAB_ACCESS_TOKEN }}
@@ -135,4 +138,4 @@ jobs:
       - name: Remove kbcli Artifact
         uses: geekyeggo/delete-artifact@v2
         with:
-          name: ${{ env.RELEASE_VERSION }}-kbcli
+          name: ${{ env.TAG_NAME }}-kbcli
