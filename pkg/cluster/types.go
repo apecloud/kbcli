@@ -44,7 +44,8 @@ type ClusterObjects struct {
 	Backups         []dpv1alpha1.Backup
 
 	// 0.8 API
-	CompDef []*appsv1alpha1.ComponentDefinition
+	CompDefs   []*appsv1alpha1.ComponentDefinition
+	Components []*appsv1alpha1.Component
 }
 
 type ClusterInfo struct {
