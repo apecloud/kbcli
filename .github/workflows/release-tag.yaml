@@ -42,11 +42,20 @@ jobs:
           fi
           echo file_changes=$FILE_CHANGES >> $GITHUB_OUTPUT
           
-          COMMIT_SHA_LATEST=${{ github.sha }}
-          if [[ "${{ github.ref_name }}" != "main" ]]; then
-              COMMIT_SHA_LATEST=$(git rev-parse HEAD)
-          fi
-          echo commit_sha_latest=$COMMIT_SHA_LATEST >> $GITHUB_OUTPUT
+          RELEASE_COMMIT="$(git rev-parse HEAD)"
+          echo 'RELEASE_COMMIT='${RELEASE_COMMIT} >> $GITHUB_ENV
+
+      - name: push kbcli embed chart changes
+        if: ${{ steps.build-kbcli-embed-chart.outputs.file_changes && github.ref_name == 'main' }}
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ env.GITHUB_TOKEN }}
+          branch: auto-update-kbcli-${{ env.RELEASE_COMMIT }}
+
+      - name: auto create pr
+        if: ${{ steps.build-kbcli-embed-chart.outputs.file_changes && github.ref_name == 'main' }}
+        run: |
+          gh pr create --head "auto-update-kbcli-${{ env.RELEASE_COMMIT }}" --title "chore: auto update kbcli embed chart changes" --body ""
 
       - name: push kbcli embed chart changes
         uses: ad-m/github-push-action@master
@@ -60,7 +69,7 @@ jobs:
         with:
           custom_tag: ${{ inputs.VERSION }}
           github_token: ${{ env.GITHUB_TOKEN }}
-          commit_sha: ${{ steps.build-kbcli-embed-chart.outputs.commit_sha_latest }}
+          commit_sha: ${{ env.RELEASE_COMMIT }}
           tag_prefix: ""
 
   send-message:
