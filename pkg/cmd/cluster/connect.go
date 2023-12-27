@@ -437,9 +437,6 @@ func getUserAndPassword(clusterDef *appsv1alpha1.ClusterDefinition, compDef *app
 	}
 
 	getSecretVal := func(secret *corev1.Secret, key string) (string, error) {
-		if secret == nil {
-			return "", nil
-		}
 		val, ok := secret.Data[key]
 		if !ok {
 			return "", fmt.Errorf("failed to find the cluster %s", key)
