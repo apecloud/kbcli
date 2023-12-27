@@ -150,7 +150,7 @@ var _ = Describe("connection", func() {
 		secretList := &corev1.SecretList{}
 		secretList.Items = []corev1.Secret{secret}
 		It("getUserAndPassword", func() {
-			u, p, err := getUserAndPassword(testing.FakeClusterDef(), nil, secretList)
+			u, p, err := getUserAndPassword(testing.FakeClusterDef(), nil, nil, secretList)
 			Expect(err).Should(Succeed())
 			Expect(u).Should(Equal(user))
 			Expect(p).Should(Equal(password))
