@@ -139,3 +139,32 @@ jobs:
         uses: geekyeggo/delete-artifact@v2
         with:
           name: ${{ env.TAG_NAME }}-kbcli
+
+  release-message:
+    runs-on: ubuntu-latest
+    needs: [ upload-release-assert ]
+    outputs:
+      content-result: ${{ steps.release_message.outputs.content_result }}
+      release-version: ${{ steps.release_message.outputs.release_version }}
+    if: ${{ always() }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: release message
+        id: release_message
+        run: |
+          CONTENT="error"
+          if [[ "${{ needs.upload-release-assert.result }}" == "success" ]]; then
+              CONTENT="success"
+          fi
+          echo 'content_result='$CONTENT >> $GITHUB_OUTPUT
+          echo release_version=${{ env.TAG_NAME } >> $GITHUB_OUTPUT
+
+  send-message:
+    needs: [ release-message ]
+    if: ${{ always() }}
+    uses: apecloud/apecloud-cd/.github/workflows/feishui-message.yml@v0.1.42
+    with:
+      TYPE: "2"
+      CONTENT: "release kbcli ${{ needs.release-message.outputs.release-version }} ${{ needs.release-message.outputs.content-result }}"
+      APECD_REF: "v0.1.42"
+    secrets: inherit
