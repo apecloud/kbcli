@@ -31,6 +31,9 @@ jobs:
       - name: build kbcli embed chart
         id: build-kbcli-embed-chart
         run: |
+          TIMESTAMP=$(date +%s)
+          echo 'TIMESTAMP='${TIMESTAMP} >> $GITHUB_ENV
+          
           make build-kbcli-embed-chart
           git add pkg/cluster/charts
           FILE_CHANGES=`git diff --name-only ${{ github.sha }}`
@@ -39,14 +42,23 @@ jobs:
               git config --local user.name "$GITHUB_ACTOR"
               git config --local user.email "$GITHUB_ACTOR@users.noreply.github.com"
               git commit -a -m "chore: auto update kbcli embed chart changes"
-              #if [[ "${{ github.ref_name }}" == "main" ]]; then
-              gh pr create --title "chore: auto update kbcli embed chart changes" --body ""
-              #fi
           fi
           echo file_changes=$FILE_CHANGES >> $GITHUB_OUTPUT
           
           RELEASE_COMMIT="$(git rev-parse HEAD)"
           echo 'RELEASE_COMMIT='${RELEASE_COMMIT} >> $GITHUB_ENV
+
+      - name: push kbcli embed chart changes
+        uses: ad-m/github-push-action@master
+        if: ${{ steps.build-kbcli-embed-chart.outputs.file_changes && github.ref_name != 'main' }}
+        with:
+          github_token: ${{ env.GITHUB_TOKEN }}
+          branch: ${{ github.ref }}-${TIMESTAMP}
+
+      - name: auto create pr
+        if: ${{ steps.build-kbcli-embed-chart.outputs.file_changes && github.ref_name != 'main' }}
+        run: |
+          gh pr create --head "${{ github.ref }}-${TIMESTAMP}" --fill
 
 #      - name: push kbcli embed chart changes
 #        uses: ad-m/github-push-action@master
