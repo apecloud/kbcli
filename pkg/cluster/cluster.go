@@ -298,7 +298,7 @@ func (o *ObjectsGetter) Get() (*ClusterObjects, error) {
 			for _, compSpec := range objs.Cluster.Spec.ComponentSpecs {
 				for _, comp := range comps {
 					if compSpec.ComponentDef == comp.Name {
-						objs.CompDef = append(objs.CompDef, comp)
+						objs.CompDefs = append(objs.CompDefs, comp)
 						break
 					}
 				}
