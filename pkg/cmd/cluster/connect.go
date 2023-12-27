@@ -269,7 +269,8 @@ func (o *ConnectOptions) connect() error {
 		authInfo.UserName = o.userName
 		authInfo.UserPasswd = o.userPasswd
 	} else if authInfo, err = o.getAuthInfo(); err != nil {
-		return err
+		// use default authInfo defined in lorry.engine
+		authInfo = nil
 	}
 
 	o.ExecOptions.ContainerName = o.engine.Container()
@@ -436,6 +437,9 @@ func getUserAndPassword(clusterDef *appsv1alpha1.ClusterDefinition, compDef *app
 	}
 
 	getSecretVal := func(secret *corev1.Secret, key string) (string, error) {
+		if secret == nil {
+			return "", nil
+		}
 		val, ok := secret.Data[key]
 		if !ok {
 			return "", fmt.Errorf("failed to find the cluster %s", key)
@@ -452,7 +456,7 @@ func getUserAndPassword(clusterDef *appsv1alpha1.ClusterDefinition, compDef *app
 		}
 	}
 	// 0.8 API connect
-	if secret == nil && compDef != nil {
+	if secret == nil && compDef != nil && comp != nil {
 		for _, account := range compDef.Spec.SystemAccounts {
 			if !account.InitAccount {
 				continue

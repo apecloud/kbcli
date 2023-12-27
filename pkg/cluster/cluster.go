@@ -141,9 +141,9 @@ func (o *ObjectsGetter) Get() (*ClusterObjects, error) {
 		objs.Cluster.Status.Phase = ConditionsError
 	}
 	// get cluster definition
-	if o.WithClusterDef == Need {
+	if o.WithClusterDef == Need || o.WithClusterDef == Maybe {
 		cd := &appsv1alpha1.ClusterDefinition{}
-		if err = getResource(types.ClusterDefGVR(), objs.Cluster.Spec.ClusterDefRef, "", cd); err != nil {
+		if err = getResource(types.ClusterDefGVR(), objs.Cluster.Spec.ClusterDefRef, "", cd); err != nil && o.WithClusterDef == Need {
 			return nil, err
 		}
 		objs.ClusterDef = cd
@@ -270,9 +270,9 @@ func (o *ObjectsGetter) Get() (*ClusterObjects, error) {
 		}
 	}
 
-	if o.WithCompDef == Need {
+	if o.WithCompDef == Need || o.WithCompDef == Maybe {
 		compDefs := []*appsv1alpha1.ComponentDefinition{}
-		if err = listResources(o.Dynamic, types.CompDefGVR(), "", metav1.ListOptions{}, &compDefs); err != nil {
+		if err = listResources(o.Dynamic, types.CompDefGVR(), "", metav1.ListOptions{}, &compDefs); err != nil && o.WithCompDef == Need {
 			return nil, err
 		}
 		for _, compSpec := range objs.Cluster.Spec.ComponentSpecs {
@@ -284,28 +284,12 @@ func (o *ObjectsGetter) Get() (*ClusterObjects, error) {
 			}
 		}
 	}
-	// get cluster definition
-	if o.WithClusterDef == Maybe {
-		cd := &appsv1alpha1.ClusterDefinition{}
-		if err = getResource(types.ClusterDefGVR(), objs.Cluster.Spec.ClusterDefRef, "", cd); err == nil {
-			objs.ClusterDef = cd
+
+	if o.WithComp == Maybe || o.WithComp == Need {
+		if err = listResources(o.Dynamic, types.ComponentGVR(), o.Namespace, listOpts(), &objs.Components); err != nil && o.WithComp == Need {
+			return objs, err
 		}
 	}
-
-	if o.WithCompDef == Maybe {
-		comps := []*appsv1alpha1.ComponentDefinition{}
-		if err = listResources(o.Dynamic, types.CompDefGVR(), "", metav1.ListOptions{}, &comps); err == nil {
-			for _, compSpec := range objs.Cluster.Spec.ComponentSpecs {
-				for _, comp := range comps {
-					if compSpec.ComponentDef == comp.Name {
-						objs.CompDefs = append(objs.CompDefs, comp)
-						break
-					}
-				}
-			}
-		}
-	}
-
 	return objs, nil
 }
 

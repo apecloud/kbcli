@@ -409,3 +409,7 @@ func GetDefaultVersionByCompDefs(dynamic dynamic.Interface, compDefs []string) (
 	}
 	return cv, nil
 }
+
+func GetCompBy() {
+
+}
