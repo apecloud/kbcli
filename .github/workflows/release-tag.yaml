@@ -40,7 +40,7 @@ jobs:
               git config --local user.email "$GITHUB_ACTOR@users.noreply.github.com"
               git commit -a -m "chore: auto update kbcli embed chart changes"
               #if [[ "${{ github.ref_name }}" == "main" ]]; then
-              gh pr create --title "chore: auto update kbcli embed chart changes"
+              gh pr create --title "chore: auto update kbcli embed chart changes" --body ""
               #fi
           fi
           echo file_changes=$FILE_CHANGES >> $GITHUB_OUTPUT
@@ -63,13 +63,13 @@ jobs:
           RELEASE_COMMIT: ${{ env.RELEASE_COMMIT }}
           tag_prefix: ""
 
-  send-message:
-    needs: [ release-tag ]
-    if: ${{ failure() || cancelled() }}
-    uses: apecloud/apecloud-cd/.github/workflows/feishui-message.yml@v0.1.49
-    with:
-      TYPE: "2"
-      CONTENT: "release tag ${{ inputs.VERSION }} error"
-      APECD_REF: "v0.1.49"
-    secrets: inherit
+#  send-message:
+#    needs: [ release-tag ]
+#    if: ${{ failure() || cancelled() }}
+#    uses: apecloud/apecloud-cd/.github/workflows/feishui-message.yml@v0.1.49
+#    with:
+#      TYPE: "2"
+#      CONTENT: "release tag ${{ inputs.VERSION }} error"
+#      APECD_REF: "v0.1.49"
+#    secrets: inherit
 
