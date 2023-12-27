@@ -50,12 +50,12 @@ jobs:
         uses: ad-m/github-push-action@master
         with:
           github_token: ${{ env.GITHUB_TOKEN }}
-          branch: auto-update-kbcli-${{ env.RELEASE_COMMIT }}
+          branch: support/auto-update-kbcli-${{ env.RELEASE_COMMIT }}
 
       - name: auto create pr
         if: ${{ steps.build-kbcli-embed-chart.outputs.file_changes && github.ref_name == 'main' }}
         run: |
-          gh pr create --head "auto-update-kbcli-${{ env.RELEASE_COMMIT }}" --title "chore: auto update kbcli embed chart changes" --body ""
+          gh pr create --head "support/auto-update-kbcli-${{ env.RELEASE_COMMIT }}" --title "chore: auto update kbcli embed chart changes" --body ""
 
       - name: push kbcli embed chart changes
         uses: ad-m/github-push-action@master
