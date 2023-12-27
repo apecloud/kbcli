@@ -270,6 +270,7 @@ func (o *ConnectOptions) connect() error {
 		authInfo.UserPasswd = o.userPasswd
 	} else if authInfo, err = o.getAuthInfo(); err != nil {
 		// use default authInfo defined in lorry.engine
+		klog.V(1).ErrorS(err, "kbcli connect failed to get getAuthInfo")
 		authInfo = nil
 	}
 
