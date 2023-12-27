@@ -79,6 +79,7 @@ func newRestoreCommand(f cmdutil.Factory, streams genericiooptions.IOStreams) *c
 
 	cmd.Flags().StringVar(&clusterName, "cluster", "", "The cluster to restore")
 	cmd.Flags().StringVar(&o.RestoreSpec.RestoreTimeStr, "restore-to-time", "", "point in time recovery(PITR)")
+	cmd.Flags().BoolVar(&o.RestoreSpec.EffectiveCommonComponentDef, "effective-common-component-def", false, "this backup will be restored for all components which refer to common ComponentDefinition.")
 	cmd.Flags().StringVar(&o.RestoreSpec.VolumeRestorePolicy, "volume-restore-policy", "Parallel", "the volume claim restore policy, supported values: [Serial, Parallel]")
 	return cmd
 }

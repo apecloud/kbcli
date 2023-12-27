@@ -178,7 +178,6 @@ var _ = Describe("backuprepo update command", func() {
 
 		It("should validate if there is a default backup repo", func() {
 			options.isDefault = true
-			options.hasDefaultFlag = true
 			err := options.validate(cmd)
 			Expect(err).Should(MatchError(ContainSubstring("there is already a default backup repo")))
 		})
