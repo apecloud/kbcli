@@ -148,7 +148,6 @@ jobs:
       release-version: ${{ steps.release_message.outputs.release_version }}
     if: ${{ always() }}
     steps:
-      - uses: actions/checkout@v4
       - name: release message
         id: release_message
         run: |
@@ -156,8 +155,8 @@ jobs:
           if [[ "${{ needs.upload-release-assert.result }}" == "success" ]]; then
               CONTENT="success"
           fi
-          echo 'content_result='$CONTENT >> $GITHUB_OUTPUT
-          echo release_version=${{ env.TAG_NAME } >> $GITHUB_OUTPUT
+          echo 'content_result='${CONTENT} >> $GITHUB_OUTPUT
+          echo 'release_version='${{ env.TAG_NAME }} >> $GITHUB_OUTPUT
 
   send-message:
     needs: [ release-message ]
