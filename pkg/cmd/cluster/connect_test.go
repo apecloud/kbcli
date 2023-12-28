@@ -91,46 +91,46 @@ var _ = Describe("connection", func() {
 		o := &ConnectOptions{ExecOptions: action.NewExecOptions(tf, streams)}
 
 		By("specified more than one cluster")
-		Expect(o.validate([]string{"c1", "c2"})).Should(HaveOccurred())
+		Expect(o.Validate([]string{"c1", "c2"})).Should(HaveOccurred())
 
 		By("without cluster name")
-		Expect(o.validate(nil)).Should(HaveOccurred())
+		Expect(o.Validate(nil)).Should(HaveOccurred())
 
-		Expect(o.validate([]string{clusterName})).Should(Succeed())
+		Expect(o.Validate([]string{clusterName})).Should(Succeed())
 
 		// set instance name and cluster name, should fail
 		o.PodName = "test-pod-0"
-		Expect(o.validate([]string{clusterName})).Should(HaveOccurred())
+		Expect(o.Validate([]string{clusterName})).Should(HaveOccurred())
 		o.componentName = "test-component"
-		Expect(o.validate([]string{})).Should(HaveOccurred())
+		Expect(o.Validate([]string{})).Should(HaveOccurred())
 
 		// unset pod name
 		o.PodName = ""
-		Expect(o.validate([]string{clusterName})).Should(Succeed())
+		Expect(o.Validate([]string{clusterName})).Should(Succeed())
 		// unset component name
 		o.componentName = ""
-		Expect(o.validate([]string{clusterName})).Should(Succeed())
+		Expect(o.Validate([]string{clusterName})).Should(Succeed())
 	})
 
 	It("complete by cluster name", func() {
 		o := &ConnectOptions{ExecOptions: action.NewExecOptions(tf, streams)}
-		Expect(o.validate([]string{clusterName})).Should(Succeed())
-		Expect(o.complete()).Should(Succeed())
+		Expect(o.Validate([]string{clusterName})).Should(Succeed())
+		Expect(o.Complete()).Should(Succeed())
 		Expect(o.Pod).ShouldNot(BeNil())
 	})
 
 	It("complete by pod name", func() {
 		o := &ConnectOptions{ExecOptions: action.NewExecOptions(tf, streams)}
 		o.PodName = "test-pod-0"
-		Expect(o.validate([]string{})).Should(Succeed())
-		Expect(o.complete()).Should(Succeed())
+		Expect(o.Validate([]string{})).Should(Succeed())
+		Expect(o.Complete()).Should(Succeed())
 		Expect(o.Pod).ShouldNot(BeNil())
 	})
 
 	It("show example", func() {
 		o := &ConnectOptions{ExecOptions: action.NewExecOptions(tf, streams)}
-		Expect(o.validate([]string{clusterName})).Should(Succeed())
-		Expect(o.complete()).Should(Succeed())
+		Expect(o.Validate([]string{clusterName})).Should(Succeed())
+		Expect(o.Complete()).Should(Succeed())
 
 		By("specify one cluster")
 		Expect(o.runShowExample()).Should(Succeed())
@@ -158,8 +158,8 @@ var _ = Describe("connection", func() {
 
 		It("--show-password", func() {
 			o := &ConnectOptions{ExecOptions: action.NewExecOptions(tf, streams)}
-			Expect(o.validate([]string{clusterName})).Should(Succeed())
-			Expect(o.complete()).Should(Succeed())
+			Expect(o.Validate([]string{clusterName})).Should(Succeed())
+			Expect(o.Complete()).Should(Succeed())
 			info, err := o.getConnectionInfo()
 			Expect(err).Should(Succeed())
 			Expect(info.Password).Should(Equal(passwordMask))
