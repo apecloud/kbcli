@@ -366,6 +366,8 @@ func (o *ConnectOptions) getConnectionInfo() (*engines.ConnectionInfo, error) {
 			WithClusterDef: cluster.Maybe,
 			WithService:    cluster.Need,
 			WithSecret:     cluster.Need,
+			WithCompDef:    cluster.Maybe,
+			WithComp:       cluster.Maybe,
 		},
 	}
 
