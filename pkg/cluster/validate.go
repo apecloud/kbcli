@@ -27,8 +27,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/dynamic"
 
-	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kubeblocks/pkg/constant"
+
+	"github.com/apecloud/kbcli/pkg/types"
 )
 
 // ValidateClusterVersion validates the cluster version.
