@@ -299,6 +299,10 @@ func (o *OperationsOptions) CompleteCharacterType(clusterObj *appsv1alpha1.Clust
 			}
 		}
 	}
+	if o.ExecPod == nil {
+		return fmt.Errorf("component %s has no primary", o.Component)
+	}
+
 	return nil
 }
 
