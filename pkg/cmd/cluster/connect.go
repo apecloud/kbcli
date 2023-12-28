@@ -269,7 +269,9 @@ func (o *ConnectOptions) connect() error {
 		authInfo.UserName = o.userName
 		authInfo.UserPasswd = o.userPasswd
 	} else if authInfo, err = o.getAuthInfo(); err != nil {
-		return err
+		// use default authInfo defined in lorry.engine
+		klog.V(1).ErrorS(err, "kbcli connect failed to get getAuthInfo")
+		authInfo = nil
 	}
 
 	o.ExecOptions.ContainerName = o.engine.Container()
@@ -452,7 +454,7 @@ func getUserAndPassword(clusterDef *appsv1alpha1.ClusterDefinition, compDef *app
 		}
 	}
 	// 0.8 API connect
-	if secret == nil && compDef != nil {
+	if secret == nil && compDef != nil && comp != nil {
 		for _, account := range compDef.Spec.SystemAccounts {
 			if !account.InitAccount {
 				continue
