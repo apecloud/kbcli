@@ -275,9 +275,6 @@ func (o *initOptions) cloud() error {
 	// clone apecloud/cloud-provider repo to local path
 	fmt.Fprintf(o.Out, "Clone ApeCloud cloud-provider repo to %s...\n", cpPath)
 	branchName := "kb-playground"
-	if version.Version != "" && version.Version != "edge" {
-		branchName = fmt.Sprintf("%s-%s", branchName, strings.Split(version.Version, "-")[0])
-	}
 	if err = util.CloneGitRepo(cp.GitRepoURL, branchName, cpPath); err != nil {
 		return err
 	}
