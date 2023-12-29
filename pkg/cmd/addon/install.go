@@ -228,10 +228,11 @@ func (o *installOption) Run() error {
 
 // validateVersion will check if the kbVersion meets the version constraint defined by annotations
 func validateVersion(annotations, kbVersion string) (bool, error) {
+	annotations = strings.Trim(annotations, " ")
 	split := strings.Split(annotations, "-")
 	// adjust '>= 0.7.0' to '>= 0.7.0-0'
 	// https://github.com/Masterminds/semver?tab=readme-ov-file#checking-version-constraints
-	if len(split) == 1 {
+	if len(split) == 1 && (strings.HasPrefix(annotations, ">") || strings.HasPrefix(annotations, "<")) {
 		annotations += "-0"
 	}
 	constraint, err := semver.NewConstraint(annotations)
