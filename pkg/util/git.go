@@ -50,7 +50,7 @@ func CloneGitRepo(url, branch, path string) error {
 			ReferenceName: plumbing.NewBranchReferenceName(branch),
 			SingleBranch:  true,
 		})
-		if err != git.NoErrAlreadyUpToDate && err != git.ErrUnstagedChanges {
+		if !errors.Is(err, git.NoErrAlreadyUpToDate) && !errors.Is(err, git.ErrUnstagedChanges) {
 			return err
 		}
 		return nil
@@ -66,7 +66,7 @@ func CloneGitRepo(url, branch, path string) error {
 		}
 	}
 
-	if err != git.ErrRepositoryNotExists {
+	if !errors.Is(err, git.ErrRepositoryNotExists) {
 		return err
 	}
 
