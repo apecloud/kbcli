@@ -29,6 +29,7 @@ import (
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	apiresource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -38,6 +39,8 @@ import (
 	clientset "k8s.io/client-go/kubernetes"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
+
+	"github.com/apecloud/kubebench/api/v1alpha1"
 
 	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/cluster"
@@ -88,6 +91,8 @@ type BenchBaseOptions struct {
 	TolerationsRaw []string
 	Tolerations    []corev1.Toleration
 	ExtraArgs      []string // extra arguments for benchmark
+	Cpu            string
+	Memory         string
 
 	factory cmdutil.Factory
 	client  clientset.Interface
@@ -129,6 +134,17 @@ func (o *BenchBaseOptions) BaseValidate() error {
 		return fmt.Errorf("port is required")
 	}
 
+	if o.Cpu != "" {
+		if _, err := apiresource.ParseQuantity(o.Cpu); err != nil {
+			return fmt.Errorf("invalid cpu: %s", err)
+		}
+	}
+	if o.Memory != "" {
+		if _, err := apiresource.ParseQuantity(o.Memory); err != nil {
+			return fmt.Errorf("invalid memory: %s", err)
+		}
+	}
+
 	if err := validateBenchmarkExist(o.factory, o.IOStreams, o.name); err != nil {
 		return err
 	}
@@ -137,6 +153,8 @@ func (o *BenchBaseOptions) BaseValidate() error {
 }
 
 func (o *BenchBaseOptions) AddFlags(cmd *cobra.Command) {
+	cmd.Flags().StringVar(&o.Cpu, "cpu", "", "the cpu of benchmark pod")
+	cmd.Flags().StringVar(&o.Memory, "memory", "", "the memory of benchmark pod")
 	cmd.Flags().StringVar(&o.Driver, "driver", "", "the driver of database")
 	cmd.Flags().StringVar(&o.Database, "database", "", "database name")
 	cmd.Flags().StringVar(&o.Host, "host", "", "the host of database")
@@ -508,4 +526,13 @@ func parseStepAndName(args []string, namePrefix string) (step, name string) {
 		}
 	}
 	return
+}
+
+func setCpuAndMemory(benchCommon *v1alpha1.BenchCommon, cpu, memory string) {
+	if cpu != "" {
+		benchCommon.Cpu = cpu
+	}
+	if memory != "" {
+		benchCommon.Memory = memory
+	}
 }

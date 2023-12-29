@@ -50,6 +50,9 @@ var sysbenchExample = templates.Examples(`
 		# sysbench on a cluster, that will exec for all steps, cleanup, prepare and run
 		kbcli bench sysbench mytest --cluster mycluster --user xxx --password xxx --database mydb
 
+		# sysbench on a cluster, but with cpu and memory limits set
+		kbcli bench sysbench mytest --cluster mycluster --user xxx --password xxx --database mydb --cpu 1 --memory 1Gi
+
 		# sysbench run on a cluster with cleanup, only cleanup by deleting the testdata
 		kbcli bench sysbench cleanup mytest --cluster mycluster --user xxx --password xxx --database mydb
 
@@ -269,6 +272,9 @@ func (o *SysBenchOptions) Run() error {
 			},
 		},
 	}
+
+	// set cpu and memory if specified
+	setCpuAndMemory(&sysbench.Spec.BenchCommon, o.Cpu, o.Memory)
 
 	obj := &unstructured.Unstructured{
 		Object: map[string]interface{}{},
