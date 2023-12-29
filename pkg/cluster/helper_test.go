@@ -83,7 +83,7 @@ var _ = Describe("helper", func() {
 	})
 
 	It("get default version", func() {
-		const clusterDefName = "test-cluster-def"
+		const clusterDefName = testing.ClusterDefName
 		genVersion := func(name string) *appsv1alpha1.ClusterVersion {
 			v := &appsv1alpha1.ClusterVersion{}
 			v.Name = name
@@ -95,14 +95,14 @@ var _ = Describe("helper", func() {
 		cv2 := genVersion("version2")
 
 		By("no default version, should throw error")
-		dynamic := testing.FakeDynamicClient(testing.FakeClusterVersion(), cv1, cv2)
+		dynamic := testing.FakeDynamicClient(testing.FakeClusterDef(), testing.FakeClusterVersion(), cv1, cv2)
 		defaultVer, err := GetDefaultVersion(dynamic, clusterDefName)
 		Expect(err).Should(HaveOccurred())
 		Expect(defaultVer).Should(BeEmpty())
 
 		By("set default version, should return default version")
 		cv1.Annotations = map[string]string{constant.DefaultClusterVersionAnnotationKey: "true"}
-		dynamic = testing.FakeDynamicClient(testing.FakeClusterVersion(), cv1, cv2)
+		dynamic = testing.FakeDynamicClient(testing.FakeClusterDef(), testing.FakeClusterVersion(), cv1, cv2)
 		defaultVer, err = GetDefaultVersion(dynamic, clusterDefName)
 		Expect(err).Should(Succeed())
 		Expect(defaultVer).Should(Equal(cv1.Name))

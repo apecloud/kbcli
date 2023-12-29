@@ -246,6 +246,9 @@ func GetDefaultVersion(dynamic dynamic.Interface, clusterDef string) (string, er
 
 	// check if all containers have been specified image
 	podSpecWithImage := func(podSpec *corev1.PodSpec) bool {
+		if podSpec == nil {
+			return false
+		}
 		containers := podSpec.Containers
 		containers = append(containers, podSpec.InitContainers...)
 		for _, c := range containers {
