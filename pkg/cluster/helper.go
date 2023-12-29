@@ -31,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/klog/v2"
 
 	"github.com/apecloud/kbcli/pkg/testing"
 	"github.com/apecloud/kbcli/pkg/types"
@@ -237,6 +238,40 @@ func BuildStorageClass(storages []StorageInfo) string {
 // If only one version is found, it will be returned directly, otherwise the version with
 // constant.DefaultClusterVersionAnnotationKey label will be returned.
 func GetDefaultVersion(dynamic dynamic.Interface, clusterDef string) (string, error) {
+	// if version already specified in the cluster definition, clusterVersion is not required
+	cd, err := GetClusterDefByName(dynamic, clusterDef)
+	if err != nil {
+		return "", err
+	}
+
+	// check if all containers have been specified image
+	podSpecWithImage := func(podSpec *corev1.PodSpec) bool {
+		if podSpec == nil {
+			return false
+		}
+		containers := podSpec.Containers
+		containers = append(containers, podSpec.InitContainers...)
+		for _, c := range containers {
+			if c.Image == "" {
+				return false
+			}
+		}
+		return true
+	}
+
+	// check if all components have image
+	allCompsWithVersion := true
+	for _, compDef := range cd.Spec.ComponentDefs {
+		if !podSpecWithImage(compDef.PodSpec) {
+			allCompsWithVersion = false
+			break
+		}
+	}
+	if allCompsWithVersion {
+		klog.V(1).Info("all components have been specified image, skip to get default cluster version")
+		return "", nil
+	}
+
 	versionList, err := GetVersionByClusterDef(dynamic, clusterDef)
 	if err != nil {
 		return "", err
