@@ -14,6 +14,9 @@ kbcli bench pgbench [Step] [BenchmarkName] [flags]
   # pgbench run on a cluster, that will exec for all steps, cleanup, prepare and run
   kbcli bench pgbench mytest --cluster pgcluster --database postgres --user xxx --password xxx
   
+  # pgbench run on a cluster, but with cpu and memory limits set
+  kbcli bench pgbench mytest --cluster pgcluster --database postgres --user xxx --password xxx --cpu 1 --memory 1Gi
+  
   # pgbench run on a cluster with cleanup, only cleanup by deleting the testdata
   kbcli bench pgbench cleanup mytest --cluster pgcluster --database postgres --user xxx --password xxx
   
@@ -41,12 +44,14 @@ kbcli bench pgbench [Step] [BenchmarkName] [flags]
 ```
       --clients ints          The number of clients to use for pgbench (default [1])
       --cluster string        the cluster of database
+      --cpu string            the cpu of benchmark pod
       --database string       database name
       --driver string         the driver of database
       --duration int          The seconds to run pgbench for (default 60)
       --extra-args strings    extra arguments for benchmark
   -h, --help                  help for pgbench
       --host string           the host of database
+      --memory string         the memory of benchmark pod
       --password string       the password of database
       --port int              the port of database
       --scale int             The scale factor to use for pgbench (default 1)
