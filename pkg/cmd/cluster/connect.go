@@ -112,12 +112,12 @@ func NewConnectCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 		Example:           connectExample,
 		ValidArgsFunction: util.ResourceNameCompletionFunc(f, types.ClusterGVR()),
 		Run: func(cmd *cobra.Command, args []string) {
-			util.CheckErr(o.validate(args))
-			util.CheckErr(o.complete())
+			util.CheckErr(o.Validate(args))
+			util.CheckErr(o.Complete())
 			if o.showExample {
 				util.CheckErr(o.runShowExample())
 			} else {
-				util.CheckErr(o.connect())
+				util.CheckErr(o.Connect())
 			}
 		},
 	}
@@ -165,7 +165,7 @@ func (o *ConnectOptions) runShowExample() error {
 	return nil
 }
 
-func (o *ConnectOptions) validate(args []string) error {
+func (o *ConnectOptions) Validate(args []string) error {
 	if len(args) > 1 {
 		return fmt.Errorf("only support to connect one cluster")
 	}
@@ -200,7 +200,7 @@ func (o *ConnectOptions) validate(args []string) error {
 	return nil
 }
 
-func (o *ConnectOptions) complete() error {
+func (o *ConnectOptions) Complete() error {
 	var err error
 	if err = o.ExecOptions.Complete(); err != nil {
 		return err
@@ -255,8 +255,8 @@ func (o *ConnectOptions) complete() error {
 	return nil
 }
 
-// connect creates connection string and connects to cluster
-func (o *ConnectOptions) connect() error {
+// Connect creates connection string and connects to cluster
+func (o *ConnectOptions) Connect() error {
 	var err error
 
 	if o.engine, err = register.NewClusterCommands(o.characterType); err != nil {
@@ -366,6 +366,8 @@ func (o *ConnectOptions) getConnectionInfo() (*engines.ConnectionInfo, error) {
 			WithClusterDef: cluster.Maybe,
 			WithService:    cluster.Need,
 			WithSecret:     cluster.Need,
+			WithCompDef:    cluster.Maybe,
+			WithComp:       cluster.Maybe,
 		},
 	}
 
