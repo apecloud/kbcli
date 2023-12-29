@@ -14,6 +14,9 @@ kbcli bench ycsb [Step] [BenchmarkName] [flags]
   # ycsb on a cluster,  that will exec for all steps, cleanup, prepare and run
   kbcli bench ycsb mytest --cluster mycluster --user xxx --password xxx --database mydb
   
+  # ycsb on a cluster, but with cpu and memory limits set
+  kbcli bench ycsb mytest --cluster mycluster --user xxx --password xxx --database mydb --cpu 1 --memory 1Gi
+  
   # ycsb on a cluster with cleanup, only cleanup by deleting the testdata
   kbcli bench ycsb cleanup mytest --cluster mycluster --user xxx --password xxx --database mydb
   
@@ -37,12 +40,14 @@ kbcli bench ycsb [Step] [BenchmarkName] [flags]
 
 ```
       --cluster string                     the cluster of database
+      --cpu string                         the cpu of benchmark pod
       --database string                    database name
       --driver string                      the driver of database
       --extra-args strings                 extra arguments for benchmark
   -h, --help                               help for ycsb
       --host string                        the host of database
       --insert-proportion int              the percentage of insert operations in benchmark
+      --memory string                      the memory of benchmark pod
       --operation-count int                the number of operations to use during the run phase (default 1000)
       --password string                    the password of database
       --port int                           the port of database

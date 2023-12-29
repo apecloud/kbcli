@@ -49,6 +49,9 @@ var (
 var tpccExample = templates.Examples(`
 	# tpcc on a cluster, that will exec for all steps, cleanup, prepare and run
 	kbcli bench tpcc mytest --cluster mycluster --user xxx --password xxx --database mydb
+
+	# tpcc on a cluster, but with cpu and memory limits set
+	kbcli bench tpcc mytest --cluster mycluster --user xxx --password xxx --database mydb --cpu 1 --memory 1Gi
 	
 	# tpcc on a cluster with cleanup, only cleanup by deleting the testdata
 	kbcli bench tpcc cleanup mytest --cluster mycluster --user xxx --password xxx --database mydb
@@ -259,6 +262,9 @@ func (o *TpccOptions) Run() error {
 			},
 		},
 	}
+
+	// set cpu and memory if specified
+	setCpuAndMemory(&tpcc.Spec.BenchCommon, o.Cpu, o.Memory)
 
 	obj := &unstructured.Unstructured{
 		Object: map[string]interface{}{},

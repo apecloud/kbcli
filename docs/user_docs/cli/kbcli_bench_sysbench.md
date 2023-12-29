@@ -14,6 +14,9 @@ kbcli bench sysbench [Step] [BenchmarkName] [flags]
   # sysbench on a cluster, that will exec for all steps, cleanup, prepare and run
   kbcli bench sysbench mytest --cluster mycluster --user xxx --password xxx --database mydb
   
+  # sysbench on a cluster, but with cpu and memory limits set
+  kbcli bench sysbench mytest --cluster mycluster --user xxx --password xxx --database mydb --cpu 1 --memory 1Gi
+  
   # sysbench run on a cluster with cleanup, only cleanup by deleting the testdata
   kbcli bench sysbench cleanup mytest --cluster mycluster --user xxx --password xxx --database mydb
   
@@ -40,12 +43,14 @@ kbcli bench sysbench [Step] [BenchmarkName] [flags]
 
 ```
       --cluster string        the cluster of database
+      --cpu string            the cpu of benchmark pod
       --database string       database name
       --driver string         the driver of database
       --duration int          the seconds of running sysbench (default 60)
       --extra-args strings    extra arguments for benchmark
   -h, --help                  help for sysbench
       --host string           the host of database
+      --memory string         the memory of benchmark pod
       --password string       the password of database
       --port int              the port of database
       --read-percent int      the percent of read, only useful when type is oltp_read_write_pct

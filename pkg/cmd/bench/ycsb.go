@@ -51,6 +51,9 @@ var (
 var ycsbExample = templates.Examples(`
 	# ycsb on a cluster,  that will exec for all steps, cleanup, prepare and run
 	kbcli bench ycsb mytest --cluster mycluster --user xxx --password xxx --database mydb
+
+	# ycsb on a cluster, but with cpu and memory limits set
+	kbcli bench ycsb mytest --cluster mycluster --user xxx --password xxx --database mydb --cpu 1 --memory 1Gi
 	
 	# ycsb on a cluster with cleanup, only cleanup by deleting the testdata
 	kbcli bench ycsb cleanup mytest --cluster mycluster --user xxx --password xxx --database mydb
@@ -256,6 +259,9 @@ func (o *YcsbOptions) Run() error {
 			},
 		},
 	}
+
+	// set cpu and memory if specified
+	setCpuAndMemory(&ycsb.Spec.BenchCommon, o.Cpu, o.Memory)
 
 	obj := &unstructured.Unstructured{
 		Object: map[string]interface{}{},
