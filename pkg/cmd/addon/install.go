@@ -23,6 +23,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/spf13/cobra"
@@ -206,7 +207,7 @@ func (o *installOption) Validate() error {
 It will automatically skip version checks, which may result in the cluster not running correctly.
 `, o.name)))
 	} else if ok, err = validateVersion(o.addon.Annotations[types.KBVersionValidateAnnotationKey], v.KubeBlocks); err == nil && !ok {
-		return fmt.Errorf("KubeBlocks version %s does not meet the requirements for addon installation\nUse --force option to skip this check", v.KubeBlocks)
+		return fmt.Errorf("KubeBlocks version %s does not meet the requirements \"%s\" for addon installation\nUse --force option to skip this check", v.KubeBlocks, o.addon.Annotations[types.KBVersionValidateAnnotationKey])
 	}
 
 	return err
@@ -226,7 +227,28 @@ func (o *installOption) Run() error {
 }
 
 // validateVersion will check if the kbVersion meets the version constraint defined by annotations
+// rules：
+// 1.0.0-alpha < 1.0.0-alpha.1 < 1.0.0-alpha.beta < 1.0.0-beta < 1.0.0-beta.2 < 1.0.0-beta.11 < 1.0.0-rc.1 < 1.0.0.
+// https://semver.org/
 func validateVersion(annotations, kbVersion string) (bool, error) {
+	// if kb version is a prerelease version, we will break the rules for developing
+	if strings.Contains(kbVersion, "-") {
+		addPreReleaseInfo := func(constrain string) string {
+			constrain = strings.Trim(constrain, " ")
+			split := strings.Split(constrain, "-")
+			// adjust '>= 0.7.0' to '>= 0.7.0-0'
+			// https://github.com/Masterminds/semver?tab=readme-ov-file#checking-version-constraints
+			if len(split) == 1 && (strings.HasPrefix(constrain, ">") || strings.Contains(constrain, "<")) {
+				constrain += "-0"
+			}
+			return constrain
+		}
+		rules := strings.Split(annotations, ",")
+		for i := range rules {
+			rules[i] = addPreReleaseInfo(rules[i])
+		}
+		annotations = strings.Join(rules, ",")
+	}
 	constraint, err := semver.NewConstraint(annotations)
 	if err != nil {
 		return false, err
