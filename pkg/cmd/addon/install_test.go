@@ -101,17 +101,18 @@ var _ = Describe("index test", func() {
 				success    bool
 				result     bool
 			}{
+				{"<=0.7.0", "0.7.0", true, true},
 				{"0.7.0", "0.7.1", true, false},
 				{"0.7.0", "0.7.0", true, true},
 				{">=0.7.0", "0.7.1", true, true},
 				{">=0.7.0", "0.6.0", true, false},
 				{">=0.7.0,<=0.8.0", "0.9.0", true, false},
-				{">=0.7.0 || <=0.5.0", "0.3.0", true, true},
+				{">=0.7.0,<=0.8.0", "0.7.0-beta.1", true, true},
+				{">=0.7.0,<=0.8.0", "0.8.0-beta.1", true, false},
 				{"", "0.7.1", false, false},
 				{"0.7.0", "", false, false},
-				{">=0.7.0", "0.8.0-alpha.0", true, false},
-				{">=0.7.0", "0.8.0-beta.0", true, false},
-				// support prerelease constraint should add "-0" in the string end
+				{">=0.7.0", "0.8.0-alpha.0", true, true},
+				{">=0.7.0", "0.8.0-beta.0", true, true},
 				{">=0.7.0-0", "0.8.0-beta.0", true, true},
 				{">=0.7.0-beta.0", "0.8.0-beta.0", true, true},
 				{">=0.7.0-beta.0", "0.8.0-alpha.11", true, true},
