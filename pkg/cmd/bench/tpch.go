@@ -49,6 +49,9 @@ var tpchExample = templates.Examples(`
 	# tpch on a cluster, that will exec for all steps, cleanup, prepare and run
 	kbcli bench tpch mytest --cluster mycluster --user xxx --password xxx --database mydb
 
+	# tpch on a cluster, but with cpu and memory limits set
+	kbcli bench tpch mytest --cluster mycluster --user xxx --password xxx --database mydb --cpu 1 --memory 1Gi
+
 	# tpch on a cluster with run, just run by running the test
 	kbcli bench tpch run mytest --cluster mycluster --user xxx --password xxx --database mydb
 `)
@@ -197,6 +200,9 @@ func (o *TpchOptions) Run() error {
 			},
 		},
 	}
+
+	// set cpu and memory if specified
+	setCpuAndMemory(&tpch.Spec.BenchCommon, o.Cpu, o.Memory)
 
 	obj := &unstructured.Unstructured{
 		Object: map[string]interface{}{},

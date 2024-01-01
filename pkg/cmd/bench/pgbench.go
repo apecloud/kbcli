@@ -44,6 +44,9 @@ const (
 var pgbenchExample = templates.Examples(`
 	# pgbench run on a cluster, that will exec for all steps, cleanup, prepare and run
 	kbcli bench pgbench mytest --cluster pgcluster --database postgres --user xxx --password xxx
+
+	# pgbench run on a cluster, but with cpu and memory limits set
+	kbcli bench pgbench mytest --cluster pgcluster --database postgres --user xxx --password xxx --cpu 1 --memory 1Gi
 	
 	# pgbench run on a cluster with cleanup, only cleanup by deleting the testdata
 	kbcli bench pgbench cleanup mytest --cluster pgcluster --database postgres --user xxx --password xxx
@@ -224,6 +227,9 @@ func (o *PgBenchOptions) Run() error {
 			},
 		},
 	}
+
+	// set cpu and memory if specified
+	setCpuAndMemory(&pgbench.Spec.BenchCommon, o.Cpu, o.Memory)
 
 	obj := &unstructured.Unstructured{
 		Object: map[string]interface{}{},

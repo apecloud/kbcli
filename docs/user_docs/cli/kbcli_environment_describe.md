@@ -1,41 +1,18 @@
 ---
-title: kbcli bench tpch
+title: kbcli environment describe
 ---
 
-Run tpch benchmark
+Get the description information of a environment.
 
 ```
-kbcli bench tpch [Step] [BenchmarkName] [flags]
-```
-
-### Examples
-
-```
-  # tpch on a cluster, that will exec for all steps, cleanup, prepare and run
-  kbcli bench tpch mytest --cluster mycluster --user xxx --password xxx --database mydb
-  
-  # tpch on a cluster, but with cpu and memory limits set
-  kbcli bench tpch mytest --cluster mycluster --user xxx --password xxx --database mydb --cpu 1 --memory 1Gi
-  
-  # tpch on a cluster with run, just run by running the test
-  kbcli bench tpch run mytest --cluster mycluster --user xxx --password xxx --database mydb
+kbcli environment describe [flags]
 ```
 
 ### Options
 
 ```
-      --cluster string        the cluster of database
-      --cpu string            the cpu of benchmark pod
-      --database string       database name
-      --driver string         the driver of database
-      --extra-args strings    extra arguments for benchmark
-  -h, --help                  help for tpch
-      --host string           the host of database
-      --memory string         the memory of benchmark pod
-      --password string       the password of database
-      --port int              the port of database
-      --tolerations strings   Tolerations for benchmark, such as '"dev=true:NoSchedule,large=true:NoSchedule"'
-      --user string           the user of database
+  -h, --help            help for describe
+  -o, --output string   Output format (table|yaml|json) (default "human")
 ```
 
 ### Options inherited from parent commands
@@ -48,6 +25,7 @@ kbcli bench tpch [Step] [BenchmarkName] [flags]
       --certificate-authority string   Path to a cert file for the certificate authority
       --client-certificate string      Path to a client certificate file for TLS
       --client-key string              Path to a client key file for TLS
+      --cluster string                 The name of the kubeconfig cluster to use
       --context string                 The name of the kubeconfig context to use
       --disable-compression            If true, opt-out of response compression for all requests to the server
       --insecure-skip-tls-verify       If true, the server's certificate will not be checked for validity. This will make your HTTPS connections insecure
@@ -58,11 +36,12 @@ kbcli bench tpch [Step] [BenchmarkName] [flags]
   -s, --server string                  The address and port of the Kubernetes API server
       --tls-server-name string         Server name to use for server certificate validation. If it is not provided, the hostname used to contact the server is used
       --token string                   Bearer token for authentication to the API server
+      --user string                    The name of the kubeconfig user to use
 ```
 
 ### SEE ALSO
 
-* [kbcli bench](kbcli_bench.md)	 - Run a benchmark.
+* [kbcli environment](kbcli_environment.md)	 - kbcli environment allows you to manage cloud environment. This command is currently only applicable to cloud, and currently does not support switching the environment of the local k8s cluster.
 
 #### Go Back to [CLI Overview](cli.md) Homepage.
 

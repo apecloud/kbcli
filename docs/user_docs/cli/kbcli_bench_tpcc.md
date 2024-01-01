@@ -14,6 +14,9 @@ kbcli bench tpcc [Step] [BenchmarkName] [flags]
   # tpcc on a cluster, that will exec for all steps, cleanup, prepare and run
   kbcli bench tpcc mytest --cluster mycluster --user xxx --password xxx --database mydb
   
+  # tpcc on a cluster, but with cpu and memory limits set
+  kbcli bench tpcc mytest --cluster mycluster --user xxx --password xxx --database mydb --cpu 1 --memory 1Gi
+  
   # tpcc on a cluster with cleanup, only cleanup by deleting the testdata
   kbcli bench tpcc cleanup mytest --cluster mycluster --user xxx --password xxx --database mydb
   
@@ -40,6 +43,7 @@ kbcli bench tpcc [Step] [BenchmarkName] [flags]
 
 ```
       --cluster string         the cluster of database
+      --cpu string             the cpu of benchmark pod
       --database string        database name
       --delivery int           specify the percentage of transactions that should be delivery (default 4)
       --driver string          the driver of database
@@ -48,6 +52,7 @@ kbcli bench tpcc [Step] [BenchmarkName] [flags]
   -h, --help                   help for tpcc
       --host string            the host of database
       --limit-tx-per-min int   limit the number of transactions to run per minute, 0 means no limit
+      --memory string          the memory of benchmark pod
       --new-order int          specify the percentage of transactions that should be new orders (default 45)
       --order-status int       specify the percentage of transactions that should be order status (default 4)
       --password string        the password of database
