@@ -687,14 +687,11 @@ func (o *OperationsOptions) fillExpose() error {
 		}
 
 		if enabled {
-			svc := appsv1alpha1.ClusterComponentService{
+			o.Services = append(o.Services, appsv1alpha1.ClusterComponentService{
 				Name:        svcName,
 				ServiceType: corev1.ServiceTypeLoadBalancer,
-			}
-			if len(annotations) > 0 {
-				svc.Annotations = annotations
-			}
-			o.Services = append(o.Services, svc)
+				Annotations: annotations,
+			})
 		}
 	}
 	return nil

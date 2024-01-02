@@ -182,7 +182,9 @@ content: {
 				services: [ for _, svc in options.services {
 					name:        svc.name
 					serviceType: svc.serviceType
-					annotations: svc.annotations
+					if len(svc.annotations) > 0 {
+						annotations: svc.annotations
+					}
 				}]
 			}]
 		}
