@@ -63,8 +63,8 @@ const oceanbase = "oceanbase"
 type OperationsOptions struct {
 	action.CreateOptions  `json:"-"`
 	HasComponentNamesFlag bool `json:"-"`
-	// autoApprove when set true, skip the double check.
-	autoApprove            bool     `json:"-"`
+	// AutoApprove when set true, skip the double check.
+	AutoApprove            bool     `json:"-"`
 	ComponentNames         []string `json:"componentNames,omitempty"`
 	OpsRequestName         string   `json:"opsRequestName"`
 	TTLSecondsAfterSucceed int      `json:"ttlSecondsAfterSucceed"`
@@ -129,7 +129,7 @@ func newBaseOperationsOptions(f cmdutil.Factory, streams genericiooptions.IOStre
 		HasPatch:              true,
 		OpsType:               opsType,
 		HasComponentNamesFlag: hasComponentNamesFlag,
-		autoApprove:           false,
+		AutoApprove:           false,
 		CreateOptions: action.CreateOptions{
 			Factory:         f,
 			IOStreams:       streams,
@@ -359,7 +359,7 @@ func (o *OperationsOptions) validateVolumeExpansion() error {
 			// determine whether the opsRequest is a recovery action for volume expansion failure
 			if specStorage.Cmp(targetStorage) > 0 &&
 				statusStorage.Cmp(targetStorage) <= 0 {
-				o.autoApprove = false
+				o.AutoApprove = false
 				fmt.Fprintln(o.Out, printer.BoldYellow("Warning: this opsRequest is a recovery action for volume expansion failure and will re-create the PersistentVolumeClaims when RECOVER_VOLUME_EXPANSION_FAILURE=false"))
 				break
 			}
@@ -472,7 +472,7 @@ func (o *OperationsOptions) Validate() error {
 			return err
 		}
 	}
-	if !o.autoApprove && o.DryRun == "none" {
+	if !o.AutoApprove && o.DryRun == "none" {
 		return prompt.Confirm([]string{o.Name}, o.In, "", "")
 	}
 	return nil
@@ -723,7 +723,7 @@ func NewRestartCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 		},
 	}
 	o.addCommonFlags(cmd, f)
-	cmd.Flags().BoolVar(&o.autoApprove, "auto-approve", false, "Skip interactive approval before restarting the cluster")
+	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "Skip interactive approval before restarting the cluster")
 	return cmd
 }
 
@@ -750,7 +750,7 @@ func NewUpgradeCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 	}
 	o.addCommonFlags(cmd, f)
 	cmd.Flags().StringVar(&o.ClusterVersionRef, "cluster-version", "", "Reference cluster version (required)")
-	cmd.Flags().BoolVar(&o.autoApprove, "auto-approve", false, "Skip interactive approval before upgrading the cluster")
+	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "Skip interactive approval before upgrading the cluster")
 	_ = cmd.MarkFlagRequired("cluster-version")
 	return cmd
 }
@@ -784,7 +784,7 @@ func NewVerticalScalingCmd(f cmdutil.Factory, streams genericiooptions.IOStreams
 	cmd.Flags().StringVar(&o.CPU, "cpu", "", "Request and limit size of component cpu")
 	cmd.Flags().StringVar(&o.Memory, "memory", "", "Request and limit size of component memory")
 	cmd.Flags().StringVar(&o.Class, "class", "", "Component class")
-	cmd.Flags().BoolVar(&o.autoApprove, "auto-approve", false, "Skip interactive approval before vertically scaling the cluster")
+	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "Skip interactive approval before vertically scaling the cluster")
 	_ = cmd.MarkFlagRequired("components")
 	return cmd
 }
@@ -814,7 +814,7 @@ func NewHorizontalScalingCmd(f cmdutil.Factory, streams genericiooptions.IOStrea
 
 	o.addCommonFlags(cmd, f)
 	cmd.Flags().IntVar(&o.Replicas, "replicas", o.Replicas, "Replicas with the specified components")
-	cmd.Flags().BoolVar(&o.autoApprove, "auto-approve", false, "Skip interactive approval before horizontally scaling the cluster")
+	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "Skip interactive approval before horizontally scaling the cluster")
 	_ = cmd.MarkFlagRequired("replicas")
 	_ = cmd.MarkFlagRequired("components")
 	return cmd
@@ -845,7 +845,7 @@ func NewVolumeExpansionCmd(f cmdutil.Factory, streams genericiooptions.IOStreams
 	o.addCommonFlags(cmd, f)
 	cmd.Flags().StringSliceVarP(&o.VCTNames, "volume-claim-templates", "t", nil, "VolumeClaimTemplate names in components (required)")
 	cmd.Flags().StringVar(&o.Storage, "storage", "", "Volume storage size (required)")
-	cmd.Flags().BoolVar(&o.autoApprove, "auto-approve", false, "Skip interactive approval before expanding the cluster volume")
+	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "Skip interactive approval before expanding the cluster volume")
 	_ = cmd.MarkFlagRequired("volume-claim-templates")
 	_ = cmd.MarkFlagRequired("storage")
 	_ = cmd.MarkFlagRequired("components")
@@ -886,7 +886,7 @@ func NewExposeCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.
 	o.addCommonFlags(cmd, f)
 	cmd.Flags().StringVar(&o.ExposeType, "type", "", "Expose type, currently supported types are 'vpc', 'internet'")
 	cmd.Flags().StringVar(&o.ExposeEnabled, "enable", "", "Enable or disable the expose, values can be true or false")
-	cmd.Flags().BoolVar(&o.autoApprove, "auto-approve", false, "Skip interactive approval before exposing the cluster")
+	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "Skip interactive approval before exposing the cluster")
 
 	util.CheckErr(cmd.RegisterFlagCompletionFunc("type", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		return []string{string(util.ExposeToVPC), string(util.ExposeToInternet)}, cobra.ShellCompDirectiveNoFileComp
@@ -921,7 +921,7 @@ func NewStopCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Co
 		},
 	}
 	o.addCommonFlags(cmd, f)
-	cmd.Flags().BoolVar(&o.autoApprove, "auto-approve", false, "Skip interactive approval before stopping the cluster")
+	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "Skip interactive approval before stopping the cluster")
 	return cmd
 }
 
@@ -933,7 +933,7 @@ var startExample = templates.Examples(`
 // NewStartCmd creates a start command
 func NewStartCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
 	o := newBaseOperationsOptions(f, streams, appsv1alpha1.StartType, false)
-	o.autoApprove = true
+	o.AutoApprove = true
 	cmd := &cobra.Command{
 		Use:               "start NAME",
 		Short:             "Start the cluster if cluster is stopped.",
@@ -972,7 +972,7 @@ func cancelOps(o *OperationsOptions) error {
 	if !slices.Contains(supportedType, opsRequest.Spec.Type) {
 		return fmt.Errorf("opsRequest type: %s not support cancel action", opsRequest.Spec.Type)
 	}
-	if !o.autoApprove {
+	if !o.AutoApprove {
 		if err := prompt.Confirm([]string{o.Name}, o.In, "", ""); err != nil {
 			return err
 		}
@@ -1013,7 +1013,7 @@ func NewCancelCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.
 			cmdutil.CheckErr(cancelOps(o))
 		},
 	}
-	cmd.Flags().BoolVar(&o.autoApprove, "auto-approve", false, "Skip interactive approval before cancel the opsRequest")
+	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "Skip interactive approval before cancel the opsRequest")
 	return cmd
 }
 
@@ -1055,7 +1055,7 @@ func NewPromoteCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 	}
 	flags.AddComponentFlag(f, cmd, &o.Component, "Specify the component name of the cluster, if the cluster has multiple components, you need to specify a component")
 	cmd.Flags().StringVar(&o.Instance, "instance", "", "Specify the instance name as the new primary or leader of the cluster, you can get the instance name by running \"kbcli cluster list-instances\"")
-	cmd.Flags().BoolVar(&o.autoApprove, "auto-approve", false, "Skip interactive approval before promote the instance")
+	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "Skip interactive approval before promote the instance")
 	o.addCommonFlags(cmd, f)
 	return cmd
 }
@@ -1110,7 +1110,7 @@ func NewCustomOpsCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cob
 	}
 	o.addCommonFlags(cmd, f)
 	flags.AddComponentFlag(f, cmd, &o.Component, "Specify the component name of the cluster. if not specified, using the first component which referenced the defined componentDefinition.")
-	cmd.Flags().BoolVar(&o.autoApprove, "auto-approve", false, "Skip interactive approval before promote the instance")
+	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "Skip interactive approval before promote the instance")
 	cmd.Flags().StringVar(&o.Name, "cluster", "", "Specify the cluster name")
 	_ = cmd.MarkFlagRequired("cluster")
 	return cmd

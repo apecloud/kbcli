@@ -195,7 +195,7 @@ func (o *configOpsOptions) checkChangedParamsAndDoubleConfirm(cc *appsv1alpha1.C
 }
 
 func (o *configOpsOptions) confirmReconfigureWithRestart() error {
-	if o.autoApprove {
+	if o.AutoApprove {
 		return nil
 	}
 	const confirmStr = "yes"
@@ -274,6 +274,6 @@ func NewReconfigureCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *c
 	}
 
 	o.buildReconfigureCommonFlags(cmd, f)
-	cmd.Flags().BoolVar(&o.autoApprove, "auto-approve", false, "Skip interactive approval before reconfiguring the cluster")
+	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "Skip interactive approval before reconfiguring the cluster")
 	return cmd
 }
