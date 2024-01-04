@@ -72,6 +72,7 @@ var benchGVRList = []schema.GroupVersionResource{
 	types.YcsbGVR(),
 	types.TpccGVR(),
 	types.TpchGVR(),
+	types.RedisBenchGVR(),
 }
 
 type BenchBaseOptions struct {
@@ -182,6 +183,7 @@ func NewBenchCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.C
 		NewYcsbCmd(f, streams),
 		NewTpccCmd(f, streams),
 		NewTpchCmd(f, streams),
+		NewRedisBenchmarkCmd(f, streams),
 		newListCmd(f, streams),
 		newDeleteCmd(f, streams),
 		newDescribeCmd(f, streams),
