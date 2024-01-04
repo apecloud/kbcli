@@ -167,6 +167,7 @@ goimports: goimportstool ## Run goimports against code.
 K3S_VERSION ?= v1.23.8+k3s1
 K3D_VERSION ?= 5.4.4
 K3S_IMG_TAG ?= $(subst +,-,$(K3S_VERSION))
+FETCH_ADDON_ENABLED ?= true
 
 CLI_LD_FLAGS ="-s -w \
 	-X github.com/apecloud/kbcli/version.BuildDate=`date -u +'%Y-%m-%dT%H:%M:%SZ'` \
@@ -182,8 +183,10 @@ bin/kbcli.%: ## Cross build bin/kbcli.$(OS).$(ARCH).
 
 .PHONY: fetch-addons
 fetch-addons: ## update addon submodule
-	git submodule update --init --recursive --remote
+ifeq ($(FETCH_ADDON_ENABLED), true)
+	git submodule update --init --recursive --remote --force
 	git submodule
+endif
 
 .PHONY: kbcli-fast
 kbcli-fast: OS=$(shell $(GO) env GOOS)
