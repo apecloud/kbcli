@@ -38,7 +38,7 @@ jobs:
       - name: build kbcli embed chart
         id: build-kbcli-embed-chart
         run: |
-          make build-kbcli-embed-chart FETCH_ADDON_ENABLED=false
+          make build-kbcli-embed-chart
           git add pkg/cluster/charts
           FILE_CHANGES=`git diff --name-only ${{ github.sha }}`
           if [[ ! -z "$FILE_CHANGES" ]]; then
