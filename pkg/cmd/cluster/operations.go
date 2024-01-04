@@ -660,12 +660,9 @@ func (o *OperationsOptions) fillExpose() error {
 		return err
 	}
 
-	var (
-		// currently, we use the expose type as service name
-		svcName = string(exposeType)
-	)
 	o.Services = append(o.Services, appsv1alpha1.OpsService{
-		Name:        svcName,
+		// currently, we use the expose type as service name
+		Name:        string(exposeType),
 		ServiceType: corev1.ServiceTypeLoadBalancer,
 		Annotations: annotations,
 	})
