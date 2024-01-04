@@ -31,9 +31,10 @@ import (
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
 
+	"github.com/apecloud/kubebench/api/v1alpha1"
+
 	"github.com/apecloud/kbcli/pkg/cluster"
 	"github.com/apecloud/kbcli/pkg/types"
-	"github.com/apecloud/kubebench/api/v1alpha1"
 )
 
 const (
@@ -215,7 +216,7 @@ func (o *RedisBenchOptions) Run() error {
 	}
 
 	// set cpu and memory if specified
-	setCpuAndMemory(&redisBench.Spec.BenchCommon, o.Cpu, o.Memory)
+	setCPUAndMemory(&redisBench.Spec.BenchCommon, o.CPU, o.Memory)
 
 	obj := &unstructured.Unstructured{
 		Object: map[string]interface{}{},
