@@ -42,16 +42,22 @@ const (
 
 var redisBenchExample = templates.Examples(`
 	# redis-benchmark run on a cluster
-	kbcli bench redis-benchmark mytest --cluster rediscluster --clients 50 --requests 10000
+	kbcli bench redis-benchmark mytest --cluster rediscluster --clients 50 --requests 10000 --password xxx
 
 	# redis-benchmark run on a cluster, but with cpu and memory limits set
-	kbcli bench redis-benchmark mytest --cluster rediscluster --clients 50 --requests 10000 --cpu 1 --memory 1Gi
+	kbcli bench redis-benchmark mytest --cluster rediscluster --clients 50 --requests 10000 --cpu 1 --memory 1Gi --password xxx
 
 	# redis-benchmark run on a cluster, just test set/get
-	kbcli bench redis-benchmark mytest --cluster rediscluster --clients 50 --requests 10000 --tests set,get
+	kbcli bench redis-benchmark mytest --cluster rediscluster --clients 50 --requests 10000 --tests set,get --password xxx
 
 	# redis-benchmark run on a cluster, just test set/get with key space
-	kbcli bench redis-benchmark mytest --cluster rediscluster --clients 50 --requests 10000 --tests set,get --key-space 100000
+	kbcli bench redis-benchmark mytest --cluster rediscluster --clients 50 --requests 10000 --tests set,get --key-space 100000 --password xxx
+
+	# redis-benchmark run on a cluster, with pipeline
+	kbcli bench redis-benchmark mytest --cluster rediscluster --clients 50 --requests 10000 --pipeline 10 --password xxx
+
+	# redis-benchmark run on a cluster, with csv output
+	kbcli bench redis-benchmark mytest --cluster rediscluster --clients 50 --requests 10000 --quiet false --extra-args "--csv" --password xxx
 `)
 
 type RedisBenchOptions struct {
@@ -220,7 +226,7 @@ func (o *RedisBenchOptions) Run() error {
 	}
 	obj.SetUnstructuredContent(data)
 
-	obj, err = o.dynamic.Resource(types.PgBenchGVR()).Namespace(o.namespace).Create(context.TODO(), obj, metav1.CreateOptions{})
+	obj, err = o.dynamic.Resource(types.RedisBenchGVR()).Namespace(o.namespace).Create(context.TODO(), obj, metav1.CreateOptions{})
 	if err != nil {
 		return err
 	}

@@ -41,6 +41,7 @@ Run a benchmark.
 * [kbcli bench describe](kbcli_bench_describe.md)	 - Describe a benchmark.
 * [kbcli bench list](kbcli_bench_list.md)	 - List all benchmarks.
 * [kbcli bench pgbench](kbcli_bench_pgbench.md)	 - Run pgbench against a PostgreSQL cluster
+* [kbcli bench redis-benchmark](kbcli_bench_redis-benchmark.md)	 - Run redis-benchmark on a cluster
 * [kbcli bench sysbench](kbcli_bench_sysbench.md)	 - run a SysBench benchmark
 * [kbcli bench tpcc](kbcli_bench_tpcc.md)	 - Run tpcc benchmark
 * [kbcli bench tpch](kbcli_bench_tpch.md)	 - Run tpch benchmark
