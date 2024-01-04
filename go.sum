@@ -282,6 +282,8 @@ github.com/apecloud/kubeblocks v0.8.0-beta.0.0.20240102025745-3f8632cd6d00 h1:ER
 github.com/apecloud/kubeblocks v0.8.0-beta.0.0.20240102025745-3f8632cd6d00/go.mod h1:HE6Y6jVgQ+qqDIZSETKUtB0+7wwxDxCJL5SsmSZ2AAk=
 github.com/apecloud/kubeblocks v0.8.0-beta.0.0.20240102032458-3108a49a6274 h1:CSkkGdoYCJmPtc/reYJ71kYCANzsNlYs7Bn+bdX4ILw=
 github.com/apecloud/kubeblocks v0.8.0-beta.0.0.20240102032458-3108a49a6274/go.mod h1:HE6Y6jVgQ+qqDIZSETKUtB0+7wwxDxCJL5SsmSZ2AAk=
+github.com/apecloud/kubeblocks v0.8.0-beta.0.0.20240104092234-1b923a063243 h1:6WxLbGWGhal87K9Zd5agOgALSlpjRC3YiHlEjlu5wT4=
+github.com/apecloud/kubeblocks v0.8.0-beta.0.0.20240104092234-1b923a063243/go.mod h1:HE6Y6jVgQ+qqDIZSETKUtB0+7wwxDxCJL5SsmSZ2AAk=
 github.com/apecloud/kubeblocks v0.8.0-beta.31 h1:VymcJXfG/C4mueFJEx2UjSYynE+2et/3tYaa5T3Kuro=
 github.com/apecloud/kubeblocks v0.8.0-beta.31/go.mod h1:8WEh5JNVnLMXOqdP8PUz4sB9/MkfyMORpbsqaQKdh0E=
 github.com/apecloud/kubeblocks v0.8.0-beta.33 h1:73zSTz7USvZ3TzdmqPzHSc18oFe7QqfQ5EAhJ7BqqA0=

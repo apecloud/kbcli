@@ -179,12 +179,19 @@ content: {
 		if options.type == "Expose" {
 			expose: [ for _, cName in options.componentNames {
 				componentName: cName
+				if options.exposeEnabled == "enabled" {
+					switch: "Enable"
+				}
+				if options.exposeEnabled == "disabled" {
+					switch: "Disable"
+				}
 				services: [ for _, svc in options.services {
 					name:        svc.name
 					serviceType: svc.serviceType
 					if len(svc.annotations) > 0 {
 						annotations: svc.annotations
 					}
+
 				}]
 			}]
 		}
