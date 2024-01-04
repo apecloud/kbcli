@@ -27,9 +27,8 @@ import (
 
 func NewDataProtectionCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "dataprotection command",
-		Short:   "Data protection command.",
-		Aliases: []string{"dp"},
+		Use:   "dataprotection command",
+		Short: "Data protection command.",
 	}
 	cmd.AddCommand(
 		newBackupCommand(f, streams),
