@@ -20,6 +20,7 @@ jobs:
     with:
       RELEASE_VERSION: "${{ inputs.release_version }}"
       CONTENT: "${{ inputs.content }}"
+      APECD_REF: "v0.1.50"
     secrets: inherit
 
   release-message:
@@ -29,6 +30,7 @@ jobs:
     with:
       TYPE: "1"
       VERSION: "${{ needs.get-version.outputs.release-version }}"
+      APECD_REF: "v0.1.50"
     secrets: inherit
 
   release-tag:
