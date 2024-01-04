@@ -15,10 +15,26 @@ on:
 run-name: ref_name:${{ github.ref_name }} release_version:${{ inputs.release_version }} ${{ inputs.content }}
 
 jobs:
-  release-version:
-    uses: apecloud/apecloud-cd/.github/workflows/release-version.yml@v0.1.42
+  get-version:
+    uses: apecloud/apecloud-cd/.github/workflows/get-version.yml@v0.1.50
     with:
       RELEASE_VERSION: "${{ inputs.release_version }}"
       CONTENT: "${{ inputs.content }}"
-      APECD_REF: "v0.1.42"
+    secrets: inherit
+
+  release-message:
+    if: ${{ needs.get-version.result == 'success' }}
+    needs: [ get-version ]
+    uses: apecloud/apecloud-cd/.github/workflows/feishui-message.yml@v0.1.50
+    with:
+      TYPE: "1"
+      VERSION: "${{ needs.get-version.outputs.release-version }}"
+    secrets: inherit
+
+  release-tag:
+    if: ${{ needs.get-version.result == 'success' }}
+    needs: [ get-version ]
+    uses: ./.github/workflows/release-tag.yaml
+    with:
+      VERSION: "${{ needs.get-version.outputs.release-version }}"
     secrets: inherit
