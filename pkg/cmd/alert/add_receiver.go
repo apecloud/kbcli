@@ -25,6 +25,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/slices"
 	corev1 "k8s.io/api/core/v1"
@@ -79,45 +80,51 @@ type baseOptions struct {
 	alertConfigMap   *corev1.ConfigMap
 	webhookConfigMap *corev1.ConfigMap
 	client           kubernetes.Interface
+	Factory          cmdutil.Factory
 }
 
-type addReceiverOptions struct {
+type AddReceiverOptions struct {
 	baseOptions
 
-	emails     []string
-	webhooks   []string
-	slacks     []string
-	clusters   []string
-	severities []string
-	types      []string
-	rules      []string
-	name       string
+	Emails     []string
+	Webhooks   []string
+	Slacks     []string
+	Clusters   []string
+	Severities []string
+	Types      []string
+	Rules      []string
+	Name       string
+	InputName  []string
 
 	receiver                *receiver
 	route                   *route
 	webhookAdaptorReceivers []webhookAdaptorReceiver
 }
 
+func NewAddReceiverOption(f cmdutil.Factory, streams genericiooptions.IOStreams) *AddReceiverOptions {
+	o := AddReceiverOptions{baseOptions: baseOptions{Factory: f, IOStreams: streams}}
+	return &o
+}
+
 func newAddReceiverCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := addReceiverOptions{baseOptions: baseOptions{IOStreams: streams}}
+	o := NewAddReceiverOption(f, streams)
 	cmd := &cobra.Command{
 		Use:     "add-receiver",
 		Short:   "Add alert receiver, such as email, slack, webhook and so on.",
 		Example: addReceiverExample,
 		Run: func(cmd *cobra.Command, args []string) {
-			util.CheckErr(o.complete(f))
-			util.CheckErr(o.validate(args))
-			util.CheckErr(o.run())
+			o.InputName = args
+			util.CheckErr(o.Exec())
 		},
 	}
 
-	cmd.Flags().StringArrayVar(&o.emails, "email", []string{}, "Add email address, such as user@kubeblocks.io, more than one emailConfig can be specified separated by comma")
-	cmd.Flags().StringArrayVar(&o.webhooks, "webhook", []string{}, "Add webhook receiver, such as url=https://open.feishu.cn/open-apis/bot/v2/hook/foo,token=xxxxx")
-	cmd.Flags().StringArrayVar(&o.slacks, "slack", []string{}, "Add slack receiver, such as api_url=https://hooks.slackConfig.com/services/foo,channel=monitor,username=kubeblocks-alert-bot")
-	cmd.Flags().StringArrayVar(&o.clusters, "cluster", []string{}, "Cluster name, such as mycluster, more than one cluster can be specified, such as mycluster1,mycluster2")
-	cmd.Flags().StringArrayVar(&o.severities, "severity", []string{}, "Alert severity level, critical, warning or info, more than one severity level can be specified, such as critical,warning")
-	cmd.Flags().StringArrayVar(&o.types, "type", []string{}, "Engine type, such as mysql, more than one types can be specified, such as mysql,postgresql,redis")
-	cmd.Flags().StringArrayVar(&o.rules, "rule", []string{}, "rule name, such as MysqlDown, more than one rule names can be specified, such as MysqlDown,MysqlRestarted")
+	cmd.Flags().StringArrayVar(&o.Emails, "email", []string{}, "Add email address, such as user@kubeblocks.io, more than one emailConfig can be specified separated by comma")
+	cmd.Flags().StringArrayVar(&o.Webhooks, "webhook", []string{}, "Add webhook receiver, such as url=https://open.feishu.cn/open-apis/bot/v2/hook/foo,token=xxxxx")
+	cmd.Flags().StringArrayVar(&o.Slacks, "slack", []string{}, "Add slack receiver, such as api_url=https://hooks.slackConfig.com/services/foo,channel=monitor,username=kubeblocks-alert-bot")
+	cmd.Flags().StringArrayVar(&o.Clusters, "cluster", []string{}, "Cluster name, such as mycluster, more than one cluster can be specified, such as mycluster1,mycluster2")
+	cmd.Flags().StringArrayVar(&o.Severities, "severity", []string{}, "Alert severity level, critical, warning or info, more than one severity level can be specified, such as critical,warning")
+	cmd.Flags().StringArrayVar(&o.Types, "type", []string{}, "Engine type, such as mysql, more than one types can be specified, such as mysql,postgresql,redis")
+	cmd.Flags().StringArrayVar(&o.Rules, "rule", []string{}, "rule name, such as MysqlDown, more than one rule names can be specified, such as MysqlDown,MysqlRestarted")
 
 	// register completions
 	util.CheckErr(cmd.RegisterFlagCompletionFunc("severity",
@@ -128,11 +135,27 @@ func newAddReceiverCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *c
 	return cmd
 }
 
-func (o *baseOptions) complete(f cmdutil.Factory) error {
+func (o *AddReceiverOptions) Exec() error {
+	if err := o.complete(); err != nil {
+		return err
+	}
+	if err := o.validate(); err != nil {
+		return err
+	}
+	if err := o.run(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (o *baseOptions) complete() error {
 	var err error
 	ctx := context.Background()
 
-	o.client, err = f.KubernetesClientSet()
+	if o.Factory == nil {
+		return errors.Errorf("no factory")
+	}
+	o.client, err = o.Factory.KubernetesClientSet()
 	if err != nil {
 		return err
 	}
@@ -153,16 +176,16 @@ func (o *baseOptions) complete(f cmdutil.Factory) error {
 	return err
 }
 
-func (o *addReceiverOptions) validate(args []string) error {
-	if len(o.emails) == 0 && len(o.webhooks) == 0 && len(o.slacks) == 0 {
+func (o *AddReceiverOptions) validate() error {
+	if len(o.Emails) == 0 && len(o.Webhooks) == 0 && len(o.Slacks) == 0 {
 		return fmt.Errorf("must specify at least one receiver, such as --email, --webhook or --slack")
 	}
 
 	// if name is not specified, generate a random one
-	if len(args) == 0 {
-		o.name = generateReceiverName()
+	if len(o.InputName) == 0 {
+		o.Name = generateReceiverName()
 	} else {
-		o.name = args[0]
+		o.Name = o.InputName[0]
 	}
 
 	if err := o.checkEmails(); err != nil {
@@ -176,8 +199,8 @@ func (o *addReceiverOptions) validate(args []string) error {
 }
 
 // checkSeverities checks if severity is valid
-func (o *addReceiverOptions) checkSeverities() error {
-	if len(o.severities) == 0 {
+func (o *AddReceiverOptions) checkSeverities() error {
+	if len(o.Severities) == 0 {
 		return nil
 	}
 	checkSeverity := func(severity string) error {
@@ -190,7 +213,7 @@ func (o *addReceiverOptions) checkSeverities() error {
 		return nil
 	}
 
-	for _, severity := range o.severities {
+	for _, severity := range o.Severities {
 		if err := checkSeverity(severity); err != nil {
 			return err
 		}
@@ -199,8 +222,8 @@ func (o *addReceiverOptions) checkSeverities() error {
 }
 
 // checkEmails checks if email SMTP is configured, if not, do not allow to add email receiver
-func (o *addReceiverOptions) checkEmails() error {
-	if len(o.emails) == 0 {
+func (o *AddReceiverOptions) checkEmails() error {
+	if len(o.Emails) == 0 {
 		return nil
 	}
 
@@ -232,7 +255,7 @@ func (o *addReceiverOptions) checkEmails() error {
 	return nil
 }
 
-func (o *addReceiverOptions) run() error {
+func (o *AddReceiverOptions) run() error {
 	// build receiver
 	if err := o.buildReceiver(); err != nil {
 		return err
@@ -256,29 +279,29 @@ func (o *addReceiverOptions) run() error {
 }
 
 // buildReceiver builds receiver from receiver options
-func (o *addReceiverOptions) buildReceiver() error {
+func (o *AddReceiverOptions) buildReceiver() error {
 	webhookConfigs, err := o.buildWebhook()
 	if err != nil {
 		return err
 	}
 
-	slackConfigs, err := buildSlackConfigs(o.slacks)
+	slackConfigs, err := buildSlackConfigs(o.Slacks)
 	if err != nil {
 		return err
 	}
 
 	o.receiver = &receiver{
-		Name:           o.name,
-		EmailConfigs:   buildEmailConfigs(o.emails),
+		Name:           o.Name,
+		EmailConfigs:   buildEmailConfigs(o.Emails),
 		WebhookConfigs: webhookConfigs,
 		SlackConfigs:   slackConfigs,
 	}
 	return nil
 }
 
-func (o *addReceiverOptions) buildRoute() {
+func (o *AddReceiverOptions) buildRoute() {
 	r := &route{
-		Receiver: o.name,
+		Receiver: o.Name,
 		Continue: true,
 	}
 
@@ -295,10 +318,10 @@ func (o *addReceiverOptions) buildRoute() {
 	}
 
 	// parse clusters and severities
-	splitStr(o.clusters, &clusterArray)
-	splitStr(o.severities, &severityArray)
-	splitStr(o.types, &typesArray)
-	splitStr(o.rules, &rulesArray)
+	splitStr(o.Clusters, &clusterArray)
+	splitStr(o.Severities, &severityArray)
+	splitStr(o.Types, &typesArray)
+	splitStr(o.Rules, &rulesArray)
 
 	// build matchers
 	buildMatchers := func(t string, values []string) string {
@@ -328,7 +351,7 @@ func (o *addReceiverOptions) buildRoute() {
 }
 
 // addReceiver adds receiver to alertmanager config
-func (o *addReceiverOptions) addReceiver() error {
+func (o *AddReceiverOptions) addReceiver() error {
 	data, err := getConfigData(o.alertConfigMap, alertConfigFileName)
 	if err != nil {
 		return err
@@ -336,7 +359,7 @@ func (o *addReceiverOptions) addReceiver() error {
 
 	// add receiver
 	receivers := getReceiversFromData(data)
-	if receiverExists(receivers, o.name) {
+	if receiverExists(receivers, o.Name) {
 		return fmt.Errorf("receiver %s already exists", o.receiver.Name)
 	}
 	receivers = append(receivers, o.receiver)
@@ -352,7 +375,7 @@ func (o *addReceiverOptions) addReceiver() error {
 	return updateConfig(o.client, o.alertConfigMap, alertConfigFileName, data)
 }
 
-func (o *addReceiverOptions) addWebhookReceivers() error {
+func (o *AddReceiverOptions) addWebhookReceivers() error {
 	data, err := getConfigData(o.webhookConfigMap, webhookAdaptorFileName)
 	if err != nil {
 		return err
@@ -369,10 +392,10 @@ func (o *addReceiverOptions) addWebhookReceivers() error {
 }
 
 // buildWebhook builds webhookConfig and webhookAdaptorReceiver from webhook options
-func (o *addReceiverOptions) buildWebhook() ([]*webhookConfig, error) {
+func (o *AddReceiverOptions) buildWebhook() ([]*webhookConfig, error) {
 	var ws []*webhookConfig
 	var waReceivers []webhookAdaptorReceiver
-	for _, hook := range o.webhooks {
+	for _, hook := range o.Webhooks {
 		m := strToMap(hook)
 		if len(m) == 0 {
 			return nil, fmt.Errorf("invalid webhook: %s, webhook should be in the format of url=my-url,token=my-token", hook)
@@ -381,7 +404,7 @@ func (o *addReceiverOptions) buildWebhook() ([]*webhookConfig, error) {
 			MaxAlerts:    10,
 			SendResolved: false,
 		}
-		waReceiver := webhookAdaptorReceiver{Name: o.name}
+		waReceiver := webhookAdaptorReceiver{Name: o.Name}
 		for k, v := range m {
 			// check webhookConfig keys
 			switch webhookKey(k) {
@@ -389,7 +412,7 @@ func (o *addReceiverOptions) buildWebhook() ([]*webhookConfig, error) {
 				if valid, err := urlIsValid(v); !valid {
 					return nil, fmt.Errorf("invalid webhook url: %s, %v", v, err)
 				}
-				w.URL = getWebhookAdaptorURL(o.name, o.webhookConfigMap.Namespace)
+				w.URL = getWebhookAdaptorURL(o.Name, o.webhookConfigMap.Namespace)
 				webhookType := getWebhookType(v)
 				if webhookType == unknownWebhookType {
 					return nil, fmt.Errorf("invalid webhook url: %s, failed to prase the webhook type", v)
