@@ -185,10 +185,15 @@ func (o *InstallOptions) Upgrade() error {
 
 		msg = "to " + o.Version
 	}
+
 	// create or update crds
+	s = spinner.New(o.Out, spinnerMsg("Upgrade CRDs"))
+	defer s.Fail()
 	if err = createOrUpdateCRDS(o.Dynamic, o.Version); err != nil {
 		return fmt.Errorf("upgrade crds failed: %s", err.Error())
 	}
+	s.Success()
+
 	s = spinner.New(o.Out, spinnerMsg("Upgrading KubeBlocks "+msg))
 	defer s.Fail()
 	// upgrade KubeBlocks chart

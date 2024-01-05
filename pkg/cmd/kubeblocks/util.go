@@ -28,6 +28,8 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
+	extensionsv1alpha1 "github.com/apecloud/kubeblocks/apis/extensions/v1alpha1"
+	"github.com/apecloud/kubeblocks/pkg/constant"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/pkg/errors"
 	"golang.org/x/exp/slices"
@@ -38,9 +40,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
-
-	extensionsv1alpha1 "github.com/apecloud/kubeblocks/apis/extensions/v1alpha1"
-	"github.com/apecloud/kubeblocks/pkg/constant"
+	"k8s.io/klog/v2"
 
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
@@ -122,7 +122,7 @@ func getHelmChartVersions(chart string) ([]*semver.Version, error) {
 //
 // KubeBlocks resources are labeled with "app.kubernetes.io/instance=types.KubeBlocksChartName",
 // and most addon resources are labeled with "app.kubernetes.io/instance=<addon-prefix>-addon.Name",
-// but some addon resources are labeled with "release=<addon-prefix>-addon.Name".
+// but some labeled with "release=<addon-prefix>-addon.Name".
 func buildResourceLabelSelectors(addons []*extensionsv1alpha1.Addon) []string {
 	var (
 		selectors []string
@@ -295,7 +295,7 @@ func createOrUpdateCRDS(dynamic dynamic.Interface, kbVersion string) error {
 	if resp.StatusCode == http.StatusNotFound {
 		return nil
 	} else if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("can not download %s", crdsURL)
+		return fmt.Errorf("failed to download CRDs from %s", crdsURL)
 	}
 	defer resp.Body.Close()
 	d := yaml.NewYAMLToJSONDecoder(resp.Body)
@@ -314,11 +314,13 @@ func createOrUpdateCRDS(dynamic dynamic.Interface, kbVersion string) error {
 	for _, obj := range objs {
 		if structObj, err := dynamic.Resource(types.CustomResourceDefinitionGVR()).Get(ctx, obj.GetName(), metav1.GetOptions{}); err != nil {
 			// create crd
+			klog.V(1).Infof("create CRD %s", obj.GetName())
 			if _, err = dynamic.Resource(types.CustomResourceDefinitionGVR()).Create(ctx, &obj, metav1.CreateOptions{}); err != nil {
 				return err
 			}
 		} else {
 			// update crd
+			klog.V(1).Infof("update CRD %s", obj.GetName())
 			obj.SetResourceVersion(structObj.GetResourceVersion())
 			if _, err = dynamic.Resource(types.CustomResourceDefinitionGVR()).Update(ctx, &obj, metav1.UpdateOptions{}); err != nil {
 				return err

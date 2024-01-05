@@ -231,9 +231,7 @@ func (o *UninstallOptions) uninstallAddons() error {
 
 	addons := make(map[string]*extensionsv1alpha1.Addon)
 	processAddons := func(uninstall bool) error {
-		objects, err := o.Dynamic.Resource(types.AddonGVR()).List(context.TODO(), metav1.ListOptions{
-			LabelSelector: buildKubeBlocksSelectorLabels(),
-		})
+		objects, err := o.Dynamic.Resource(types.AddonGVR()).List(context.TODO(), metav1.ListOptions{})
 		if err != nil && !apierrors.IsNotFound(err) {
 			klog.V(1).Infof("Failed to get KubeBlocks addons %s", err.Error())
 			allErrs = append(allErrs, err)
@@ -303,22 +301,23 @@ func (o *UninstallOptions) uninstallAddons() error {
 
 	// check if all addons are disabled, if so, then we will stop checking addons
 	// status otherwise, we will wait for a while and check again
-	if err = wait.PollImmediate(5*time.Second, o.Timeout, func() (bool, error) {
-		// we only check addons status, do not try to uninstall addons again
-		if err = processAddons(false); err != nil {
-			return false, err
-		}
-		status := checkAddons(maps.Values(addons), false)
-		msg = suffixMsg(fmt.Sprintf("%s\n  %s", header, status.outputMsg))
-		s.SetMessage(msg)
-		if status.allDisabled {
-			spinnerDone()
-			return true, nil
-		} else if status.hasFailed {
-			return false, errors.New("some addons are failed to disabled")
-		}
-		return false, nil
-	}); err != nil {
+	if err = wait.PollUntilContextTimeout(context.Background(), 5*time.Second,
+		o.Timeout, true, func(_ context.Context) (bool, error) {
+			// we only check addons status, do not try to uninstall addons again
+			if err = processAddons(false); err != nil {
+				return false, err
+			}
+			status := checkAddons(maps.Values(addons), false)
+			msg = suffixMsg(fmt.Sprintf("%s\n  %s", header, status.outputMsg))
+			s.SetMessage(msg)
+			if status.allDisabled {
+				spinnerDone()
+				return true, nil
+			} else if status.hasFailed {
+				return false, errors.New("some addons are failed to disabled")
+			}
+			return false, nil
+		}); err != nil {
 		spinnerDone()
 		printAddonMsg(o.Out, maps.Values(addons), false)
 		allErrs = append(allErrs, err)
