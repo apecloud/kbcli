@@ -773,6 +773,12 @@ var ProviderExposeAnnotations = map[K8sProvider]map[ExposeType]map[string]string
 	TKEProvider: {
 		ExposeToInternet: map[string]string{},
 	},
+	KINDProvider: {
+		ExposeToVPC: map[string]string{},
+	},
+	K3SProvider: {
+		ExposeToVPC: map[string]string{},
+	},
 }
 
 func GetExposeAnnotations(provider K8sProvider, exposeType ExposeType) (map[string]string, error) {
