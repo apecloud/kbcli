@@ -229,7 +229,7 @@ func (o *PgBenchOptions) Run() error {
 	}
 
 	// set cpu and memory if specified
-	setCpuAndMemory(&pgbench.Spec.BenchCommon, o.Cpu, o.Memory)
+	setCPUAndMemory(&pgbench.Spec.BenchCommon, o.CPU, o.Memory)
 
 	obj := &unstructured.Unstructured{
 		Object: map[string]interface{}{},

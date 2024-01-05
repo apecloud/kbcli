@@ -213,6 +213,7 @@ const (
 	ResourceYcsb        = "ycsbs"
 	ResourceTpcc        = "tpccs"
 	ResourceTpch        = "tpches"
+	ResourceRedisBench  = "redisbenches"
 )
 
 // Workload API group
@@ -501,4 +502,8 @@ func TpccGVR() schema.GroupVersionResource {
 
 func TpchGVR() schema.GroupVersionResource {
 	return schema.GroupVersionResource{Group: KubebenchAPIGroup, Version: KubebenchAPIVersion, Resource: ResourceTpch}
+}
+
+func RedisBenchGVR() schema.GroupVersionResource {
+	return schema.GroupVersionResource{Group: KubebenchAPIGroup, Version: KubebenchAPIVersion, Resource: ResourceRedisBench}
 }
