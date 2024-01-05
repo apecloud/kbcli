@@ -48,7 +48,7 @@ import (
 	"k8s.io/kubectl/pkg/util/templates"
 
 	extensionsv1alpha1 "github.com/apecloud/kubeblocks/apis/extensions/v1alpha1"
-	viperx "github.com/apecloud/kubeblocks/pkg/viperx"
+	"github.com/apecloud/kubeblocks/pkg/viperx"
 
 	"github.com/apecloud/kbcli/pkg/spinner"
 	"github.com/apecloud/kbcli/pkg/types"
@@ -275,11 +275,15 @@ func (o *InstallOptions) CompleteInstallOptions() error {
 func (o *InstallOptions) Install() error {
 	var err error
 	// create or update crds
+	s := spinner.New(o.Out, spinnerMsg("Create CRDs"))
+	defer s.Fail()
 	if err = createOrUpdateCRDS(o.Dynamic, o.Version); err != nil {
 		return fmt.Errorf("install crds failed: %s", err.Error())
 	}
+	s.Success()
+
 	// add helm repo
-	s := spinner.New(o.Out, spinnerMsg("Add and update repo "+types.KubeBlocksRepoName))
+	s = spinner.New(o.Out, spinnerMsg("Add and update repo "+types.KubeBlocksRepoName))
 	defer s.Fail()
 	// Add repo, if exists, will update it
 	if err = helm.AddRepo(newHelmRepoEntry()); err != nil {
@@ -403,21 +407,22 @@ func (o *InstallOptions) waitAddonsEnabled() error {
 		}
 	)
 	// wait all addons to be enabled, or timeout
-	if err = wait.PollImmediate(5*time.Second, o.Timeout, func() (bool, error) {
-		if err = fetchAddons(); err != nil || len(addons) == 0 {
-			return false, err
-		}
-		status := checkAddons(maps.Values(addons), true)
-		msg = suffixMsg(fmt.Sprintf("%s\n  %s", header, status.outputMsg))
-		s.SetMessage(msg)
-		if status.allEnabled {
-			spinnerDone()
-			return true, nil
-		} else if status.hasFailed {
-			return false, failedErr
-		}
-		return false, nil
-	}); err != nil {
+	if err = wait.PollUntilContextTimeout(context.Background(), 5*time.Second,
+		o.Timeout, true, func(_ context.Context) (bool, error) {
+			if err = fetchAddons(); err != nil || len(addons) == 0 {
+				return false, err
+			}
+			status := checkAddons(maps.Values(addons), true)
+			msg = suffixMsg(fmt.Sprintf("%s\n  %s", header, status.outputMsg))
+			s.SetMessage(msg)
+			if status.allEnabled {
+				spinnerDone()
+				return true, nil
+			} else if status.hasFailed {
+				return false, failedErr
+			}
+			return false, nil
+		}); err != nil {
 		spinnerDone()
 		printAddonMsg(o.Out, maps.Values(addons), true)
 		return err
