@@ -261,7 +261,7 @@ func (o *YcsbOptions) Run() error {
 	}
 
 	// set cpu and memory if specified
-	setCpuAndMemory(&ycsb.Spec.BenchCommon, o.Cpu, o.Memory)
+	setCPUAndMemory(&ycsb.Spec.BenchCommon, o.CPU, o.Memory)
 
 	obj := &unstructured.Unstructured{
 		Object: map[string]interface{}{},

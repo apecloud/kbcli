@@ -72,6 +72,7 @@ var benchGVRList = []schema.GroupVersionResource{
 	types.YcsbGVR(),
 	types.TpccGVR(),
 	types.TpchGVR(),
+	types.RedisBenchGVR(),
 }
 
 type BenchBaseOptions struct {
@@ -91,7 +92,7 @@ type BenchBaseOptions struct {
 	TolerationsRaw []string
 	Tolerations    []corev1.Toleration
 	ExtraArgs      []string // extra arguments for benchmark
-	Cpu            string
+	CPU            string
 	Memory         string
 
 	factory cmdutil.Factory
@@ -134,8 +135,8 @@ func (o *BenchBaseOptions) BaseValidate() error {
 		return fmt.Errorf("port is required")
 	}
 
-	if o.Cpu != "" {
-		if _, err := apiresource.ParseQuantity(o.Cpu); err != nil {
+	if o.CPU != "" {
+		if _, err := apiresource.ParseQuantity(o.CPU); err != nil {
 			return fmt.Errorf("invalid cpu: %s", err)
 		}
 	}
@@ -153,7 +154,7 @@ func (o *BenchBaseOptions) BaseValidate() error {
 }
 
 func (o *BenchBaseOptions) AddFlags(cmd *cobra.Command) {
-	cmd.Flags().StringVar(&o.Cpu, "cpu", "", "the cpu of benchmark pod")
+	cmd.Flags().StringVar(&o.CPU, "cpu", "", "the cpu of benchmark pod")
 	cmd.Flags().StringVar(&o.Memory, "memory", "", "the memory of benchmark pod")
 	cmd.Flags().StringVar(&o.Driver, "driver", "", "the driver of database")
 	cmd.Flags().StringVar(&o.Database, "database", "", "database name")
@@ -182,6 +183,7 @@ func NewBenchCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.C
 		NewYcsbCmd(f, streams),
 		NewTpccCmd(f, streams),
 		NewTpchCmd(f, streams),
+		NewRedisBenchmarkCmd(f, streams),
 		newListCmd(f, streams),
 		newDeleteCmd(f, streams),
 		newDescribeCmd(f, streams),
@@ -528,7 +530,7 @@ func parseStepAndName(args []string, namePrefix string) (step, name string) {
 	return
 }
 
-func setCpuAndMemory(benchCommon *v1alpha1.BenchCommon, cpu, memory string) {
+func setCPUAndMemory(benchCommon *v1alpha1.BenchCommon, cpu, memory string) {
 	if cpu != "" {
 		benchCommon.Cpu = cpu
 	}

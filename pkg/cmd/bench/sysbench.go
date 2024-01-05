@@ -274,7 +274,7 @@ func (o *SysBenchOptions) Run() error {
 	}
 
 	// set cpu and memory if specified
-	setCpuAndMemory(&sysbench.Spec.BenchCommon, o.Cpu, o.Memory)
+	setCPUAndMemory(&sysbench.Spec.BenchCommon, o.CPU, o.Memory)
 
 	obj := &unstructured.Unstructured{
 		Object: map[string]interface{}{},

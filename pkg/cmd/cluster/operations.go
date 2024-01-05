@@ -109,6 +109,7 @@ type OperationsOptions struct {
 	Component      string      `json:"component"`
 	Instance       string      `json:"instance"`
 	Primary        string      `json:"-"`
+	Force          bool        `json:"-"`
 	CharacterType  string      `json:"-"`
 	LorryHAEnabled bool        `json:"-"`
 	ExecPod        *corev1.Pod `json:"-"`
@@ -1018,7 +1019,7 @@ func NewPromoteCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 			if (o.LorryHAEnabled || o.CharacterType == oceanbase) && o.ExecPod != nil {
 				lorryCli, err := lorryclient.NewK8sExecClientWithPod(nil, o.ExecPod)
 				cmdutil.CheckErr(err)
-				cmdutil.CheckErr(lorryCli.Switchover(context.Background(), o.Primary, o.Instance))
+				cmdutil.CheckErr(lorryCli.Switchover(context.Background(), o.Primary, o.Instance, o.Force))
 				fmt.Fprint(o.Out, "swichover task created\n")
 			} else {
 				cmdutil.CheckErr(o.Run())
@@ -1028,6 +1029,7 @@ func NewPromoteCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 	flags.AddComponentFlag(f, cmd, &o.Component, "Specify the component name of the cluster, if the cluster has multiple components, you need to specify a component")
 	cmd.Flags().StringVar(&o.Instance, "instance", "", "Specify the instance name as the new primary or leader of the cluster, you can get the instance name by running \"kbcli cluster list-instances\"")
 	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "Skip interactive approval before promote the instance")
+	cmd.Flags().BoolVar(&o.Force, "force", false, "force switchover if failed")
 	o.addCommonFlags(cmd, f)
 	return cmd
 }
