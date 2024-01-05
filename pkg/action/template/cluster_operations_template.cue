@@ -179,10 +179,10 @@ content: {
 		if options.type == "Expose" {
 			expose: [ for _, cName in options.componentNames {
 				componentName: cName
-				if options.exposeEnabled == "enabled" {
+				if options.exposeEnabled == "true" {
 					switch: "Enable"
 				}
-				if options.exposeEnabled == "disabled" {
+				if options.exposeEnabled == "false" {
 					switch: "Disable"
 				}
 				services: [ for _, svc in options.services {

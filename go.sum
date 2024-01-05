@@ -288,6 +288,8 @@ github.com/apecloud/kubeblocks v0.8.0-beta.31 h1:VymcJXfG/C4mueFJEx2UjSYynE+2et/
 github.com/apecloud/kubeblocks v0.8.0-beta.31/go.mod h1:8WEh5JNVnLMXOqdP8PUz4sB9/MkfyMORpbsqaQKdh0E=
 github.com/apecloud/kubeblocks v0.8.0-beta.33 h1:73zSTz7USvZ3TzdmqPzHSc18oFe7QqfQ5EAhJ7BqqA0=
 github.com/apecloud/kubeblocks v0.8.0-beta.33/go.mod h1:8WEh5JNVnLMXOqdP8PUz4sB9/MkfyMORpbsqaQKdh0E=
+github.com/apecloud/kubeblocks v0.8.0-beta.38 h1:q8AZv7b5SjMFHNGiCH8huhxHDCx7OAV2G9k8nlXhFcI=
+github.com/apecloud/kubeblocks v0.8.0-beta.38/go.mod h1:8WEh5JNVnLMXOqdP8PUz4sB9/MkfyMORpbsqaQKdh0E=
 github.com/apparentlymart/go-textseg v1.0.0/go.mod h1:z96Txxhf3xSFMPmb5X/1W05FF/Nj9VFpLOpjS5yuumk=
 github.com/apparentlymart/go-textseg/v13 v13.0.0/go.mod h1:ZK2fH7c4NqDTLtiYLvIkEghdlcqw7yxLeM89kiTRPUo=
 github.com/armon/circbuf v0.0.0-20150827004946-bbbad097214e/go.mod h1:3U/XgcO3hCbHZ8TKRvWD2dDTCfh9M9ya+I9JpbB7O8o=
