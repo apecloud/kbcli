@@ -2,7 +2,7 @@
 title: kbcli addon install
 ---
 
-install KubeBlocks addon
+Install KubeBlocks addon
 
 ```
 kbcli addon install [flags]

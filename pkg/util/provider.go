@@ -37,6 +37,8 @@ const (
 	AKSProvider     K8sProvider = "AKS"
 	ACKProvider     K8sProvider = "ACK"
 	TKEProvider     K8sProvider = "TKE"
+	KINDProvider    K8sProvider = "Kind"
+	K3SProvider     K8sProvider = "K3S"
 	UnknownProvider K8sProvider = "unknown"
 )
 
@@ -114,6 +116,10 @@ func GetK8sProviderFromNodes(nodes *corev1.NodeList) K8sProvider {
 			return GKEProvider
 		case "qcloud":
 			return TKEProvider
+		case "kind":
+			return KINDProvider
+		case "k3s":
+			return K3SProvider
 		}
 	}
 	return UnknownProvider
