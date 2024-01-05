@@ -124,7 +124,7 @@ func newAddReceiverCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *c
 	cmd.Flags().StringArrayVar(&o.Clusters, "cluster", []string{}, "Cluster name, such as mycluster, more than one cluster can be specified, such as mycluster1,mycluster2")
 	cmd.Flags().StringArrayVar(&o.Severities, "severity", []string{}, "Alert severity level, critical, warning or info, more than one severity level can be specified, such as critical,warning")
 	cmd.Flags().StringArrayVar(&o.Types, "type", []string{}, "Engine type, such as mysql, more than one types can be specified, such as mysql,postgresql,redis")
-	cmd.Flags().StringArrayVar(&o.Rules, "rule", []string{}, "rule name, such as MysqlDown, more than one rule names can be specified, such as MysqlDown,MysqlRestarted")
+	cmd.Flags().StringArrayVar(&o.Rules, "rule", []string{}, "Rule name, such as MysqlDown, more than one rule names can be specified, such as MysqlDown,MysqlRestarted")
 
 	// register completions
 	util.CheckErr(cmd.RegisterFlagCompletionFunc("severity",
