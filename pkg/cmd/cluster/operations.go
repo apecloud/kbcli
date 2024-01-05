@@ -101,9 +101,9 @@ type OperationsOptions struct {
 	Storage  string   `json:"storage"`
 
 	// Expose options
-	ExposeType    string                                 `json:"-"`
-	ExposeEnabled string                                 `json:"-"`
-	Services      []appsv1alpha1.ClusterComponentService `json:"services,omitempty"`
+	ExposeType    string                    `json:"-"`
+	ExposeEnabled string                    `json:"exposeEnabled,omitempty"`
+	Services      []appsv1alpha1.OpsService `json:"services,omitempty"`
 
 	// Switchover options
 	Component      string      `json:"component"`
@@ -657,40 +657,12 @@ func (o *OperationsOptions) fillExpose() error {
 		return err
 	}
 
-	cluster, err := cluster.GetClusterByName(o.Dynamic, o.Name, o.Namespace)
-	if err != nil {
-		return err
-	}
-	compMap := make(map[string]appsv1alpha1.ClusterComponentSpec)
-	for _, compSpec := range cluster.Spec.ComponentSpecs {
-		compMap[compSpec.Name] = compSpec
-	}
-
-	var (
+	o.Services = append(o.Services, appsv1alpha1.OpsService{
 		// currently, we use the expose type as service name
-		svcName = string(exposeType)
-		enabled = strings.ToLower(o.ExposeEnabled) == util.EnableValue
-	)
-	for _, name := range o.ComponentNames {
-		comp, ok := compMap[name]
-		if !ok {
-			return fmt.Errorf("component %s not found", name)
-		}
-
-		for _, svc := range comp.Services {
-			if svc.Name != svcName {
-				o.Services = append(o.Services, svc)
-			}
-		}
-
-		if enabled {
-			o.Services = append(o.Services, appsv1alpha1.ClusterComponentService{
-				Name:        svcName,
-				ServiceType: corev1.ServiceTypeLoadBalancer,
-				Annotations: annotations,
-			})
-		}
-	}
+		Name:        string(exposeType),
+		ServiceType: corev1.ServiceTypeLoadBalancer,
+		Annotations: annotations,
+	})
 	return nil
 }
 
