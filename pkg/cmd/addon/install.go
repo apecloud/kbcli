@@ -114,6 +114,9 @@ func newInstallCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 		Short:   "install KubeBlocks addon",
 		Args:    cobra.ExactArgs(1),
 		Example: addonInstallExample,
+		PersistentPreRun: func(_ *cobra.Command, _ []string) {
+			util.CheckErr(addDefaultIndex())
+		},
 		Run: func(cmd *cobra.Command, args []string) {
 			o.name = args[0]
 			util.CheckErr(o.Complete())
