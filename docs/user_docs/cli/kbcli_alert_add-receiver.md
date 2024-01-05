@@ -42,7 +42,7 @@ kbcli alert add-receiver [flags]
       --cluster stringArray    Cluster name, such as mycluster, more than one cluster can be specified, such as mycluster1,mycluster2
       --email stringArray      Add email address, such as user@kubeblocks.io, more than one emailConfig can be specified separated by comma
   -h, --help                   help for add-receiver
-      --rule stringArray       rule name, such as MysqlDown, more than one rule names can be specified, such as MysqlDown,MysqlRestarted
+      --rule stringArray       Rule name, such as MysqlDown, more than one rule names can be specified, such as MysqlDown,MysqlRestarted
       --severity stringArray   Alert severity level, critical, warning or info, more than one severity level can be specified, such as critical,warning
       --slack stringArray      Add slack receiver, such as api_url=https://hooks.slackConfig.com/services/foo,channel=monitor,username=kubeblocks-alert-bot
       --type stringArray       Engine type, such as mysql, more than one types can be specified, such as mysql,postgresql,redis
