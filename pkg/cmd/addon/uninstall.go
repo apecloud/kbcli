@@ -37,16 +37,14 @@ var addonUninstallExample = templates.Examples(`
 	# uninstall an addon 
 	kbcli addon uninstall apecloud-mysql 
 
-	# uninstall an addon with a specified version
-	kbcli addon uninstall apecloud-mysql --version 0.7.0
+	# uninstall more than one addons
+	kbcli addon uninstall apecloud-mysql postgresql
 `)
 
 type uninstallOption struct {
 	*baseOption
-	// addon name
-	name string
-	// the version
-	version string
+	// addon names
+	names []string
 }
 
 func newUninstallOption(f cmdutil.Factory, streams genericiooptions.IOStreams) *uninstallOption {
@@ -63,27 +61,25 @@ func newUninstallCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cob
 	o := newUninstallOption(f, streams)
 	cmd := &cobra.Command{
 		Use:               "uninstall",
-		Short:             "uninstall an existed addon",
-		Args:              cobra.ExactArgs(1),
+		Short:             "Uninstall an existed addon",
 		Example:           addonUninstallExample,
 		ValidArgsFunction: util.ResourceNameCompletionFunc(f, o.GVR),
 		Run: func(cmd *cobra.Command, args []string) {
-			o.name = args[0]
+			o.names = args
 			util.CheckErr(o.baseOption.complete())
-			// util.CheckErr(o.Validate())
 			util.CheckErr(o.Run())
 		},
 	}
-
-	cmd.Flags().StringVar(&o.version, "version", "", "must be specified if the addon owns multiple version")
 	return cmd
 }
 
 func (o *uninstallOption) Run() error {
-	err := o.Dynamic.Resource(o.GVR).Delete(context.Background(), o.name, metav1.DeleteOptions{})
-	if err != nil {
-		return err
+	for _, name := range o.names {
+		err := o.Dynamic.Resource(o.GVR).Delete(context.Background(), name, metav1.DeleteOptions{})
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(o.Out, "addon %s uninstalled successfully\n", name)
 	}
-	fmt.Fprintf(o.Out, "%s uninstall succssed\n", o.name)
 	return nil
 }
