@@ -64,6 +64,12 @@ var (
 		# add email receiver, and only receive alert from cluster mycluster and alert severity is warning
 		kbcli alert add-receiver --email='user1@kubeblocks.io,user2@kubeblocks.io' --cluster=mycluster --severity=warning
 
+		# add email receiver, and only receive alert from mysql clusters
+		kbcli alert add-receiver --email='user1@kubeblocks.io,user2@kubeblocks.io' --type=mysql
+
+		# add email receiver, and only receive alert triggered by specified rule
+		kbcli alert add-receiver --email='user1@kubeblocks.io,user2@kubeblocks.io' --rule=MysqlDown
+
 		# add slack receiver
   		kbcli alert add-receiver --slack api_url=https://hooks.slackConfig.com/services/foo,channel=monitor,username=kubeblocks-alert-bot`)
 )
@@ -83,6 +89,8 @@ type addReceiverOptions struct {
 	slacks     []string
 	clusters   []string
 	severities []string
+	types      []string
+	rules      []string
 	name       string
 
 	receiver                *receiver
@@ -108,6 +116,8 @@ func newAddReceiverCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *c
 	cmd.Flags().StringArrayVar(&o.slacks, "slack", []string{}, "Add slack receiver, such as api_url=https://hooks.slackConfig.com/services/foo,channel=monitor,username=kubeblocks-alert-bot")
 	cmd.Flags().StringArrayVar(&o.clusters, "cluster", []string{}, "Cluster name, such as mycluster, more than one cluster can be specified, such as mycluster1,mycluster2")
 	cmd.Flags().StringArrayVar(&o.severities, "severity", []string{}, "Alert severity level, critical, warning or info, more than one severity level can be specified, such as critical,warning")
+	cmd.Flags().StringArrayVar(&o.types, "type", []string{}, "Engine type, such as mysql, more than one types can be specified, such as mysql,postgresql,redis")
+	cmd.Flags().StringArrayVar(&o.rules, "rule", []string{}, "rule name, such as MysqlDown, more than one rule names can be specified, such as MysqlDown,MysqlRestarted")
 
 	// register completions
 	util.CheckErr(cmd.RegisterFlagCompletionFunc("severity",
@@ -274,6 +284,8 @@ func (o *addReceiverOptions) buildRoute() {
 
 	var clusterArray []string
 	var severityArray []string
+	var typesArray []string
+	var rulesArray []string
 
 	splitStr := func(strArray []string, target *[]string) {
 		for _, s := range strArray {
@@ -285,6 +297,8 @@ func (o *addReceiverOptions) buildRoute() {
 	// parse clusters and severities
 	splitStr(o.clusters, &clusterArray)
 	splitStr(o.severities, &severityArray)
+	splitStr(o.types, &typesArray)
+	splitStr(o.rules, &rulesArray)
 
 	// build matchers
 	buildMatchers := func(t string, values []string) string {
@@ -297,13 +311,19 @@ func (o *addReceiverOptions) buildRoute() {
 			return routeMatcherClusterKey + routeMatcherOperator + strings.Join(deValues, "|")
 		case routeMatcherSeverityType:
 			return routeMatcherSeverityKey + routeMatcherOperator + strings.Join(deValues, "|")
+		case routeMatcherTypeType:
+			return routeMatcherTypeKey + routeMatcherOperator + strings.Join(deValues, "|")
+		case routeMatcherRuleType:
+			return routeMatcherRuleKey + routeMatcherOperator + strings.Join(deValues, "|")
 		default:
 			return ""
 		}
 	}
 
 	r.Matchers = append(r.Matchers, buildMatchers(routeMatcherClusterType, clusterArray),
-		buildMatchers(routeMatcherSeverityType, severityArray))
+		buildMatchers(routeMatcherSeverityType, severityArray),
+		buildMatchers(routeMatcherTypeType, typesArray),
+		buildMatchers(routeMatcherRuleType, rulesArray))
 	o.route = r
 }
 
