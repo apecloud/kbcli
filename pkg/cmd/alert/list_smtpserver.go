@@ -40,13 +40,13 @@ type listSMTPServerOptions struct {
 }
 
 func newListSMTPServerCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := &listSMTPServerOptions{baseOptions: baseOptions{IOStreams: streams}}
+	o := &listSMTPServerOptions{baseOptions: baseOptions{Factory: f, IOStreams: streams}}
 	cmd := &cobra.Command{
 		Use:     "list-smtpserver",
 		Short:   "List alert smtp servers config.",
 		Example: listSMTPServerExample,
 		Run: func(cmd *cobra.Command, args []string) {
-			util.CheckErr(o.complete(f))
+			util.CheckErr(o.complete())
 			util.CheckErr(o.run())
 		},
 	}

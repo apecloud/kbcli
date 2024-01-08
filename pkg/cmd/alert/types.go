@@ -61,12 +61,16 @@ const (
 const (
 	routeMatcherClusterKey  = "app_kubernetes_io_instance"
 	routeMatcherSeverityKey = "severity"
+	routeMatcherTypeKey     = "app_kubernetes_io_component"
+	routeMatcherRuleKey     = "alertname"
 	routeMatcherOperator    = "=~"
 )
 
 const (
 	routeMatcherClusterType  = "cluster"
 	routeMatcherSeverityType = "severity"
+	routeMatcherTypeType     = "type"
+	routeMatcherRuleType     = "rule"
 )
 
 // severity is the severity level of alert

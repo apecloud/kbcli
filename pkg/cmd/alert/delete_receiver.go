@@ -44,13 +44,13 @@ type deleteReceiverOptions struct {
 }
 
 func newDeleteReceiverCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := &deleteReceiverOptions{baseOptions: baseOptions{IOStreams: streams}}
+	o := &deleteReceiverOptions{baseOptions: baseOptions{Factory: f, IOStreams: streams}}
 	cmd := &cobra.Command{
 		Use:     "delete-receiver NAME",
 		Short:   "Delete alert receiver.",
 		Example: deleteReceiverExample,
 		Run: func(cmd *cobra.Command, args []string) {
-			util.CheckErr(o.complete(f))
+			util.CheckErr(o.complete())
 			util.CheckErr(o.validate(args))
 			util.CheckErr(o.run())
 		},
