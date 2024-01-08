@@ -45,13 +45,13 @@ type configSMTPServerOptions struct {
 }
 
 func newConfigSMTPServerCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := &configSMTPServerOptions{baseOptions: baseOptions{IOStreams: streams}}
+	o := &configSMTPServerOptions{baseOptions: baseOptions{Factory: f, IOStreams: streams}}
 	cmd := &cobra.Command{
 		Use:     "config-smtpserver",
 		Short:   "Set smtp server config",
 		Example: configSMTPServerExample,
 		Run: func(cmd *cobra.Command, args []string) {
-			cmdutil.CheckErr(o.complete(f))
+			cmdutil.CheckErr(o.complete())
 			cmdutil.CheckErr(o.validate())
 			cmdutil.CheckErr(o.run())
 		},

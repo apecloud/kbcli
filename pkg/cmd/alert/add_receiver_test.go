@@ -103,36 +103,38 @@ var _ = Describe("add receiver", func() {
 	})
 
 	It("complete", func() {
-		o := baseOptions{IOStreams: s}
-		Expect(o.complete(f)).Should(HaveOccurred())
+		o := baseOptions{Factory: f, IOStreams: s}
+		Expect(o.complete()).Should(HaveOccurred())
 	})
 
 	It("validate", func() {
 		By("nothing to be input, should fail")
-		o := addReceiverOptions{baseOptions: baseOptions{IOStreams: s}}
-		Expect(o.validate([]string{})).Should(HaveOccurred())
+		o := NewAddReceiverOption(f, s)
+		Expect(o.validate()).Should(HaveOccurred())
 
 		By("set email, do not specify the name")
-		o.emails = []string{"user@kubeblocks.io"}
+		o.Emails = []string{"user@kubeblocks.io"}
 		o.alertConfigMap = mockConfigmap(alertConfigmapName, alertConfigFileName, "")
-		Expect(o.validate([]string{})).Should(HaveOccurred())
-		Expect(o.name).ShouldNot(BeEmpty())
+		Expect(o.validate()).Should(HaveOccurred())
+		Expect(o.Name).ShouldNot(BeEmpty())
 
 		By("set email, specify the name")
-		Expect(o.validate([]string{"test"})).Should(HaveOccurred())
-		Expect(o.name).Should(Equal("test"))
+		o.InputName = []string{"test"}
+		Expect(o.validate()).Should(HaveOccurred())
+		Expect(o.Name).Should(Equal("test"))
 
 		By("set email, set smtp config in configmap")
 		baseOptions := mockBaseOptions(s)
 		o.alertConfigMap = baseOptions.alertConfigMap
-		Expect(o.validate([]string{})).Should(Succeed())
+		o.InputName = []string{}
+		Expect(o.validate()).Should(Succeed())
 	})
 
 	It("build receiver", func() {
-		o := addReceiverOptions{baseOptions: baseOptions{IOStreams: s}}
-		o.emails = []string{"user@kubeblocks.io", "user1@kubeblocks.io,user2@kubeblocks.io"}
-		o.webhooks = []string{"url=https://oapi.dingtalk.com/robot/send", "url=https://oapi.dingtalk.com/robot/send,url=https://oapi.dingtalk.com/robot/send?"}
-		o.slacks = []string{"api_url=https://foo.com,channel=foo,username=test"}
+		o := AddReceiverOptions{baseOptions: baseOptions{IOStreams: s}}
+		o.Emails = []string{"user@kubeblocks.io", "user1@kubeblocks.io,user2@kubeblocks.io"}
+		o.Webhooks = []string{"url=https://oapi.dingtalk.com/robot/send", "url=https://oapi.dingtalk.com/robot/send,url=https://oapi.dingtalk.com/robot/send?"}
+		o.Slacks = []string{"api_url=https://foo.com,channel=foo,username=test"}
 		o.webhookConfigMap = mockConfigmap(webhookAdaptorConfigmapName, webhookAdaptorFileName, "")
 		Expect(o.buildReceiver()).Should(Succeed())
 		Expect(o.receiver).ShouldNot(BeNil())
@@ -142,26 +144,26 @@ var _ = Describe("add receiver", func() {
 	})
 
 	It("build routes", func() {
-		o := addReceiverOptions{baseOptions: baseOptions{IOStreams: s}}
-		o.name = "receiver-test"
-		o.clusters = []string{"cluster1", "cluster2"}
-		o.severities = []string{"critical", "warning"}
+		o := AddReceiverOptions{baseOptions: baseOptions{IOStreams: s}}
+		o.Name = "receiver-test"
+		o.Clusters = []string{"cluster1", "cluster2"}
+		o.Severities = []string{"critical", "warning"}
 		o.buildRoute()
 		Expect(o.route).ShouldNot(BeNil())
-		Expect(o.route.Receiver).Should(Equal(o.name))
-		Expect(o.route.Matchers).Should(HaveLen(2))
+		Expect(o.route.Receiver).Should(Equal(o.Name))
+		Expect(o.route.Matchers).Should(HaveLen(4))
 		Expect(o.route.Matchers[0]).Should(ContainSubstring(routeMatcherClusterKey))
 		Expect(o.route.Matchers[1]).Should(ContainSubstring(routeMatcherSeverityKey))
 	})
 
 	It("run", func() {
-		o := addReceiverOptions{baseOptions: baseOptions{IOStreams: s}}
+		o := AddReceiverOptions{baseOptions: baseOptions{IOStreams: s}}
 		alertCM := mockConfigmap(alertConfigmapName, alertConfigFileName, "")
 		webhookAdaptorCM := mockConfigmap(webhookAdaptorConfigmapName, webhookAdaptorFileName, "")
 		o.baseOptions.alertConfigMap = alertCM
 		o.baseOptions.webhookConfigMap = webhookAdaptorCM
 		o.client = testing.FakeClientSet(alertCM, webhookAdaptorCM)
-		o.name = "receiver-test"
+		o.Name = "receiver-test"
 		Expect(o.addReceiver()).Should(Succeed())
 		Expect(o.addWebhookReceivers()).Should(Succeed())
 	})
