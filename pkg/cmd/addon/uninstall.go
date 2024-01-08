@@ -22,8 +22,6 @@ package addon
 import (
 	"context"
 	"fmt"
-	"github.com/apecloud/kbcli/pkg/printer"
-	"github.com/apecloud/kbcli/pkg/util/prompt"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -32,8 +30,10 @@ import (
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
 
+	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
+	"github.com/apecloud/kbcli/pkg/util/prompt"
 )
 
 var addonUninstallExample = templates.Examples(`
