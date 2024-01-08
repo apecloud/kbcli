@@ -23,7 +23,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/apecloud/kbcli/pkg/util/prompt"
 	"math"
 	"path"
 	"sort"
@@ -54,6 +53,7 @@ import (
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
+	"github.com/apecloud/kbcli/pkg/util/prompt"
 )
 
 type addonEnableFlags struct {

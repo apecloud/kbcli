@@ -71,7 +71,7 @@ func newUninstallCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cob
 		Run: func(cmd *cobra.Command, args []string) {
 			o.names = args
 			util.CheckErr(o.baseOption.complete())
-			util.CheckErr(CheckBeforeDisableAddon(f, o.names))
+			util.CheckErr(o.checkBeforeUninstall())
 			util.CheckErr(o.Run())
 		},
 	}

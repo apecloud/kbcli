@@ -56,7 +56,7 @@ func CheckBeforeDisableAddon(f cmdutil.Factory, addons []string) error {
 		Unstructured().
 		AllNamespaces(true).
 		LabelSelector(labelSelecotor).
-		ResourceTypeOrNameArgs(true, append([]string{util.GVRToString(types.ClusterGVR())})...).
+		ResourceTypeOrNameArgs(true, []string{util.GVRToString(types.ClusterGVR())}...).
 		ContinueOnError().
 		Latest().
 		Flatten().
