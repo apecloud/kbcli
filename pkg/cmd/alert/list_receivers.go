@@ -44,13 +44,13 @@ type listReceiversOptions struct {
 }
 
 func newListReceiversCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := &listReceiversOptions{baseOptions: baseOptions{IOStreams: streams}}
+	o := &listReceiversOptions{baseOptions: baseOptions{Factory: f, IOStreams: streams}}
 	cmd := &cobra.Command{
 		Use:     "list-receivers",
 		Short:   "List all alert receivers.",
 		Example: listReceiversExample,
 		Run: func(cmd *cobra.Command, args []string) {
-			util.CheckErr(o.complete(f))
+			util.CheckErr(o.complete())
 			util.CheckErr(o.run())
 		},
 	}
