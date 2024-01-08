@@ -21,7 +21,8 @@ kbcli addon uninstall [flags]
 ### Options
 
 ```
-  -h, --help   help for uninstall
+      --auto-approve   Skip interactive approval before uninstalling addon
+  -h, --help           help for uninstall
 ```
 
 ### Options inherited from parent commands
