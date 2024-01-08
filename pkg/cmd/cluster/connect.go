@@ -74,6 +74,10 @@ var connectExample = templates.Examples(`
 
 const passwordMask = "******"
 
+var kbcliEnginesBlackList = []string{
+	string(models.PolarDBX),
+}
+
 type ConnectOptions struct {
 	clusterName   string
 	componentName string
@@ -240,7 +244,7 @@ func (o *ConnectOptions) Complete() error {
 
 	// 2.3 get character type
 	if err = o.getClusterCharacterType(); err != nil {
-		return fmt.Errorf("failed to get component def form cluster definition and component def, %s", err.Error())
+		return fmt.Errorf("failed to get component def form cluster definition and component def: %s", err.Error())
 	}
 
 	// 2.4. get pod to connect, make sure o.clusterName, o.componentName are set before this step
@@ -519,6 +523,11 @@ func (o *ConnectOptions) getClusterCharacterType() error {
 		return fmt.Errorf("failed to get component def :%s", o.component.ComponentDefRef)
 	}
 	o.characterType = o.componentDef.CharacterType
+	for i := range kbcliEnginesBlackList {
+		if o.characterType == kbcliEnginesBlackList[i] {
+			return fmt.Errorf("unsupported engine type:%s", o.characterType)
+		}
+	}
 	return nil
 }
 
