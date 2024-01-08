@@ -46,7 +46,6 @@ import (
 
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	"github.com/apecloud/kubeblocks/pkg/constant"
-	lorryclient "github.com/apecloud/kubeblocks/pkg/lorry/client"
 
 	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/cluster"
@@ -1013,10 +1012,13 @@ func NewPromoteCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 			cmdutil.CheckErr(o.CompletePromoteOps())
 			cmdutil.CheckErr(o.Validate())
 			if (o.LorryHAEnabled || o.CharacterType == oceanbase) && o.ExecPod != nil {
-				lorryCli, err := lorryclient.NewK8sExecClientWithPod(nil, o.ExecPod)
-				cmdutil.CheckErr(err)
-				cmdutil.CheckErr(lorryCli.Switchover(context.Background(), o.Primary, o.Instance, o.Force))
-				fmt.Fprint(o.Out, "swichover task created\n")
+				// lorryCli, err := lorryclient.NewK8sExecClientWithPod(nil, o.ExecPod)
+				// cmdutil.CheckErr(err)
+				// cmdutil.CheckErr(lorryCli.Switchover(context.Background(), o.Primary, o.Instance))
+				customOpr := &CustomOperations{OperationsOptions: o}
+				customOpr.OpsDefinitionName = "Custom"
+				customOpr.Params = []map[string]string{{"primary": o.Primary}, {"candidate": o.Instance}}
+				cmdutil.CheckErr(customOpr.Run())
 			} else {
 				cmdutil.CheckErr(o.Run())
 			}
@@ -1044,7 +1046,7 @@ var customOpsExample = templates.Examples(`
         kbcli cluster custom-ops kafka-quota --cluster mycluster --user client --producerByteRate 1024 --consumerByteRate 2048
 `)
 
-type customOperations struct {
+type CustomOperations struct {
 	*OperationsOptions
 	OpsDefinitionName string              `json:"opsDefinitionName"`
 	Params            []map[string]string `json:"params"`
@@ -1052,7 +1054,7 @@ type customOperations struct {
 }
 
 func NewCustomOpsCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := &customOperations{
+	o := &CustomOperations{
 		OperationsOptions: newBaseOperationsOptions(f, streams, "Custom", false),
 	}
 	// set options to build cue struct
@@ -1086,7 +1088,7 @@ func NewCustomOpsCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cob
 	return cmd
 }
 
-func (o *customOperations) init() error {
+func (o *CustomOperations) init() error {
 	var err error
 	if o.Namespace, _, err = o.Factory.ToRawKubeConfigLoader().Namespace(); err != nil {
 		return err
@@ -1100,7 +1102,7 @@ func (o *customOperations) init() error {
 	return nil
 }
 
-func (o *customOperations) validateAndCompleteComponentName() error {
+func (o *CustomOperations) validateAndCompleteComponentName() error {
 	if o.Name == "" {
 		return makeMissingClusterNameErr()
 	}
@@ -1142,7 +1144,7 @@ func (o *customOperations) validateAndCompleteComponentName() error {
 	return fmt.Errorf(`can not found any component in the cluster "%s" for this custom ops "%s"`, o.Name, o.OpsDefinitionName)
 }
 
-func (o *customOperations) parseOpsDefinitionAndParams(cmd *cobra.Command, args []string) error {
+func (o *CustomOperations) parseOpsDefinitionAndParams(cmd *cobra.Command, args []string) error {
 	fmt.Printf("args: %v\n", args)
 	if len(args) == 0 {
 		return fmt.Errorf("please specify the custom ops which you want to do")
@@ -1167,7 +1169,7 @@ func (o *customOperations) parseOpsDefinitionAndParams(cmd *cobra.Command, args 
 	})
 }
 
-func (o *customOperations) completeCustomSpec(cmd *cobra.Command) error {
+func (o *CustomOperations) completeCustomSpec(cmd *cobra.Command) error {
 	param := map[string]string{}
 	// Construct config and credential map from flags
 	if o.SchemaProperties != nil {

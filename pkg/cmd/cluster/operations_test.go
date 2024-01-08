@@ -453,7 +453,7 @@ var _ = Describe("operations", func() {
 
 	It("Custom ops base on component definition", func() {
 		o := initCommonOperationOps(appsv1alpha1.CustomType, clusterNameWithCompDef, false)
-		customOperations := &customOperations{
+		customOperations := &CustomOperations{
 			OperationsOptions: o,
 		}
 		cmd := NewCustomOpsCmd(tf, streams)
