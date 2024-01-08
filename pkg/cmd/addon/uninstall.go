@@ -22,6 +22,9 @@ package addon
 import (
 	"context"
 	"fmt"
+	"github.com/apecloud/kbcli/pkg/printer"
+	"github.com/apecloud/kbcli/pkg/util/prompt"
+	"strings"
 
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -44,7 +47,8 @@ var addonUninstallExample = templates.Examples(`
 type uninstallOption struct {
 	*baseOption
 	// addon names
-	names []string
+	names       []string
+	autoApprove bool
 }
 
 func newUninstallOption(f cmdutil.Factory, streams genericiooptions.IOStreams) *uninstallOption {
@@ -67,9 +71,11 @@ func newUninstallCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cob
 		Run: func(cmd *cobra.Command, args []string) {
 			o.names = args
 			util.CheckErr(o.baseOption.complete())
+			util.CheckErr(CheckBeforeDisableAddon(f, o.names))
 			util.CheckErr(o.Run())
 		},
 	}
+	cmd.Flags().BoolVar(&o.autoApprove, "auto-approve", false, "Skip interactive approval before uninstalling addon")
 	return cmd
 }
 
@@ -80,6 +86,18 @@ func (o *uninstallOption) Run() error {
 			return err
 		}
 		fmt.Fprintf(o.Out, "addon %s uninstalled successfully\n", name)
+	}
+	return nil
+}
+
+func (o *uninstallOption) checkBeforeUninstall() error {
+	if err := CheckBeforeDisableAddon(o.Factory, o.names); err != nil {
+		return err
+	}
+	if !o.autoApprove {
+		if err := prompt.Confirm(o.names, o.In, fmt.Sprintf("%s to be deleted:[%s]", o.GVR.Resource, printer.BoldRed(strings.Join(o.names, " "))), ""); err != nil {
+			return err
+		}
 	}
 	return nil
 }

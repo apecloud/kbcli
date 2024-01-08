@@ -23,6 +23,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/apecloud/kbcli/pkg/util/prompt"
 	"math"
 	"path"
 	"sort"
@@ -86,7 +87,8 @@ type addonCmdOpts struct {
 	*action.PatchOptions
 	addonEnableFlags *addonEnableFlags
 
-	complete func(self *addonCmdOpts, cmd *cobra.Command, args []string) error
+	autoApprove bool
+	complete    func(self *addonCmdOpts, cmd *cobra.Command, args []string) error
 }
 
 // NewAddonCmd for addon functions
@@ -257,11 +259,13 @@ func newDisableCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 		Run: func(cmd *cobra.Command, args []string) {
 			util.CheckErr(o.init(args))
 			util.CheckErr(o.fetchAddonObj())
+			util.CheckErr(o.checkBeforeDisable())
 			util.CheckErr(o.complete(o, cmd, args))
 			util.CheckErr(o.CmdComplete(cmd))
 			util.CheckErr(o.Run())
 		},
 	}
+	cmd.Flags().BoolVar(&o.autoApprove, "auto-approve", false, "Skip interactive approval before disabling addon")
 	o.PatchOptions.AddFlags(cmd)
 	return cmd
 }
@@ -305,6 +309,7 @@ func (o *addonCmdOpts) fetchAddonObj() error {
 }
 
 func (o *addonCmdOpts) validate() error {
+
 	if o.addonEnableFlags.Force {
 		return nil
 	}
@@ -940,5 +945,17 @@ func (o *addonCmdOpts) installAndUpgradePlugins() error {
 		return err
 	}
 
+	return nil
+}
+
+func (o *addonCmdOpts) checkBeforeDisable() error {
+	if err := CheckBeforeDisableAddon(o.Factory, o.Names); err != nil {
+		return err
+	}
+	if !o.autoApprove {
+		if err := prompt.Confirm(o.Names, o.In, fmt.Sprintf("%s to be deleted:[%s]", o.GVR.Resource, printer.BoldRed(strings.Join(o.Names, " "))), ""); err != nil {
+			return err
+		}
+	}
 	return nil
 }

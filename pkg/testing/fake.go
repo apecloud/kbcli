@@ -96,6 +96,9 @@ func FakeCluster(name, namespace string, conditions ...metav1.Condition) *appsv1
 			Name:      name,
 			Namespace: namespace,
 			UID:       "b262b889-a27f-42d8-b066-2978561c8167",
+			Labels: map[string]string{
+				constant.ClusterDefLabelKey: ClusterDefName,
+			},
 		},
 		Status: appsv1alpha1.ClusterStatus{
 			Phase: appsv1alpha1.RunningClusterPhase,
