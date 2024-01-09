@@ -26,6 +26,7 @@ import (
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/cli-runtime/pkg/genericiooptions"
 	"k8s.io/cli-runtime/pkg/resource"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientfake "k8s.io/client-go/rest/fake"
@@ -39,7 +40,8 @@ import (
 
 var _ = Describe("addon util test", func() {
 	var (
-		tf *cmdtesting.TestFactory
+		tf      *cmdtesting.TestFactory
+		streams genericiooptions.IOStreams
 	)
 
 	const (
@@ -61,12 +63,13 @@ var _ = Describe("addon util test", func() {
 	}
 
 	BeforeEach(func() {
+		streams, _, _, _ = genericiooptions.NewTestIOStreams()
 		_ = appsv1alpha1.AddToScheme(scheme.Scheme)
 		cluster := testing.FakeCluster(testing.ClusterName, testing.Namespace)
 		tf = mockClient(cluster)
 	})
-	It("text CheckBeforeDisableAddon", func() {
-		Expect(CheckBeforeDisableAddon(tf, []string{fakeAddonName})).Should(HaveOccurred())
+	It("text CheckAddonUsedByCluster", func() {
+		Expect(CheckAddonUsedByCluster(tf.FakeDynamicClient, []string{fakeAddonName}, streams.In)).Should(HaveOccurred())
 	})
 
 })

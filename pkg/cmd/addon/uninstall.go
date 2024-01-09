@@ -91,7 +91,7 @@ func (o *uninstallOption) Run() error {
 }
 
 func (o *uninstallOption) checkBeforeUninstall() error {
-	if err := CheckBeforeDisableAddon(o.Factory, o.names); err != nil {
+	if err := CheckAddonUsedByCluster(o.Dynamic, o.names, o.In); err != nil {
 		return err
 	}
 	if !o.autoApprove {

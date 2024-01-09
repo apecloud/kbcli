@@ -20,19 +20,24 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package addon
 
 import (
+	"context"
 	"fmt"
+	"io"
+	"strings"
 
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"golang.org/x/exp/maps"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	cmdutil "k8s.io/kubectl/pkg/cmd/util"
-
-	extensionsv1alpha1 "github.com/apecloud/kubeblocks/apis/extensions/v1alpha1"
-	"github.com/apecloud/kubeblocks/pkg/constant"
+	"k8s.io/client-go/dynamic"
 
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
 	"github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
+	extensionsv1alpha1 "github.com/apecloud/kubeblocks/apis/extensions/v1alpha1"
+	"github.com/apecloud/kubeblocks/pkg/constant"
+
+	"github.com/apecloud/kbcli/pkg/util/prompt"
 )
 
 func getAddonVersion(addon *extensionsv1alpha1.Addon) string {
@@ -50,32 +55,27 @@ func getAddonVersion(addon *extensionsv1alpha1.Addon) string {
 	return ""
 }
 
-func CheckBeforeDisableAddon(f cmdutil.Factory, addons []string) error {
+func CheckAddonUsedByCluster(dynamic dynamic.Interface, addons []string, in io.Reader) error {
+
 	labelSelecotor := util.BuildClusterLabel("", addons)
-	r := f.NewBuilder().
-		Unstructured().
-		AllNamespaces(true).
-		LabelSelector(labelSelecotor).
-		ResourceTypeOrNameArgs(true, []string{util.GVRToString(types.ClusterGVR())}...).
-		ContinueOnError().
-		Latest().
-		Flatten().
-		Do()
-	infos, err := r.Infos()
+	list, err := dynamic.Resource(types.ClusterGVR()).List(context.Background(), metav1.ListOptions{LabelSelector: labelSelecotor})
 	if err != nil {
 		return err
-	} else if len(infos) != 0 {
-		errMsg := "There are addons are being used:\n"
-		for _, info := range infos {
+	} else if len(list.Items) != 0 {
+		msg := "There are addons are being used by K8s clusters:\n"
+		usedAddons := make(map[string]struct{})
+		for _, item := range list.Items {
 			var cluster v1alpha1.Cluster
-			if err = runtime.DefaultUnstructuredConverter.FromUnstructured(info.Object.(*unstructured.Unstructured).Object, &cluster); err != nil {
+			if err = runtime.DefaultUnstructuredConverter.FromUnstructured(item.Object, &cluster); err != nil {
 				return err
 			}
-			errMsg += fmt.Sprintf("name: %s namespace: %s addon: %s\n", printer.BoldRed(info.Name), printer.BoldYellow(info.Namespace), printer.BoldRed(cluster.Labels[constant.ClusterDefLabelKey]))
+			msg += fmt.Sprintf("cluster name: %s namespace: %s addon: %s\n", printer.BoldGreen(item.GetName()), printer.BoldYellow(item.GetNamespace()), printer.BoldRed(cluster.Labels[constant.ClusterDefLabelKey]))
+			labels := item.GetLabels()
+			usedAddons[labels[constant.ClusterDefLabelKey]] = struct{}{}
 		}
-		errMsg += "please delete the cluster(s) first!\n"
 
-		return fmt.Errorf(errMsg)
+		msg += fmt.Sprintf("In used addons [%s] to be deleted", printer.BoldRed(strings.Join(maps.Keys(usedAddons), ",")))
+		return prompt.Confirm(addons, in, msg, "")
 	}
 	return nil
 }

@@ -53,7 +53,6 @@ import (
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
-	"github.com/apecloud/kbcli/pkg/util/prompt"
 )
 
 type addonEnableFlags struct {
@@ -309,7 +308,6 @@ func (o *addonCmdOpts) fetchAddonObj() error {
 }
 
 func (o *addonCmdOpts) validate() error {
-
 	if o.addonEnableFlags.Force {
 		return nil
 	}
@@ -949,13 +947,8 @@ func (o *addonCmdOpts) installAndUpgradePlugins() error {
 }
 
 func (o *addonCmdOpts) checkBeforeDisable() error {
-	if err := CheckBeforeDisableAddon(o.Factory, o.Names); err != nil {
-		return err
+	if o.autoApprove {
+		return nil
 	}
-	if !o.autoApprove {
-		if err := prompt.Confirm(o.Names, o.In, fmt.Sprintf("%s to be deleted:[%s]", o.GVR.Resource, printer.BoldRed(strings.Join(o.Names, " "))), ""); err != nil {
-			return err
-		}
-	}
-	return nil
+	return CheckAddonUsedByCluster(o.dynamic, o.Names, o.In)
 }
