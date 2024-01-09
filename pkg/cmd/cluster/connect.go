@@ -74,8 +74,10 @@ var connectExample = templates.Examples(`
 
 const passwordMask = "******"
 
-var kbcliEnginesBlackList = []string{
+// nonConnectiveEngines refer to the clusterdefinition or componentdefinition label 'app.kubernetes.io/name'
+var nonConnectiveEngines = []string{
 	string(models.PolarDBX),
+	"starrocks",
 }
 
 type ConnectOptions struct {
@@ -247,7 +249,12 @@ func (o *ConnectOptions) Complete() error {
 		return fmt.Errorf("failed to get component def form cluster definition and component def: %s", err.Error())
 	}
 
-	// 2.4. get pod to connect, make sure o.clusterName, o.componentName are set before this step
+	// 2.4 precheck if the engine type is supported
+	if err = o.checkUnsupportedEngine(); err != nil {
+		return err
+	}
+
+	// 2.5. get pod to connect, make sure o.clusterName, o.componentName are set before this step
 	if len(o.PodName) == 0 {
 		if err = o.getTargetPod(); err != nil {
 			return err
@@ -523,8 +530,22 @@ func (o *ConnectOptions) getClusterCharacterType() error {
 		return fmt.Errorf("failed to get component def :%s", o.component.ComponentDefRef)
 	}
 	o.characterType = o.componentDef.CharacterType
-	for i := range kbcliEnginesBlackList {
-		if o.characterType == kbcliEnginesBlackList[i] {
+	return nil
+}
+
+func (o *ConnectOptions) checkUnsupportedEngine() error {
+	var engineType string
+	if o.componentDefV2 != nil {
+		engineType = o.componentDefV2.Labels[types.AddonNameLabelKey]
+	}
+	if o.targetClusterDef != nil && engineType == "" {
+		engineType = o.targetClusterDef.Labels[types.AddonNameLabelKey]
+	}
+	if engineType == "" {
+		return fmt.Errorf("fail to get the target engine type")
+	}
+	for i := range nonConnectiveEngines {
+		if engineType == nonConnectiveEngines[i] {
 			return fmt.Errorf("unsupported engine type:%s", o.characterType)
 		}
 	}
