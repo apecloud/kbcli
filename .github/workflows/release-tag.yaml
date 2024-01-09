@@ -5,7 +5,14 @@ on:
     inputs:
       VERSION:
         description: 'The version of release'
-        required: true
+        required: false
+        default: ''
+  workflow_call:
+    inputs:
+      VERSION:
+        description: 'The version of release'
+        required: false
+        type: string
         default: ''
 
 run-name: ref_name:${{ github.ref_name }} release_version:${{ inputs.VERSION }}

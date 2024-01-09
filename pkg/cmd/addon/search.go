@@ -47,10 +47,11 @@ type searchResult struct {
 func newSearchCmd(streams genericiooptions.IOStreams) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "search",
-		Short: "search the addon from index",
+		Short: "Search the addon from index",
 		Args:  cobra.ExactArgs(1),
 		PersistentPreRun: func(cmd *cobra.Command, _ []string) {
 			util.CheckErr(util.EnableLogToFile(cmd.Flags()))
+			util.CheckErr(addDefaultIndex())
 		},
 		Run: func(_ *cobra.Command, args []string) {
 			util.CheckErr(search(args, streams.Out))

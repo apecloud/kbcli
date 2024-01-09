@@ -337,7 +337,7 @@ var _ = Describe("operations", func() {
 		o := newBaseOperationsOptions(tf, streams, "", false)
 		o.Dynamic = tf.FakeDynamicClient
 		o.Namespace = testing.Namespace
-		o.autoApprove = true
+		o.AutoApprove = true
 		for _, phase := range completedPhases {
 			for _, opsType := range supportedOpsType {
 				o.Name = getOpsName(opsType, phase)
@@ -453,7 +453,7 @@ var _ = Describe("operations", func() {
 
 	It("Custom ops base on component definition", func() {
 		o := initCommonOperationOps(appsv1alpha1.CustomType, clusterNameWithCompDef, false)
-		customOperations := &customOperations{
+		customOperations := &CustomOperations{
 			OperationsOptions: o,
 		}
 		cmd := NewCustomOpsCmd(tf, streams)

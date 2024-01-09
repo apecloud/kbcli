@@ -111,16 +111,19 @@ func newInstallCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 	o := newInstallOption(f, streams)
 	cmd := &cobra.Command{
 		Use:     "install",
-		Short:   "install KubeBlocks addon",
+		Short:   "Install KubeBlocks addon",
 		Args:    cobra.ExactArgs(1),
 		Example: addonInstallExample,
+		PersistentPreRun: func(_ *cobra.Command, _ []string) {
+			util.CheckErr(addDefaultIndex())
+		},
 		Run: func(cmd *cobra.Command, args []string) {
 			o.name = args[0]
 			util.CheckErr(o.Complete())
 			util.CheckErr(o.Validate())
 			util.CheckErr(o.Run())
 			// avoid unnecessary messages for upgrade
-			fmt.Fprintf(o.Out, "%s install successed\n", o.name)
+			fmt.Fprintf(o.Out, "addon %s installed successfully\n", o.name)
 		},
 	}
 	cmd.Flags().BoolVar(&o.force, "force", false, "force install the addon and ignore the version check")

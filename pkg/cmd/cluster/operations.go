@@ -46,7 +46,6 @@ import (
 
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	"github.com/apecloud/kubeblocks/pkg/constant"
-	lorryclient "github.com/apecloud/kubeblocks/pkg/lorry/client"
 
 	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/cluster"
@@ -63,8 +62,8 @@ const oceanbase = "oceanbase"
 type OperationsOptions struct {
 	action.CreateOptions  `json:"-"`
 	HasComponentNamesFlag bool `json:"-"`
-	// autoApprove when set true, skip the double check.
-	autoApprove            bool     `json:"-"`
+	// AutoApprove when set true, skip the double check.
+	AutoApprove            bool     `json:"-"`
 	ComponentNames         []string `json:"componentNames,omitempty"`
 	OpsRequestName         string   `json:"opsRequestName"`
 	TTLSecondsAfterSucceed int      `json:"ttlSecondsAfterSucceed"`
@@ -101,14 +100,15 @@ type OperationsOptions struct {
 	Storage  string   `json:"storage"`
 
 	// Expose options
-	ExposeType    string                                 `json:"-"`
-	ExposeEnabled string                                 `json:"-"`
-	Services      []appsv1alpha1.ClusterComponentService `json:"services,omitempty"`
+	ExposeType    string                    `json:"-"`
+	ExposeEnabled string                    `json:"exposeEnabled,omitempty"`
+	Services      []appsv1alpha1.OpsService `json:"services,omitempty"`
 
 	// Switchover options
 	Component      string      `json:"component"`
 	Instance       string      `json:"instance"`
 	Primary        string      `json:"-"`
+	Force          bool        `json:"-"`
 	CharacterType  string      `json:"-"`
 	LorryHAEnabled bool        `json:"-"`
 	ExecPod        *corev1.Pod `json:"-"`
@@ -129,7 +129,7 @@ func newBaseOperationsOptions(f cmdutil.Factory, streams genericiooptions.IOStre
 		HasPatch:              true,
 		OpsType:               opsType,
 		HasComponentNamesFlag: hasComponentNamesFlag,
-		autoApprove:           false,
+		AutoApprove:           false,
 		CreateOptions: action.CreateOptions{
 			Factory:         f,
 			IOStreams:       streams,
@@ -355,7 +355,7 @@ func (o *OperationsOptions) validateVolumeExpansion() error {
 			// determine whether the opsRequest is a recovery action for volume expansion failure
 			if specStorage.Cmp(targetStorage) > 0 &&
 				statusStorage.Cmp(targetStorage) <= 0 {
-				o.autoApprove = false
+				o.AutoApprove = false
 				fmt.Fprintln(o.Out, printer.BoldYellow("Warning: this opsRequest is a recovery action for volume expansion failure and will re-create the PersistentVolumeClaims when RECOVER_VOLUME_EXPANSION_FAILURE=false"))
 				break
 			}
@@ -468,7 +468,7 @@ func (o *OperationsOptions) Validate() error {
 			return err
 		}
 	}
-	if !o.autoApprove && o.DryRun == "none" {
+	if !o.AutoApprove && o.DryRun == "none" {
 		return prompt.Confirm([]string{o.Name}, o.In, "", "")
 	}
 	return nil
@@ -656,40 +656,12 @@ func (o *OperationsOptions) fillExpose() error {
 		return err
 	}
 
-	cluster, err := cluster.GetClusterByName(o.Dynamic, o.Name, o.Namespace)
-	if err != nil {
-		return err
-	}
-	compMap := make(map[string]appsv1alpha1.ClusterComponentSpec)
-	for _, compSpec := range cluster.Spec.ComponentSpecs {
-		compMap[compSpec.Name] = compSpec
-	}
-
-	var (
+	o.Services = append(o.Services, appsv1alpha1.OpsService{
 		// currently, we use the expose type as service name
-		svcName = string(exposeType)
-		enabled = strings.ToLower(o.ExposeEnabled) == util.EnableValue
-	)
-	for _, name := range o.ComponentNames {
-		comp, ok := compMap[name]
-		if !ok {
-			return fmt.Errorf("component %s not found", name)
-		}
-
-		for _, svc := range comp.Services {
-			if svc.Name != svcName {
-				o.Services = append(o.Services, svc)
-			}
-		}
-
-		if enabled {
-			o.Services = append(o.Services, appsv1alpha1.ClusterComponentService{
-				Name:        svcName,
-				ServiceType: corev1.ServiceTypeLoadBalancer,
-				Annotations: annotations,
-			})
-		}
-	}
+		Name:        string(exposeType),
+		ServiceType: corev1.ServiceTypeLoadBalancer,
+		Annotations: annotations,
+	})
 	return nil
 }
 
@@ -719,7 +691,7 @@ func NewRestartCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 		},
 	}
 	o.addCommonFlags(cmd, f)
-	cmd.Flags().BoolVar(&o.autoApprove, "auto-approve", false, "Skip interactive approval before restarting the cluster")
+	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "Skip interactive approval before restarting the cluster")
 	return cmd
 }
 
@@ -746,7 +718,7 @@ func NewUpgradeCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 	}
 	o.addCommonFlags(cmd, f)
 	cmd.Flags().StringVar(&o.ClusterVersionRef, "cluster-version", "", "Reference cluster version (required)")
-	cmd.Flags().BoolVar(&o.autoApprove, "auto-approve", false, "Skip interactive approval before upgrading the cluster")
+	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "Skip interactive approval before upgrading the cluster")
 	_ = cmd.MarkFlagRequired("cluster-version")
 	return cmd
 }
@@ -780,7 +752,7 @@ func NewVerticalScalingCmd(f cmdutil.Factory, streams genericiooptions.IOStreams
 	cmd.Flags().StringVar(&o.CPU, "cpu", "", "Request and limit size of component cpu")
 	cmd.Flags().StringVar(&o.Memory, "memory", "", "Request and limit size of component memory")
 	cmd.Flags().StringVar(&o.Class, "class", "", "Component class")
-	cmd.Flags().BoolVar(&o.autoApprove, "auto-approve", false, "Skip interactive approval before vertically scaling the cluster")
+	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "Skip interactive approval before vertically scaling the cluster")
 	_ = cmd.MarkFlagRequired("components")
 	return cmd
 }
@@ -810,7 +782,7 @@ func NewHorizontalScalingCmd(f cmdutil.Factory, streams genericiooptions.IOStrea
 
 	o.addCommonFlags(cmd, f)
 	cmd.Flags().IntVar(&o.Replicas, "replicas", o.Replicas, "Replicas with the specified components")
-	cmd.Flags().BoolVar(&o.autoApprove, "auto-approve", false, "Skip interactive approval before horizontally scaling the cluster")
+	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "Skip interactive approval before horizontally scaling the cluster")
 	_ = cmd.MarkFlagRequired("replicas")
 	_ = cmd.MarkFlagRequired("components")
 	return cmd
@@ -841,7 +813,7 @@ func NewVolumeExpansionCmd(f cmdutil.Factory, streams genericiooptions.IOStreams
 	o.addCommonFlags(cmd, f)
 	cmd.Flags().StringSliceVarP(&o.VCTNames, "volume-claim-templates", "t", nil, "VolumeClaimTemplate names in components (required)")
 	cmd.Flags().StringVar(&o.Storage, "storage", "", "Volume storage size (required)")
-	cmd.Flags().BoolVar(&o.autoApprove, "auto-approve", false, "Skip interactive approval before expanding the cluster volume")
+	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "Skip interactive approval before expanding the cluster volume")
 	_ = cmd.MarkFlagRequired("volume-claim-templates")
 	_ = cmd.MarkFlagRequired("storage")
 	_ = cmd.MarkFlagRequired("components")
@@ -882,7 +854,7 @@ func NewExposeCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.
 	o.addCommonFlags(cmd, f)
 	cmd.Flags().StringVar(&o.ExposeType, "type", "", "Expose type, currently supported types are 'vpc', 'internet'")
 	cmd.Flags().StringVar(&o.ExposeEnabled, "enable", "", "Enable or disable the expose, values can be true or false")
-	cmd.Flags().BoolVar(&o.autoApprove, "auto-approve", false, "Skip interactive approval before exposing the cluster")
+	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "Skip interactive approval before exposing the cluster")
 
 	util.CheckErr(cmd.RegisterFlagCompletionFunc("type", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		return []string{string(util.ExposeToVPC), string(util.ExposeToInternet)}, cobra.ShellCompDirectiveNoFileComp
@@ -917,7 +889,7 @@ func NewStopCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Co
 		},
 	}
 	o.addCommonFlags(cmd, f)
-	cmd.Flags().BoolVar(&o.autoApprove, "auto-approve", false, "Skip interactive approval before stopping the cluster")
+	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "Skip interactive approval before stopping the cluster")
 	return cmd
 }
 
@@ -929,7 +901,7 @@ var startExample = templates.Examples(`
 // NewStartCmd creates a start command
 func NewStartCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
 	o := newBaseOperationsOptions(f, streams, appsv1alpha1.StartType, false)
-	o.autoApprove = true
+	o.AutoApprove = true
 	cmd := &cobra.Command{
 		Use:               "start NAME",
 		Short:             "Start the cluster if cluster is stopped.",
@@ -968,7 +940,7 @@ func cancelOps(o *OperationsOptions) error {
 	if !slices.Contains(supportedType, opsRequest.Spec.Type) {
 		return fmt.Errorf("opsRequest type: %s not support cancel action", opsRequest.Spec.Type)
 	}
-	if !o.autoApprove {
+	if !o.AutoApprove {
 		if err := prompt.Confirm([]string{o.Name}, o.In, "", ""); err != nil {
 			return err
 		}
@@ -1009,7 +981,7 @@ func NewCancelCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.
 			cmdutil.CheckErr(cancelOps(o))
 		},
 	}
-	cmd.Flags().BoolVar(&o.autoApprove, "auto-approve", false, "Skip interactive approval before cancel the opsRequest")
+	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "Skip interactive approval before cancel the opsRequest")
 	return cmd
 }
 
@@ -1040,10 +1012,13 @@ func NewPromoteCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 			cmdutil.CheckErr(o.CompletePromoteOps())
 			cmdutil.CheckErr(o.Validate())
 			if (o.LorryHAEnabled || o.CharacterType == oceanbase) && o.ExecPod != nil {
-				lorryCli, err := lorryclient.NewK8sExecClientWithPod(nil, o.ExecPod)
-				cmdutil.CheckErr(err)
-				cmdutil.CheckErr(lorryCli.Switchover(context.Background(), o.Primary, o.Instance))
-				fmt.Fprint(o.Out, "swichover task created\n")
+				// lorryCli, err := lorryclient.NewK8sExecClientWithPod(nil, o.ExecPod)
+				// cmdutil.CheckErr(err)
+				// cmdutil.CheckErr(lorryCli.Switchover(context.Background(), o.Primary, o.Instance))
+				customOpr := &CustomOperations{OperationsOptions: o}
+				customOpr.OpsDefinitionName = "Custom"
+				customOpr.Params = []map[string]string{{"primary": o.Primary}, {"candidate": o.Instance}}
+				cmdutil.CheckErr(customOpr.Run())
 			} else {
 				cmdutil.CheckErr(o.Run())
 			}
@@ -1051,7 +1026,8 @@ func NewPromoteCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 	}
 	flags.AddComponentFlag(f, cmd, &o.Component, "Specify the component name of the cluster, if the cluster has multiple components, you need to specify a component")
 	cmd.Flags().StringVar(&o.Instance, "instance", "", "Specify the instance name as the new primary or leader of the cluster, you can get the instance name by running \"kbcli cluster list-instances\"")
-	cmd.Flags().BoolVar(&o.autoApprove, "auto-approve", false, "Skip interactive approval before promote the instance")
+	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "Skip interactive approval before promote the instance")
+	cmd.Flags().BoolVar(&o.Force, "force", false, "force switchover if failed")
 	o.addCommonFlags(cmd, f)
 	return cmd
 }
@@ -1070,7 +1046,7 @@ var customOpsExample = templates.Examples(`
         kbcli cluster custom-ops kafka-quota --cluster mycluster --user client --producerByteRate 1024 --consumerByteRate 2048
 `)
 
-type customOperations struct {
+type CustomOperations struct {
 	*OperationsOptions
 	OpsDefinitionName string              `json:"opsDefinitionName"`
 	Params            []map[string]string `json:"params"`
@@ -1078,7 +1054,7 @@ type customOperations struct {
 }
 
 func NewCustomOpsCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := &customOperations{
+	o := &CustomOperations{
 		OperationsOptions: newBaseOperationsOptions(f, streams, "Custom", false),
 	}
 	// set options to build cue struct
@@ -1106,13 +1082,13 @@ func NewCustomOpsCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cob
 	}
 	o.addCommonFlags(cmd, f)
 	flags.AddComponentFlag(f, cmd, &o.Component, "Specify the component name of the cluster. if not specified, using the first component which referenced the defined componentDefinition.")
-	cmd.Flags().BoolVar(&o.autoApprove, "auto-approve", false, "Skip interactive approval before promote the instance")
+	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "Skip interactive approval before promote the instance")
 	cmd.Flags().StringVar(&o.Name, "cluster", "", "Specify the cluster name")
 	_ = cmd.MarkFlagRequired("cluster")
 	return cmd
 }
 
-func (o *customOperations) init() error {
+func (o *CustomOperations) init() error {
 	var err error
 	if o.Namespace, _, err = o.Factory.ToRawKubeConfigLoader().Namespace(); err != nil {
 		return err
@@ -1126,7 +1102,7 @@ func (o *customOperations) init() error {
 	return nil
 }
 
-func (o *customOperations) validateAndCompleteComponentName() error {
+func (o *CustomOperations) validateAndCompleteComponentName() error {
 	if o.Name == "" {
 		return makeMissingClusterNameErr()
 	}
@@ -1143,32 +1119,35 @@ func (o *customOperations) validateAndCompleteComponentName() error {
 	for _, v := range opsDef.Spec.ComponentDefinitionRefs {
 		supportedComponentDefs[v.Name] = struct{}{}
 	}
-	inputComponent := o.Component
-	o.Component = ""
-	for _, v := range clusterObj.Spec.ComponentSpecs {
-		if v.ComponentDef == "" {
-			continue
-		}
-		if _, ok := supportedComponentDefs[v.ComponentDef]; ok {
-			if inputComponent == "" {
-				o.Component = v.Name
-				break
-			} else if inputComponent == v.Name {
-				o.Component = inputComponent
-				break
+	if len(supportedComponentDefs) > 0 {
+		// check if the ops supports the input component
+		inputComponent := o.Component
+		o.Component = ""
+		for _, v := range clusterObj.Spec.ComponentSpecs {
+			if v.ComponentDef == "" {
+				continue
+			}
+			if _, ok := supportedComponentDefs[v.ComponentDef]; ok {
+				if inputComponent == "" {
+					o.Component = v.Name
+					break
+				} else if inputComponent == v.Name {
+					o.Component = inputComponent
+					break
+				}
 			}
 		}
+		if inputComponent != "" {
+			return fmt.Errorf(`this custom ops "%s" not supports the component "%s"`, o.OpsDefinitionName, inputComponent)
+		}
 	}
-	if o.Component != "" {
-		return nil
+	if o.Component == "" {
+		return fmt.Errorf("component name can not be empty")
 	}
-	if inputComponent != "" {
-		return fmt.Errorf(`this custom ops "%s" not supports the component "%s"`, o.OpsDefinitionName, inputComponent)
-	}
-	return fmt.Errorf(`can not found any component in the cluster "%s" for this custom ops "%s"`, o.Name, o.OpsDefinitionName)
+	return nil
 }
 
-func (o *customOperations) parseOpsDefinitionAndParams(cmd *cobra.Command, args []string) error {
+func (o *CustomOperations) parseOpsDefinitionAndParams(cmd *cobra.Command, args []string) error {
 	fmt.Printf("args: %v\n", args)
 	if len(args) == 0 {
 		return fmt.Errorf("please specify the custom ops which you want to do")
@@ -1193,7 +1172,7 @@ func (o *customOperations) parseOpsDefinitionAndParams(cmd *cobra.Command, args 
 	})
 }
 
-func (o *customOperations) completeCustomSpec(cmd *cobra.Command) error {
+func (o *CustomOperations) completeCustomSpec(cmd *cobra.Command) error {
 	param := map[string]string{}
 	// Construct config and credential map from flags
 	if o.SchemaProperties != nil {

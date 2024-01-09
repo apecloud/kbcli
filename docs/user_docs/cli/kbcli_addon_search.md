@@ -2,7 +2,7 @@
 title: kbcli addon search
 ---
 
-search the addon from index
+Search the addon from index
 
 ```
 kbcli addon search [flags]

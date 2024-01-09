@@ -2,7 +2,7 @@
 title: kbcli addon uninstall
 ---
 
-uninstall an existed addon
+Uninstall an existed addon
 
 ```
 kbcli addon uninstall [flags]
@@ -14,15 +14,14 @@ kbcli addon uninstall [flags]
   # uninstall an addon
   kbcli addon uninstall apecloud-mysql
   
-  # uninstall an addon with a specified version
-  kbcli addon uninstall apecloud-mysql --version 0.7.0
+  # uninstall more than one addons
+  kbcli addon uninstall apecloud-mysql postgresql
 ```
 
 ### Options
 
 ```
-  -h, --help             help for uninstall
-      --version string   must be specified if the addon owns multiple version
+  -h, --help   help for uninstall
 ```
 
 ### Options inherited from parent commands

@@ -24,17 +24,7 @@ import (
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
-
-	viper "github.com/apecloud/kubeblocks/pkg/viperx"
 )
-
-const (
-	EnvExperimentalExpose = "KBCLI_EXPERIMENTAL_EXPOSE"
-)
-
-func init() {
-	_ = viper.BindEnv(EnvExperimentalExpose)
-}
 
 // NewClusterCmd creates the cluster command
 func NewClusterCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
