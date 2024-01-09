@@ -21,6 +21,7 @@ package kubeblocks
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -165,8 +166,16 @@ func (o *InstallOptions) Upgrade() error {
 	// it's time to upgrade
 	msg := ""
 	if o.Version != "" {
+		// keep addons before upgrade KubeBlocks avoid the addons been deleted
+		s = spinner.New(o.Out, spinnerMsg("Keep addons"))
+		defer s.Fail()
+		if err = o.keepAddons(); err != nil {
+			return err
+		}
+		s.Success()
+
 		// stop the old version KubeBlocks, otherwise the old version KubeBlocks will reconcile the
-		// new version resources, which may not be compatible. helm will start the new version
+		// new version resources, which may be not compatible. helm will start the new version
 		// KubeBlocks after upgrade.
 		s = spinner.New(o.Out, spinnerMsg("Stop KubeBlocks "+kbVersion))
 		defer s.Fail()
@@ -250,4 +259,45 @@ func (o *InstallOptions) stopDeployment(getDeployFn getDeploymentFunc) error {
 			}
 			return false, nil
 		})
+}
+
+// keepAddons set the addons to keep when upgrade KubeBlocks avoid the addons been deleted
+func (o *InstallOptions) keepAddons() error {
+	const (
+		helmResourcePolicyKey  = "helm.sh/resource-policy"
+		helmResourcePolicyKeep = "keep"
+	)
+
+	klog.V(1).Info("start to keep addons")
+	addons, err := o.Dynamic.Resource(types.AddonGVR()).List(context.Background(), metav1.ListOptions{
+		LabelSelector: buildKubeBlocksSelectorLabels(),
+	})
+	if err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+
+	if addons == nil || len(addons.Items) == 0 {
+		return nil
+	}
+
+	for _, addon := range addons.Items {
+		if addon.GetDeletionTimestamp() != nil {
+			continue
+		}
+		annotations := addon.GetAnnotations()
+		if annotations == nil {
+			annotations = make(map[string]string)
+		}
+		if addon.GetAnnotations()[helmResourcePolicyKey] == helmResourcePolicyKeep {
+			continue
+		}
+		klog.V(1).Info("keep addon: ", addon.GetName())
+		annotations[helmResourcePolicyKey] = helmResourcePolicyKeep
+		patchBytes, _ := json.Marshal(map[string]interface{}{"metadata": map[string]interface{}{"annotations": annotations}})
+		if _, err = o.Dynamic.Resource(types.AddonGVR()).Namespace(addon.GetNamespace()).Patch(context.Background(),
+			addon.GetName(), apitypes.MergePatchType, patchBytes, metav1.PatchOptions{}); err != nil {
+			return err
+		}
+	}
+	return nil
 }
