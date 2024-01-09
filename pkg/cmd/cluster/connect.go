@@ -540,6 +540,10 @@ func (o *ConnectOptions) checkUnsupportedEngine() error {
 	}
 	if o.targetClusterDef != nil && engineType == "" {
 		engineType = o.targetClusterDef.Labels[types.AddonNameLabelKey]
+		if engineType == "" {
+			// try old label
+			engineType = o.targetClusterDef.Labels[constant.AppNameLabelKey]
+		}
 	}
 	if engineType == "" {
 		return fmt.Errorf("fail to get the target engine type")
