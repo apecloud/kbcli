@@ -56,7 +56,6 @@ func getAddonVersion(addon *extensionsv1alpha1.Addon) string {
 }
 
 func CheckAddonUsedByCluster(dynamic dynamic.Interface, addons []string, in io.Reader) error {
-
 	labelSelecotor := util.BuildClusterLabel("", addons)
 	list, err := dynamic.Resource(types.ClusterGVR()).List(context.Background(), metav1.ListOptions{LabelSelector: labelSelecotor})
 	if err != nil {
@@ -75,7 +74,7 @@ func CheckAddonUsedByCluster(dynamic dynamic.Interface, addons []string, in io.R
 		}
 
 		msg += fmt.Sprintf("In used addons [%s] to be deleted", printer.BoldRed(strings.Join(maps.Keys(usedAddons), ",")))
-		return prompt.Confirm(addons, in, msg, "")
+		return prompt.Confirm(maps.Keys(usedAddons), in, msg, "")
 	}
 	return nil
 }
