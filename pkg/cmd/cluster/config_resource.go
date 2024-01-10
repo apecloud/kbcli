@@ -45,6 +45,7 @@ type ConfigRelatedObjects struct {
 	Cluster        *appsv1alpha1.Cluster
 	ClusterDef     *appsv1alpha1.ClusterDefinition
 	ClusterVersion *appsv1alpha1.ClusterVersion
+	CompDefs       []*appsv1alpha1.ComponentDefinition
 
 	ConfigSpecs map[string]configSpecsType
 }
@@ -86,6 +87,7 @@ func (w *configObjectsWrapper) GetObjects() (*ConfigRelatedObjects, error) {
 	err := w.cluster(objects).
 		clusterDefinition(objects).
 		clusterVersion(objects).
+		compDefs(objects).
 		configSpecsObjects(objects).
 		finish()
 	if err != nil {
@@ -152,6 +154,29 @@ func (w *configObjectsWrapper) clusterVersion(objects *ConfigRelatedObjects) *co
 	return w.objectWrapper(fn)
 }
 
+func (w *configObjectsWrapper) compDefs(object *ConfigRelatedObjects) *configObjectsWrapper {
+	fn := func() error {
+
+		object.CompDefs = make([]*appsv1alpha1.ComponentDefinition, len(object.Cluster.Spec.ComponentSpecs))
+		for i, comp := range object.Cluster.Spec.ComponentSpecs {
+			if comp.ComponentDef == "" {
+				continue
+			}
+			compDefKey := client.ObjectKey{
+				Namespace: "",
+				Name:      comp.ComponentDef,
+			}
+			temp := appsv1alpha1.ComponentDefinition{}
+			err := util.GetResourceObjectFromGVR(types.CompDefGVR(), compDefKey, w.cli, &temp)
+			if err != nil {
+				return err
+			}
+			object.CompDefs[i] = &temp
+		}
+		return nil
+	}
+	return w.objectWrapper(fn)
+}
 func (w *configObjectsWrapper) clusterDefinition(objects *ConfigRelatedObjects) *configObjectsWrapper {
 	fn := func() error {
 		clusterVerKey := client.ObjectKey{
@@ -171,11 +196,17 @@ func (w *configObjectsWrapper) configSpecsObjects(objects *ConfigRelatedObjects)
 			components = getComponentNames(objects.Cluster)
 		}
 		configSpecs := make(map[string]configSpecsType, len(components))
-		for _, component := range components {
+		for i, component := range components {
 			componentConfigSpecs, err := w.genConfigSpecs(objects, component)
 			if err != nil {
 				return err
 			}
+			def, err := w.genConfigSpecsByCompDef(objects.CompDefs[i])
+			if err != nil {
+				return err
+			}
+			componentConfigSpecs = append(componentConfigSpecs, def...)
+
 			componentScriptsSpecs, err := w.genScriptsSpecs(objects, component)
 			if err != nil {
 				return err
@@ -264,6 +295,21 @@ func (w *configObjectsWrapper) genConfigSpecs(objects *ConfigRelatedObjects, com
 	}
 	for _, spec := range configSpecs {
 		meta, err := w.transformConfigSpecMeta(spec, component)
+		if err != nil {
+			return nil, err
+		}
+		ret = append(ret, meta)
+	}
+	return ret, nil
+}
+
+func (w *configObjectsWrapper) genConfigSpecsByCompDef(compDef *appsv1alpha1.ComponentDefinition) ([]*configSpecMeta, error) {
+	var (
+		ret []*configSpecMeta
+	)
+	//w.genConfigSpecs()
+	for _, spec := range compDef.Spec.Configs {
+		meta, err := w.transformConfigSpecMeta(spec, compDef.Name)
 		if err != nil {
 			return nil, err
 		}
