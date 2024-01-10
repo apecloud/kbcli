@@ -1020,8 +1020,11 @@ func NewPromoteCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 				// cmdutil.CheckErr(err)
 				// cmdutil.CheckErr(lorryCli.Switchover(context.Background(), o.Primary, o.Instance))
 				customOpr := &CustomOperations{OperationsOptions: o}
-				customOpr.OpsDefinitionName = "Custom"
-				customOpr.Params = []map[string]string{{"primary": o.Primary}, {"candidate": o.Instance}}
+				customOpr.OpsType = "Custom"
+				customOpr.OpsTypeLower = strings.ToLower(string(o.OpsType))
+				customOpr.OpsDefinitionName = "switchover"
+				customOpr.Params = []map[string]string{{"primary": o.Primary, "candidate": o.Instance}}
+				customOpr.CreateOptions.Options = customOpr
 				cmdutil.CheckErr(customOpr.Run())
 			} else {
 				cmdutil.CheckErr(o.Run())
