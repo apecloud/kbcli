@@ -195,6 +195,16 @@ func (o *InstallOptions) Upgrade() error {
 		msg = "to " + o.Version
 	}
 
+	// save resources of old version before upgrade the crds
+	upgrader := breakingchange.Upgrader{
+		FromVersion: o.OldVersion,
+		ToVersion:   o.Version,
+		Dynamic:     o.Dynamic,
+	}
+	if err = upgrader.SaveOldResources(); err != nil {
+		return err
+	}
+
 	// create or update crds
 	s = spinner.New(o.Out, spinnerMsg("Upgrade CRDs"))
 	defer s.Fail()
