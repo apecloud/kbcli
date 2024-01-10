@@ -59,8 +59,7 @@ var _ = Describe("alert", func() {
 		o := &deleteReceiverOptions{baseOptions: mockBaseOptions(s)}
 		o.client = testing.FakeClientSet(o.baseOptions.alertConfigMap, o.baseOptions.webhookConfigMap)
 		o.names = []string{"receiver-7pb52"}
-		o.Factory = f
-		Expect(o.complete()).Should(Succeed())
+		o.AlertConfigFileName = alertConfigFileName
 		Expect(o.run()).Should(Succeed())
 	})
 })
