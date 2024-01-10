@@ -46,6 +46,7 @@ var _ upgradeHandler = &upgradeHandlerTo7{}
 
 func init() {
 	registerUpgradeHandler([]string{"0.5", "0.6"}, "0.7", &upgradeHandlerTo7{})
+	registerUpgradeHandler([]string{"0.6"}, "0.8", &upgradeHandlerTo7{})
 }
 
 type upgradeHandlerTo7 struct {
