@@ -82,7 +82,7 @@ func (o *deleteReceiverOptions) run() error {
 }
 
 func (o *deleteReceiverOptions) deleteReceiver() error {
-	data, err := getConfigData(o.alertConfigMap, alertConfigFileName)
+	data, err := getConfigData(o.alertConfigMap, o.AlertConfigFileName)
 	if err != nil {
 		return err
 	}
@@ -125,7 +125,7 @@ func (o *deleteReceiverOptions) deleteReceiver() error {
 
 	data["receivers"] = newReceivers
 	data["route"].(map[string]interface{})["routes"] = newRoutes
-	return updateConfig(o.client, o.alertConfigMap, alertConfigFileName, data)
+	return updateConfig(o.client, o.alertConfigMap, o.AlertConfigFileName, data)
 }
 
 func (o *deleteReceiverOptions) deleteWebhookReceivers() error {

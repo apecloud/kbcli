@@ -87,7 +87,7 @@ func (o *configSMTPServerOptions) validate() error {
 }
 
 func (o *configSMTPServerOptions) run() error {
-	data, err := getConfigData(o.alertConfigMap, alertConfigFileName)
+	data, err := getConfigData(o.alertConfigMap, o.AlertConfigFileName)
 	if err != nil {
 		return err
 	}
@@ -105,5 +105,5 @@ func (o *configSMTPServerOptions) run() error {
 	data["global"] = global
 
 	// update global config
-	return updateConfig(o.client, o.alertConfigMap, alertConfigFileName, data)
+	return updateConfig(o.client, o.alertConfigMap, o.AlertConfigFileName, data)
 }
