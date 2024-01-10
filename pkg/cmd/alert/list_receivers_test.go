@@ -52,6 +52,8 @@ var _ = Describe("alert", func() {
 	It("run", func() {
 		o := &listReceiversOptions{baseOptions: mockBaseOptions(s)}
 		o.client = testing.FakeClientSet(o.baseOptions.alertConfigMap, o.baseOptions.webhookConfigMap)
+		o.Factory = f
+		Expect(o.complete()).Should(Succeed())
 		Expect(o.run()).Should(Succeed())
 	})
 })

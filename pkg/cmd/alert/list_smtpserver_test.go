@@ -52,6 +52,8 @@ var _ = Describe("list smtpserver", func() {
 	It("run", func() {
 		o := &listSMTPServerOptions{baseOptions: mockBaseOptions(s)}
 		o.client = testing.FakeClientSet(o.baseOptions.alertConfigMap, o.baseOptions.webhookConfigMap)
+		o.Factory = f
+		Expect(o.complete()).Should(Succeed())
 		Expect(o.run()).Should(Succeed())
 	})
 })
