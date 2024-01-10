@@ -196,12 +196,12 @@ func (o *InstallOptions) Upgrade() error {
 	}
 
 	// save resources of old version before upgrade the crds
-	upgrader := breakingchange.Upgrader{
+	o.upgrader = breakingchange.Upgrader{
 		FromVersion: o.OldVersion,
 		ToVersion:   o.Version,
 		Dynamic:     o.Dynamic,
 	}
-	if err = upgrader.SaveOldResources(); err != nil {
+	if err = o.upgrader.SaveOldResources(); err != nil {
 		return err
 	}
 
