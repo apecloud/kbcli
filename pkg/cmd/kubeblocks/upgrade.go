@@ -194,6 +194,17 @@ func (o *InstallOptions) Upgrade() error {
 
 		msg = "to " + o.Version
 	}
+
+	// save resources of old version before upgrade the crds
+	upgrader := breakingchange.Upgrader{
+		FromVersion: o.OldVersion,
+		ToVersion:   o.Version,
+		Dynamic:     o.Dynamic,
+	}
+	if err = upgrader.SaveOldResources(); err != nil {
+		return err
+	}
+
 	// create or update crds
 	if err = createOrUpdateCRDS(o.Dynamic, o.Version); err != nil {
 		return fmt.Errorf("upgrade crds failed: %s", err.Error())
