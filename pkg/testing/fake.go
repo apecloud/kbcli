@@ -277,6 +277,8 @@ func FakeNode() *corev1.Node {
 
 func FakeClusterDef() *appsv1alpha1.ClusterDefinition {
 	clusterDef := &appsv1alpha1.ClusterDefinition{}
+	clusterDef.Labels = make(map[string]string)
+	clusterDef.Labels[types.AddonNameLabelKey] = ClusterDefName
 	clusterDef.Name = ClusterDefName
 	clusterDef.Spec.ComponentDefs = []appsv1alpha1.ClusterComponentDefinition{
 		{

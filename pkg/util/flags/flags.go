@@ -220,7 +220,7 @@ func autoCompleteClusterComponent(cmd *cobra.Command, f cmdutil.Factory, flag st
 		namespace, _, _ := f.ToRawKubeConfigLoader().Namespace()
 		dynamic, _ := f.DynamicClient()
 		cluster := &appsv1alpha1.Cluster{}
-		_ = util.GetK8SClientObject(dynamic, cluster, types.ClusterGVR(), util.GetClusterNameFromArgsOrFlag(cmd, args), namespace)
+		_ = util.GetK8SClientObject(dynamic, cluster, types.ClusterGVR(), namespace, util.GetClusterNameFromArgsOrFlag(cmd, args))
 		for _, comp := range cluster.Spec.ComponentSpecs {
 			if strings.HasPrefix(comp.Name, toComplete) {
 				components = append(components, comp.Name)
