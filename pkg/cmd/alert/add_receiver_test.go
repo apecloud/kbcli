@@ -164,6 +164,7 @@ var _ = Describe("add receiver", func() {
 		o.baseOptions.webhookConfigMap = webhookAdaptorCM
 		o.client = testing.FakeClientSet(alertCM, webhookAdaptorCM)
 		o.Name = "receiver-test"
+		o.AlertConfigFileName = alertConfigFileName
 		Expect(o.addReceiver()).Should(Succeed())
 		Expect(o.addWebhookReceivers()).Should(Succeed())
 	})
