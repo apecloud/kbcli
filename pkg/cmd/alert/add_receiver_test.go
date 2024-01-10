@@ -127,6 +127,7 @@ var _ = Describe("add receiver", func() {
 		baseOptions := mockBaseOptions(s)
 		o.alertConfigMap = baseOptions.alertConfigMap
 		o.InputName = []string{}
+		o.AlertConfigFileName = alertConfigFileName
 		Expect(o.validate()).Should(Succeed())
 	})
 
