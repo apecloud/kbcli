@@ -1128,27 +1128,26 @@ func (o *CustomOperations) validateAndCompleteComponentName() error {
 	}
 	if len(supportedComponentDefs) > 0 {
 		// check if the ops supports the input component
-		inputComponent := o.Component
-		o.Component = ""
+		var isSupported bool
 		for _, v := range clusterObj.Spec.ComponentSpecs {
 			if v.ComponentDef == "" {
 				continue
 			}
 			if _, ok := supportedComponentDefs[v.ComponentDef]; ok {
-				if inputComponent == "" {
+				if o.Component == "" {
 					o.Component = v.Name
+					isSupported = true
 					break
-				} else if inputComponent == v.Name {
-					o.Component = inputComponent
+				} else if o.Component == v.Name {
+					isSupported = true
 					break
 				}
 			}
 		}
-		if inputComponent != "" {
-			return fmt.Errorf(`this custom ops "%s" not supports the component "%s"`, o.OpsDefinitionName, inputComponent)
+		if !isSupported {
+			return fmt.Errorf(`this custom ops "%s" not supports the component "%s"`, o.OpsDefinitionName, o.Component)
 		}
-	}
-	if o.Component == "" {
+	} else if o.Component == "" {
 		return fmt.Errorf("component name can not be empty")
 	}
 	return nil
