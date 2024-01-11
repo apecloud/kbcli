@@ -127,6 +127,7 @@ var _ = Describe("add receiver", func() {
 		baseOptions := mockBaseOptions(s)
 		o.alertConfigMap = baseOptions.alertConfigMap
 		o.InputName = []string{}
+		o.AlertConfigFileName = alertConfigFileName
 		Expect(o.validate()).Should(Succeed())
 	})
 
@@ -164,6 +165,7 @@ var _ = Describe("add receiver", func() {
 		o.baseOptions.webhookConfigMap = webhookAdaptorCM
 		o.client = testing.FakeClientSet(alertCM, webhookAdaptorCM)
 		o.Name = "receiver-test"
+		o.AlertConfigFileName = alertConfigFileName
 		Expect(o.addReceiver()).Should(Succeed())
 		Expect(o.addWebhookReceivers()).Should(Succeed())
 	})

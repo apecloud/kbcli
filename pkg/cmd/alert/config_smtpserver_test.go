@@ -103,6 +103,7 @@ var _ = Describe("config smtpserver", func() {
 		o.smtpAuthPassword = "123456abc"
 		o.smtpAuthIdentity = "admin@kubeblocks.io"
 		o.client = testing.FakeClientSet(o.alertConfigMap, o.webhookConfigMap)
+		o.AlertConfigFileName = alertConfigFileName
 		Expect(o.validate()).Should(Succeed())
 		Expect(o.run()).Should(Succeed())
 	})
