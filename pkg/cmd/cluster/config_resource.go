@@ -26,12 +26,10 @@ import (
 	"k8s.io/client-go/dynamic"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
-	"github.com/apecloud/kubeblocks/pkg/configuration/core"
-	"github.com/apecloud/kubeblocks/pkg/constant"
-
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
+	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
+	"github.com/apecloud/kubeblocks/pkg/configuration/core"
 )
 
 type configSpecsType []*configSpecMeta
@@ -393,9 +391,11 @@ func (w *configObjectsWrapper) genScriptsSpecsByCompDef(comp *appsv1alpha1.Compo
 	var (
 		ret []*configSpecMeta
 	)
-	targetCompDef := comp.Labels[constant.ComponentDefinitionLabelKey]
+	if comp == nil {
+		return nil, fmt.Errorf("failed to get the cluster component CR in K8s")
+	}
 	for _, compDef := range compDefs {
-		if compDef.Name != targetCompDef {
+		if compDef.Name != comp.Spec.CompDef {
 			continue
 		}
 		for _, spec := range compDef.Spec.Scripts {
