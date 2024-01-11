@@ -160,6 +160,7 @@ const (
 	ProviderLabelKey     = "kubeblocks.io/provider"
 	AddonVersionLabelKey = "addon.kubeblocks.io/version"
 	AddonNameLabelKey    = "addon.kubeblocks.io/name"
+	AddonModelLabelKey   = "addon.kubeblocks.io/model"
 )
 
 // DataProtection API group
