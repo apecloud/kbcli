@@ -51,7 +51,7 @@ jobs:
         run: |
           make build-kbcli-embed-chart
           git add pkg/cluster/charts
-          FILE_CHANGES=`git diff --name-only ${{ github.sha }}`
+          FILE_CHANGES=`git diff --name-only ${{ github.sha }} | (grep "pkg/cluster/charts" || true)`
           if [[ ! -z "$FILE_CHANGES" ]]; then
               echo $FILE_CHANGES
               git config --local user.name "$GITHUB_ACTOR"
