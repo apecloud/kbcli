@@ -227,28 +227,32 @@ func (w *configObjectsWrapper) configSpecsObjects(objects *ConfigRelatedObjects)
 		}
 		configSpecs := make(map[string]configSpecsType, len(components))
 		for i, component := range components {
+			if configSpecs[component] == nil {
+				configSpecs[component] = make(configSpecsType, 0)
+			}
 			// if the object have the new API
 			if len(objects.CompDefs) != 0 {
 				componentConfigSpecs, err := w.genConfigSpecsByCompDef(objects.Comps[i], objects.CompDefs)
 				if err != nil {
 					return err
 				}
+				configSpecs[component] = append(configSpecs[component], componentConfigSpecs...)
 				componentScriptsSpecs, err := w.genScriptsSpecsByCompDef(objects.Comps[i], objects.CompDefs)
 				if err != nil {
 					return err
 				}
-				configSpecs[component] = append(componentConfigSpecs, componentScriptsSpecs...)
+				configSpecs[component] = append(configSpecs[component], componentScriptsSpecs...)
 			} else {
 				componentConfigSpecs, err := w.genConfigSpecs(objects, component)
 				if err != nil {
 					return err
 				}
-
+				configSpecs[component] = append(configSpecs[component], componentConfigSpecs...)
 				componentScriptsSpecs, err := w.genScriptsSpecs(objects, component)
 				if err != nil {
 					return err
 				}
-				configSpecs[component] = append(componentConfigSpecs, componentScriptsSpecs...)
+				configSpecs[component] = append(configSpecs[component], componentScriptsSpecs...)
 			}
 
 		}
@@ -346,9 +350,11 @@ func (w *configObjectsWrapper) genConfigSpecsByCompDef(comp *appsv1alpha1.Compon
 	var (
 		ret []*configSpecMeta
 	)
-	targetCompDef := comp.Labels[constant.ComponentDefinitionLabelKey]
+	if comp == nil {
+		return nil, fmt.Errorf("failed to get the cluster component CR in K8s")
+	}
 	for _, compDef := range compDefs {
-		if compDef.Name != targetCompDef {
+		if compDef.Name != comp.Spec.CompDef {
 			continue
 		}
 		for _, spec := range compDef.Spec.Configs {
