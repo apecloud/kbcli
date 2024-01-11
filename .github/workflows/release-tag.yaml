@@ -20,6 +20,7 @@ run-name: ref_name:${{ github.ref_name }} release_version:${{ inputs.VERSION }}
 env:
   GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
   HELM_VERSION: v3.13.1
+  CUR_BRANCH: ${{ vars.CURRENT_RELEASE_BRANCH }}
 
 jobs:
   release-tag:
@@ -30,10 +31,20 @@ jobs:
         with:
           version: ${{ env.HELM_VERSION }}
 
-      - name: checkout branch ${{ github.ref_name }}
+      - name: checkout branch ${{ env.CUR_BRANCH }}
+        if: ${{ env.CUR_BRANCH != '' }}
         uses: actions/checkout@v4
         with:
           submodules: 'recursive'
+          ref: ${{ env.CUR_BRANCH }}
+          fetch-depth: 0
+
+      - name: checkout branch ${{ github.ref_name }}
+        if: ${{ env.CUR_BRANCH == '' }}
+        uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+          fetch-depth: 0
 
       - name: build kbcli embed chart
         id: build-kbcli-embed-chart
