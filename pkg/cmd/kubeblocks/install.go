@@ -94,6 +94,7 @@ type InstallOptions struct {
 	TopologyKeys    []string
 	NodeLabels      map[string]string
 	TolerationsRaw  []string
+	upgrader        breakingchange.Upgrader
 }
 
 type addonStatus struct {
@@ -548,11 +549,7 @@ func (o *InstallOptions) buildChart() *helm.InstallOpts {
 		CreateNamespace: o.CreateNamespace,
 		Timeout:         o.Timeout,
 		Atomic:          false,
-		Upgrader: breakingchange.Upgrader{
-			FromVersion: o.OldVersion,
-			ToVersion:   o.Version,
-			Dynamic:     o.Dynamic,
-		},
+		Upgrader:        o.upgrader,
 	}
 }
 
