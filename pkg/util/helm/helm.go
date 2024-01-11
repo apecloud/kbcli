@@ -557,11 +557,6 @@ func (i *InstallOpts) tryUpgrade(cfg *action.Configuration) (*release.Release, e
 		cancel()
 	}()
 
-	// save resources of old version
-	if err = i.Upgrader.SaveOldResources(); err != nil {
-		return nil, err
-	}
-
 	// update crds before helm upgrade
 	for _, obj := range chartRequested.CRDObjects() {
 		// Read in the resources

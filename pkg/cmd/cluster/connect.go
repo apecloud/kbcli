@@ -539,7 +539,7 @@ func (o *ConnectOptions) checkUnsupportedEngine() error {
 		engineType = o.componentDefV2.Labels[types.AddonNameLabelKey]
 	}
 	if o.targetClusterDef != nil && engineType == "" {
-		engineType = o.targetClusterDef.Labels[types.AddonNameLabelKey]
+		engineType = o.targetClusterDef.Name
 	}
 	if engineType == "" {
 		return fmt.Errorf("fail to get the target engine type")
