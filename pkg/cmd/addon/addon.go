@@ -92,8 +92,8 @@ type addonCmdOpts struct {
 type addonListOpts struct {
 	*action.ListOptions
 
-	// listEnabled is used to list enabled addons only
-	listEnabled bool
+	// status is used to filter addons by status
+	status []string
 	// listEngines is used to list engine addons
 	listEngines bool
 }
@@ -133,7 +133,7 @@ func newListCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Co
 		},
 	}
 	o.AddFlags(cmd, true)
-	cmd.Flags().BoolVar(&o.listEnabled, "enabled", false, "List enabled addons only")
+	cmd.Flags().StringArrayVar(&o.status, "status", []string{}, "Filter addons by status")
 	cmd.Flags().BoolVar(&o.listEngines, "engines", false, "List engine addons only")
 	return cmd
 }
@@ -863,8 +863,8 @@ func addonListRun(o *addonListOpts) error {
 			}
 			version := getAddonVersion(addon)
 
-			// only show enabled addons
-			if o.listEnabled && addon.Status.Phase != extensionsv1alpha1.AddonEnabled {
+			// only show addons with matching status
+			if !matchStatus(addon, o.status) {
 				continue
 			}
 
@@ -974,6 +974,18 @@ func isEngineAddon(addon *extensionsv1alpha1.Addon) bool {
 	}
 	if _, ok := labels[types.AddonModelLabelKey]; ok {
 		return true
+	}
+	return false
+}
+
+func matchStatus(addon *extensionsv1alpha1.Addon, status []string) bool {
+	if len(status) == 0 {
+		return true
+	}
+	for _, s := range status {
+		if strings.EqualFold(string(addon.Status.Phase), s) {
+			return true
+		}
 	}
 	return false
 }
