@@ -20,12 +20,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package cluster
 
 import (
+	"fmt"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/dynamic"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	"github.com/apecloud/kubeblocks/pkg/configuration/core"
+	"github.com/apecloud/kubeblocks/pkg/constant"
 
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
@@ -45,9 +48,9 @@ type ConfigRelatedObjects struct {
 	Cluster        *appsv1alpha1.Cluster
 	ClusterDef     *appsv1alpha1.ClusterDefinition
 	ClusterVersion *appsv1alpha1.ClusterVersion
+	Comps          []*appsv1alpha1.Component
 	CompDefs       []*appsv1alpha1.ComponentDefinition
-
-	ConfigSpecs map[string]configSpecsType
+	ConfigSpecs    map[string]configSpecsType
 }
 
 type configObjectsWrapper struct {
@@ -88,6 +91,7 @@ func (w *configObjectsWrapper) GetObjects() (*ConfigRelatedObjects, error) {
 		clusterDefinition(objects).
 		clusterVersion(objects).
 		compDefs(objects).
+		comps(objects).
 		configSpecsObjects(objects).
 		finish()
 	if err != nil {
@@ -154,11 +158,36 @@ func (w *configObjectsWrapper) clusterVersion(objects *ConfigRelatedObjects) *co
 	return w.objectWrapper(fn)
 }
 
+func (w *configObjectsWrapper) comps(object *ConfigRelatedObjects) *configObjectsWrapper {
+	fn := func() error {
+		if len(object.CompDefs) == 0 {
+			return nil
+		}
+		object.Comps = make([]*appsv1alpha1.Component, len(object.Cluster.Spec.ComponentSpecs))
+		for i, comp := range object.Cluster.Spec.ComponentSpecs {
+			if comp.ComponentDef == "" {
+				continue
+			}
+			compKey := client.ObjectKey{
+				Namespace: w.namespace,
+				Name:      fmt.Sprintf("%s-%s", w.clusterName, comp.Name),
+			}
+			temp := appsv1alpha1.Component{}
+			err := util.GetResourceObjectFromGVR(types.ComponentGVR(), compKey, w.cli, &temp)
+			if err != nil {
+				return err
+			}
+			object.Comps[i] = &temp
+		}
+		return nil
+	}
+	return w.objectWrapper(fn)
+}
+
 func (w *configObjectsWrapper) compDefs(object *ConfigRelatedObjects) *configObjectsWrapper {
 	fn := func() error {
-
-		object.CompDefs = make([]*appsv1alpha1.ComponentDefinition, len(object.Cluster.Spec.ComponentSpecs))
-		for i, comp := range object.Cluster.Spec.ComponentSpecs {
+		object.CompDefs = make([]*appsv1alpha1.ComponentDefinition, 0)
+		for _, comp := range object.Cluster.Spec.ComponentSpecs {
 			if comp.ComponentDef == "" {
 				continue
 			}
@@ -171,12 +200,13 @@ func (w *configObjectsWrapper) compDefs(object *ConfigRelatedObjects) *configObj
 			if err != nil {
 				return err
 			}
-			object.CompDefs[i] = &temp
+			object.CompDefs = append(object.CompDefs, &temp)
 		}
 		return nil
 	}
 	return w.objectWrapper(fn)
 }
+
 func (w *configObjectsWrapper) clusterDefinition(objects *ConfigRelatedObjects) *configObjectsWrapper {
 	fn := func() error {
 		clusterVerKey := client.ObjectKey{
@@ -197,21 +227,30 @@ func (w *configObjectsWrapper) configSpecsObjects(objects *ConfigRelatedObjects)
 		}
 		configSpecs := make(map[string]configSpecsType, len(components))
 		for i, component := range components {
-			componentConfigSpecs, err := w.genConfigSpecs(objects, component)
-			if err != nil {
-				return err
-			}
-			def, err := w.genConfigSpecsByCompDef(objects.CompDefs[i])
-			if err != nil {
-				return err
-			}
-			componentConfigSpecs = append(componentConfigSpecs, def...)
+			// if the object have the new API
+			if len(objects.CompDefs) != 0 {
+				componentConfigSpecs, err := w.genConfigSpecsByCompDef(objects.Comps[i], objects.CompDefs)
+				if err != nil {
+					return err
+				}
+				componentScriptsSpecs, err := w.genScriptsSpecsByCompDef(objects.Comps[i], objects.CompDefs)
+				if err != nil {
+					return err
+				}
+				configSpecs[component] = append(componentConfigSpecs, componentScriptsSpecs...)
+			} else {
+				componentConfigSpecs, err := w.genConfigSpecs(objects, component)
+				if err != nil {
+					return err
+				}
 
-			componentScriptsSpecs, err := w.genScriptsSpecs(objects, component)
-			if err != nil {
-				return err
+				componentScriptsSpecs, err := w.genScriptsSpecs(objects, component)
+				if err != nil {
+					return err
+				}
+				configSpecs[component] = append(componentConfigSpecs, componentScriptsSpecs...)
 			}
-			configSpecs[component] = append(componentConfigSpecs, componentScriptsSpecs...)
+
 		}
 		objects.ConfigSpecs = configSpecs
 		return nil
@@ -303,17 +342,71 @@ func (w *configObjectsWrapper) genConfigSpecs(objects *ConfigRelatedObjects, com
 	return ret, nil
 }
 
-func (w *configObjectsWrapper) genConfigSpecsByCompDef(compDef *appsv1alpha1.ComponentDefinition) ([]*configSpecMeta, error) {
+func (w *configObjectsWrapper) genConfigSpecsByCompDef(comp *appsv1alpha1.Component, compDefs []*appsv1alpha1.ComponentDefinition) ([]*configSpecMeta, error) {
 	var (
 		ret []*configSpecMeta
 	)
-	//w.genConfigSpecs()
-	for _, spec := range compDef.Spec.Configs {
-		meta, err := w.transformConfigSpecMeta(spec, compDef.Name)
-		if err != nil {
-			return nil, err
+	targetCompDef := comp.Labels[constant.ComponentDefinitionLabelKey]
+	for _, compDef := range compDefs {
+		if compDef.Name != targetCompDef {
+			continue
 		}
-		ret = append(ret, meta)
+		for _, spec := range compDef.Spec.Configs {
+			specMeta := &configSpecMeta{
+				Spec:       spec.ComponentTemplateSpec,
+				ConfigSpec: spec.DeepCopy(),
+				ConfigMap:  &corev1.ConfigMap{},
+			}
+			err := util.GetResourceObjectFromGVR(types.ConfigmapGVR(), client.ObjectKey{
+				Namespace: w.namespace,
+				Name:      fmt.Sprintf("%s-%s", comp.Name, spec.Name),
+			}, w.cli, specMeta.ConfigMap)
+			if err != nil {
+				return nil, err
+			}
+			if spec.ConfigConstraintRef != "" {
+				cc := &appsv1alpha1.ConfigConstraint{}
+				err = util.GetResourceObjectFromGVR(types.ConfigConstraintGVR(), client.ObjectKey{
+					Namespace: "",
+					Name:      spec.ConfigConstraintRef,
+				}, w.cli, cc)
+				if err != nil {
+					return nil, err
+				}
+				specMeta.ConfigConstraint = cc
+			}
+
+			ret = append(ret, specMeta)
+		}
+		break
+	}
+	return ret, nil
+}
+
+func (w *configObjectsWrapper) genScriptsSpecsByCompDef(comp *appsv1alpha1.Component, compDefs []*appsv1alpha1.ComponentDefinition) ([]*configSpecMeta, error) {
+	var (
+		ret []*configSpecMeta
+	)
+	targetCompDef := comp.Labels[constant.ComponentDefinitionLabelKey]
+	for _, compDef := range compDefs {
+		if compDef.Name != targetCompDef {
+			continue
+		}
+		for _, spec := range compDef.Spec.Scripts {
+			specMeta := &configSpecMeta{
+				Spec:      spec,
+				ConfigMap: &corev1.ConfigMap{},
+			}
+			err := util.GetResourceObjectFromGVR(types.ConfigmapGVR(), client.ObjectKey{
+				Namespace: w.namespace,
+				Name:      fmt.Sprintf("%s-%s", comp.Name, spec.Name),
+			}, w.cli, specMeta.ConfigMap)
+			if err != nil {
+				return nil, err
+			}
+			ret = append(ret, specMeta)
+		}
+		break
 	}
 	return ret, nil
 }
