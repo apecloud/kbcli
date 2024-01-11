@@ -38,35 +38,50 @@ var (
 		kbcli alert delete-receiver my-receiver`)
 )
 
-type deleteReceiverOptions struct {
+type DeleteReceiverOptions struct {
 	baseOptions
-	names []string
+	Names []string
+}
+
+func NewDeleteReceiverOption(f cmdutil.Factory, streams genericiooptions.IOStreams) *DeleteReceiverOptions {
+	return &DeleteReceiverOptions{baseOptions: baseOptions{Factory: f, IOStreams: streams}}
 }
 
 func newDeleteReceiverCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := &deleteReceiverOptions{baseOptions: baseOptions{Factory: f, IOStreams: streams}}
+	o := NewDeleteReceiverOption(f, streams)
 	cmd := &cobra.Command{
 		Use:     "delete-receiver NAME",
 		Short:   "Delete alert receiver.",
 		Example: deleteReceiverExample,
 		Run: func(cmd *cobra.Command, args []string) {
-			util.CheckErr(o.complete())
-			util.CheckErr(o.validate(args))
-			util.CheckErr(o.run())
+			o.Names = args
+			util.CheckErr(o.Exec())
 		},
 	}
 	return cmd
 }
 
-func (o *deleteReceiverOptions) validate(args []string) error {
-	if len(args) == 0 {
-		return fmt.Errorf("receiver name is required")
+func (o *DeleteReceiverOptions) Exec() error {
+	if err := o.complete(); err != nil {
+		return err
 	}
-	o.names = args
+	if err := o.validate(); err != nil {
+		return err
+	}
+	if err := o.run(); err != nil {
+		return err
+	}
 	return nil
 }
 
-func (o *deleteReceiverOptions) run() error {
+func (o *DeleteReceiverOptions) validate() error {
+	if len(o.Names) == 0 {
+		return fmt.Errorf("receiver name is required")
+	}
+	return nil
+}
+
+func (o *DeleteReceiverOptions) run() error {
 	// delete receiver from alert manager config
 	if err := o.deleteReceiver(); err != nil {
 		return err
@@ -77,11 +92,11 @@ func (o *deleteReceiverOptions) run() error {
 		return err
 	}
 
-	fmt.Fprintf(o.Out, "Receiver %s deleted successfully\n", strings.Join(o.names, ","))
+	fmt.Fprintf(o.Out, "Receiver %s deleted successfully\n", strings.Join(o.Names, ","))
 	return nil
 }
 
-func (o *deleteReceiverOptions) deleteReceiver() error {
+func (o *DeleteReceiverOptions) deleteReceiver() error {
 	data, err := getConfigData(o.alertConfigMap, o.AlertConfigFileName)
 	if err != nil {
 		return err
@@ -101,7 +116,7 @@ func (o *deleteReceiverOptions) deleteReceiver() error {
 	for i, rec := range receivers {
 		var found bool
 		name := rec.(map[string]interface{})["name"].(string)
-		for _, n := range o.names {
+		for _, n := range o.Names {
 			if n == name {
 				found = true
 				break
@@ -120,7 +135,7 @@ func (o *deleteReceiverOptions) deleteReceiver() error {
 
 	// check if receiver exists
 	if len(receivers) == len(newReceivers) {
-		return fmt.Errorf("receiver %s not found", strings.Join(o.names, ","))
+		return fmt.Errorf("receiver %s not found", strings.Join(o.Names, ","))
 	}
 
 	data["receivers"] = newReceivers
@@ -128,7 +143,7 @@ func (o *deleteReceiverOptions) deleteReceiver() error {
 	return updateConfig(o.client, o.alertConfigMap, o.AlertConfigFileName, data)
 }
 
-func (o *deleteReceiverOptions) deleteWebhookReceivers() error {
+func (o *DeleteReceiverOptions) deleteWebhookReceivers() error {
 	data, err := getConfigData(o.webhookConfigMap, webhookAdaptorFileName)
 	if err != nil {
 		return err
@@ -138,7 +153,7 @@ func (o *deleteReceiverOptions) deleteWebhookReceivers() error {
 	for i, rec := range receivers {
 		var found bool
 		name := rec.(map[string]interface{})["name"].(string)
-		for _, n := range o.names {
+		for _, n := range o.Names {
 			if n == name {
 				found = true
 				break
