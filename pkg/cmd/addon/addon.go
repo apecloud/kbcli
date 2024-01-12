@@ -90,6 +90,15 @@ type addonCmdOpts struct {
 	complete    func(self *addonCmdOpts, cmd *cobra.Command, args []string) error
 }
 
+type addonListOpts struct {
+	*action.ListOptions
+
+	// status is used to filter addons by status
+	status []string
+	// listEngines is used to list engine addons
+	listEngines bool
+}
+
 // NewAddonCmd for addon functions
 func NewAddonCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
 	cmd := &cobra.Command{
@@ -111,7 +120,9 @@ func NewAddonCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.C
 }
 
 func newListCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := action.NewListOptions(f, streams, types.AddonGVR())
+	o := &addonListOpts{
+		ListOptions: action.NewListOptions(f, streams, types.AddonGVR()),
+	}
 	cmd := &cobra.Command{
 		Use:               "list",
 		Short:             "List addons.",
@@ -123,6 +134,8 @@ func newListCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Co
 		},
 	}
 	o.AddFlags(cmd, true)
+	cmd.Flags().StringArrayVar(&o.status, "status", []string{}, "Filter addons by status")
+	cmd.Flags().BoolVar(&o.listEngines, "engines", false, "List engine addons only")
 	return cmd
 }
 
@@ -786,7 +799,7 @@ func (o *addonCmdOpts) buildPatch(flags []*pflag.Flag) error {
 	return nil
 }
 
-func addonListRun(o *action.ListOptions) error {
+func addonListRun(o *addonListOpts) error {
 	// if format is JSON or YAML, use default printer to output the result.
 	if o.Format == printer.JSON || o.Format == printer.YAML {
 		_, err := o.Run()
@@ -852,6 +865,17 @@ func addonListRun(o *action.ListOptions) error {
 				provider = label[types.ProviderLabelKey]
 			}
 			version := getAddonVersion(addon)
+
+			// only show addons with matching status
+			if !matchStatus(addon, o.status) {
+				continue
+			}
+
+			// only show engine addons
+			if o.listEngines && !isEngineAddon(addon) {
+				continue
+			}
+
 			if o.Format == printer.Wide {
 				tbl.AddRow(addon.Name,
 					version,
@@ -944,6 +968,29 @@ func (o *addonCmdOpts) installAndUpgradePlugins() error {
 	}
 
 	return nil
+}
+
+func isEngineAddon(addon *extensionsv1alpha1.Addon) bool {
+	labels := addon.GetLabels()
+	if len(labels) == 0 {
+		return false
+	}
+	if _, ok := labels[types.AddonModelLabelKey]; ok {
+		return true
+	}
+	return false
+}
+
+func matchStatus(addon *extensionsv1alpha1.Addon, status []string) bool {
+	if len(status) == 0 {
+		return true
+	}
+	for _, s := range status {
+		if strings.EqualFold(string(addon.Status.Phase), s) {
+			return true
+		}
+	}
+	return false
 }
 
 func (o *addonCmdOpts) checkBeforeDisable() error {
