@@ -60,7 +60,8 @@ func CheckAddonUsedByCluster(dynamic dynamic.Interface, addons []string, in io.R
 	list, err := dynamic.Resource(types.ClusterGVR()).List(context.Background(), metav1.ListOptions{LabelSelector: labelSelecotor})
 	if err != nil {
 		return err
-	} else if len(list.Items) != 0 {
+	}
+	if list != nil && len(list.Items) != 0 {
 		msg := "There are addons are being used by K8s clusters:\n"
 		usedAddons := make(map[string]struct{})
 		for _, item := range list.Items {
@@ -72,7 +73,6 @@ func CheckAddonUsedByCluster(dynamic dynamic.Interface, addons []string, in io.R
 			labels := item.GetLabels()
 			usedAddons[labels[constant.ClusterDefLabelKey]] = struct{}{}
 		}
-
 		msg += fmt.Sprintf("In used addons [%s] to be deleted", printer.BoldRed(strings.Join(maps.Keys(usedAddons), ",")))
 		return prompt.Confirm(maps.Keys(usedAddons), in, msg, "")
 	}
