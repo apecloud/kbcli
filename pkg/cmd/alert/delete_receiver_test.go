@@ -50,15 +50,18 @@ var _ = Describe("alert", func() {
 	})
 
 	It("validate", func() {
-		o := &deleteReceiverOptions{baseOptions: baseOptions{IOStreams: s}}
-		Expect(o.validate([]string{})).Should(HaveOccurred())
-		Expect(o.validate([]string{"test"})).Should(Succeed())
+		o := &DeleteReceiverOptions{baseOptions: baseOptions{IOStreams: s}}
+		o.Names = []string{}
+		Expect(o.validate()).Should(HaveOccurred())
+		o.Names = []string{"test"}
+		Expect(o.validate()).Should(Succeed())
 	})
 
 	It("run", func() {
-		o := &deleteReceiverOptions{baseOptions: mockBaseOptions(s)}
+		o := &DeleteReceiverOptions{baseOptions: mockBaseOptions(s)}
 		o.client = testing.FakeClientSet(o.baseOptions.alertConfigMap, o.baseOptions.webhookConfigMap)
-		o.names = []string{"receiver-7pb52"}
+		o.Names = []string{"receiver-7pb52"}
+		o.AlertConfigFileName = alertConfigFileName
 		Expect(o.run()).Should(Succeed())
 	})
 })

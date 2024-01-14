@@ -54,7 +54,7 @@ func newListSMTPServerCmd(f cmdutil.Factory, streams genericiooptions.IOStreams)
 }
 
 func (o *listSMTPServerOptions) run() error {
-	data, err := getConfigData(o.alertConfigMap, alertConfigFileName)
+	data, err := getConfigData(o.alertConfigMap, o.AlertConfigFileName)
 	if err != nil {
 		return err
 	}

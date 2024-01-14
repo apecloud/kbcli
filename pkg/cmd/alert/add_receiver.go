@@ -77,10 +77,13 @@ var (
 
 type baseOptions struct {
 	genericiooptions.IOStreams
-	alertConfigMap   *corev1.ConfigMap
-	webhookConfigMap *corev1.ConfigMap
-	client           kubernetes.Interface
-	Factory          cmdutil.Factory
+	alertConfigMap      *corev1.ConfigMap
+	webhookConfigMap    *corev1.ConfigMap
+	client              kubernetes.Interface
+	Factory             cmdutil.Factory
+	AlertConfigMapKey   apitypes.NamespacedName
+	AlertConfigFileName string
+	NoAdapter           bool
 }
 
 type AddReceiverOptions struct {
@@ -165,8 +168,17 @@ func (o *baseOptions) complete() error {
 		return err
 	}
 
+	if len(o.AlertConfigFileName) == 0 {
+		o.AlertConfigFileName = alertConfigFileName
+	}
+	if len(o.AlertConfigMapKey.Name) == 0 {
+		o.AlertConfigMapKey.Name = alertConfigmapName
+	}
+	if len(o.AlertConfigMapKey.Namespace) == 0 {
+		o.AlertConfigMapKey.Namespace = namespace
+	}
 	// get alertmanager configmap
-	o.alertConfigMap, err = o.client.CoreV1().ConfigMaps(namespace).Get(ctx, alertConfigmapName, metav1.GetOptions{})
+	o.alertConfigMap, err = o.client.CoreV1().ConfigMaps(o.AlertConfigMapKey.Namespace).Get(ctx, o.AlertConfigMapKey.Name, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -228,7 +240,7 @@ func (o *AddReceiverOptions) checkEmails() error {
 	}
 
 	errMsg := "SMTP %sis not configured, if you want to add email receiver, please use `kbcli alert config-smtpserver` configure it first"
-	data, err := getConfigData(o.alertConfigMap, alertConfigFileName)
+	data, err := getConfigData(o.alertConfigMap, o.AlertConfigFileName)
 	if err != nil {
 		return err
 	}
@@ -352,7 +364,7 @@ func (o *AddReceiverOptions) buildRoute() {
 
 // addReceiver adds receiver to alertmanager config
 func (o *AddReceiverOptions) addReceiver() error {
-	data, err := getConfigData(o.alertConfigMap, alertConfigFileName)
+	data, err := getConfigData(o.alertConfigMap, o.AlertConfigFileName)
 	if err != nil {
 		return err
 	}
@@ -372,7 +384,7 @@ func (o *AddReceiverOptions) addReceiver() error {
 	data["route"].(map[string]interface{})["routes"] = routes
 
 	// update alertmanager configmap
-	return updateConfig(o.client, o.alertConfigMap, alertConfigFileName, data)
+	return updateConfig(o.client, o.alertConfigMap, o.AlertConfigFileName, data)
 }
 
 func (o *AddReceiverOptions) addWebhookReceivers() error {
@@ -412,11 +424,12 @@ func (o *AddReceiverOptions) buildWebhook() ([]*webhookConfig, error) {
 				if valid, err := urlIsValid(v); !valid {
 					return nil, fmt.Errorf("invalid webhook url: %s, %v", v, err)
 				}
-				w.URL = getWebhookAdaptorURL(o.Name, o.webhookConfigMap.Namespace)
-				webhookType := getWebhookType(v)
-				if webhookType == unknownWebhookType {
-					return nil, fmt.Errorf("invalid webhook url: %s, failed to prase the webhook type", v)
+				if o.NoAdapter {
+					w.URL = v
+				} else {
+					w.URL = getWebhookAdaptorURL(o.Name, o.webhookConfigMap.Namespace)
 				}
+				webhookType := getWebhookType(v)
 				waReceiver.Type = string(webhookType)
 				waReceiver.Params.URL = v
 			case webhookToken:
