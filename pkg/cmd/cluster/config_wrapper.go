@@ -50,6 +50,10 @@ type configWrapper struct {
 	clusterObj    *appsv1alpha1.Cluster
 	clusterDefObj *appsv1alpha1.ClusterDefinition
 	clusterVerObj *appsv1alpha1.ClusterVersion
+
+	// new API
+	comps    []*appsv1alpha1.Component
+	compDefs []*appsv1alpha1.ComponentDefinition
 }
 
 func (w *configWrapper) ConfigTemplateSpec() *appsv1alpha1.ComponentConfigSpec {
@@ -132,18 +136,28 @@ func (w *configWrapper) fillConfigSpec() error {
 		}
 		return nil
 	}
-
-	var vComponents []appsv1alpha1.ClusterComponentVersion
-	var cComponents = w.clusterObj.Spec.ComponentSpecs
-	var dComponents = w.clusterDefObj.Spec.ComponentDefs
+	var (
+		vComponents []appsv1alpha1.ClusterComponentVersion
+		cComponents = w.clusterObj.Spec.ComponentSpecs
+		dComponents = w.clusterDefObj.Spec.ComponentDefs
+		configSpecs []appsv1alpha1.ComponentConfigSpec
+		err         error
+	)
 
 	if w.clusterVerObj != nil {
 		vComponents = w.clusterVerObj.Spec.ComponentVersions
 	}
-
-	configSpecs, err := util.GetConfigTemplateListWithResource(cComponents, dComponents, vComponents, w.componentName, w.configSpecName == "")
-	if err != nil {
-		return err
+	// use 0.8 api
+	if len(w.compDefs) != 0 {
+		configSpecs, err = cluster.GetConfigTemplateListByCompDefs(cComponents, w.compDefs, w.componentName, w.configSpecName == "")
+		if err != nil {
+			return err
+		}
+	} else {
+		configSpecs, err = util.GetConfigTemplateListWithResource(cComponents, dComponents, vComponents, w.componentName, w.configSpecName == "")
+		if err != nil {
+			return err
+		}
 	}
 	if len(configSpecs) == 0 {
 		return makeNotFoundTemplateErr(w.clusterName, w.componentName)
@@ -220,6 +234,8 @@ func newConfigWrapper(baseOptions action.CreateOptions, clusterName, componentNa
 		err           error
 		clusterObj    *appsv1alpha1.Cluster
 		clusterDefObj *appsv1alpha1.ClusterDefinition
+		compDefs      = make([]*appsv1alpha1.ComponentDefinition, 0)
+		comps         = make([]*appsv1alpha1.Component, 0)
 	)
 
 	if clusterObj, err = cluster.GetClusterByName(baseOptions.Dynamic, clusterName, baseOptions.Namespace); err != nil {
@@ -228,11 +244,31 @@ func newConfigWrapper(baseOptions action.CreateOptions, clusterName, componentNa
 	if clusterDefObj, err = cluster.GetClusterDefByName(baseOptions.Dynamic, clusterObj.Spec.ClusterDefRef); err != nil {
 		return nil, err
 	}
+	// 0.8 new api
+
+	for _, spec := range clusterObj.Spec.ComponentSpecs {
+		if len(spec.ComponentDef) == 0 {
+			continue
+		}
+		compDef, err := cluster.GetComponentDefinitionByName(baseOptions.Dynamic, spec.ComponentDef)
+		if err != nil {
+			return nil, err
+		}
+		compDefs = append(compDefs, compDef)
+
+		comp, err := cluster.GetComponetByName(baseOptions.Dynamic, cluster.GetComponentNameByClusterName(clusterName, spec.Name), baseOptions.Namespace)
+		if err != nil {
+			return nil, err
+		}
+		comps = append(comps, comp)
+	}
 
 	w := &configWrapper{
 		CreateOptions: baseOptions,
 		clusterObj:    clusterObj,
 		clusterDefObj: clusterDefObj,
+		compDefs:      compDefs,
+		comps:         comps,
 		clusterName:   clusterName,
 
 		componentName:  componentName,
