@@ -26,10 +26,11 @@ import (
 	"k8s.io/client-go/dynamic"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/apecloud/kbcli/pkg/types"
-	"github.com/apecloud/kbcli/pkg/util"
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	"github.com/apecloud/kubeblocks/pkg/configuration/core"
+
+	"github.com/apecloud/kbcli/pkg/types"
+	"github.com/apecloud/kbcli/pkg/util"
 )
 
 type configSpecsType []*configSpecMeta
