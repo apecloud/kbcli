@@ -44,7 +44,8 @@ var addonUninstallExample = templates.Examples(`
 type uninstallOption struct {
 	*baseOption
 	// addon names
-	names []string
+	names       []string
+	autoApprove bool
 }
 
 func newUninstallOption(f cmdutil.Factory, streams genericiooptions.IOStreams) *uninstallOption {
@@ -67,9 +68,11 @@ func newUninstallCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cob
 		Run: func(cmd *cobra.Command, args []string) {
 			o.names = args
 			util.CheckErr(o.baseOption.complete())
+			util.CheckErr(o.checkBeforeUninstall())
 			util.CheckErr(o.Run())
 		},
 	}
+	cmd.Flags().BoolVar(&o.autoApprove, "auto-approve", false, "Skip interactive approval before uninstalling addon")
 	return cmd
 }
 
@@ -82,4 +85,11 @@ func (o *uninstallOption) Run() error {
 		fmt.Fprintf(o.Out, "addon %s uninstalled successfully\n", name)
 	}
 	return nil
+}
+
+func (o *uninstallOption) checkBeforeUninstall() error {
+	if o.autoApprove {
+		return nil
+	}
+	return CheckAddonUsedByCluster(o.Dynamic, o.names, o.In)
 }
