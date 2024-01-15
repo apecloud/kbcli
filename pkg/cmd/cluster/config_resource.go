@@ -350,7 +350,7 @@ func (w *configObjectsWrapper) genConfigSpecsByCompDef(comp *appsv1alpha1.Compon
 		ret []*configSpecMeta
 	)
 	if comp == nil {
-		return nil, fmt.Errorf("failed to get the cluster component CR in K8s")
+		return nil, fmt.Errorf("the component is nil and fail to get the corresponding configs")
 	}
 	for _, compDef := range compDefs {
 		if compDef.Name != comp.Spec.CompDef {
@@ -393,7 +393,7 @@ func (w *configObjectsWrapper) genScriptsSpecsByCompDef(comp *appsv1alpha1.Compo
 		ret []*configSpecMeta
 	)
 	if comp == nil {
-		return nil, fmt.Errorf("failed to get the cluster component CR in K8s")
+		return nil, fmt.Errorf("the component is nil and fail to get the corresponding scripts")
 	}
 	for _, compDef := range compDefs {
 		if compDef.Name != comp.Spec.CompDef {
