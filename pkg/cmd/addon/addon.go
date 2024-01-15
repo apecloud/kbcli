@@ -86,7 +86,8 @@ type addonCmdOpts struct {
 	*action.PatchOptions
 	addonEnableFlags *addonEnableFlags
 
-	complete func(self *addonCmdOpts, cmd *cobra.Command, args []string) error
+	autoApprove bool
+	complete    func(self *addonCmdOpts, cmd *cobra.Command, args []string) error
 }
 
 type addonListOpts struct {
@@ -270,11 +271,13 @@ func newDisableCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 		Run: func(cmd *cobra.Command, args []string) {
 			util.CheckErr(o.init(args))
 			util.CheckErr(o.fetchAddonObj())
+			util.CheckErr(o.checkBeforeDisable())
 			util.CheckErr(o.complete(o, cmd, args))
 			util.CheckErr(o.CmdComplete(cmd))
 			util.CheckErr(o.Run())
 		},
 	}
+	cmd.Flags().BoolVar(&o.autoApprove, "auto-approve", false, "Skip interactive approval before disabling addon")
 	o.PatchOptions.AddFlags(cmd)
 	return cmd
 }
@@ -988,4 +991,11 @@ func matchStatus(addon *extensionsv1alpha1.Addon, status []string) bool {
 		}
 	}
 	return false
+}
+
+func (o *addonCmdOpts) checkBeforeDisable() error {
+	if o.autoApprove {
+		return nil
+	}
+	return CheckAddonUsedByCluster(o.dynamic, o.Names, o.In)
 }
