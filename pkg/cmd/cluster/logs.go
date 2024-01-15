@@ -148,7 +148,7 @@ func (o *LogsOptions) complete(args []string) error {
 	// podName not set, find the default pod of cluster
 	if len(o.PodName) == 0 {
 		infos := cluster.GetSimpleInstanceInfos(o.Dynamic, o.clusterName, o.Namespace)
-		if len(infos) == 0 || infos[0].Name == constant.ComponentStatusDefaultPodName {
+		if len(infos) == 0 || infos[0].Name == ComponentStatusDefaultPodName {
 			return fmt.Errorf("failed to find the default instance, please check cluster status")
 		}
 		// first element is the default instance to connect
