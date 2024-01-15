@@ -433,8 +433,8 @@ func mockBackupInfo(dynamic dynamic.Interface, backupName, clusterName string, t
 			"metadata": map[string]any{
 				"name": backupName,
 				"annotations": map[string]any{
-					constant.ClusterSnapshotAnnotationKey: clusterString,
-					dptypes.ConnectionPasswordKey:         "test-password",
+					constant.ClusterSnapshotAnnotationKey:   clusterString,
+					dptypes.ConnectionPasswordAnnotationKey: "test-password",
 				},
 				"labels": map[string]any{
 					constant.AppInstanceLabelKey:    clusterName,
