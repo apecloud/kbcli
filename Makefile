@@ -201,11 +201,7 @@ create-kbcli-embed-charts-dir:
 build-single-kbcli-embed-chart.%: chart=$(word 2,$(subst ., ,$@))
 build-single-kbcli-embed-chart.%:
 	$(HELM) dependency update addons/addons/$(chart) --skip-refresh
-ifeq ($(VERSION), latest)
 	$(HELM) package addons/addons/$(chart)
-else
-	$(HELM) package addons/addons/$(chart) --version $(VERSION)
-endif
 	- bash -c "diff <($(HELM) template $(chart)-*.tgz) <($(HELM) template pkg/cluster/charts/$(chart).tgz)" > chart.diff
 	@if [ -s chart.diff ]; then \
  	  mv $(chart)-*.tgz pkg/cluster/charts/$(chart).tgz; \
@@ -253,7 +249,7 @@ install-docker-buildx: ## Create `docker buildx` builder.
 	fi
 
 .PHONY: golangci
-golangci: GOLANGCILINT_VERSION = v1.54.2
+golangci: GOLANGCILINT_VERSION = v1.55.2
 golangci: ## Download golangci-lint locally if necessary.
 ifneq ($(shell which golangci-lint),)
 	@echo golangci-lint is already installed
