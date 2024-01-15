@@ -30,12 +30,15 @@ import (
 	"k8s.io/klog/v2"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 
-	"github.com/apecloud/kubeblocks/pkg/constant"
 	lorryutil "github.com/apecloud/kubeblocks/pkg/lorry/util"
 
 	"github.com/apecloud/kbcli/pkg/action"
 	clusterutil "github.com/apecloud/kbcli/pkg/cluster"
 	"github.com/apecloud/kbcli/pkg/printer"
+)
+
+const (
+	ComponentStatusDefaultPodName = "Unknown"
 )
 
 type AccountBaseOptions struct {
@@ -126,7 +129,7 @@ func (o *AccountBaseOptions) Complete() error {
 
 		// podName not set, find the default pod of cluster
 		infos := clusterutil.GetSimpleInstanceInfosForComponent(o.Dynamic, o.ClusterName, o.ComponentName, o.Namespace)
-		if len(infos) == 0 || infos[0].Name == constant.ComponentStatusDefaultPodName {
+		if len(infos) == 0 || infos[0].Name == ComponentStatusDefaultPodName {
 			return fmt.Errorf("failed to find the default instance, please check cluster status")
 		}
 		// first element is the default instance to connect
