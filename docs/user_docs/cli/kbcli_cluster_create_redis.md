@@ -36,7 +36,7 @@ kbcli cluster create redis NAME [flags]
       --sentinel.enabled             Whether have sentinel component, default is true (default true)
       --sentinel.memory float        Sentinel component memory, the unit is Gi. Value range [0.1, 4]. (default 0.2)
       --sentinel.replicas float      Sentinel component replicas Value range [1, 5]. (default 3)
-      --sentinel.storage float       Sentinel component storage size, the unit is Gi. Value range [1, 10]. (default 5)
+      --sentinel.storage float       Sentinel component storage size, the unit is Gi. Value range [1, 1024]. (default 20)
       --storage float                Storage size, the unit is Gi. Value range [1, 10000]. (default 20)
       --tenancy string               The tenancy of cluster. Legal values [SharedNode, DedicatedNode]. (default "SharedNode")
       --termination-policy string    The termination policy of cluster. Legal values [DoNotTerminate, Halt, Delete, WipeOut]. (default "Delete")
