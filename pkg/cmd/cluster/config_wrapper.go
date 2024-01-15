@@ -51,7 +51,7 @@ type configWrapper struct {
 	clusterDefObj *appsv1alpha1.ClusterDefinition
 	clusterVerObj *appsv1alpha1.ClusterVersion
 
-	// new API
+	// 0.8 KubeBlocks API
 	comps    []*appsv1alpha1.Component
 	compDefs []*appsv1alpha1.ComponentDefinition
 }
