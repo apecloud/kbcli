@@ -30,13 +30,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
 
-	"github.com/apecloud/kbcli/pkg/printer"
-	"github.com/apecloud/kbcli/pkg/types"
-	"github.com/apecloud/kbcli/pkg/util"
 	"github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	extensionsv1alpha1 "github.com/apecloud/kubeblocks/apis/extensions/v1alpha1"
 	"github.com/apecloud/kubeblocks/pkg/constant"
 
+	"github.com/apecloud/kbcli/pkg/printer"
+	"github.com/apecloud/kbcli/pkg/types"
+	"github.com/apecloud/kbcli/pkg/util"
 	"github.com/apecloud/kbcli/pkg/util/prompt"
 )
 
@@ -62,7 +62,7 @@ func CheckAddonUsedByCluster(dynamic dynamic.Interface, addons []string, in io.R
 		return err
 	}
 	if list != nil && len(list.Items) != 0 {
-		msg := "There are addons are being used by K8s clusters:\n"
+		msg := "There are addons are being used by clusters:\n"
 		usedAddons := make(map[string]struct{})
 		for _, item := range list.Items {
 			var cluster v1alpha1.Cluster
