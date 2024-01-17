@@ -41,7 +41,7 @@ import (
 var (
 	sysbenchDriverMap = map[string]string{
 		"mysql":      "mysql",
-		"postgresql": "pgsql",
+		"postgresql": "postgresql",
 	}
 	sysbenchSupportedDrivers = []string{"mysql", "pgsql"}
 )

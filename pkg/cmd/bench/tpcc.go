@@ -41,7 +41,7 @@ import (
 var (
 	tpccDriverMap = map[string]string{
 		"mysql":      "mysql",
-		"postgresql": "postgres",
+		"postgresql": "postgresql",
 	}
 	tpccSupportedDrivers = []string{"mysql", "postgres"}
 )

@@ -211,6 +211,9 @@ func (o *RedisBenchOptions) Run() error {
 	if o.Tests != "" {
 		redisBench.Spec.Tests = o.Tests
 	}
+	if o.User != "" {
+		redisBench.Spec.Target.User = o.User
+	}
 	if o.Password != "" {
 		redisBench.Spec.Target.Password = o.Password
 	}
