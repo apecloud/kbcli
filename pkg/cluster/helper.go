@@ -358,7 +358,11 @@ func FillCompInfoByName(ctx context.Context, dynamic dynamic.Interface, namespac
 	}
 	// find component def by reference
 	for _, compDef := range clusterDef.Spec.ComponentDefs {
-		if compDef.Name == compInfo.Component.ComponentDefRef {
+		compRefName := compInfo.Component.ComponentDefRef
+		if len(compRefName) == 0 {
+			compRefName = compInfo.Component.ComponentDef
+		}
+		if compDef.Name == compRefName {
 			compInfo.ComponentDef = &compDef
 			break
 		}
