@@ -39,4 +39,5 @@ jobs:
     uses: ./.github/workflows/release-tag.yaml
     with:
       VERSION: "${{ needs.get-version.outputs.release-version }}"
+      RELEASE_VERSION: "${{ inputs.release_version }}"
     secrets: inherit
