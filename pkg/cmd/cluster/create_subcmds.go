@@ -42,15 +42,15 @@ type objectInfo struct {
 }
 
 type CreateSubCmdsOptions struct {
-	// clusterType is the type of the cluster to create.
-	clusterType cluster.ClusterType
+	// ClusterType is the type of the cluster to create.
+	ClusterType cluster.ClusterType
 
-	// values is used to render the cluster helm chartInfo.
+	// values is used to render the cluster helm ChartInfo.
 	Values map[string]interface{}
 
-	// chartInfo is the cluster chart information, used to render the command flag
+	// ChartInfo is the cluster chart information, used to render the command flag
 	// and validate the values.
-	chartInfo *cluster.ChartInfo
+	ChartInfo *cluster.ChartInfo
 
 	*action.CreateOptions
 }
@@ -59,10 +59,10 @@ func NewSubCmdsOptions(createOptions *action.CreateOptions, t cluster.ClusterTyp
 	var err error
 	o := &CreateSubCmdsOptions{
 		CreateOptions: createOptions,
-		clusterType:   t,
+		ClusterType:   t,
 	}
 
-	if o.chartInfo, err = cluster.BuildChartInfo(t); err != nil {
+	if o.ChartInfo, err = cluster.BuildChartInfo(t); err != nil {
 		return nil, err
 	}
 	return o, nil
@@ -92,11 +92,11 @@ func buildCreateSubCmds(createOptions *action.CreateOptions) []*cobra.Command {
 			},
 		}
 
-		if o.chartInfo.Alias != "" {
-			cmd.Aliases = []string{o.chartInfo.Alias}
+		if o.ChartInfo.Alias != "" {
+			cmd.Aliases = []string{o.ChartInfo.Alias}
 		}
 
-		util.CheckErr(addCreateFlags(cmd, o.Factory, o.chartInfo))
+		util.CheckErr(addCreateFlags(cmd, o.Factory, o.ChartInfo))
 		cmds = append(cmds, cmd)
 	}
 	return cmds
@@ -134,20 +134,20 @@ func (o *CreateSubCmdsOptions) complete(cmd *cobra.Command) error {
 		return fmt.Errorf("cannot find spec in cluster object")
 	}
 	if compSpec, ok := spec["componentSpecs"].([]interface{}); ok {
-		if o.chartInfo.ComponentDef == nil {
-			o.chartInfo.ComponentDef = []string{}
+		if o.ChartInfo.ComponentDef == nil {
+			o.ChartInfo.ComponentDef = []string{}
 		}
 		for i := range compSpec {
 			comp := compSpec[i].(map[string]interface{})
 			if compDef, ok := comp["componentDef"]; ok {
-				o.chartInfo.ComponentDef = append(o.chartInfo.ComponentDef, compDef.(string))
+				o.ChartInfo.ComponentDef = append(o.ChartInfo.ComponentDef, compDef.(string))
 			}
 		}
 	}
 	if clusterDef, ok := spec["clusterDefinitionRef"].(string); ok {
-		o.chartInfo.ClusterDef = clusterDef
+		o.ChartInfo.ClusterDef = clusterDef
 	}
-	if o.chartInfo.ClusterDef == "" && len(o.chartInfo.ComponentDef) == 0 {
+	if o.ChartInfo.ClusterDef == "" && len(o.ChartInfo.ComponentDef) == 0 {
 		return fmt.Errorf("cannot find clusterDefinitionRef in cluster spec or componentDef in componentSpecs")
 	}
 
@@ -158,7 +158,7 @@ func (o *CreateSubCmdsOptions) validate() error {
 	if err := o.validateVersion(); err != nil {
 		return err
 	}
-	return cluster.ValidateValues(o.chartInfo, o.Values)
+	return cluster.ValidateValues(o.ChartInfo, o.Values)
 }
 
 func (o *CreateSubCmdsOptions) Run() error {
@@ -174,7 +174,7 @@ func (o *CreateSubCmdsOptions) Run() error {
 				return obj.obj, nil
 			}
 		}
-		return nil, fmt.Errorf("failed to find cluster object from manifests rendered from %s chart", o.clusterType)
+		return nil, fmt.Errorf("failed to find cluster object from manifests rendered from %s chart", o.ClusterType)
 	}
 
 	// only edits the cluster object, other dependency objects are created directly
@@ -244,19 +244,19 @@ func (o *CreateSubCmdsOptions) validateVersion() error {
 	var err error
 	cv, ok := o.Values[cluster.VersionSchemaProp.String()].(string)
 	if ok && cv != "" {
-		if err = cluster.ValidateClusterVersion(o.Dynamic, o.chartInfo.ClusterDef, cv); err == nil {
+		if err = cluster.ValidateClusterVersion(o.Dynamic, o.ChartInfo.ClusterDef, cv); err == nil {
 			return nil
 		}
-		if err = cluster.ValidateClusterVersionByComponentDef(o.Dynamic, o.chartInfo.ComponentDef, cv); err == nil {
+		if err = cluster.ValidateClusterVersionByComponentDef(o.Dynamic, o.ChartInfo.ComponentDef, cv); err == nil {
 			return nil
 		}
 		return fmt.Errorf("cluster version \"%s\" does not exist", cv)
 	}
-	if o.chartInfo.ClusterDef != "" {
-		cv, _ = cluster.GetDefaultVersion(o.Dynamic, o.chartInfo.ClusterDef)
+	if o.ChartInfo.ClusterDef != "" {
+		cv, _ = cluster.GetDefaultVersion(o.Dynamic, o.ChartInfo.ClusterDef)
 	}
-	if len(o.chartInfo.ComponentDef) != 0 {
-		cv, _ = cluster.GetDefaultVersionByCompDefs(o.Dynamic, o.chartInfo.ComponentDef)
+	if len(o.ChartInfo.ComponentDef) != 0 {
+		cv, _ = cluster.GetDefaultVersionByCompDefs(o.Dynamic, o.ChartInfo.ComponentDef)
 	}
 	if cv == "" {
 		return fmt.Errorf(": failed to find default cluster version referencing cluster definition or component definition")
@@ -281,7 +281,7 @@ func (o *CreateSubCmdsOptions) validateVersion() error {
 // getObjectsInfo returns all objects in helm charts along with their GVK information.
 func (o *CreateSubCmdsOptions) getObjectsInfo() ([]*objectInfo, error) {
 	// move values that belong to sub chart to sub map
-	values := buildHelmValues(o.chartInfo, o.Values)
+	values := buildHelmValues(o.ChartInfo, o.Values)
 
 	// get Kubernetes version
 	kubeVersion, err := util.GetK8sVersion(o.Client.Discovery())
@@ -290,7 +290,7 @@ func (o *CreateSubCmdsOptions) getObjectsInfo() ([]*objectInfo, error) {
 	}
 
 	// get cluster manifests
-	manifests, err := cluster.GetManifests(o.chartInfo.Chart, o.Namespace, o.Name, kubeVersion, values)
+	manifests, err := cluster.GetManifests(o.ChartInfo.Chart, o.Namespace, o.Name, kubeVersion, values)
 	if err != nil {
 		return nil, err
 	}
@@ -305,5 +305,5 @@ func (o *CreateSubCmdsOptions) getClusterObj(objs []*objectInfo) (*unstructured.
 			return obj.obj, nil
 		}
 	}
-	return nil, fmt.Errorf("failed to find cluster object from manifests rendered from %s chart", o.clusterType)
+	return nil, fmt.Errorf("failed to find cluster object from manifests rendered from %s chart", o.ClusterType)
 }

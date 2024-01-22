@@ -214,7 +214,7 @@ func copyFile(src, dest string) error {
 	return err
 }
 
-// buildCreateSubCmdsExamples builds the creation examples for the specified clusterType type.
+// buildCreateSubCmdsExamples builds the creation examples for the specified ClusterType type.
 func buildRegisterSuccessExamples(t cluster.ClusterType) string {
 	exampleTpl := `
 
