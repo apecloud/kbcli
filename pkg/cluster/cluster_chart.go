@@ -45,7 +45,6 @@ type SchemaPropName string
 // the common schema property name
 const (
 	VersionSchemaProp SchemaPropName = "version"
-	RBACEnabledProp   SchemaPropName = "rbacEnabled"
 )
 
 type ChartInfo struct {
@@ -81,7 +80,7 @@ func BuildChartInfo(t ClusterType) (*ChartInfo, error) {
 	}
 
 	if c.Chart.Schema != nil {
-		if err = c.buildClusterSchema(); err != nil {
+		if err = c.BuildClusterSchema(); err != nil {
 			return nil, err
 		}
 	}
@@ -125,8 +124,8 @@ func GetManifests(c *chart.Chart, namespace, name, kubeVersion string, values ma
 	return releaseutil.SplitManifests(rel.Manifest), nil
 }
 
-// buildClusterSchema build the schema for the given cluster chart.
-func (c *ChartInfo) buildClusterSchema() error {
+// BuildClusterSchema build the schema for the given cluster chart.
+func (c *ChartInfo) BuildClusterSchema() error {
 	var err error
 	cht := c.Chart
 	buildSchema := func(bs []byte) (*spec.Schema, error) {

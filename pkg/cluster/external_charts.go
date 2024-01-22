@@ -186,7 +186,7 @@ func (h *TypeInstance) PreCheck() error {
 		}
 		chartInfo.Chart = c
 	}
-	if err := chartInfo.buildClusterSchema(); err != nil {
+	if err := chartInfo.BuildClusterSchema(); err != nil {
 		return err
 	}
 	// pre-check build sub-command flags
