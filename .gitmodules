@@ -1,4 +1,0 @@
-[submodule "addons"]
-	path = addons
-	url = https://github.com/apecloud/kubeblocks-addons.git
-	branch = release-0.8
