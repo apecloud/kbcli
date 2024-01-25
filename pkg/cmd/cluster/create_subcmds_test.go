@@ -95,7 +95,7 @@ var _ = Describe("create cluster by cluster type", func() {
 		o, err := NewSubCmdsOptions(createOptions, clusterType)
 		Expect(err).Should(Succeed())
 		Expect(o).ShouldNot(BeNil())
-		Expect(o.chartInfo).ShouldNot(BeNil())
+		Expect(o.ChartInfo).ShouldNot(BeNil())
 
 		By("complete")
 		var mysqlCmd *cobra.Command
@@ -114,10 +114,10 @@ var _ = Describe("create cluster by cluster type", func() {
 		Expect(o.complete(mysqlCmd)).Should(Succeed())
 		Expect(o.Name).ShouldNot(BeEmpty())
 		Expect(o.Values).ShouldNot(BeNil())
-		Expect(o.chartInfo.ClusterDef).Should(Equal(apeCloudMysql))
+		Expect(o.ChartInfo.ClusterDef).Should(Equal(apeCloudMysql))
 
 		By("validate")
-		o.chartInfo.ClusterDef = testing.ClusterDefName
+		o.ChartInfo.ClusterDef = testing.ClusterDefName
 		o.Dynamic = testing.FakeDynamicClient(testing.FakeClusterDef(), testing.FakeClusterVersion())
 		Expect(o.validate()).Should(Succeed())
 		Expect(o.Values[cluster.VersionSchemaProp.String()]).Should(Equal(testing.ClusterVersionName))

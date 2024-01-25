@@ -130,7 +130,7 @@ func registerFlagCompFunc(cmd *cobra.Command, f cmdutil.Factory, c *cluster.Char
 		})
 }
 
-// buildCreateSubCmdsExamples builds the creation examples for the specified clusterType type.
+// buildCreateSubCmdsExamples builds the creation examples for the specified ClusterType type.
 func buildCreateSubCmdsExamples(t cluster.ClusterType) string {
 	exampleTpl := `
 	# Create a cluster with the default values
