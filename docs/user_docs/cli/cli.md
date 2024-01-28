@@ -64,15 +64,6 @@ builder command.
 * [kbcli builder template](kbcli_builder_template.md)	 - tpl - a developer tool integrated with KubeBlocks that can help developers quickly generate rendered configurations or scripts based on Helm templates, and discover errors in the template before creating the database cluster.
 
 
-## [class](kbcli_class.md)
-
-Manage classes
-
-* [kbcli class create](kbcli_class_create.md)	 - Create a class
-* [kbcli class list](kbcli_class_list.md)	 - List classes
-* [kbcli class template](kbcli_class_template.md)	 - Generate class definition template
-
-
 ## [cluster](kbcli_cluster.md)
 
 Cluster command.
