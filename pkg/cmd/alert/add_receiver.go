@@ -89,15 +89,16 @@ type baseOptions struct {
 type AddReceiverOptions struct {
 	baseOptions
 
-	Emails     []string
-	Webhooks   []string
-	Slacks     []string
-	Clusters   []string
-	Severities []string
-	Types      []string
-	Rules      []string
-	Name       string
-	InputName  []string
+	Emails       []string
+	Webhooks     []string
+	Slacks       []string
+	Clusters     []string
+	Severities   []string
+	Types        []string
+	Rules        []string
+	Name         string
+	InputName    []string
+	SendResolved bool
 
 	receiver                *receiver
 	route                   *route
@@ -414,7 +415,7 @@ func (o *AddReceiverOptions) buildWebhook() ([]*webhookConfig, error) {
 		}
 		w := webhookConfig{
 			MaxAlerts:    10,
-			SendResolved: false,
+			SendResolved: o.SendResolved,
 		}
 		waReceiver := webhookAdaptorReceiver{Name: o.Name}
 		for k, v := range m {
