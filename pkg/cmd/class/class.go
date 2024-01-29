@@ -27,8 +27,9 @@ import (
 
 func NewClassCommand(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "class",
-		Short: "Manage classes",
+		Use:        "class",
+		Short:      "Manage classes",
+		Deprecated: "This command is deprecated.",
 	}
 
 	cmd.AddCommand(NewCreateCommand(f, streams))
