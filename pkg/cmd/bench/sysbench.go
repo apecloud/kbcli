@@ -43,7 +43,7 @@ var (
 		"mysql":      "mysql",
 		"postgresql": "postgresql",
 	}
-	sysbenchSupportedDrivers = []string{"mysql", "pgsql"}
+	sysbenchSupportedDrivers = []string{"mysql", "postgresql"}
 )
 
 var sysbenchExample = templates.Examples(`

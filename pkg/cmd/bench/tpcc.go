@@ -43,7 +43,7 @@ var (
 		"mysql":      "mysql",
 		"postgresql": "postgresql",
 	}
-	tpccSupportedDrivers = []string{"mysql", "postgres"}
+	tpccSupportedDrivers = []string{"mysql", "postgresql"}
 )
 
 var tpccExample = templates.Examples(`
