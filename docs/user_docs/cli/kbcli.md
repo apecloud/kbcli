@@ -66,7 +66,6 @@ kbcli [flags]
 * [kbcli dataprotection](kbcli_dataprotection.md)	 - Data protection command.
 * [kbcli environment](kbcli_environment.md)	 - kbcli environment allows you to manage cloud environment. This command is currently only applicable to cloud, and currently does not support switching the environment of the local k8s cluster.
 * [kbcli fault](kbcli_fault.md)	 - Inject faults to pod.
-* [kbcli infra](kbcli_infra.md)	 - infra command
 * [kbcli kubeblocks](kbcli_kubeblocks.md)	 - KubeBlocks operation commands.
 * [kbcli login](kbcli_login.md)	 - Authenticate with the KubeBlocks Cloud
 * [kbcli logout](kbcli_logout.md)	 - Log out of the KubeBlocks Cloud
