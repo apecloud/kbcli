@@ -51,7 +51,6 @@ import (
 	"github.com/apecloud/kbcli/pkg/cmd/dashboard"
 	"github.com/apecloud/kbcli/pkg/cmd/dataprotection"
 	"github.com/apecloud/kbcli/pkg/cmd/fault"
-	infras "github.com/apecloud/kbcli/pkg/cmd/infrastructure"
 	"github.com/apecloud/kbcli/pkg/cmd/kubeblocks"
 	"github.com/apecloud/kbcli/pkg/cmd/migration"
 	"github.com/apecloud/kbcli/pkg/cmd/options"
@@ -211,7 +210,6 @@ A Command Line Interface for KubeBlocks`,
 		fault.NewFaultCmd(f, ioStreams),
 		builder.NewBuilderCmd(f, ioStreams),
 		report.NewReportCmd(f, ioStreams),
-		infras.NewInfraCmd(ioStreams),
 		backuprepo.NewBackupRepoCmd(f, ioStreams),
 		dataprotection.NewDataProtectionCmd(f, ioStreams),
 	)
