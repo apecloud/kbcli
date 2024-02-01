@@ -21,6 +21,7 @@ package accounts
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/sethvargo/go-password/password"
@@ -77,6 +78,9 @@ func (o *CreateUserOptions) Run() error {
 	lorryClient, err := client.NewK8sExecClientWithPod(o.Config, o.Pod)
 	if err != nil {
 		return err
+	}
+	if lorryClient == nil {
+		return errors.New("not support yet")
 	}
 
 	err = lorryClient.CreateUser(context.Background(), o.UserName, o.Password, "")
