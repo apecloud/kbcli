@@ -21,6 +21,7 @@ package accounts
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -88,6 +89,10 @@ func (o *GrantOptions) Run() error {
 	lorryClient, err := client.NewK8sExecClientWithPod(o.Config, o.Pod)
 	if err != nil {
 		return err
+	}
+
+	if lorryClient == nil {
+		return errors.New("not support yet")
 	}
 
 	err = lorryClient.GrantUserRole(context.Background(), o.UserName, o.RoleName)
