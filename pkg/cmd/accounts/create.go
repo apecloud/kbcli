@@ -21,6 +21,7 @@ package accounts
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/sethvargo/go-password/password"
@@ -29,6 +30,7 @@ import (
 	"k8s.io/klog/v2"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 
+	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kubeblocks/pkg/lorry/client"
 )
 
@@ -78,13 +80,17 @@ func (o *CreateUserOptions) Run() error {
 	if err != nil {
 		return err
 	}
+	if lorryClient == nil {
+		return errors.New("not support yet")
+	}
 
 	err = lorryClient.CreateUser(context.Background(), o.UserName, o.Password, "")
 	if err != nil {
 		o.printGeneralInfo("fail", err.Error())
 		return err
 	}
-	o.printGeneralInfo("success", "")
+	o.printGeneralInfo("password", o.Password)
+	printer.Alert(o.Out, "Please do REMEMBER the password for the new user! Once forgotten, it cannot be retrieved!\n")
 	return nil
 }
 

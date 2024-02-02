@@ -21,6 +21,7 @@ package accounts
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"k8s.io/cli-runtime/pkg/genericiooptions"
@@ -53,6 +54,9 @@ func (o *ListUserOptions) Run() error {
 	lorryClient, err := client.NewK8sExecClientWithPod(o.Config, o.Pod)
 	if err != nil {
 		return err
+	}
+	if lorryClient == nil {
+		return errors.New("not support yet")
 	}
 
 	users, err := lorryClient.ListUsers(context.Background())

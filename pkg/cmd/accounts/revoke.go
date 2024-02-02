@@ -21,6 +21,7 @@ package accounts
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -91,6 +92,10 @@ func (o *RevokeOptions) Run(cmd *cobra.Command, f cmdutil.Factory, streams gener
 	lorryClient, err := client.NewK8sExecClientWithPod(o.Config, o.Pod)
 	if err != nil {
 		return err
+	}
+
+	if lorryClient == nil {
+		return errors.New("not support yet")
 	}
 
 	err = lorryClient.RevokeUserRole(context.Background(), o.userName, o.roleName)

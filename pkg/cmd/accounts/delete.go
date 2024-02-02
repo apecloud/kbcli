@@ -21,6 +21,7 @@ package accounts
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -77,6 +78,9 @@ func (o *DeleteUserOptions) Run() error {
 	lorryClient, err := client.NewK8sExecClientWithPod(o.Config, o.Pod)
 	if err != nil {
 		return err
+	}
+	if lorryClient == nil {
+		return errors.New("not support yet")
 	}
 
 	err = lorryClient.DeleteUser(context.Background(), o.UserName)
