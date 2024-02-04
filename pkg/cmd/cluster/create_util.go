@@ -163,7 +163,10 @@ func getObjectsInfo(f cmdutil.Factory, manifests map[string]string) ([]*objectIn
 		if err != nil {
 			return nil, err
 		}
-
+		// check if jsonData is empty or null
+		if len(jsonData) == 0 || string(jsonData) == "null" {
+			continue
+		}
 		// get resource gvk
 		obj, gvk, err := unstructured.UnstructuredJSONScheme.Decode(jsonData, nil, nil)
 		if err != nil {

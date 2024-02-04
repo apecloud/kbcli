@@ -82,7 +82,7 @@ var clusterCreateExample = templates.Examples(`
 	# Output resource information in YAML format, the information will be sent to the server
 	# but the resources will not be actually created.
 	kbcli cluster create mycluster --cluster-definition apecloud-mysql --dry-run=server -o yaml
-	
+
 	# Create a cluster and set termination policy DoNotTerminate that prevents the cluster from being deleted
 	kbcli cluster create mycluster --cluster-definition apecloud-mysql --termination-policy DoNotTerminate
 
@@ -129,7 +129,7 @@ var clusterCreateExample = templates.Examples(`
 	kbcli cluster create --cluster-definition apecloud-mysql \
 		--node-labels '"topology.kubernetes.io/zone=us-east-1a","disktype=ssd,essd"'
 
-	# Create a Cluster with two tolerations 
+	# Create a Cluster with two tolerations
 	kbcli cluster create --cluster-definition apecloud-mysql --tolerations \ '"engineType=mongo:NoSchedule","diskType=ssd:NoSchedule"'
 
     # Create a cluster, with each pod runs on their own dedicated node
