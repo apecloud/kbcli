@@ -224,7 +224,7 @@ build-kbcli-embed-chart: helmtool fetch-addons create-kbcli-embed-charts-dir \
 	build-single-kbcli-embed-chart.milvus-cluster \
 	build-single-kbcli-embed-chart.qdrant-cluster \
 	build-single-kbcli-embed-chart.weaviate-cluster \
-	build-single-kbcli-embed-chart.oceanbase-cluster \
+	build-single-kbcli-embed-chart.oceanbase-ce-cluster \
 	build-single-kbcli-embed-chart.elasticsearch-cluster
 
 .PHONY: kbcli
@@ -329,6 +329,10 @@ ifeq (, $(shell which kubectl))
 	}
 endif
 KUBECTL=$(shell which kubectl)
+
+.PHONY: check-license-header
+check-license-header: ## Run license header check.
+	@./hack/license/header-check.sh
 
 .PHONY: fix-license-header
 fix-license-header: ## Run license header fix.
