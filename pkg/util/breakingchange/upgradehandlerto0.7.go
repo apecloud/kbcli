@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2022-2023 ApeCloud Co., Ltd
+Copyright (C) 2022-2024 ApeCloud Co., Ltd
 
 This file is part of KubeBlocks project
 
@@ -191,7 +191,7 @@ func (u *upgradeHandlerTo7) transformBackupPolicy(dynamic dynamic.Interface, obj
 	// build backupMethod/backupTarget with datafile
 	buildWithBackupType(backupTypeDatafile, isMysqlHScalePolicy)
 
-	/// build backupMethod/backupTarget with snapshot
+	// / build backupMethod/backupTarget with snapshot
 	buildWithBackupType(backupTypeSnapshot, isMysqlHScalePolicy)
 	if backupRepoName != "" {
 		newSpecData["backupRepoName"] = backupRepoName

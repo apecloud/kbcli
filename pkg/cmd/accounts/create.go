@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2022-2023 ApeCloud Co., Ltd
+Copyright (C) 2022-2024 ApeCloud Co., Ltd
 
 This file is part of KubeBlocks project
 
@@ -30,8 +30,9 @@ import (
 	"k8s.io/klog/v2"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 
-	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kubeblocks/pkg/lorry/client"
+
+	"github.com/apecloud/kbcli/pkg/printer"
 )
 
 type CreateUserOptions struct {
