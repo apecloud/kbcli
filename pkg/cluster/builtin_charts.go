@@ -83,85 +83,54 @@ func IsBuiltinCharts(clusterType ClusterType) bool {
 // internal_chart registers embed chart
 
 func init() {
-	embedChartConfigs := []struct {
-		embedConfig
-		engineName string
-	}{
-		// mysql
-		{
-			embedConfig{
-				chartFS: mysqlChart,
-				name:    "apecloud-mysql-cluster.tgz",
-				alias:   "",
-			},
-			"mysql",
+	embedChartConfigs := map[string]*embedConfig{
+		"mysql": {
+			chartFS: mysqlChart,
+			name:    "apecloud-mysql-cluster.tgz",
+			alias:   "",
 		},
 
-		// postgresql
-		{
-			embedConfig{
-				chartFS: postgresqlChart,
-				name:    "postgresql-cluster.tgz",
-				alias:   "",
-			},
-			"postgresql",
+		"postgresql": {
+			chartFS: postgresqlChart,
+			name:    "postgresql-cluster.tgz",
+			alias:   "",
 		},
 
-		// kafka
-		{
-			embedConfig{
-				chartFS: kafkaChart,
-				name:    "kafka-cluster.tgz",
-				alias:   "",
-			},
-			"kafka",
+		"kafka": {
+			chartFS: kafkaChart,
+			name:    "kafka-cluster.tgz",
+			alias:   "",
 		},
 
-		// redis
-		{
-			embedConfig{
-				chartFS: redisChart,
-				name:    "redis-cluster.tgz",
-				alias:   "",
-			},
-			"redis",
+		"redis": {
+			chartFS: redisChart,
+			name:    "redis-cluster.tgz",
+			alias:   "",
 		},
 
-		// mongodb
-		{
-			embedConfig{
-				chartFS: mongodbChart,
-				name:    "mongodb-cluster.tgz",
-				alias:   "",
-			},
-			"mongodb",
+		"mongodb": {
+			chartFS: mongodbChart,
+			name:    "mongodb-cluster.tgz",
+			alias:   "",
 		},
 
-		// llm
-		{
-			embedConfig{
-				chartFS: llmChart,
-				name:    "llm-cluster.tgz",
-				alias:   "",
-			},
-			"llm",
+		"llm": {
+			chartFS: llmChart,
+			name:    "llm-cluster.tgz",
+			alias:   "",
 		},
 
-		// xinference
-		{
-			embedConfig{
-				chartFS: xinferenceChart,
-				name:    "xinference-cluster.tgz",
-				alias:   "",
-			},
-			"xinference",
+		"xinference": {
+			chartFS: xinferenceChart,
+			name:    "xinference-cluster.tgz",
+			alias:   "",
 		},
 	}
 
-	for _, cfg := range embedChartConfigs {
-		if err := cfg.register(ClusterType(cfg.engineName)); err != nil {
+	for k, v := range embedChartConfigs {
+		if err := v.register(ClusterType(k)); err != nil {
 			fmt.Println(err.Error())
 		}
-		builtinClusterTypes[ClusterType(cfg.engineName)] = true
+		builtinClusterTypes[ClusterType(k)] = true
 	}
 }
