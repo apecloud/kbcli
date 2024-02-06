@@ -102,7 +102,7 @@ func (o *registerOption) validate() error {
 		return fmt.Errorf("cluster type %s is not appropriate as a subcommand", o.clusterType.String())
 	}
 	// stop registering if the register cluster type is the builtin cluster
-	if cluster.IsbuiltinCharts(o.clusterType.String()) {
+	if cluster.IsBuiltinCharts(o.clusterType) {
 		return fmt.Errorf("cluster type %s is the kbcli builtin type, not allow to be changed", o.clusterType.String())
 	}
 	// double check if  the register cluster type is already existed
