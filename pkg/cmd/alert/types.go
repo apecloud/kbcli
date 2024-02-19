@@ -143,9 +143,10 @@ type receiver struct {
 
 // route is the route of receiver
 type route struct {
-	Receiver string   `json:"receiver"`
-	Continue bool     `json:"continue,omitempty"`
-	Matchers []string `json:"matchers,omitempty"`
+	Receiver       string   `json:"receiver"`
+	Continue       bool     `json:"continue,omitempty"`
+	Matchers       []string `json:"matchers,omitempty"`
+	RepeatInterval string   `json:"repeat_interval,omitempty"`
 }
 
 type webhookAdaptorReceiverParams struct {
