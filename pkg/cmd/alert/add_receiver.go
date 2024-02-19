@@ -89,16 +89,17 @@ type baseOptions struct {
 type AddReceiverOptions struct {
 	baseOptions
 
-	Emails       []string
-	Webhooks     []string
-	Slacks       []string
-	Clusters     []string
-	Severities   []string
-	Types        []string
-	Rules        []string
-	Name         string
-	InputName    []string
-	SendResolved bool
+	Emails         []string
+	Webhooks       []string
+	Slacks         []string
+	Clusters       []string
+	Severities     []string
+	Types          []string
+	Rules          []string
+	Name           string
+	InputName      []string
+	SendResolved   bool
+	RepeatInterval string
 
 	receiver                *receiver
 	route                   *route
@@ -129,6 +130,7 @@ func newAddReceiverCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *c
 	cmd.Flags().StringArrayVar(&o.Severities, "severity", []string{}, "Alert severity level, critical, warning or info, more than one severity level can be specified, such as critical,warning")
 	cmd.Flags().StringArrayVar(&o.Types, "type", []string{}, "Engine type, such as mysql, more than one types can be specified, such as mysql,postgresql,redis")
 	cmd.Flags().StringArrayVar(&o.Rules, "rule", []string{}, "Rule name, such as MysqlDown, more than one rule names can be specified, such as MysqlDown,MysqlRestarted")
+	cmd.Flags().StringVar(&o.RepeatInterval, "repeat-interval", "", "Repeat interval of current receiver")
 
 	// register completions
 	util.CheckErr(cmd.RegisterFlagCompletionFunc("severity",
@@ -314,8 +316,9 @@ func (o *AddReceiverOptions) buildReceiver() error {
 
 func (o *AddReceiverOptions) buildRoute() {
 	r := &route{
-		Receiver: o.Name,
-		Continue: true,
+		Receiver:       o.Name,
+		Continue:       true,
+		RepeatInterval: o.RepeatInterval,
 	}
 
 	var clusterArray []string
