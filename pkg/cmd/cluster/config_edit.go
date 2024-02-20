@@ -144,7 +144,7 @@ func (o *editConfigOptions) runWithConfigConstraints(cfgEditContext *configEditC
 		}
 	}
 
-	params := core.GenerateVisualizedParamsList(configPatch, configConstraint.Spec.FormatterConfig, nil)
+	params := core.GenerateVisualizedParamsListImpl(configPatch, configConstraint.Spec.FormatterConfig, nil, true)
 	// check immutable parameters
 	if len(configConstraint.Spec.ImmutableParameters) > 0 {
 		if err = util.ValidateParametersModified2(sets.KeySet(fromKeyValuesToMap(params, o.CfgFile)), configConstraint.Spec); err != nil {
