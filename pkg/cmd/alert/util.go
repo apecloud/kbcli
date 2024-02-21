@@ -65,6 +65,14 @@ func getConfigData(cm *corev1.ConfigMap, key string) (map[string]interface{}, er
 	return data, nil
 }
 
+func getTimeIntervalsFromData(data map[string]interface{}) []interface{} {
+	timeIntervals, ok := data["time_intervals"]
+	if !ok || timeIntervals == nil {
+		timeIntervals = []interface{}{} // init timeIntervals
+	}
+	return timeIntervals.([]interface{})
+}
+
 func getReceiversFromData(data map[string]interface{}) []interface{} {
 	receivers, ok := data["receivers"]
 	if !ok || receivers == nil {

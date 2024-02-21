@@ -37,6 +37,9 @@ import (
 	"k8s.io/kubectl/pkg/util/templates"
 	"sigs.k8s.io/yaml"
 
+	"github.com/prometheus/alertmanager/config"
+	"github.com/prometheus/alertmanager/timeinterval"
+
 	"github.com/apecloud/kbcli/pkg/util"
 )
 
@@ -86,23 +89,35 @@ type baseOptions struct {
 	NoAdapter           bool
 }
 
+type Times struct {
+	StartTime string
+	EndTime   string
+}
+
+type TimeInterval struct {
+	Times    Times
+	Weekdays []string
+}
+
 type AddReceiverOptions struct {
 	baseOptions
 
-	Emails         []string
-	Webhooks       []string
-	Slacks         []string
-	Clusters       []string
-	Severities     []string
-	Types          []string
-	Rules          []string
-	Name           string
-	InputName      []string
-	SendResolved   bool
-	RepeatInterval string
+	Emails           []string
+	Webhooks         []string
+	Slacks           []string
+	Clusters         []string
+	Severities       []string
+	Types            []string
+	Rules            []string
+	Name             string
+	InputName        []string
+	SendResolved     bool
+	RepeatInterval   string
+	MuteTimeInterval *timeinterval.TimeInterval
 
 	receiver                *receiver
 	route                   *route
+	timeInterval            *config.TimeInterval
 	webhookAdaptorReceivers []webhookAdaptorReceiver
 }
 
@@ -271,6 +286,9 @@ func (o *AddReceiverOptions) checkEmails() error {
 }
 
 func (o *AddReceiverOptions) run() error {
+	// build time interval
+	o.buildTimeInterval()
+
 	// build receiver
 	if err := o.buildReceiver(); err != nil {
 		return err
@@ -326,6 +344,10 @@ func (o *AddReceiverOptions) buildRoute() {
 	var typesArray []string
 	var rulesArray []string
 
+	if o.MuteTimeInterval != nil {
+		r.MuteTimeIntervals = []string{o.Name}
+	}
+
 	splitStr := func(strArray []string, target *[]string) {
 		for _, s := range strArray {
 			ss := strings.Split(s, ",")
@@ -366,12 +388,29 @@ func (o *AddReceiverOptions) buildRoute() {
 	o.route = r
 }
 
+func (o *AddReceiverOptions) buildTimeInterval() {
+	if o.MuteTimeInterval == nil {
+		return
+	}
+	o.timeInterval = &config.TimeInterval{
+		Name:          o.Name,
+		TimeIntervals: []timeinterval.TimeInterval{*o.MuteTimeInterval},
+	}
+}
+
 // addReceiver adds receiver to alertmanager config
 func (o *AddReceiverOptions) addReceiver() error {
 	data, err := getConfigData(o.alertConfigMap, o.AlertConfigFileName)
 	if err != nil {
 		return err
 	}
+
+	// add time interval
+	timeIntervals := getTimeIntervalsFromData(data)
+	if timeIntervalExists(timeIntervals, o.Name) {
+		return fmt.Errorf("timeInterval %s already exists", o.timeInterval.Name)
+	}
+	timeIntervals = append(timeIntervals, o.timeInterval)
 
 	// add receiver
 	receivers := getReceiversFromData(data)
@@ -384,6 +423,7 @@ func (o *AddReceiverOptions) addReceiver() error {
 	routes := getRoutesFromData(data)
 	routes = append(routes, o.route)
 
+	data["time_intervals"] = timeIntervals
 	data["receivers"] = receivers
 	data["route"].(map[string]interface{})["routes"] = routes
 
@@ -447,6 +487,19 @@ func (o *AddReceiverOptions) buildWebhook() ([]*webhookConfig, error) {
 	}
 	o.webhookAdaptorReceivers = waReceivers
 	return ws, nil
+}
+
+func timeIntervalExists(timeIntervals []interface{}, name string) bool {
+	for _, r := range timeIntervals {
+		if r == nil {
+			continue
+		}
+		n := r.(map[string]interface{})["name"]
+		if n != nil && n.(string) == name {
+			return true
+		}
+	}
+	return false
 }
 
 func receiverExists(receivers []interface{}, name string) bool {
