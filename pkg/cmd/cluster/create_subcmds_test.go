@@ -118,7 +118,9 @@ var _ = Describe("create cluster by cluster type", func() {
 
 		By("validate")
 		o.ChartInfo.ClusterDef = testing.ClusterDefName
-		o.Dynamic = testing.FakeDynamicClient(testing.FakeClusterDef(), testing.FakeClusterVersion())
+		cv := testing.FakeClusterVersion()
+		o.Values[cluster.VersionSchemaProp.String()] = cv.Name
+		o.Dynamic = testing.FakeDynamicClient(testing.FakeClusterDef(), cv)
 		Expect(o.validate()).Should(Succeed())
 		Expect(o.Values[cluster.VersionSchemaProp.String()]).Should(Equal(testing.ClusterVersionName))
 
