@@ -102,8 +102,25 @@ func (o *DeleteReceiverOptions) deleteReceiver() error {
 		return err
 	}
 
+	var newTimeIntervals []interface{}
 	var newReceivers []interface{}
 	var newRoutes []interface{}
+
+	timeIntervals := getTimeIntervalsFromData(data)
+	for i, ti := range timeIntervals {
+		var found bool
+		name := ti.(map[string]interface{})["name"].(string)
+		for _, n := range o.Names {
+			if n == name {
+				found = true
+				break
+			}
+		}
+		if !found {
+			newTimeIntervals = append(newTimeIntervals, timeIntervals[i])
+		}
+	}
+
 	// build receiver route map, key is receiver name, value is route
 	receiverRouteMap := make(map[string]interface{})
 	routes := getRoutesFromData(data)
@@ -138,6 +155,7 @@ func (o *DeleteReceiverOptions) deleteReceiver() error {
 		return fmt.Errorf("receiver %s not found", strings.Join(o.Names, ","))
 	}
 
+	data["time_intervals"] = newTimeIntervals
 	data["receivers"] = newReceivers
 	data["route"].(map[string]interface{})["routes"] = newRoutes
 	return updateConfig(o.client, o.alertConfigMap, o.AlertConfigFileName, data)
