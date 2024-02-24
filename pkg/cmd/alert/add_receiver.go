@@ -406,11 +406,14 @@ func (o *AddReceiverOptions) addReceiver() error {
 	}
 
 	// add time interval
-	timeIntervals := getTimeIntervalsFromData(data)
-	if timeIntervalExists(timeIntervals, o.Name) {
-		return fmt.Errorf("timeInterval %s already exists", o.timeInterval.Name)
+	if o.timeInterval != nil {
+		timeIntervals := getTimeIntervalsFromData(data)
+		if timeIntervalExists(timeIntervals, o.Name) {
+			return fmt.Errorf("timeInterval %s already exists", o.timeInterval.Name)
+		}
+		timeIntervals = append(timeIntervals, o.timeInterval)
+		data["time_intervals"] = timeIntervals
 	}
-	timeIntervals = append(timeIntervals, o.timeInterval)
 
 	// add receiver
 	receivers := getReceiversFromData(data)
@@ -423,7 +426,6 @@ func (o *AddReceiverOptions) addReceiver() error {
 	routes := getRoutesFromData(data)
 	routes = append(routes, o.route)
 
-	data["time_intervals"] = timeIntervals
 	data["receivers"] = receivers
 	data["route"].(map[string]interface{})["routes"] = routes
 
