@@ -42,6 +42,7 @@ import (
 	dpv1alpha1 "github.com/apecloud/kubeblocks/apis/dataprotection/v1alpha1"
 	extensionsv1alpha1 "github.com/apecloud/kubeblocks/apis/extensions/v1alpha1"
 	storagev1alpha1 "github.com/apecloud/kubeblocks/apis/storage/v1alpha1"
+	workloadsv1alpha1 "github.com/apecloud/kubeblocks/apis/workloads/v1alpha1"
 	"github.com/apecloud/kubeblocks/pkg/constant"
 	dptypes "github.com/apecloud/kubeblocks/pkg/dataprotection/types"
 	"github.com/apecloud/kubeblocks/pkg/dataprotection/utils/boolptr"
@@ -104,11 +105,13 @@ func FakeCluster(name, namespace string, conditions ...metav1.Condition) *appsv1
 			Phase: appsv1alpha1.RunningClusterPhase,
 			Components: map[string]appsv1alpha1.ClusterComponentStatus{
 				ComponentName: {
-					ConsensusSetStatus: &appsv1alpha1.ConsensusSetStatus{
-						Leader: appsv1alpha1.ConsensusMemberStatus{
-							Name:       "leader",
-							AccessMode: appsv1alpha1.ReadWrite,
-							Pod:        fmt.Sprintf("%s-pod-0", name),
+					MembersStatus: []workloadsv1alpha1.MemberStatus{
+						{
+							ReplicaRole: workloadsv1alpha1.ReplicaRole{
+								Name:       "leader",
+								AccessMode: workloadsv1alpha1.ReadWriteMode,
+							},
+							PodName: fmt.Sprintf("%s-pod-0", name),
 						},
 					},
 				},

@@ -304,23 +304,7 @@ type CompInfo struct {
 	ComponentDef    *appsv1alpha1.ClusterComponentDefinition
 }
 
-func (info *CompInfo) InferPodName() (string, error) {
-	if info.ComponentStatus == nil {
-		return "", fmt.Errorf("component status is missing")
-	}
-	if info.ComponentStatus.Phase != appsv1alpha1.RunningClusterCompPhase || !*info.ComponentStatus.PodsReady {
-		return "", fmt.Errorf("component is not ready, please try later")
-	}
-	if info.ComponentStatus.ConsensusSetStatus != nil {
-		return info.ComponentStatus.ConsensusSetStatus.Leader.Pod, nil
-	}
-	if info.ComponentStatus.ReplicationSetStatus != nil {
-		return info.ComponentStatus.ReplicationSetStatus.Primary.Pod, nil
-	}
-	return "", fmt.Errorf("cannot pick a pod to connect, please specify the pod name explicitly by `--instance` flag")
-}
-
-func FillCompInfoByName(ctx context.Context, dynamic dynamic.Interface, namespace, clusterName, componentName string) (*CompInfo, error) {
+func FillCompInfoByName(dynamic dynamic.Interface, namespace, clusterName, componentName string) (*CompInfo, error) {
 	cluster, err := GetClusterByName(dynamic, clusterName, namespace)
 	if err != nil {
 		return nil, err
