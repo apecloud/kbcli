@@ -114,7 +114,7 @@ func (o *AccountBaseOptions) Complete() error {
 		o.ComponentName = clusterutil.GetPodComponentName(o.Pod)
 	}
 
-	compInfo, err := clusterutil.FillCompInfoByName(ctx, o.ExecOptions.Dynamic, o.Namespace, o.ClusterName, o.ComponentName)
+	compInfo, err := clusterutil.FillCompInfoByName(o.ExecOptions.Dynamic, o.Namespace, o.ClusterName, o.ComponentName)
 	if err != nil {
 		return err
 	}
