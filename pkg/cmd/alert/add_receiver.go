@@ -114,6 +114,7 @@ type AddReceiverOptions struct {
 	SendResolved     bool
 	RepeatInterval   string
 	MuteTimeInterval *timeinterval.TimeInterval
+	CustomMatchers   []string
 
 	receiver                *receiver
 	route                   *route
@@ -385,6 +386,10 @@ func (o *AddReceiverOptions) buildRoute() {
 		buildMatchers(routeMatcherSeverityType, severityArray),
 		buildMatchers(routeMatcherTypeType, typesArray),
 		buildMatchers(routeMatcherRuleType, rulesArray))
+	// add custom matchers
+	if len(o.CustomMatchers) > 0 {
+		r.Matchers = append(r.Matchers, o.CustomMatchers...)
+	}
 	o.route = r
 }
 
