@@ -453,35 +453,35 @@ func GetComponentNameByClusterName(clusterName, compSpecName string) string {
 	return fmt.Sprintf("%s-%s", clusterName, compSpecName)
 }
 
-func GetConfigTemplateListByCompDefs(clusterCompSpecs []appsv1alpha1.ClusterComponentSpec, compDefs []*appsv1alpha1.ComponentDefinition, compName string, reloadTpl bool) ([]appsv1alpha1.ComponentConfigSpec, error) {
-	var (
-		compDefName = ""
-		configSpecs []appsv1alpha1.ComponentConfigSpec
-	)
-
-	for _, spec := range clusterCompSpecs {
-		if spec.Name == compName {
-			compDefName = spec.ComponentDef
-			break
-		}
-	}
-	for i, compDef := range compDefs {
-		if compDef.Name == compDefName {
-			configSpecs = compDefs[i].Spec.Configs
-		}
-	}
-	if configSpecs == nil {
-		return nil, fmt.Errorf("fail to get the config template from componentdefinition %s", compDefName)
-	}
-	if !reloadTpl || len(configSpecs) == 1 {
-		return configSpecs, nil
-	}
-
-	validConfigSpecs := make([]appsv1alpha1.ComponentConfigSpec, 0, len(configSpecs))
-	for _, configSpec := range configSpecs {
-		if configSpec.ConfigConstraintRef != "" && configSpec.TemplateRef != "" {
-			validConfigSpecs = append(validConfigSpecs, configSpec)
-		}
-	}
-	return validConfigSpecs, nil
-}
+// func GetConfigTemplateListByCompDefs(clusterCompSpecs []appsv1alpha1.ClusterComponentSpec, compDefs []*appsv1alpha1.ComponentDefinition, compName string, reloadTpl bool) ([]appsv1alpha1.ComponentConfigSpec, error) {
+// 	var (
+// 		compDefName = ""
+// 		configSpecs []appsv1alpha1.ComponentConfigSpec
+// 	)
+//
+// 	for _, spec := range clusterCompSpecs {
+// 		if spec.Name == compName {
+// 			compDefName = spec.ComponentDef
+// 			break
+// 		}
+// 	}
+// 	for i, compDef := range compDefs {
+// 		if compDef.Name == compDefName {
+// 			configSpecs = compDefs[i].Spec.Configs
+// 		}
+// 	}
+// 	if configSpecs == nil {
+// 		return nil, fmt.Errorf("fail to get the config template from componentdefinition %s", compDefName)
+// 	}
+// 	if !reloadTpl || len(configSpecs) == 1 {
+// 		return configSpecs, nil
+// 	}
+//
+// 	validConfigSpecs := make([]appsv1alpha1.ComponentConfigSpec, 0, len(configSpecs))
+// 	for _, configSpec := range configSpecs {
+// 		if configSpec.ConfigConstraintRef != "" && configSpec.TemplateRef != "" {
+// 			validConfigSpecs = append(validConfigSpecs, configSpec)
+// 		}
+// 	}
+// 	return validConfigSpecs, nil
+// }

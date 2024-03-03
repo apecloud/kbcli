@@ -33,7 +33,7 @@ import (
 	"github.com/apecloud/kbcli/pkg/types"
 )
 
-func NewFakeOperationsOptions(ns, cName string, opsType appsv1alpha1.OpsType, objs ...runtime.Object) (*cmdtesting.TestFactory, *action.CreateOptions) {
+func NewFakeOperationsOptions(ns, cName string, objs ...runtime.Object) (*cmdtesting.TestFactory, *action.CreateOptions) {
 	streams, _, _, _ := genericiooptions.NewTestIOStreams()
 	tf := cmdtesting.NewTestFactory().WithNamespace(ns)
 	baseOptions := &action.CreateOptions{
@@ -53,6 +53,7 @@ func NewFakeOperationsOptions(ns, cName string, opsType appsv1alpha1.OpsType, ob
 		types.ClusterVersionGVR():   types.KindClusterVersion + "List",
 		types.ClusterGVR():          types.KindCluster + "List",
 		types.ConfigConstraintGVR(): types.KindConfigConstraint + "List",
+		types.ConfigurationGVR():    types.KindConfiguration + "List",
 		types.BackupGVR():           types.KindBackup + "List",
 		types.RestoreGVR():          types.KindRestore + "List",
 		types.OpsGVR():              types.KindOps + "List",
