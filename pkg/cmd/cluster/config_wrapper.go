@@ -215,62 +215,19 @@ func (w *configWrapper) filterForReconfiguring(data map[string]string) []string 
 }
 
 func newConfigWrapper(baseOptions action.CreateOptions, componentName, configSpec, configKey string, params map[string]*string) (*configWrapper, error) {
-	var (
-		err        error
-		clusterObj *appsv1alpha1.Cluster
-	)
+	var err error
+	var clusterObj *appsv1alpha1.Cluster
 
 	if clusterObj, err = cluster.GetClusterByName(baseOptions.Dynamic, baseOptions.Name, baseOptions.Namespace); err != nil {
 		return nil, err
 	}
-	// if clusterDefObj, err = cluster.GetClusterDefByName(baseOptions.Dynamic, clusterObj.Spec.ClusterDefRef); err != nil {
-	// 	return nil, err
-	// }
-	// 0.8 new api
-
-	// for _, spec := range clusterObj.Spec.ComponentSpecs {
-	// 	if len(spec.ComponentDef) == 0 {
-	// 		continue
-	// 	}
-	// 	compDef, err := cluster.GetComponentDefinitionByName(baseOptions.Dynamic, spec.ComponentDef)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// 	compDefs = append(compDefs, compDef)
-	//
-	// 	comp, err := cluster.GetComponetByName(baseOptions.Dynamic, cluster.GetComponentNameByClusterName(baseOptions.Name, spec.Name), baseOptions.Namespace)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// 	comps = append(comps, comp)
-	// }
-
-	w := &configWrapper{
-		CreateOptions: baseOptions,
-		Cluster:       clusterObj,
-		// clusterDefObj: clusterDefObj,
-		// compDefs:      compDefs,
-		// comps:         comps,
-		clusterName: baseOptions.Name,
-
+	return &configWrapper{
+		CreateOptions:  baseOptions,
+		Cluster:        clusterObj,
+		clusterName:    baseOptions.Name,
 		componentName:  componentName,
 		configSpecName: configSpec,
 		configFileKey:  configKey,
 		updatedParams:  params,
-	}
-
-	// if w.clusterObj.Spec.ClusterVersionRef == "" {
-	// 	return w, err
-	// }
-	//
-	// clusterVerObj := &appsv1alpha1.ClusterVersion{}
-	// if err := util.GetResourceObjectFromGVR(types.ClusterVersionGVR(), client.ObjectKey{
-	// 	Namespace: "",
-	// 	Name:      w.clusterObj.Spec.ClusterVersionRef,
-	// }, w.Dynamic, clusterVerObj); err != nil {
-	// 	return nil, err
-	// }
-	//
-	// w.clusterVerObj = clusterVerObj
-	return w, nil
+	}, nil
 }

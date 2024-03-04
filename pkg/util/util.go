@@ -565,24 +565,6 @@ func GetResourceObjectFromGVR(gvr schema.GroupVersionResource, key client.Object
 	return apiruntime.DefaultUnstructuredConverter.FromUnstructured(unstructuredObj.Object, k8sObj)
 }
 
-// GetComponentsFromClusterName returns name of component.
-// func GetComponentsFromClusterName(key client.ObjectKey, cli dynamic.Interface) ([]string, error) {
-// 	clusterObj := appsv1alpha1.Cluster{}
-// 	clusterDefObj := appsv1alpha1.ClusterDefinition{}
-// 	if err := GetResourceObjectFromGVR(types.ClusterGVR(), key, cli, &clusterObj); err != nil {
-// 		return nil, err
-// 	}
-//
-// 	if err := GetResourceObjectFromGVR(types.ClusterDefGVR(), client.ObjectKey{
-// 		Namespace: "",
-// 		Name:      clusterObj.Spec.ClusterDefRef,
-// 	}, cli, &clusterDefObj); err != nil {
-// 		return nil, err
-// 	}
-//
-// 	return GetComponentsFromResource(clusterObj.Spec.ComponentSpecs, &clusterDefObj)
-// }
-
 // GetComponentsFromResource returns name of component.
 func GetComponentsFromResource(namespace, clusterName string, componentSpecs []appsv1alpha1.ClusterComponentSpec, cli dynamic.Interface) ([]string, error) {
 	componentNames := make([]string, 0, len(componentSpecs))
