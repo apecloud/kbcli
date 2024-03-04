@@ -73,8 +73,14 @@ var (
 		# edit backup policy
 		kbcli cluster edit-backup-policy <backup-policy-name>
 
-        # update backup Repo
+        # specify a backup repository
 		kbcli cluster edit-backup-policy <backup-policy-name> --set backupRepoName=<backup-repo-name>
+
+        # enable encryption
+		kbcli cluster edit-backup-policy <backup-policy-name> --set encryption.algorithm=AES-256-CFB --set encryption.passPhrase="SECRET!"
+
+        # disable encryption
+		kbcli cluster edit-backup-policy <backup-policy-name> --set encryption.disabled=true
 
 	    # using short cmd to edit backup policy
         kbcli cluster edit-bp <backup-policy-name>
@@ -644,6 +650,7 @@ type editBackupPolicyOptions struct {
 	namespace string
 	name      string
 	dynamic   dynamic.Interface
+	client    clientset.Interface
 	Factory   cmdutil.Factory
 
 	GVR schema.GroupVersionResource
@@ -685,6 +692,81 @@ func NewEditBackupPolicyCmd(f cmdutil.Factory, streams genericiooptions.IOStream
 	return cmd
 }
 
+func (o *editBackupPolicyOptions) updateRepoName(backupPolicy *dpv1alpha1.BackupPolicy, targetVal string) error {
+	// check if the backup repo exists
+	if targetVal != "" {
+		_, err := o.dynamic.Resource(types.BackupRepoGVR()).Get(context.Background(), targetVal, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+	}
+	if backupPolicy != nil {
+		if targetVal != "" {
+			backupPolicy.Spec.BackupRepoName = &targetVal
+		} else {
+			backupPolicy.Spec.BackupRepoName = nil
+		}
+	}
+	return nil
+}
+
+func (o *editBackupPolicyOptions) updateEncryptionPassPhrase(backupPolicy *dpv1alpha1.BackupPolicy, targetVal string) error {
+	if backupPolicy.Spec.EncryptionConfig == nil {
+		backupPolicy.Spec.EncryptionConfig = &dpv1alpha1.EncryptionConfig{}
+	}
+	if targetVal == "" {
+		return fmt.Errorf("encryption.passPhrase can't be empty")
+	}
+	// check if the current pass phrase is the same as the new value
+	if backupPolicy.Spec.EncryptionConfig.PassPhraseSecretKeyRef != nil {
+		secretKeyRef := backupPolicy.Spec.EncryptionConfig.PassPhraseSecretKeyRef
+		secretObj, err := o.dynamic.Resource(types.SecretGVR()).
+			Namespace(backupPolicy.Namespace).
+			Get(context.Background(), secretKeyRef.Name, metav1.GetOptions{})
+		if client.IgnoreNotFound(err) != nil {
+			return err
+		}
+		if secretObj != nil {
+			secret := &corev1.Secret{}
+			if err = runtime.DefaultUnstructuredConverter.FromUnstructured(secretObj.Object, secret); err != nil {
+				return err
+			}
+			if string(secret.Data[secretKeyRef.Key]) == targetVal {
+				// no need to update
+				return nil
+			}
+		}
+	}
+	// create a new secret for the value
+	const passPhraseKey = "passPhrase"
+	secretObj := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "kb-backup-encryption-",
+			Namespace:    backupPolicy.Namespace,
+			Labels: map[string]string{
+				"dataprotection.kubeblocks.io/created-for-backup-policy": backupPolicy.Name,
+			},
+		},
+		Type: corev1.SecretTypeOpaque,
+		Data: map[string][]byte{
+			passPhraseKey: []byte(targetVal),
+		},
+	}
+	createdSecret, err := o.client.CoreV1().Secrets(backupPolicy.Namespace).Create(
+		context.Background(), secretObj, metav1.CreateOptions{})
+	if err != nil {
+		return err
+	}
+	// update backup policy
+	backupPolicy.Spec.EncryptionConfig.PassPhraseSecretKeyRef = &corev1.SecretKeySelector{
+		LocalObjectReference: corev1.LocalObjectReference{
+			Name: createdSecret.Name,
+		},
+		Key: passPhraseKey,
+	}
+	return nil
+}
+
 func (o *editBackupPolicyOptions) complete(args []string) error {
 	var err error
 	if len(args) == 0 {
@@ -700,30 +782,41 @@ func (o *editBackupPolicyOptions) complete(args []string) error {
 	if o.dynamic, err = o.Factory.DynamicClient(); err != nil {
 		return err
 	}
-	updateRepoName := func(backupPolicy *dpv1alpha1.BackupPolicy, targetVal string) error {
-		// check if the backup repo exists
-		if targetVal != "" {
-			_, err := o.dynamic.Resource(types.BackupRepoGVR()).Get(context.Background(), targetVal, metav1.GetOptions{})
-			if err != nil {
-				return err
-			}
-		}
-		if backupPolicy != nil {
-			if targetVal != "" {
-				backupPolicy.Spec.BackupRepoName = &targetVal
-			} else {
-				backupPolicy.Spec.BackupRepoName = nil
-			}
-		}
-		return nil
+	if o.client, err = o.Factory.KubernetesClientSet(); err != nil {
+		return err
 	}
 
 	o.editContent = []editorRow{
 		{
-			key:      "backupRepoName",
-			jsonpath: "backupRepoName",
+			key:        "backupRepoName",
+			jsonpath:   "backupRepoName",
+			updateFunc: o.updateRepoName,
+		},
+		{
+			key:      "encryption.algorithm",
+			jsonpath: "encryptionConfig.algorithm",
 			updateFunc: func(backupPolicy *dpv1alpha1.BackupPolicy, targetVal string) error {
-				return updateRepoName(backupPolicy, targetVal)
+				if backupPolicy.Spec.EncryptionConfig == nil {
+					backupPolicy.Spec.EncryptionConfig = &dpv1alpha1.EncryptionConfig{}
+				}
+				backupPolicy.Spec.EncryptionConfig.Algorithm = targetVal
+				return nil
+			},
+		},
+		{
+			key:        "encryption.passPhrase",
+			jsonpath:   "__not_a_field",
+			updateFunc: o.updateEncryptionPassPhrase,
+		},
+		{
+			key:      "encryption.disabled",
+			jsonpath: "__not_a_field",
+			updateFunc: func(backupPolicy *dpv1alpha1.BackupPolicy, targetVal string) error {
+				if targetVal != "true" {
+					return nil
+				}
+				backupPolicy.Spec.EncryptionConfig = nil
+				return nil
 			},
 		},
 	}
@@ -839,6 +932,19 @@ func (o *editBackupPolicyOptions) getValueWithJsonpath(spec dpv1alpha1.BackupPol
 	return nil, nil
 }
 
+func trimQuotes(s string) string {
+	if len(s) < 2 {
+		return s
+	}
+	if s[0] == '"' && s[len(s)-1] == '"' {
+		return s[1 : len(s)-1]
+	}
+	if s[0] == '\'' && s[len(s)-1] == '\'' {
+		return s[1 : len(s)-1]
+	}
+	return s
+}
+
 // applyChanges applies the changes of backupPolicy.
 func (o *editBackupPolicyOptions) applyChanges(backupPolicy *dpv1alpha1.BackupPolicy) error {
 	for _, v := range o.values {
@@ -851,12 +957,12 @@ func (o *editBackupPolicyOptions) applyChanges(backupPolicy *dpv1alpha1.BackupPo
 		if len(arr) != 2 {
 			return fmt.Errorf(`invalid row: %s, format should be "key=value"`, v)
 		}
+		arr[0] = strings.TrimSpace(arr[0])
 		updateFn, ok := o.editContentKeyMap[arr[0]]
 		if !ok {
 			return fmt.Errorf(`invalid key: %s`, arr[0])
 		}
-		arr[1] = strings.Trim(arr[1], `"`)
-		arr[1] = strings.Trim(arr[1], `'`)
+		arr[1] = trimQuotes(strings.TrimSpace(arr[1]))
 		if err := updateFn(backupPolicy, arr[1]); err != nil {
 			return err
 		}

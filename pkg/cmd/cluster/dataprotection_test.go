@@ -22,18 +22,23 @@ package cluster
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
+	"k8s.io/cli-runtime/pkg/resource"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes/scheme"
 	clientfake "k8s.io/client-go/rest/fake"
 	cmdtesting "k8s.io/kubectl/pkg/cmd/testing"
 
@@ -57,7 +62,34 @@ var _ = Describe("DataProtection", func() {
 	BeforeEach(func() {
 		streams, _, out, _ = genericiooptions.NewTestIOStreams()
 		tf = cmdtesting.NewTestFactory().WithNamespace(testing.Namespace)
-		tf.Client = &clientfake.RESTClient{}
+
+		codec := scheme.Codecs.LegacyCodec(scheme.Scheme.PrioritizedVersionsAllGroups()...)
+		httpResp := func(obj runtime.Object) *http.Response {
+			return &http.Response{StatusCode: http.StatusOK, Header: cmdtesting.DefaultHeader(), Body: cmdtesting.ObjBody(codec, obj)}
+		}
+		tf.UnstructuredClient = &clientfake.RESTClient{
+			NegotiatedSerializer: resource.UnstructuredPlusDefaultContentConfig().NegotiatedSerializer,
+			Client: clientfake.CreateHTTPClient(func(req *http.Request) (*http.Response, error) {
+				urlPrefix := "/api/v1/namespaces/" + testing.Namespace
+				if req.URL.Path == urlPrefix+"/secrets" && req.Method == http.MethodPost {
+					dec := json.NewDecoder(req.Body)
+					secret := &corev1.Secret{}
+					_ = dec.Decode(secret)
+					if secret.Name == "" && secret.GenerateName != "" {
+						secret.Name = secret.GenerateName + "123456"
+					}
+					return httpResp(secret), nil
+				}
+				if strings.HasPrefix(req.URL.Path, urlPrefix+"/secrets") && req.Method == http.MethodPatch {
+					return httpResp(&corev1.Secret{}), nil
+				}
+				mapping := map[string]*http.Response{
+					"/api/v1/secrets": httpResp(&corev1.SecretList{}),
+				}
+				return mapping[req.URL.Path], nil
+			}),
+		}
+		tf.Client = tf.UnstructuredClient
 	})
 
 	AfterEach(func() {
@@ -116,6 +148,32 @@ var _ = Describe("DataProtection", func() {
 			By("test edit backup policy function")
 			o := editBackupPolicyOptions{Factory: tf, IOStreams: streams, GVR: types.BackupPolicyGVR()}
 			Expect(o.complete([]string{policyName})).Should(Succeed())
+
+			By("test update encryption algorithm")
+			o.values = []string{"encryption.algorithm=AES-256-CFB"}
+			Expect(o.runEditBackupPolicy()).Should(Succeed())
+
+			By("test update encryption pass phrase")
+			o.values = []string{"encryption.passPhrase=THISISSECRET"}
+			Expect(o.runEditBackupPolicy()).Should(Succeed())
+
+			By("test update encryption pass phrase with the same value")
+			o.values = []string{"encryption.passPhrase=THISISSECRET"}
+			Expect(o.runEditBackupPolicy()).Should(Succeed())
+
+			By("test update encryption pass phrase with a different value")
+			o.values = []string{"encryption.passPhrase=CHANGED"}
+			Expect(o.runEditBackupPolicy()).Should(Succeed())
+
+			By("test set empty encryption pass phrase")
+			o.values = []string{"encryption.passPhrase="}
+			Expect(o.runEditBackupPolicy()).Should(MatchError(ContainSubstring("encryption.passPhrase can't be empty")))
+
+			By("test disable encryption")
+			o.values = []string{"encryption.disabled=true"}
+			Expect(o.runEditBackupPolicy()).Should(Succeed())
+
+			By("test update backup repo")
 			o.values = []string{"backupRepoName=repo"}
 			Expect(o.runEditBackupPolicy()).Should(Succeed())
 
