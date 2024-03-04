@@ -83,7 +83,7 @@ func (o *configOpsOptions) Complete() error {
 		}
 	}
 
-	wrapper, err := newConfigWrapper(o.CreateOptions, o.Name, o.ComponentName, o.CfgTemplateName, o.CfgFile, o.KeyValues)
+	wrapper, err := newConfigWrapper(o.CreateOptions, o.ComponentName, o.CfgTemplateName, o.CfgFile, o.KeyValues)
 	if err != nil {
 		return err
 	}

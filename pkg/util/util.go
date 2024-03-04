@@ -500,6 +500,10 @@ func GetConfigTemplateListWithResource(cComponents []appsv1alpha1.ClusterCompone
 	if err != nil {
 		return nil, err
 	}
+	return getValidConfigSpecs(reloadTpl, configSpecs)
+}
+
+func getValidConfigSpecs(reloadTpl bool, configSpecs []appsv1alpha1.ComponentConfigSpec) ([]appsv1alpha1.ComponentConfigSpec, error) {
 	if !reloadTpl || len(configSpecs) == 1 {
 		return configSpecs, nil
 	}
@@ -511,6 +515,28 @@ func GetConfigTemplateListWithResource(cComponents []appsv1alpha1.ClusterCompone
 		}
 	}
 	return validConfigSpecs, nil
+}
+
+func GetConfigSpecsFromComponentName(namespace, clusterName, componentName string, reloadTpl bool, cli dynamic.Interface) ([]appsv1alpha1.ComponentConfigSpec, error) {
+	configKey := client.ObjectKey{
+		Namespace: namespace,
+		Name:      core.GenerateComponentConfigurationName(clusterName, componentName),
+	}
+	config := appsv1alpha1.Configuration{}
+	if err := GetResourceObjectFromGVR(types.ConfigurationGVR(), configKey, cli, &config); err != nil {
+		return nil, err
+	}
+	if len(config.Spec.ConfigItemDetails) == 0 {
+		return nil, nil
+	}
+
+	configSpecs := make([]appsv1alpha1.ComponentConfigSpec, 0, len(config.Spec.ConfigItemDetails))
+	for _, item := range config.Spec.ConfigItemDetails {
+		if item.ConfigSpec != nil {
+			configSpecs = append(configSpecs, *item.ConfigSpec)
+		}
+	}
+	return getValidConfigSpecs(reloadTpl, configSpecs)
 }
 
 // GetK8SClientObject gets the client object of k8s,
@@ -539,47 +565,38 @@ func GetResourceObjectFromGVR(gvr schema.GroupVersionResource, key client.Object
 	return apiruntime.DefaultUnstructuredConverter.FromUnstructured(unstructuredObj.Object, k8sObj)
 }
 
-// GetComponentsFromClusterName returns name of component.
-func GetComponentsFromClusterName(key client.ObjectKey, cli dynamic.Interface) ([]string, error) {
-	clusterObj := appsv1alpha1.Cluster{}
-	clusterDefObj := appsv1alpha1.ClusterDefinition{}
-	if err := GetResourceObjectFromGVR(types.ClusterGVR(), key, cli, &clusterObj); err != nil {
-		return nil, err
-	}
-
-	if err := GetResourceObjectFromGVR(types.ClusterDefGVR(), client.ObjectKey{
-		Namespace: "",
-		Name:      clusterObj.Spec.ClusterDefRef,
-	}, cli, &clusterDefObj); err != nil {
-		return nil, err
-	}
-
-	return GetComponentsFromResource(clusterObj.Spec.ComponentSpecs, &clusterDefObj)
-}
-
 // GetComponentsFromResource returns name of component.
-func GetComponentsFromResource(componentSpecs []appsv1alpha1.ClusterComponentSpec, clusterDefObj *appsv1alpha1.ClusterDefinition) ([]string, error) {
-	filter := func(component *appsv1alpha1.ClusterComponentDefinition) bool {
-		if component != nil && len(componentSpecs) == 1 {
-			return true
-		}
-		return enableReconfiguring(component)
-	}
+func GetComponentsFromResource(namespace, clusterName string, componentSpecs []appsv1alpha1.ClusterComponentSpec, cli dynamic.Interface) ([]string, error) {
 	componentNames := make([]string, 0, len(componentSpecs))
 	for _, component := range componentSpecs {
-		cdComponent := clusterDefObj.GetComponentDefByName(component.ComponentDefRef)
-		if filter(cdComponent) {
+		configKey := client.ObjectKey{
+			Namespace: namespace,
+			Name:      core.GenerateComponentConfigurationName(clusterName, component.Name),
+		}
+		config := appsv1alpha1.Configuration{}
+		if err := GetResourceObjectFromGVR(types.ConfigurationGVR(), configKey, cli, &config); err != nil {
+			return nil, err
+		}
+		if len(config.Spec.ConfigItemDetails) == 0 {
+			continue
+		}
+
+		if enableReconfiguring(&config.Spec) {
 			componentNames = append(componentNames, component.Name)
 		}
 	}
 	return componentNames, nil
 }
 
-func enableReconfiguring(component *appsv1alpha1.ClusterComponentDefinition) bool {
+func enableReconfiguring(component *appsv1alpha1.ConfigurationSpec) bool {
 	if component == nil {
 		return false
 	}
-	for _, tpl := range component.ConfigSpecs {
+	for _, item := range component.ConfigItemDetails {
+		if item.ConfigSpec == nil {
+			continue
+		}
+		tpl := item.ConfigSpec
 		if len(tpl.ConfigConstraintRef) > 0 && len(tpl.TemplateRef) > 0 {
 			return true
 		}

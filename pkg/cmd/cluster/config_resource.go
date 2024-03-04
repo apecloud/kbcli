@@ -20,8 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package cluster
 
 import (
-	"fmt"
-
+	"golang.org/x/exp/slices"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/dynamic"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -45,11 +44,8 @@ type configSpecMeta struct {
 
 type ConfigRelatedObjects struct {
 	Cluster        *appsv1alpha1.Cluster
-	ClusterDef     *appsv1alpha1.ClusterDefinition
-	ClusterVersion *appsv1alpha1.ClusterVersion
-	Comps          []*appsv1alpha1.Component
-	CompDefs       []*appsv1alpha1.ComponentDefinition
 	ConfigSpecs    map[string]configSpecsType
+	Configurations []*appsv1alpha1.Configuration
 }
 
 type configObjectsWrapper struct {
@@ -87,10 +83,10 @@ func New(clusterName string, namespace string, cli dynamic.Interface, component 
 func (w *configObjectsWrapper) GetObjects() (*ConfigRelatedObjects, error) {
 	objects := &ConfigRelatedObjects{}
 	err := w.cluster(objects).
-		clusterDefinition(objects).
-		clusterVersion(objects).
-		compDefs(objects).
-		comps(objects).
+		// clusterDefinition(objects).
+		// clusterVersion(objects).
+		compConfigurations(objects).
+		// comps(objects).
 		configSpecsObjects(objects).
 		finish()
 	if err != nil {
@@ -141,119 +137,40 @@ func (w *configObjectsWrapper) cluster(objects *ConfigRelatedObjects) *configObj
 	return w.objectWrapper(fn)
 }
 
-func (w *configObjectsWrapper) clusterVersion(objects *ConfigRelatedObjects) *configObjectsWrapper {
+func (w *configObjectsWrapper) compConfigurations(object *ConfigRelatedObjects) *configObjectsWrapper {
 	fn := func() error {
-		clusterVerName := objects.Cluster.Spec.ClusterVersionRef
-		if clusterVerName == "" {
-			return nil
-		}
-		clusterVerKey := client.ObjectKey{
-			Namespace: "",
-			Name:      clusterVerName,
-		}
-		objects.ClusterVersion = &appsv1alpha1.ClusterVersion{}
-		return util.GetResourceObjectFromGVR(types.ClusterVersionGVR(), clusterVerKey, w.cli, objects.ClusterVersion)
-	}
-	return w.objectWrapper(fn)
-}
-
-func (w *configObjectsWrapper) comps(object *ConfigRelatedObjects) *configObjectsWrapper {
-	fn := func() error {
-		if len(object.CompDefs) == 0 {
-			return nil
-		}
-		object.Comps = make([]*appsv1alpha1.Component, len(object.Cluster.Spec.ComponentSpecs))
-		for i, comp := range object.Cluster.Spec.ComponentSpecs {
-			if comp.ComponentDef == "" {
-				continue
-			}
-			compKey := client.ObjectKey{
-				Namespace: w.namespace,
-				Name:      fmt.Sprintf("%s-%s", w.clusterName, comp.Name),
-			}
-			temp := appsv1alpha1.Component{}
-			err := util.GetResourceObjectFromGVR(types.ComponentGVR(), compKey, w.cli, &temp)
-			if err != nil {
-				return err
-			}
-			object.Comps[i] = &temp
-		}
-		return nil
-	}
-	return w.objectWrapper(fn)
-}
-
-func (w *configObjectsWrapper) compDefs(object *ConfigRelatedObjects) *configObjectsWrapper {
-	fn := func() error {
-		object.CompDefs = make([]*appsv1alpha1.ComponentDefinition, 0)
 		for _, comp := range object.Cluster.Spec.ComponentSpecs {
-			if comp.ComponentDef == "" {
-				continue
+			configKey := client.ObjectKey{
+				Namespace: w.namespace,
+				Name:      core.GenerateComponentConfigurationName(w.clusterName, comp.Name),
 			}
-			compDefKey := client.ObjectKey{
-				Namespace: "",
-				Name:      comp.ComponentDef,
-			}
-			temp := appsv1alpha1.ComponentDefinition{}
-			err := util.GetResourceObjectFromGVR(types.CompDefGVR(), compDefKey, w.cli, &temp)
-			if err != nil {
+			config := appsv1alpha1.Configuration{}
+			if err := util.GetResourceObjectFromGVR(types.ConfigurationGVR(), configKey, w.cli, &config); err != nil {
 				return err
 			}
-			object.CompDefs = append(object.CompDefs, &temp)
+			object.Configurations = append(object.Configurations, &config)
 		}
 		return nil
-	}
-	return w.objectWrapper(fn)
-}
-
-func (w *configObjectsWrapper) clusterDefinition(objects *ConfigRelatedObjects) *configObjectsWrapper {
-	fn := func() error {
-		clusterVerKey := client.ObjectKey{
-			Namespace: "",
-			Name:      objects.Cluster.Spec.ClusterDefRef,
-		}
-		objects.ClusterDef = &appsv1alpha1.ClusterDefinition{}
-		return util.GetResourceObjectFromGVR(types.ClusterDefGVR(), clusterVerKey, w.cli, objects.ClusterDef)
 	}
 	return w.objectWrapper(fn)
 }
 
 func (w *configObjectsWrapper) configSpecsObjects(objects *ConfigRelatedObjects) *configObjectsWrapper {
 	fn := func() error {
-		components := w.components
-		if len(components) == 0 {
-			components = getComponentNames(objects.Cluster)
-		}
-		configSpecs := make(map[string]configSpecsType, len(components))
-		for i, component := range components {
-			if configSpecs[component] == nil {
-				configSpecs[component] = make(configSpecsType, 0)
+		configSpecs := make(map[string]configSpecsType, len(objects.Configurations))
+		for _, component := range objects.Configurations {
+			componentName := component.Spec.ComponentName
+			if len(w.components) != 0 && !slices.Contains(w.components, componentName) {
+				continue
 			}
-			// if the object have the new API
-			if len(objects.CompDefs) != 0 {
-				componentConfigSpecs, err := w.genConfigSpecsByCompDef(objects.Comps[i], objects.CompDefs)
-				if err != nil {
-					return err
-				}
-				configSpecs[component] = append(configSpecs[component], componentConfigSpecs...)
-				componentScriptsSpecs, err := w.genScriptsSpecsByCompDef(objects.Comps[i], objects.CompDefs)
-				if err != nil {
-					return err
-				}
-				configSpecs[component] = append(configSpecs[component], componentScriptsSpecs...)
-			} else {
-				componentConfigSpecs, err := w.genConfigSpecs(objects, component)
-				if err != nil {
-					return err
-				}
-				configSpecs[component] = append(configSpecs[component], componentConfigSpecs...)
-				componentScriptsSpecs, err := w.genScriptsSpecs(objects, component)
-				if err != nil {
-					return err
-				}
-				configSpecs[component] = append(configSpecs[component], componentScriptsSpecs...)
+			if _, ok := configSpecs[componentName]; !ok {
+				configSpecs[componentName] = make(configSpecsType, 0)
 			}
-
+			componentConfigSpecs, err := w.genConfigSpecsByConfiguration(&component.Spec)
+			if err != nil {
+				return err
+			}
+			configSpecs[componentName] = append(configSpecs[componentName], componentConfigSpecs...)
 		}
 		objects.ConfigSpecs = configSpecs
 		return nil
@@ -265,24 +182,22 @@ func (w *configObjectsWrapper) finish() error {
 	return w.err
 }
 
-func (w *configObjectsWrapper) genScriptsSpecs(objects *ConfigRelatedObjects, component string) ([]*configSpecMeta, error) {
-	cComponent := objects.Cluster.Spec.GetComponentByName(component)
-	if cComponent == nil {
-		return nil, core.MakeError("not found component %s in cluster %s", component, objects.Cluster.Name)
+func (w *configObjectsWrapper) genConfigSpecsByConfiguration(config *appsv1alpha1.ConfigurationSpec) (rets []*configSpecMeta, err error) {
+	if len(config.ConfigItemDetails) == 0 {
+		return
 	}
-	dComponent := objects.ClusterDef.GetComponentDefByName(cComponent.ComponentDefRef)
-	if dComponent == nil {
-		return nil, core.MakeError("not found component %s in cluster definition %s", component, objects.ClusterDef.Name)
-	}
-	configSpecMetas := make([]*configSpecMeta, 0)
-	for _, spec := range dComponent.ScriptSpecs {
-		meta, err := w.transformScriptsSpecMeta(spec, component)
+
+	for _, item := range config.ConfigItemDetails {
+		if item.ConfigSpec == nil {
+			continue
+		}
+		specMeta, err := w.transformConfigSpecMeta(*item.ConfigSpec, config.ComponentName)
 		if err != nil {
 			return nil, err
 		}
-		configSpecMetas = append(configSpecMetas, meta)
+		rets = append(rets, specMeta)
 	}
-	return configSpecMetas, nil
+	return
 }
 
 func (w *configObjectsWrapper) transformConfigSpecMeta(spec appsv1alpha1.ComponentConfigSpec, component string) (*configSpecMeta, error) {
@@ -299,121 +214,10 @@ func (w *configObjectsWrapper) transformConfigSpecMeta(spec appsv1alpha1.Compone
 	return specMeta, nil
 }
 
-func (w *configObjectsWrapper) transformScriptsSpecMeta(spec appsv1alpha1.ComponentTemplateSpec, component string) (*configSpecMeta, error) {
-	specMeta := &configSpecMeta{
-		Spec: spec,
-	}
-	err := w.configMap(spec.Name, component, specMeta).
-		finish()
-	if err != nil {
-		return nil, err
-	}
-	return specMeta, nil
-}
-
 func (w *configObjectsWrapper) objectWrapper(fn func() error) *configObjectsWrapper {
 	if w.err != nil {
 		return w
 	}
 	w.err = fn()
 	return w
-}
-
-func (w *configObjectsWrapper) genConfigSpecs(objects *ConfigRelatedObjects, component string) ([]*configSpecMeta, error) {
-	var (
-		ret []*configSpecMeta
-
-		cComponents = objects.Cluster.Spec.ComponentSpecs
-		dComponents = objects.ClusterDef.Spec.ComponentDefs
-		vComponents []appsv1alpha1.ClusterComponentVersion
-	)
-
-	if objects.ClusterVersion != nil {
-		vComponents = objects.ClusterVersion.Spec.ComponentVersions
-	}
-	configSpecs, err := core.GetConfigTemplatesFromComponent(cComponents, dComponents, vComponents, component)
-	if err != nil {
-		return nil, err
-	}
-	for _, spec := range configSpecs {
-		meta, err := w.transformConfigSpecMeta(spec, component)
-		if err != nil {
-			return nil, err
-		}
-		ret = append(ret, meta)
-	}
-	return ret, nil
-}
-
-func (w *configObjectsWrapper) genConfigSpecsByCompDef(comp *appsv1alpha1.Component, compDefs []*appsv1alpha1.ComponentDefinition) ([]*configSpecMeta, error) {
-	var (
-		ret []*configSpecMeta
-	)
-	if comp == nil {
-		return nil, fmt.Errorf("the component is nil and fail to get the corresponding configs")
-	}
-	for _, compDef := range compDefs {
-		if compDef.Name != comp.Spec.CompDef {
-			continue
-		}
-		for _, spec := range compDef.Spec.Configs {
-			specMeta := &configSpecMeta{
-				Spec:       spec.ComponentTemplateSpec,
-				ConfigSpec: spec.DeepCopy(),
-				ConfigMap:  &corev1.ConfigMap{},
-			}
-			err := util.GetResourceObjectFromGVR(types.ConfigmapGVR(), client.ObjectKey{
-				Namespace: w.namespace,
-				Name:      fmt.Sprintf("%s-%s", comp.Name, spec.Name),
-			}, w.cli, specMeta.ConfigMap)
-			if err != nil {
-				return nil, err
-			}
-			if spec.ConfigConstraintRef != "" {
-				cc := &appsv1alpha1.ConfigConstraint{}
-				err = util.GetResourceObjectFromGVR(types.ConfigConstraintGVR(), client.ObjectKey{
-					Namespace: "",
-					Name:      spec.ConfigConstraintRef,
-				}, w.cli, cc)
-				if err != nil {
-					return nil, err
-				}
-				specMeta.ConfigConstraint = cc
-			}
-
-			ret = append(ret, specMeta)
-		}
-		break
-	}
-	return ret, nil
-}
-
-func (w *configObjectsWrapper) genScriptsSpecsByCompDef(comp *appsv1alpha1.Component, compDefs []*appsv1alpha1.ComponentDefinition) ([]*configSpecMeta, error) {
-	var (
-		ret []*configSpecMeta
-	)
-	if comp == nil {
-		return nil, fmt.Errorf("the component is nil and fail to get the corresponding scripts")
-	}
-	for _, compDef := range compDefs {
-		if compDef.Name != comp.Spec.CompDef {
-			continue
-		}
-		for _, spec := range compDef.Spec.Scripts {
-			specMeta := &configSpecMeta{
-				Spec:      spec,
-				ConfigMap: &corev1.ConfigMap{},
-			}
-			err := util.GetResourceObjectFromGVR(types.ConfigmapGVR(), client.ObjectKey{
-				Namespace: w.namespace,
-				Name:      fmt.Sprintf("%s-%s", comp.Name, spec.Name),
-			}, w.cli, specMeta.ConfigMap)
-			if err != nil {
-				return nil, err
-			}
-			ret = append(ret, specMeta)
-		}
-		break
-	}
-	return ret, nil
 }

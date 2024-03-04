@@ -117,6 +117,7 @@ const (
 	KindClusterDef                      = "ClusterDefinition"
 	KindClusterVersion                  = "ClusterVersion"
 	KindConfigConstraint                = "ConfigConstraint"
+	KindConfiguration                   = "Configuration"
 	KindBackup                          = "Backup"
 	KindRestore                         = "Restore"
 	KindBackupPolicy                    = "BackupPolicy"
