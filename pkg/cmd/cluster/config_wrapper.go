@@ -36,6 +36,7 @@ import (
 
 type configWrapper struct {
 	action.CreateOptions
+	*appsv1alpha1.Cluster
 
 	clusterName   string
 	updatedParams map[string]*string
@@ -47,13 +48,12 @@ type configWrapper struct {
 
 	configTemplateSpec appsv1alpha1.ComponentConfigSpec
 
-	clusterObj    *appsv1alpha1.Cluster
-	clusterDefObj *appsv1alpha1.ClusterDefinition
-	clusterVerObj *appsv1alpha1.ClusterVersion
+	// clusterDefObj *appsv1alpha1.ClusterDefinition
+	// clusterVerObj *appsv1alpha1.ClusterVersion
 
 	// 0.8 KubeBlocks API
-	comps    []*appsv1alpha1.Component
-	compDefs []*appsv1alpha1.ComponentDefinition
+	// comps    []*appsv1alpha1.Component
+	// compDefs []*appsv1alpha1.ComponentDefinition
 }
 
 func (w *configWrapper) ConfigTemplateSpec() *appsv1alpha1.ComponentConfigSpec {
@@ -86,7 +86,7 @@ func (w *configWrapper) AutoFillRequiredParam() error {
 // ValidateRequiredParam validates required param.
 func (w *configWrapper) ValidateRequiredParam(forceReplace bool) error {
 	// step1: check existence of component.
-	if w.clusterObj.Spec.GetComponentByName(w.componentName) == nil {
+	if w.Spec.GetComponentByName(w.componentName) == nil {
 		return makeComponentNotExistErr(w.clusterName, w.componentName)
 	}
 
@@ -115,7 +115,7 @@ func (w *configWrapper) fillComponent() error {
 	if w.componentName != "" {
 		return nil
 	}
-	componentNames, err := util.GetComponentsFromResource(w.clusterObj.Spec.ComponentSpecs, w.clusterDefObj)
+	componentNames, err := util.GetComponentsFromResource(w.Namespace, w.clusterName, w.Spec.ComponentSpecs, w.Dynamic)
 	if err != nil {
 		return err
 	}
@@ -136,28 +136,10 @@ func (w *configWrapper) fillConfigSpec() error {
 		}
 		return nil
 	}
-	var (
-		vComponents []appsv1alpha1.ClusterComponentVersion
-		cComponents = w.clusterObj.Spec.ComponentSpecs
-		dComponents = w.clusterDefObj.Spec.ComponentDefs
-		configSpecs []appsv1alpha1.ComponentConfigSpec
-		err         error
-	)
 
-	if w.clusterVerObj != nil {
-		vComponents = w.clusterVerObj.Spec.ComponentVersions
-	}
-	// use 0.8 api
-	if len(w.compDefs) != 0 {
-		configSpecs, err = cluster.GetConfigTemplateListByCompDefs(cComponents, w.compDefs, w.componentName, w.configSpecName == "")
-		if err != nil {
-			return err
-		}
-	} else {
-		configSpecs, err = util.GetConfigTemplateListWithResource(cComponents, dComponents, vComponents, w.componentName, w.configSpecName == "")
-		if err != nil {
-			return err
-		}
+	configSpecs, err := util.GetConfigSpecsFromComponentName(w.GetNamespace(), w.clusterName, w.componentName, w.configSpecName == "", w.Dynamic)
+	if err != nil {
+		return err
 	}
 	if len(configSpecs) == 0 {
 		return makeNotFoundTemplateErr(w.clusterName, w.componentName)
@@ -176,6 +158,9 @@ func (w *configWrapper) fillConfigSpec() error {
 		return nil
 	}
 
+	if len(w.updatedParams) == 0 {
+		return core.MakeError(multiConfigTemplateErrorMessage)
+	}
 	supportUpdatedTpl := make([]appsv1alpha1.ComponentConfigSpec, 0)
 	for _, configSpec := range configSpecs {
 		if ok, err := util.IsSupportReconfigureParams(configSpec, w.updatedParams, w.Dynamic); err == nil && ok {
@@ -229,66 +214,20 @@ func (w *configWrapper) filterForReconfiguring(data map[string]string) []string 
 	return keys
 }
 
-func newConfigWrapper(baseOptions action.CreateOptions, clusterName, componentName, configSpec, configKey string, params map[string]*string) (*configWrapper, error) {
-	var (
-		err           error
-		clusterObj    *appsv1alpha1.Cluster
-		clusterDefObj *appsv1alpha1.ClusterDefinition
-		compDefs      = make([]*appsv1alpha1.ComponentDefinition, 0)
-		comps         = make([]*appsv1alpha1.Component, 0)
-	)
+func newConfigWrapper(baseOptions action.CreateOptions, componentName, configSpec, configKey string, params map[string]*string) (*configWrapper, error) {
+	var err error
+	var clusterObj *appsv1alpha1.Cluster
 
-	if clusterObj, err = cluster.GetClusterByName(baseOptions.Dynamic, clusterName, baseOptions.Namespace); err != nil {
+	if clusterObj, err = cluster.GetClusterByName(baseOptions.Dynamic, baseOptions.Name, baseOptions.Namespace); err != nil {
 		return nil, err
 	}
-	if clusterDefObj, err = cluster.GetClusterDefByName(baseOptions.Dynamic, clusterObj.Spec.ClusterDefRef); err != nil {
-		return nil, err
-	}
-	// 0.8 new api
-
-	for _, spec := range clusterObj.Spec.ComponentSpecs {
-		if len(spec.ComponentDef) == 0 {
-			continue
-		}
-		compDef, err := cluster.GetComponentDefinitionByName(baseOptions.Dynamic, spec.ComponentDef)
-		if err != nil {
-			return nil, err
-		}
-		compDefs = append(compDefs, compDef)
-
-		comp, err := cluster.GetComponetByName(baseOptions.Dynamic, cluster.GetComponentNameByClusterName(clusterName, spec.Name), baseOptions.Namespace)
-		if err != nil {
-			return nil, err
-		}
-		comps = append(comps, comp)
-	}
-
-	w := &configWrapper{
-		CreateOptions: baseOptions,
-		clusterObj:    clusterObj,
-		clusterDefObj: clusterDefObj,
-		compDefs:      compDefs,
-		comps:         comps,
-		clusterName:   clusterName,
-
+	return &configWrapper{
+		CreateOptions:  baseOptions,
+		Cluster:        clusterObj,
+		clusterName:    baseOptions.Name,
 		componentName:  componentName,
 		configSpecName: configSpec,
 		configFileKey:  configKey,
 		updatedParams:  params,
-	}
-
-	if w.clusterObj.Spec.ClusterVersionRef == "" {
-		return w, err
-	}
-
-	clusterVerObj := &appsv1alpha1.ClusterVersion{}
-	if err := util.GetResourceObjectFromGVR(types.ClusterVersionGVR(), client.ObjectKey{
-		Namespace: "",
-		Name:      w.clusterObj.Spec.ClusterVersionRef,
-	}, w.Dynamic, clusterVerObj); err != nil {
-		return nil, err
-	}
-
-	w.clusterVerObj = clusterVerObj
-	return w, nil
+	}, nil
 }

@@ -26,8 +26,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	cfgcore "github.com/apecloud/kubeblocks/pkg/configuration/core"
-
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
@@ -35,6 +33,8 @@ import (
 	cmdtesting "k8s.io/kubectl/pkg/cmd/testing"
 
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
+	cfgcore "github.com/apecloud/kubeblocks/pkg/configuration/core"
+	"github.com/apecloud/kubeblocks/pkg/controller/builder"
 	testapps "github.com/apecloud/kubeblocks/pkg/testutil/apps"
 
 	"github.com/apecloud/kbcli/pkg/testing"
@@ -95,13 +95,27 @@ var _ = Describe("reconfigure test", func() {
 		clusterVersionObj := testapps.NewClusterVersionFactory(clusterVersionName, clusterDefObj.GetName()).
 			AddComponentVersion(statefulCompDefName).
 			GetObject()
+		By("Create a configuration obj")
+		configObj := builder.NewConfigurationBuilder(ns, cfgcore.GenerateComponentConfigurationName(clusterName, statefulCompName)).
+			ClusterRef(clusterName).
+			Component(statefulCompName).
+			AddConfigurationItem(appsv1alpha1.ComponentConfigSpec{
+				ComponentTemplateSpec: appsv1alpha1.ComponentTemplateSpec{
+					Name:        configSpecName,
+					TemplateRef: configmap.Name,
+					Namespace:   ns,
+					VolumeName:  configVolumeName,
+				},
+				ConfigConstraintRef: constraint.Name,
+			}).
+			GetObject()
 		By("creating a cluster")
 		clusterObj := testapps.NewClusterFactory(ns, clusterName,
 			clusterDefObj.Name, "").
 			AddComponent(statefulCompName, statefulCompDefName).GetObject()
 
-		objs := []runtime.Object{configmap, constraint, clusterDefObj, clusterVersionObj, clusterObj, componentConfig}
-		ttf, ops := NewFakeOperationsOptions(ns, clusterObj.Name, appsv1alpha1.ReconfiguringType, objs...)
+		objs := []runtime.Object{configmap, constraint, clusterDefObj, clusterVersionObj, clusterObj, componentConfig, configObj}
+		ttf, ops := NewFakeOperationsOptions(ns, clusterObj.Name, objs...)
 		o := &configOpsOptions{
 			// nil cannot be set to a map struct in CueLang, so init the map of KeyValues.
 			OperationsOptions: &OperationsOptions{
