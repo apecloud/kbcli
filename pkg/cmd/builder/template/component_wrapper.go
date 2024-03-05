@@ -331,7 +331,7 @@ func generateComponentObjects(w *templateRenderWorkflow, reqCtx intctrlutil.Requ
 	model.NewGraphClient(nil).Root(dag, nil, root, nil)
 
 	compSpec := cluster.Spec.GetComponentByName(compName)
-	comp, err := component.BuildComponent(cluster, compSpec)
+	comp, err := component.BuildComponent(cluster, compSpec, nil)
 	if err != nil {
 		return nil, nil, err
 	}
