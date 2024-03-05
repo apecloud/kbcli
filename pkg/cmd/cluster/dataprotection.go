@@ -73,17 +73,17 @@ var (
 		# edit backup policy
 		kbcli cluster edit-backup-policy <backup-policy-name>
 
-        # specify a backup repository
+		# specify a backup repository
 		kbcli cluster edit-backup-policy <backup-policy-name> --set backupRepoName=<backup-repo-name>
 
-        # enable encryption
+		# enable encryption
 		kbcli cluster edit-backup-policy <backup-policy-name> --set encryption.algorithm=AES-256-CFB --set encryption.passPhrase="SECRET!"
 
-        # disable encryption
+		# disable encryption
 		kbcli cluster edit-backup-policy <backup-policy-name> --set encryption.disabled=true
 
-	    # using short cmd to edit backup policy
-        kbcli cluster edit-bp <backup-policy-name>
+		# using short cmd to edit backup policy
+		kbcli cluster edit-bp <backup-policy-name>
 	`)
 	createBackupExample = templates.Examples(`
 		# Create a backup for the cluster, use the default backup policy and volume snapshot backup method
