@@ -164,7 +164,12 @@ func getComponentNameFromOps(ops *appsv1alpha1.OpsRequest) string {
 	opsSpec := ops.Spec
 	switch opsSpec.Type {
 	case appsv1alpha1.ReconfiguringType:
-		components = append(components, opsSpec.Reconfigure.ComponentName)
+		if opsSpec.Reconfigure != nil {
+			components = append(components, opsSpec.Reconfigure.ComponentName)
+		}
+		for _, item := range opsSpec.Reconfigures {
+			components = append(components, item.ComponentName)
+		}
 	case appsv1alpha1.HorizontalScalingType:
 		for _, item := range opsSpec.HorizontalScalingList {
 			components = append(components, item.ComponentName)
@@ -196,10 +201,21 @@ func getTemplateNameFromOps(ops appsv1alpha1.OpsRequestSpec) string {
 	}
 
 	tpls := make([]string, 0)
-	for _, config := range ops.Reconfigure.Configurations {
+	for _, config := range getValidConfigurations(ops) {
 		tpls = append(tpls, config.Name)
 	}
 	return strings.Join(tpls, ",")
+}
+
+func getValidConfigurations(ops appsv1alpha1.OpsRequestSpec) []appsv1alpha1.ConfigurationItem {
+	config := ops.Reconfigure
+	if config == nil && len(ops.Reconfigures) > 0 {
+		config = &ops.Reconfigures[0]
+	}
+	if config != nil {
+		return config.Configurations
+	}
+	return nil
 }
 
 func getKeyNameFromOps(ops appsv1alpha1.OpsRequestSpec) string {
@@ -208,7 +224,7 @@ func getKeyNameFromOps(ops appsv1alpha1.OpsRequestSpec) string {
 	}
 
 	keys := make([]string, 0)
-	for _, config := range ops.Reconfigure.Configurations {
+	for _, config := range getValidConfigurations(ops) {
 		for _, key := range config.Keys {
 			keys = append(keys, key.Key)
 		}

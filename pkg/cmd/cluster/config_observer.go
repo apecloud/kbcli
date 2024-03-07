@@ -272,10 +272,10 @@ func (r *configObserverOptions) printConfigureHistory(component string) error {
 			tplNames,
 			keyNames,
 			phase,
-			getReconfigurePolicy(ops.Status),
+			getReconfigurePolicy(ops.Status, component),
 			ops.Status.Progress,
 			util.TimeFormat(&ops.CreationTimestamp),
-			getValidUpdatedParams(ops.Status))
+			getValidUpdatedParams(ops.Status, component))
 	}
 	tbl.Print()
 	return nil
@@ -329,16 +329,21 @@ func (r *configObserverOptions) printConfigConstraint(schema *apiext.JSONSchemaP
 	return nil
 }
 
-func getReconfigurePolicy(status appsv1alpha1.OpsRequestStatus) string {
-	if status.ReconfiguringStatus == nil || len(status.ReconfiguringStatus.ConfigurationStatus) == 0 {
+func getReconfigurePolicy(status appsv1alpha1.OpsRequestStatus, component string) string {
+	reconfigureStatus := getReconfigureStatus(status, component)
+	if reconfigureStatus == nil || len(reconfigureStatus.ConfigurationStatus) == 0 {
 		return ""
 	}
 
 	var policy string
-	reStatus := status.ReconfiguringStatus.ConfigurationStatus[0]
+	reStatus := reconfigureStatus.ConfigurationStatus[0]
 	switch reStatus.UpdatePolicy {
+	case appsv1alpha1.OperatorSyncUpdate:
+		policy = "syncDynamicReload"
 	case appsv1alpha1.AutoReload:
-		policy = "reload"
+		policy = "asyncDynamicReload"
+	case appsv1alpha1.HotUpdateAndRestartPolicy:
+		policy = "dynamicReloadBeginRestart"
 	case appsv1alpha1.NormalPolicy, appsv1alpha1.RestartPolicy, appsv1alpha1.RollingPolicy:
 		policy = "restart"
 	default:
@@ -347,12 +352,21 @@ func getReconfigurePolicy(status appsv1alpha1.OpsRequestStatus) string {
 	return printer.BoldYellow(policy)
 }
 
-func getValidUpdatedParams(status appsv1alpha1.OpsRequestStatus) string {
-	if status.ReconfiguringStatus == nil || len(status.ReconfiguringStatus.ConfigurationStatus) == 0 {
+func getReconfigureStatus(status appsv1alpha1.OpsRequestStatus, component string) *appsv1alpha1.ReconfiguringStatus {
+	rStatus := status.ReconfiguringStatus
+	if rStatus == nil && len(status.ReconfiguringStatusAsComponent) != 0 {
+		rStatus = status.ReconfiguringStatusAsComponent[component]
+	}
+	return rStatus
+}
+
+func getValidUpdatedParams(status appsv1alpha1.OpsRequestStatus, component string) string {
+	reconfigureStatus := getReconfigureStatus(status, component)
+	if reconfigureStatus == nil || len(reconfigureStatus.ConfigurationStatus) == 0 {
 		return ""
 	}
 
-	reStatus := status.ReconfiguringStatus.ConfigurationStatus[0]
+	reStatus := reconfigureStatus.ConfigurationStatus[0]
 	if len(reStatus.UpdatedParameters.UpdatedKeys) == 0 {
 		return ""
 	}
