@@ -124,6 +124,7 @@ type CreateBackupOptions struct {
 	ClusterRef     string                  `json:"clusterRef"`
 	OpsType        string                  `json:"opsType"`
 	OpsRequestName string                  `json:"opsRequestName"`
+	Force          bool                    `json:"force"`
 
 	action.CreateOptions `json:"-"`
 }
@@ -501,6 +502,7 @@ type CreateRestoreOptions struct {
 	ClusterRef     string                   `json:"clusterRef"`
 	OpsType        string                   `json:"opsType"`
 	OpsRequestName string                   `json:"opsRequestName"`
+	Force          bool                     `json:"force"`
 
 	action.CreateOptions `json:"-"`
 }

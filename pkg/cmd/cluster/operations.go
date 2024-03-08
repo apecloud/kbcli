@@ -67,6 +67,7 @@ type OperationsOptions struct {
 	ComponentNames         []string `json:"componentNames,omitempty"`
 	OpsRequestName         string   `json:"opsRequestName"`
 	TTLSecondsAfterSucceed int      `json:"ttlSecondsAfterSucceed"`
+	Force                  bool     `json:"force"`
 
 	// OpsType operation type
 	OpsType appsv1alpha1.OpsType `json:"type"`
@@ -108,7 +109,6 @@ type OperationsOptions struct {
 	Component      string      `json:"component"`
 	Instance       string      `json:"instance"`
 	Primary        string      `json:"-"`
-	Force          bool        `json:"-"`
 	CharacterType  string      `json:"-"`
 	LorryHAEnabled bool        `json:"-"`
 	ExecPod        *corev1.Pod `json:"-"`
@@ -148,8 +148,8 @@ func newBaseOperationsOptions(f cmdutil.Factory, streams genericiooptions.IOStre
 func (o *OperationsOptions) addCommonFlags(cmd *cobra.Command, f cmdutil.Factory) {
 	// add print flags
 	printer.AddOutputFlagForCreate(cmd, &o.Format, false)
-
-	cmd.Flags().StringVar(&o.OpsRequestName, "name", "", "OpsRequest name. if not specified, it will be randomly generated ")
+	cmd.Flags().BoolVar(&o.Force, "force", false, " skip the pre-checks of the opsRequest to run the opsRequest forcibly")
+	cmd.Flags().StringVar(&o.OpsRequestName, "name", "", "OpsRequest name. if not specified, it will be randomly generated")
 	cmd.Flags().IntVar(&o.TTLSecondsAfterSucceed, "ttlSecondsAfterSucceed", 0, "Time to live after the OpsRequest succeed")
 	cmd.Flags().StringVar(&o.DryRun, "dry-run", "none", `Must be "client", or "server". If with client strategy, only print the object that would be sent, and no data is actually sent. If with server strategy, submit the server-side request, but no data is persistent.`)
 	cmd.Flags().Lookup("dry-run").NoOptDefVal = "unchanged"
@@ -1034,7 +1034,6 @@ func NewPromoteCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 	flags.AddComponentFlag(f, cmd, &o.Component, "Specify the component name of the cluster, if the cluster has multiple components, you need to specify a component")
 	cmd.Flags().StringVar(&o.Instance, "instance", "", "Specify the instance name as the new primary or leader of the cluster, you can get the instance name by running \"kbcli cluster list-instances\"")
 	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "Skip interactive approval before promote the instance")
-	cmd.Flags().BoolVar(&o.Force, "force", false, "force switchover if failed")
 	o.addCommonFlags(cmd, f)
 	return cmd
 }
