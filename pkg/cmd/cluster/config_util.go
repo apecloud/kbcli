@@ -57,14 +57,15 @@ type configEditContext struct {
 }
 
 type parameterSchema struct {
-	name        string
-	valueType   string
-	miniNum     string
-	maxiNum     string
-	enum        []string
-	description string
-	scope       string
-	dynamic     bool
+	name         string
+	valueType    string
+	miniNum      string
+	maxiNum      string
+	enum         []string
+	description  string
+	scope        string
+	dynamic      bool
+	defaultValue string
 }
 
 func (c *configEditContext) getOriginal() string {
@@ -199,9 +200,9 @@ func printConfigParameterSchema(paramTemplates []*parameterSchema, out io.Writer
 	tbl := printer.NewTablePrinter(out)
 	tbl.SetStyle(printer.TerminalStyle)
 	printer.PrintTitle("Parameter Explain")
-	tbl.SetHeader("PARAMETER NAME", "ALLOWED VALUES", "SCOPE", "DYNAMIC", "TYPE", "DESCRIPTION")
+	tbl.SetHeader("PARAMETER NAME", "ALLOWED VALUES", "DEFAULT VALUE", "SCOPE", "DYNAMIC", "TYPE", "DESCRIPTION")
 	for _, pt := range paramTemplates {
-		tbl.AddRow(pt.name, getAllowedValues(pt, maxFieldLength), pt.scope, cast.ToString(pt.dynamic), pt.valueType, pt.description)
+		tbl.AddRow(pt.name, getAllowedValues(pt, maxFieldLength), pt.defaultValue, pt.scope, cast.ToString(pt.dynamic), pt.valueType, pt.description)
 	}
 	tbl.Print()
 }
@@ -225,6 +226,13 @@ func generateParameterSchema(paramName string, property apiext.JSONSchemaProps) 
 			return nil, err
 		}
 		pt.miniNum = b
+	}
+	if property.Default != nil {
+		b, err := toString(property.Default)
+		if err != nil {
+			return nil, err
+		}
+		pt.defaultValue = b
 	}
 	if property.Format != "" {
 		pt.valueType = property.Format
