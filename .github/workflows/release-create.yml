@@ -8,6 +8,7 @@ on:
 
 jobs:
   release-create:
+    if: ${{ ! contains(env.TAG_NAME, 'v0.5.') && ! contains(env.TAG_NAME, 'v0.6.') && ! contains(env.TAG_NAME, 'v0.7.') }}
     uses: apecloud/apecloud-cd/.github/workflows/release-create.yml@v0.1.42
     with:
       APECD_REF: "v0.1.42"

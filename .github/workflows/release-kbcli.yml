@@ -20,6 +20,7 @@ env:
 
 jobs:
   create-release-jihulab:
+    if: ${{ ! contains(env.TAG_NAME, 'v0.5.') && ! contains(env.TAG_NAME, 'v0.6.') && ! contains(env.TAG_NAME, 'v0.7.') }}
     name: Create Release Kbcli Jihulab
     runs-on: ubuntu-latest
     steps:
