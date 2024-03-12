@@ -26,6 +26,7 @@ import (
 	"net/http"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
 	extensionsv1alpha1 "github.com/apecloud/kubeblocks/apis/extensions/v1alpha1"
@@ -37,10 +38,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
@@ -326,6 +329,46 @@ func createOrUpdateCRDS(dynamic dynamic.Interface, kbVersion string) error {
 				return err
 			}
 		}
+	}
+
+	conditionFunc := func(_ context.Context) (bool, error) {
+		for _, obj := range objs {
+			structObj, err := dynamic.Resource(types.CustomResourceDefinitionGVR()).Get(ctx, obj.GetName(), metav1.GetOptions{})
+			if client.IgnoreNotFound(err) != nil {
+				return true, err
+			}
+			if structObj == nil {
+				return false, nil
+			}
+			// check conditions
+			status := structObj.Object["status"]
+			if status == nil {
+				return false, nil
+			}
+			conditions := status.(map[string]interface{})["conditions"]
+			if conditions == nil {
+				return false, nil
+			}
+			done := false
+			for _, c := range conditions.([]interface{}) {
+				condition := c.(map[string]interface{})
+				if condition["type"] == "Established" && condition["status"] == "True" {
+					done = true
+					break
+				}
+			}
+			if !done {
+				return false, nil
+			}
+		}
+		return true, nil
+	}
+
+	// wait for crds to be ready
+	// wait all addons to be enabled, or timeout
+	klog.V(1).Info("wait for CRDs to be ready")
+	if err = wait.PollUntilContextTimeout(context.Background(), 5*time.Second, 5*time.Minute, true, conditionFunc); err != nil {
+		return err
 	}
 	return nil
 }
