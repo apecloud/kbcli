@@ -147,7 +147,7 @@ jobs:
     outputs:
       content-result: ${{ steps.release_message.outputs.content_result }}
       release-version: ${{ steps.release_message.outputs.release_version }}
-    if: ${{ always() }}
+    if: ${{ always() && ! contains(github.ref_name, 'v0.5.') && ! contains(github.ref_name, 'v0.6.') && ! contains(github.ref_name, 'v0.7.') }}
     steps:
       - name: release message
         id: release_message
@@ -161,7 +161,7 @@ jobs:
 
   send-message:
     needs: [ release-message ]
-    if: ${{ always() }}
+    if: ${{ always() && ! contains(github.ref_name, 'v0.5.') && ! contains(github.ref_name, 'v0.6.') && ! contains(github.ref_name, 'v0.7.') }}
     uses: apecloud/apecloud-cd/.github/workflows/feishui-message.yml@v0.1.42
     with:
       TYPE: "2"
