@@ -26,9 +26,10 @@ kbcli cluster vscale NAME [flags]
       --components strings             Component names to this operations
       --cpu string                     Request and limit size of component cpu
       --dry-run string[="unchanged"]   Must be "client", or "server". If with client strategy, only print the object that would be sent, and no data is actually sent. If with server strategy, submit the server-side request, but no data is persistent. (default "none")
+      --force                           skip the pre-checks of the opsRequest to run the opsRequest forcibly
   -h, --help                           help for vscale
       --memory string                  Request and limit size of component memory
-      --name string                    OpsRequest name. if not specified, it will be randomly generated 
+      --name string                    OpsRequest name. if not specified, it will be randomly generated
   -o, --output format                  Prints the output in the specified format. Allowed values: JSON and YAML (default yaml)
       --ttlSecondsAfterSucceed int     Time to live after the OpsRequest succeed
 ```
