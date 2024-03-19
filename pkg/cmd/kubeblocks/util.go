@@ -331,7 +331,7 @@ func createOrUpdateCRDS(dynamic dynamic.Interface, kbVersion string) error {
 		}
 	}
 
-	conditionFunc := func(_ context.Context) (bool, error) {
+	checkCRDs := func(_ context.Context) (bool, error) {
 		for _, obj := range objs {
 			structObj, err := dynamic.Resource(types.CustomResourceDefinitionGVR()).Get(ctx, obj.GetName(), metav1.GetOptions{})
 			if client.IgnoreNotFound(err) != nil {
@@ -367,7 +367,7 @@ func createOrUpdateCRDS(dynamic dynamic.Interface, kbVersion string) error {
 	// wait for crds to be ready
 	// wait all addons to be enabled, or timeout
 	klog.V(1).Info("wait for CRDs to be ready")
-	if err = wait.PollUntilContextTimeout(context.Background(), 5*time.Second, 5*time.Minute, true, conditionFunc); err != nil {
+	if err = wait.PollUntilContextTimeout(context.Background(), 5*time.Second, 5*time.Minute, true, checkCRDs); err != nil {
 		return err
 	}
 	return nil
