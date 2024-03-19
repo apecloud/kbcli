@@ -373,17 +373,19 @@ func (o *InstallOptions) waitAddonsEnabled() error {
 				continue
 			}
 
+			if !addon.Spec.InstallSpec.GetEnabled() {
+				continue
+			}
+
 			// addon should be auto installed, check its status
-			if addon.Spec.InstallSpec.GetEnabled() {
-				addons[addon.Name] = addon
-				if addon.Status.Phase != extensionsv1alpha1.AddonEnabled {
-					klog.V(1).Infof("Addon %s is not enabled yet, status %s", addon.Name, addon.Status.Phase)
-				}
-				if addon.Status.Phase == extensionsv1alpha1.AddonFailed {
-					klog.V(1).Infof("Addon %s failed:", addon.Name)
-					for _, c := range addon.Status.Conditions {
-						klog.V(1).Infof("  %s: %s", c.Reason, c.Message)
-					}
+			addons[addon.Name] = addon
+			if addon.Status.Phase != extensionsv1alpha1.AddonEnabled {
+				klog.V(1).Infof("Addon %s is not enabled yet, status %s", addon.Name, addon.Status.Phase)
+			}
+			if addon.Status.Phase == extensionsv1alpha1.AddonFailed {
+				klog.V(1).Infof("Addon %s failed:", addon.Name)
+				for _, c := range addon.Status.Conditions {
+					klog.V(1).Infof("  %s: %s", c.Reason, c.Message)
 				}
 			}
 		}
@@ -399,6 +401,7 @@ func (o *InstallOptions) waitAddonsEnabled() error {
 	header := "Wait for addons to be enabled"
 	failedErr := errors.New("some addons are failed to be enabled")
 	s := spinner.New(o.Out, spinnerMsg(header))
+
 	var (
 		err         error
 		spinnerDone = func() {
@@ -407,23 +410,25 @@ func (o *InstallOptions) waitAddonsEnabled() error {
 			fmt.Fprintln(o.Out)
 		}
 	)
+
+	conditionFunc := func(_ context.Context) (bool, error) {
+		if err = fetchAddons(); err != nil || len(addons) == 0 {
+			return false, err
+		}
+		status := checkAddons(maps.Values(addons), true)
+		msg = suffixMsg(fmt.Sprintf("%s\n  %s", header, status.outputMsg))
+		s.SetMessage(msg)
+		if status.allEnabled {
+			spinnerDone()
+			return true, nil
+		} else if status.hasFailed {
+			return false, failedErr
+		}
+		return false, nil
+	}
+
 	// wait all addons to be enabled, or timeout
-	if err = wait.PollUntilContextTimeout(context.Background(), 5*time.Second,
-		o.Timeout, true, func(_ context.Context) (bool, error) {
-			if err = fetchAddons(); err != nil || len(addons) == 0 {
-				return false, err
-			}
-			status := checkAddons(maps.Values(addons), true)
-			msg = suffixMsg(fmt.Sprintf("%s\n  %s", header, status.outputMsg))
-			s.SetMessage(msg)
-			if status.allEnabled {
-				spinnerDone()
-				return true, nil
-			} else if status.hasFailed {
-				return false, failedErr
-			}
-			return false, nil
-		}); err != nil {
+	if err = wait.PollUntilContextTimeout(context.Background(), 5*time.Second, o.Timeout, true, conditionFunc); err != nil {
 		spinnerDone()
 		printAddonMsg(o.Out, maps.Values(addons), true)
 		return err
