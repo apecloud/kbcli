@@ -30,8 +30,9 @@ import (
 	"k8s.io/klog/v2"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 
-	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kubeblocks/pkg/lorry/client"
+
+	"github.com/apecloud/kbcli/pkg/printer"
 )
 
 type CreateUserOptions struct {
