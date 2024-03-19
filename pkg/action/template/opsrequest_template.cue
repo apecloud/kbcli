@@ -23,6 +23,7 @@ options: {
 	opsType: 						string
 	backupSpec: 			{}
 	restoreSpec: 			{}
+	force: bool
 }
 
 // required, k8s api resource content
@@ -36,6 +37,7 @@ content: {
 	spec: {
 		clusterRef: options.clusterRef
 		type: options.opsType
+		force: options.force
 		if options.opsType == "Backup" {
 			backupSpec: options.backupSpec
 		}

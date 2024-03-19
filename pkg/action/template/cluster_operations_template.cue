@@ -40,6 +40,7 @@ options: {
 	cfgTemplateName: string
 	cfgFile:         string
 	forceRestart:    bool
+	force: bool
 	services: [
 		...{
 			name:        string
@@ -81,6 +82,7 @@ content: {
 		clusterRef:             options.name
 		type:                   options.type
 		ttlSecondsAfterSucceed: options.ttlSecondsAfterSucceed
+		force: options.force
 		if options.type == "Upgrade" {
 			upgrade: #upgrade
 		}
