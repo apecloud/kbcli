@@ -33,9 +33,10 @@ kbcli cluster create kafka NAME [flags]
       --meta-storage float           Metadata Storage size, the unit is Gi. Value range [1, 10000]. (default 5)
       --meta-storage-class string    The StorageClass for Kafka Metadata Storage.
       --mode string                  Mode for Kafka kraft cluster, 'combined' is combined Kafka controller and broker,'separated' is broker and controller running independently. Legal values [combined, separated]. (default "combined")
-      --monitor-enable               Enable monitor for Kafka.
+      --monitor-enable               Enable monitor for Kafka. (default true)
       --monitor-replicas int         The number of Kafka monitor replicas. Value range [1, 5]. (default 1)
       --monitoring-interval int      The monitoring interval of cluster, 0 is disabled, the unit is second. Value range [0, 60].
+      --node-port-enabled            Whether NodePort service is enabled, default is false
       --publicly-accessible          Specify whether the cluster can be accessed from the public internet.
       --rbac-enabled                 Specify whether rbac resources will be created by client, otherwise KubeBlocks server will try to create rbac resources.
       --replicas int                 The number of Kafka broker replicas for combined mode. Legal values [1, 3, 5]. (default 1)
