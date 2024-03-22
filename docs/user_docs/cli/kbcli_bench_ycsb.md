@@ -40,20 +40,22 @@ kbcli bench ycsb [Step] [BenchmarkName] [flags]
 
 ```
       --cluster string                     the cluster of database
-      --cpu string                         the cpu of benchmark pod
       --database string                    database name
       --driver string                      the driver of database
       --extra-args strings                 extra arguments for benchmark
   -h, --help                               help for ycsb
       --host string                        the host of database
       --insert-proportion int              the percentage of insert operations in benchmark
-      --memory string                      the memory of benchmark pod
+      --limit-cpu string                   the limit cpu of benchmark
+      --limit-memory string                the limit memory of benchmark
       --operation-count int                the number of operations to use during the run phase (default 1000)
       --password string                    the password of database
       --port int                           the port of database
       --read-modify-write-proportion int   the percentage of read-modify-write operations in benchmark, which read a record, modify it, and write it back
       --read-proportion int                the percentage of read operations in benchmark
       --record-count int                   the number of records to use (default 1000)
+      --request-cpu string                 the request cpu of benchmark
+      --request-memory string              the request memory of benchmark
       --scan-proportion int                the percentage of scan operations in benchmark
       --threads ints                       the number of threads to use (default [1])
       --tolerations strings                Tolerations for benchmark, such as '"dev=true:NoSchedule,large=true:NoSchedule"'

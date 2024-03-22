@@ -33,25 +33,27 @@ kbcli bench redis-benchmark [flags]
 ### Options
 
 ```
-      --clients ints          number of parallel connections (default [50])
-      --cluster string        the cluster of database
-      --cpu string            the cpu of benchmark pod
-      --data-size int         data size of set/get value in bytes (default 3)
-      --database string       database name
-      --driver string         the driver of database
-      --extra-args strings    extra arguments for benchmark
-  -h, --help                  help for redis-benchmark
-      --host string           the host of database
-      --key-space int         use random keys for SET/GET/INCR, random values for SADD
-      --memory string         the memory of benchmark pod
-      --password string       the password of database
-      --pipeline int          pipelining num requests. Default 1 (no pipeline). (default 1)
-      --port int              the port of database
-      --quiet                 quiet mode. Just show query/sec values (default true)
-      --requests int          total number of requests (default 10000)
-      --tests string          only run the comma separated list of tests. The test names are the same as the ones produced as output.
-      --tolerations strings   Tolerations for benchmark, such as '"dev=true:NoSchedule,large=true:NoSchedule"'
-      --user string           the user of database
+      --clients ints            number of parallel connections (default [50])
+      --cluster string          the cluster of database
+      --data-size int           data size of set/get value in bytes (default 3)
+      --database string         database name
+      --driver string           the driver of database
+      --extra-args strings      extra arguments for benchmark
+  -h, --help                    help for redis-benchmark
+      --host string             the host of database
+      --key-space int           use random keys for SET/GET/INCR, random values for SADD
+      --limit-cpu string        the limit cpu of benchmark
+      --limit-memory string     the limit memory of benchmark
+      --password string         the password of database
+      --pipeline int            pipelining num requests. Default 1 (no pipeline). (default 1)
+      --port int                the port of database
+      --quiet                   quiet mode. Just show query/sec values (default true)
+      --request-cpu string      the request cpu of benchmark
+      --request-memory string   the request memory of benchmark
+      --requests int            total number of requests (default 10000)
+      --tests string            only run the comma separated list of tests. The test names are the same as the ones produced as output.
+      --tolerations strings     Tolerations for benchmark, such as '"dev=true:NoSchedule,large=true:NoSchedule"'
+      --user string             the user of database
 ```
 
 ### Options inherited from parent commands

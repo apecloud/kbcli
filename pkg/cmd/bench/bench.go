@@ -92,8 +92,10 @@ type BenchBaseOptions struct {
 	TolerationsRaw []string
 	Tolerations    []corev1.Toleration
 	ExtraArgs      []string // extra arguments for benchmark
-	CPU            string
-	Memory         string
+	RequestCPU     string
+	RequestMemory  string
+	LimitCPU       string
+	LimitMemory    string
 
 	factory cmdutil.Factory
 	client  clientset.Interface
@@ -135,13 +137,24 @@ func (o *BenchBaseOptions) BaseValidate() error {
 		return fmt.Errorf("port is required")
 	}
 
-	if o.CPU != "" {
-		if _, err := apiresource.ParseQuantity(o.CPU); err != nil {
+	if o.LimitCPU != "" {
+		if _, err := apiresource.ParseQuantity(o.LimitCPU); err != nil {
 			return fmt.Errorf("invalid cpu: %s", err)
 		}
 	}
-	if o.Memory != "" {
-		if _, err := apiresource.ParseQuantity(o.Memory); err != nil {
+	if o.LimitMemory != "" {
+		if _, err := apiresource.ParseQuantity(o.LimitMemory); err != nil {
+			return fmt.Errorf("invalid memory: %s", err)
+		}
+
+	}
+	if o.RequestCPU != "" {
+		if _, err := apiresource.ParseQuantity(o.RequestCPU); err != nil {
+			return fmt.Errorf("invalid cpu: %s", err)
+		}
+	}
+	if o.RequestMemory != "" {
+		if _, err := apiresource.ParseQuantity(o.RequestMemory); err != nil {
 			return fmt.Errorf("invalid memory: %s", err)
 		}
 	}
@@ -154,8 +167,10 @@ func (o *BenchBaseOptions) BaseValidate() error {
 }
 
 func (o *BenchBaseOptions) AddFlags(cmd *cobra.Command) {
-	cmd.Flags().StringVar(&o.CPU, "cpu", "", "the cpu of benchmark pod")
-	cmd.Flags().StringVar(&o.Memory, "memory", "", "the memory of benchmark pod")
+	cmd.Flags().StringVar(&o.RequestCPU, "request-cpu", "", "the request cpu of benchmark")
+	cmd.Flags().StringVar(&o.RequestMemory, "request-memory", "", "the request memory of benchmark")
+	cmd.Flags().StringVar(&o.LimitCPU, "limit-cpu", "", "the limit cpu of benchmark")
+	cmd.Flags().StringVar(&o.LimitMemory, "limit-memory", "", "the limit memory of benchmark")
 	cmd.Flags().StringVar(&o.Driver, "driver", "", "the driver of database")
 	cmd.Flags().StringVar(&o.Database, "database", "", "database name")
 	cmd.Flags().StringVar(&o.Host, "host", "", "the host of database")
@@ -530,11 +545,17 @@ func parseStepAndName(args []string, namePrefix string) (step, name string) {
 	return
 }
 
-func setCPUAndMemory(benchCommon *v1alpha1.BenchCommon, cpu, memory string) {
-	if cpu != "" {
-		benchCommon.Cpu = cpu
+func setCPUAndMemory(benchCommon *v1alpha1.BenchCommon, requestCPU, requestMemory, limitCPU, limitMemory string) {
+	if requestCPU != "" {
+		benchCommon.ResourceRequests.Cpu = requestCPU
 	}
-	if memory != "" {
-		benchCommon.Memory = memory
+	if requestMemory != "" {
+		benchCommon.ResourceRequests.Memory = requestMemory
+	}
+	if limitCPU != "" {
+		benchCommon.ResourceLimits.Cpu = limitCPU
+	}
+	if limitMemory != "" {
+		benchCommon.ResourceLimits.Memory = limitMemory
 	}
 }
