@@ -202,7 +202,7 @@ func (o *TpchOptions) Run() error {
 	}
 
 	// set cpu and memory if specified
-	setCPUAndMemory(&tpch.Spec.BenchCommon, o.CPU, o.Memory)
+	setCPUAndMemory(&tpch.Spec.BenchCommon, o.RequestCPU, o.RequestMemory, o.LimitCPU, o.LimitMemory)
 
 	obj := &unstructured.Unstructured{
 		Object: map[string]interface{}{},
