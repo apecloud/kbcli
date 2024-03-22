@@ -42,25 +42,27 @@ kbcli bench sysbench [Step] [BenchmarkName] [flags]
 ### Options
 
 ```
-      --cluster string        the cluster of database
-      --cpu string            the cpu of benchmark pod
-      --database string       database name
-      --driver string         the driver of database
-      --duration int          the seconds of running sysbench (default 60)
-      --extra-args strings    extra arguments for benchmark
-  -h, --help                  help for sysbench
-      --host string           the host of database
-      --memory string         the memory of benchmark pod
-      --password string       the password of database
-      --port int              the port of database
-      --read-percent int      the percent of read, only useful when type is oltp_read_write_pct
-      --size int              the data size of per table (default 25000)
-      --tables int            the number of tables (default 10)
-      --threads ints          the number of threads, you can set multiple values, like 4,8 (default [4])
-      --tolerations strings   Tolerations for benchmark, such as '"dev=true:NoSchedule,large=true:NoSchedule"'
-      --type strings          sysbench type, you can set multiple values (default [oltp_read_write])
-      --user string           the user of database
-      --write-percent int     the percent of write, only useful when type is oltp_read_write_pct
+      --cluster string          the cluster of database
+      --database string         database name
+      --driver string           the driver of database
+      --duration int            the seconds of running sysbench (default 60)
+      --extra-args strings      extra arguments for benchmark
+  -h, --help                    help for sysbench
+      --host string             the host of database
+      --limit-cpu string        the limit cpu of benchmark
+      --limit-memory string     the limit memory of benchmark
+      --password string         the password of database
+      --port int                the port of database
+      --read-percent int        the percent of read, only useful when type is oltp_read_write_pct
+      --request-cpu string      the request cpu of benchmark
+      --request-memory string   the request memory of benchmark
+      --size int                the data size of per table (default 25000)
+      --tables int              the number of tables (default 10)
+      --threads ints            the number of threads, you can set multiple values, like 4,8 (default [4])
+      --tolerations strings     Tolerations for benchmark, such as '"dev=true:NoSchedule,large=true:NoSchedule"'
+      --type strings            sysbench type, you can set multiple values (default [oltp_read_write])
+      --user string             the user of database
+      --write-percent int       the percent of write, only useful when type is oltp_read_write_pct
 ```
 
 ### Options inherited from parent commands
