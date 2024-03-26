@@ -338,11 +338,11 @@ func getReconfigurePolicy(status appsv1alpha1.OpsRequestStatus, component string
 	var policy string
 	reStatus := reconfigureStatus.ConfigurationStatus[0]
 	switch reStatus.UpdatePolicy {
-	case appsv1alpha1.OperatorSyncUpdate:
+	case appsv1alpha1.SyncDynamicReloadPolicy:
 		policy = "syncDynamicReload"
-	case appsv1alpha1.AutoReload:
+	case appsv1alpha1.AsyncDynamicReloadPolicy:
 		policy = "asyncDynamicReload"
-	case appsv1alpha1.HotUpdateAndRestartPolicy:
+	case appsv1alpha1.DynamicReloadAndRestartPolicy:
 		policy = "dynamicReloadBeginRestart"
 	case appsv1alpha1.NormalPolicy, appsv1alpha1.RestartPolicy, appsv1alpha1.RollingPolicy:
 		policy = "restart"

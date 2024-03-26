@@ -107,7 +107,7 @@ func FakeCluster(name, namespace string, conditions ...metav1.Condition) *appsv1
 				ComponentName: {
 					MembersStatus: []workloadsv1alpha1.MemberStatus{
 						{
-							ReplicaRole: workloadsv1alpha1.ReplicaRole{
+							ReplicaRole: &workloadsv1alpha1.ReplicaRole{
 								Name:       "leader",
 								AccessMode: workloadsv1alpha1.ReadWriteMode,
 							},

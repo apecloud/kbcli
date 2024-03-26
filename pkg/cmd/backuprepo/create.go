@@ -82,6 +82,7 @@ type createOptions struct {
 	isDefault       bool
 	pvReclaimPolicy string
 	volumeCapacity  string
+	pathPrefix      string
 	repoName        string
 	config          map[string]string
 	credential      map[string]string
@@ -105,6 +106,15 @@ var backupRepoCreateExamples = templates.Examples(`
       --bucket test-kb-backup \
       --access-key-id <ACCESS KEY> \
       --secret-access-key <SECRET KEY>
+
+    # Create a backup repository with a sub-path to isolate different repositories
+    kbcli backuprepo create my-backup-repo \
+      --provider s3 \
+      --region us-west-1 \
+      --bucket test-kb-backup \
+      --access-key-id <ACCESS KEY> \
+      --secret-access-key <SECRET KEY> \
+      --path-prefix dev/team1
 
     # Create a backup repository with a FTP backend
     kbcli backuprepo create \
@@ -148,6 +158,8 @@ func newCreateCommand(o *createOptions, f cmdutil.Factory, streams genericioopti
 		`Specify the reclaim policy for PVs created by this backup repository, the value can be "Retain" or "Delete". This option only takes effect when --access-method="Mount".`)
 	cmd.Flags().StringVar(&o.volumeCapacity, "volume-capacity", "100Gi",
 		`Specify the capacity of the new created PVC. This option only takes effect when --access-method="Mount".`)
+	cmd.Flags().StringVar(&o.pathPrefix, "path-prefix", "",
+		`Specify the prefix of the path for storing backup files.`)
 
 	// register flag completion func
 	registerFlagCompletionFunc(cmd, f)
@@ -374,6 +386,7 @@ func (o *createOptions) buildBackupRepoObject(secret *corev1.Secret) (*unstructu
 			PVReclaimPolicy:    corev1.PersistentVolumeReclaimPolicy(o.pvReclaimPolicy),
 			VolumeCapacity:     resource.MustParse(o.volumeCapacity),
 			Config:             o.config,
+			PathPrefix:         o.pathPrefix,
 		},
 	}
 	if o.repoName != "" {
