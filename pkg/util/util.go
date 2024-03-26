@@ -805,7 +805,7 @@ var ProviderExposeAnnotations = map[K8sProvider]map[ExposeType]map[string]string
 func GetExposeAnnotations(provider K8sProvider, exposeType ExposeType) (map[string]string, error) {
 	exposeAnnotations, ok := ProviderExposeAnnotations[provider]
 	if !ok {
-		return make(map[string]string), nil
+		return nil, fmt.Errorf("unsupported provider: %s", provider)
 	}
 	annotations, ok := exposeAnnotations[exposeType]
 	if !ok {
