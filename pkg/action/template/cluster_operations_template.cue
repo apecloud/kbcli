@@ -27,6 +27,19 @@ options: {
 	component:              string
 	instance:               string
 	componentNames: [...string]
+	rebuildInstanceFrom: [
+	  ...{
+	     componentName: string
+	     backupName?: string
+	     instanceNames: [...string]
+	     envForRestore?: [
+	       ...{
+	         name: string
+	         value: string
+	       },
+	     ]
+	  },
+	]
 	cpu:    string
 	memory: string
 	class:  string
@@ -50,7 +63,8 @@ options: {
 	]
 	params: [
 		...{
-			[string]: {string | null}
+			name: string
+			value: string
 		},
 	]
 	...
@@ -213,11 +227,18 @@ content: {
 				}
 			}]
 		}
+        if options.type == "RebuildInstance" {
+            rebuildFrom: options.rebuildInstanceFrom
+        }
 		if options.type == "Custom" {
 			customSpec: {
-				componentName:    options.component
-				opsDefinitionRef: options.opsDefinitionName
-				params:           options.params
+			    opsDefinitionRef: options.opsDefinitionName
+			    components: [
+			       {
+			         name: options.component
+			         parameters: options.params
+			       }
+			    ]
 			}
 		}
 	}

@@ -56,6 +56,7 @@ func NewClusterCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 				NewStopCmd(f, streams),
 				NewStartCmd(f, streams),
 				NewRestartCmd(f, streams),
+				NewRebuildInstanceCmd(f, streams),
 				NewUpgradeCmd(f, streams),
 				NewVolumeExpansionCmd(f, streams),
 				NewVerticalScalingCmd(f, streams),
