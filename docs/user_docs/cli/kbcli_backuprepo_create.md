@@ -28,6 +28,15 @@ kbcli backuprepo create [NAME] [flags]
   --access-key-id <ACCESS KEY> \
   --secret-access-key <SECRET KEY>
   
+  # Create a backup repository with a sub-path to isolate different repositories
+  kbcli backuprepo create my-backup-repo \
+  --provider s3 \
+  --region us-west-1 \
+  --bucket test-kb-backup \
+  --access-key-id <ACCESS KEY> \
+  --secret-access-key <SECRET KEY> \
+  --path-prefix dev/team1
+  
   # Create a backup repository with a FTP backend
   kbcli backuprepo create \
   --provider ftp \
@@ -43,6 +52,7 @@ kbcli backuprepo create [NAME] [flags]
       --access-method string       Specify the access method for the backup repository, "Tool" is preferred if not specified. options: ["Mount" "Tool"]
       --default                    Specify whether to set the created backup repository as default
   -h, --help                       help for create
+      --path-prefix string         Specify the prefix of the path for storing backup files.
       --provider string            Specify storage provider
       --pv-reclaim-policy string   Specify the reclaim policy for PVs created by this backup repository, the value can be "Retain" or "Delete". This option only takes effect when --access-method="Mount". (default "Retain")
       --volume-capacity string     Specify the capacity of the new created PVC. This option only takes effect when --access-method="Mount". (default "100Gi")

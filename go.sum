@@ -272,8 +272,8 @@ github.com/antlr/antlr4/runtime/Go/antlr/v4 v4.0.0-20230305170008-8188dc5388df h
 github.com/antlr/antlr4/runtime/Go/antlr/v4 v4.0.0-20230305170008-8188dc5388df/go.mod h1:pSwJ0fSY5KhvocuWSx4fz3BA8OrA1bQn+K1Eli3BRwM=
 github.com/apecloud/kubebench v0.0.0-20240313105909-ba8654f654fc h1:BkFyEBEmDMdDhkWNAs9yg6zAj7xZjWON2u8b265T2a8=
 github.com/apecloud/kubebench v0.0.0-20240313105909-ba8654f654fc/go.mod h1:5IZiDkFdgiZRGLsL+FOlvPsiF9LbyU55DVj4/5vT7+4=
-github.com/apecloud/kubeblocks v0.9.0-alpha.2.0.20240305040354-fcd1aa88ecde h1:UQ56VPtrrUU8mvVJgCczrPCLhrZM2P3sSwKUnD/hI/o=
-github.com/apecloud/kubeblocks v0.9.0-alpha.2.0.20240305040354-fcd1aa88ecde/go.mod h1:Rl8VABmwW/Cf7vyodu1qIpoEpHXqGegh4XsP18U5zsg=
+github.com/apecloud/kubeblocks v0.0.0-20240326022625-78469760d798 h1:1HKluAKHrdO1l9ETTQVZobB3rYTGjUAeSMq5hK3s34k=
+github.com/apecloud/kubeblocks v0.0.0-20240326022625-78469760d798/go.mod h1:nU4ytJVEzPg+n7Py2IDbwPI8k433dsLWSGmn3U0JexU=
 github.com/apparentlymart/go-textseg v1.0.0/go.mod h1:z96Txxhf3xSFMPmb5X/1W05FF/Nj9VFpLOpjS5yuumk=
 github.com/apparentlymart/go-textseg/v13 v13.0.0/go.mod h1:ZK2fH7c4NqDTLtiYLvIkEghdlcqw7yxLeM89kiTRPUo=
 github.com/armon/circbuf v0.0.0-20150827004946-bbbad097214e/go.mod h1:3U/XgcO3hCbHZ8TKRvWD2dDTCfh9M9ya+I9JpbB7O8o=
@@ -1151,8 +1151,6 @@ github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c/go.mod h1:Om
 github.com/poy/onpar v0.0.0-20200406201722-06f95a1c68e8/go.mod h1:nSbFQvMj97ZyhFRSJYtut+msi4sOY6zJDGCdSc+/rZU=
 github.com/poy/onpar v1.1.2 h1:QaNrNiZx0+Nar5dLgTVp5mXkyoVFIbepjyEoGSnhbAY=
 github.com/poy/onpar v1.1.2/go.mod h1:6X8FLNoxyr9kkmnlqpK6LSoiOtrO6MICtWwEuWkLjzg=
-github.com/prometheus-community/pro-bing v0.3.0 h1:SFT6gHqXwbItEDJhTkzPWVqU6CLEtqEfNAPp47RUON4=
-github.com/prometheus-community/pro-bing v0.3.0/go.mod h1:p9dLb9zdmv+eLxWfCT6jESWuDrS+YzpPkQBgysQF8a0=
 github.com/prometheus/alertmanager v0.26.0 h1:uOMJWfIwJguc3NaM3appWNbbrh6G/OjvaHMk22aBBYc=
 github.com/prometheus/alertmanager v0.26.0/go.mod h1:rVcnARltVjavgVaNnmevxK7kOn7IZavyf0KNgHkbEpU=
 github.com/prometheus/client_golang v0.9.0-pre1.0.20180209125602-c332b6f63c06/go.mod h1:7SWBe2y4D6OKWSNQJUaRYU/AaXPKyh/dDVn+NZz0KFw=

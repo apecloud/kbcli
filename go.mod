@@ -7,7 +7,7 @@ require (
 	github.com/99designs/keyring v1.2.2
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/apecloud/kubebench v0.0.0-20240313105909-ba8654f654fc
-	github.com/apecloud/kubeblocks v0.9.0-alpha.2.0.20240305040354-fcd1aa88ecde
+	github.com/apecloud/kubeblocks v0.0.0-20240326022625-78469760d798
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
 	github.com/benbjohnson/clock v1.3.5
 	github.com/briandowns/spinner v1.23.0
@@ -261,7 +261,6 @@ require (
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
 	github.com/pjbgf/sha1cd v0.3.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
-	github.com/prometheus-community/pro-bing v0.3.0 // indirect
 	github.com/prometheus/client_golang v1.18.0 // indirect
 	github.com/prometheus/client_model v0.5.0 // indirect
 	github.com/prometheus/common v0.45.0 // indirect
