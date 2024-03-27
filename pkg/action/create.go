@@ -106,10 +106,11 @@ type CreateOptions struct {
 
 func (o *CreateOptions) Complete() error {
 	var err error
-	if o.Namespace, _, err = o.Factory.ToRawKubeConfigLoader().Namespace(); err != nil {
-		return err
+	if o.Namespace == "" {
+		if o.Namespace, _, err = o.Factory.ToRawKubeConfigLoader().Namespace(); err != nil {
+			return err
+		}
 	}
-
 	// now we use the first argument as the resource name
 	if len(o.Args) > 0 {
 		o.Name = o.Args[0]
@@ -249,7 +250,6 @@ func (o *CreateOptions) buildResourceObj() (*unstructured.Unstructured, error) {
 	if optionsByte, err = json.Marshal(m); err != nil {
 		return nil, err
 	}
-
 	if cueValue, err = newCueValue(o.CueTemplateName); err != nil {
 		return nil, err
 	}

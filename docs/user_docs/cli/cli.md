@@ -104,6 +104,7 @@ Cluster command.
 * [kbcli cluster list-ops](kbcli_cluster_list-ops.md)	 - List all opsRequests.
 * [kbcli cluster logs](kbcli_cluster_logs.md)	 - Access cluster log file.
 * [kbcli cluster promote](kbcli_cluster_promote.md)	 - Promote a non-primary or non-leader instance as the new primary or leader of the cluster
+* [kbcli cluster rebuild-instance](kbcli_cluster_rebuild-instance.md)	 - Rebuild the specified instances in the cluster.
 * [kbcli cluster register](kbcli_cluster_register.md)	 - Pull the cluster chart to the local cache and register the type to 'create' sub-command
 * [kbcli cluster restart](kbcli_cluster_restart.md)	 - Restart the specified components in the cluster.
 * [kbcli cluster restore](kbcli_cluster_restore.md)	 - Restore a new cluster from backup.

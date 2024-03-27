@@ -106,12 +106,16 @@ type OperationsOptions struct {
 	Services      []appsv1alpha1.OpsService `json:"services,omitempty"`
 
 	// Switchover options
-	Component      string      `json:"component"`
-	Instance       string      `json:"instance"`
-	Primary        string      `json:"-"`
-	CharacterType  string      `json:"-"`
-	LorryHAEnabled bool        `json:"-"`
-	ExecPod        *corev1.Pod `json:"-"`
+	Component           string                         `json:"component"`
+	Instance            string                         `json:"instance"`
+	Primary             string                         `json:"-"`
+	CharacterType       string                         `json:"-"`
+	LorryHAEnabled      bool                           `json:"-"`
+	ExecPod             *corev1.Pod                    `json:"-"`
+	BackupName          string                         `json:"-"`
+	InstanceNames       []string                       `json:"-"`
+	RebuildInstanceFrom []appsv1alpha1.RebuildInstance `json:"rebuildInstanceFrom,omitempty"`
+	Env                 []string                       `json:"-"`
 }
 
 func newBaseOperationsOptions(f cmdutil.Factory, streams genericiooptions.IOStreams,
@@ -1020,7 +1024,16 @@ func NewPromoteCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 				customOpr.OpsType = "Custom"
 				customOpr.OpsTypeLower = strings.ToLower(string(o.OpsType))
 				customOpr.OpsDefinitionName = "switchover"
-				customOpr.Params = []map[string]string{{"primary": o.Primary, "candidate": o.Instance}}
+				customOpr.Params = []appsv1alpha1.Parameter{
+					{
+						Name:  "primary",
+						Value: o.Primary,
+					},
+					{
+						Name:  "candidate",
+						Value: o.Instance,
+					},
+				}
 				customOpr.CreateOptions.Options = customOpr
 				cmdutil.CheckErr(customOpr.Run())
 			} else {
@@ -1051,8 +1064,8 @@ var customOpsExample = templates.Examples(`
 
 type CustomOperations struct {
 	*OperationsOptions
-	OpsDefinitionName string              `json:"opsDefinitionName"`
-	Params            []map[string]string `json:"params"`
+	OpsDefinitionName string                   `json:"opsDefinitionName"`
+	Params            []appsv1alpha1.Parameter `json:"params"`
 	SchemaProperties  *apiextensionsv1.JSONSchemaProps
 }
 
@@ -1093,8 +1106,10 @@ func NewCustomOpsCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cob
 
 func (o *CustomOperations) init() error {
 	var err error
-	if o.Namespace, _, err = o.Factory.ToRawKubeConfigLoader().Namespace(); err != nil {
-		return err
+	if o.Namespace == "" {
+		if o.Namespace, _, err = o.Factory.ToRawKubeConfigLoader().Namespace(); err != nil {
+			return err
+		}
 	}
 	if o.Dynamic, err = o.Factory.DynamicClient(); err != nil {
 		return err
@@ -1175,18 +1190,25 @@ func (o *CustomOperations) parseOpsDefinitionAndParams(cmd *cobra.Command, args 
 }
 
 func (o *CustomOperations) completeCustomSpec(cmd *cobra.Command) error {
-	param := map[string]string{}
+	var (
+		params   []appsv1alpha1.Parameter
+		paramMap = map[string]string{}
+	)
 	// Construct config and credential map from flags
 	if o.SchemaProperties != nil {
 		fromFlags := flags.FlagsToValues(cmd.LocalNonPersistentFlags(), true)
 		for name := range o.SchemaProperties.Properties {
 			flagName := strcase.KebabCase(name)
 			if val, ok := fromFlags[flagName]; ok {
-				param[name] = val.String()
+				params = append(params, appsv1alpha1.Parameter{
+					Name:  name,
+					Value: val.String(),
+				})
+				paramMap[name] = val.String()
 			}
 		}
 		// validate if flags values are legal.
-		data, err := common.CoverStringToInterfaceBySchemaType(o.SchemaProperties, param)
+		data, err := common.CoverStringToInterfaceBySchemaType(o.SchemaProperties, paramMap)
 		if err != nil {
 			return err
 		}
@@ -1194,6 +1216,91 @@ func (o *CustomOperations) completeCustomSpec(cmd *cobra.Command) error {
 			return err
 		}
 	}
-	o.Params = []map[string]string{param}
+	o.Params = params
 	return nil
+}
+
+var rebuildExample = templates.Examples(`
+		# rebuild instance without backup
+		kbcli cluster rebuild-instance mycluster --instances pod1,pod2
+
+		# rebuild instance from backup
+		kbcli cluster rebuild-instance mycluster --instances pod1,pod2 --backupName <backup>
+`)
+
+// NewRebuildInstanceCmd creates a rebuildInstance command
+func NewRebuildInstanceCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
+	o := newBaseOperationsOptions(f, streams, appsv1alpha1.RebuildInstanceType, false)
+	completedRebuildOps := func() error {
+		if o.Name == "" {
+			return makeMissingClusterNameErr()
+		}
+		if len(o.InstanceNames) == 0 {
+			return fmt.Errorf("instances can not be empty")
+		}
+		_, err := cluster.GetClusterByName(o.Dynamic, o.Name, o.Namespace)
+		if err != nil {
+			return err
+		}
+		var compName string
+		for _, podName := range o.InstanceNames {
+			pod := &corev1.Pod{}
+			if err = util.GetK8SClientObject(o.Dynamic, pod, types.PodGVR(), o.Namespace, podName); err != nil {
+				return err
+			}
+			clusterName := pod.Labels[constant.AppInstanceLabelKey]
+			if clusterName != o.Name {
+				return fmt.Errorf(`the instance "%s" not belongs the cluster "%s"`, podName, o.Name)
+			}
+			insCompName := pod.Labels[constant.KBAppComponentLabelKey]
+			if compName != "" && compName != insCompName {
+				return fmt.Errorf("these instances do not belong to the same component")
+			}
+			compName = insCompName
+		}
+		var envVars []corev1.EnvVar
+		for _, v := range o.Env {
+			for _, envVar := range strings.Split(v, ",") {
+				kv := strings.Split(envVar, "=")
+				if len(kv) != 2 {
+					return fmt.Errorf("unknown format for env: %s", envVar)
+				}
+				envVars = append(envVars, corev1.EnvVar{
+					Name:  kv[0],
+					Value: kv[1],
+				})
+			}
+		}
+		o.RebuildInstanceFrom = []appsv1alpha1.RebuildInstance{
+			{
+				ComponentOps: appsv1alpha1.ComponentOps{
+					ComponentName: compName,
+				},
+				InstanceNames: o.InstanceNames,
+				BackupName:    o.BackupName,
+				EnvForRestore: envVars,
+			},
+		}
+		return nil
+	}
+	cmd := &cobra.Command{
+		Use:               "rebuild-instance NAME",
+		Short:             "Rebuild the specified instances in the cluster.",
+		Example:           restartExample,
+		ValidArgsFunction: util.ResourceNameCompletionFunc(f, types.ClusterGVR()),
+		Run: func(cmd *cobra.Command, args []string) {
+			o.Args = args
+			cmdutil.BehaviorOnFatal(printer.FatalWithRedColor)
+			cmdutil.CheckErr(o.Complete())
+			cmdutil.CheckErr(completedRebuildOps())
+			cmdutil.CheckErr(o.Validate())
+			cmdutil.CheckErr(o.Run())
+		},
+	}
+	o.addCommonFlags(cmd, f)
+	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "Skip interactive approval before rebuilding the instances.gi")
+	cmd.Flags().StringVar(&o.BackupName, "backup", "", "instances will be rebuild by the specified backup.")
+	cmd.Flags().StringSliceVar(&o.InstanceNames, "instances", nil, "instances which need to rebuild.")
+	cmd.Flags().StringArrayVar(&o.Env, "env", []string{}, "provide the necessary env for the 'Restore' operation from the backup. format: key1=value, key2=value")
+	return cmd
 }
