@@ -31,7 +31,6 @@ kbcli cluster promote NAME [--component=<comp-name>] [--instance <instance-name>
   -h, --help                           help for promote
       --instance string                Specify the instance name as the new primary or leader of the cluster, you can get the instance name by running "kbcli cluster list-instances"
       --name string                    OpsRequest name. if not specified, it will be randomly generated
-      --namespace string               the namespace of the cluster
   -o, --output format                  Prints the output in the specified format. Allowed values: JSON and YAML (default yaml)
       --ttlSecondsAfterSucceed int     Time to live after the OpsRequest succeed
 ```
@@ -52,6 +51,7 @@ kbcli cluster promote NAME [--component=<comp-name>] [--instance <instance-name>
       --insecure-skip-tls-verify       If true, the server's certificate will not be checked for validity. This will make your HTTPS connections insecure
       --kubeconfig string              Path to the kubeconfig file to use for CLI requests.
       --match-server-version           Require server version to match client version
+  -n, --namespace string               If present, the namespace scope for this CLI request
       --request-timeout string         The length of time to wait before giving up on a single server request. Non-zero values should contain a corresponding time unit (e.g. 1s, 2m, 3h). A value of zero means don't timeout requests. (default "0")
   -s, --server string                  The address and port of the Kubernetes API server
       --tls-server-name string         Server name to use for server certificate validation. If it is not provided, the hostname used to contact the server is used
