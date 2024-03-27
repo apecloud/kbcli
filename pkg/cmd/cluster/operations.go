@@ -152,7 +152,6 @@ func newBaseOperationsOptions(f cmdutil.Factory, streams genericiooptions.IOStre
 func (o *OperationsOptions) addCommonFlags(cmd *cobra.Command, f cmdutil.Factory) {
 	// add print flags
 	printer.AddOutputFlagForCreate(cmd, &o.Format, false)
-	cmd.Flags().StringVar(&o.Namespace, "namespace", "", "the namespace of the cluster")
 	cmd.Flags().BoolVar(&o.Force, "force", false, " skip the pre-checks of the opsRequest to run the opsRequest forcibly")
 	cmd.Flags().StringVar(&o.OpsRequestName, "name", "", "OpsRequest name. if not specified, it will be randomly generated")
 	cmd.Flags().IntVar(&o.TTLSecondsAfterSucceed, "ttlSecondsAfterSucceed", 0, "Time to live after the OpsRequest succeed")
