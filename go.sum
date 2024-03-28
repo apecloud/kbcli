@@ -272,8 +272,8 @@ github.com/antlr/antlr4/runtime/Go/antlr/v4 v4.0.0-20230305170008-8188dc5388df h
 github.com/antlr/antlr4/runtime/Go/antlr/v4 v4.0.0-20230305170008-8188dc5388df/go.mod h1:pSwJ0fSY5KhvocuWSx4fz3BA8OrA1bQn+K1Eli3BRwM=
 github.com/apecloud/kubebench v0.0.0-20240313105909-ba8654f654fc h1:BkFyEBEmDMdDhkWNAs9yg6zAj7xZjWON2u8b265T2a8=
 github.com/apecloud/kubebench v0.0.0-20240313105909-ba8654f654fc/go.mod h1:5IZiDkFdgiZRGLsL+FOlvPsiF9LbyU55DVj4/5vT7+4=
-github.com/apecloud/kubeblocks v0.0.0-20240326022625-78469760d798 h1:1HKluAKHrdO1l9ETTQVZobB3rYTGjUAeSMq5hK3s34k=
-github.com/apecloud/kubeblocks v0.0.0-20240326022625-78469760d798/go.mod h1:nU4ytJVEzPg+n7Py2IDbwPI8k433dsLWSGmn3U0JexU=
+github.com/apecloud/kubeblocks v0.0.0-20240328092917-34c21903b27b h1:nLcuqUQDxtD685CqLnnl+4m8YkogJ5p2J20aqofdv3o=
+github.com/apecloud/kubeblocks v0.0.0-20240328092917-34c21903b27b/go.mod h1:scOC+CrVliHgn7ZwfKXkoXcTOIynXQhy97dHJLiQF8g=
 github.com/apparentlymart/go-textseg v1.0.0/go.mod h1:z96Txxhf3xSFMPmb5X/1W05FF/Nj9VFpLOpjS5yuumk=
 github.com/apparentlymart/go-textseg/v13 v13.0.0/go.mod h1:ZK2fH7c4NqDTLtiYLvIkEghdlcqw7yxLeM89kiTRPUo=
 github.com/armon/circbuf v0.0.0-20150827004946-bbbad097214e/go.mod h1:3U/XgcO3hCbHZ8TKRvWD2dDTCfh9M9ya+I9JpbB7O8o=
