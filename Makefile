@@ -224,7 +224,7 @@ build-kbcli-embed-chart: helmtool fetch-addons create-kbcli-embed-charts-dir \
 	build-single-kbcli-embed-chart.milvus-cluster \
 	build-single-kbcli-embed-chart.qdrant-cluster \
 	build-single-kbcli-embed-chart.weaviate-cluster \
-	build-single-kbcli-embed-chart.oceanbase-cluster \
+	build-single-kbcli-embed-chart.oceanbase-ce-cluster \
 	build-single-kbcli-embed-chart.elasticsearch-cluster
 
 .PHONY: kbcli
