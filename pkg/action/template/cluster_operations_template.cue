@@ -31,7 +31,12 @@ options: {
 	  ...{
 	     componentName: string
 	     backupName?: string
-	     instanceNames: [...string]
+	     instances: [
+	       ...{
+	         name: string
+	         targetNodeName?: string
+	       }
+	     ]
 	     envForRestore?: [
 	       ...{
 	         name: string

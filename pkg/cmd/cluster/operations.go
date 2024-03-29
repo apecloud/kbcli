@@ -114,6 +114,7 @@ type OperationsOptions struct {
 	ExecPod             *corev1.Pod                    `json:"-"`
 	BackupName          string                         `json:"-"`
 	InstanceNames       []string                       `json:"-"`
+	Nodes               []string                       `json:"-"`
 	RebuildInstanceFrom []appsv1alpha1.RebuildInstance `json:"rebuildInstanceFrom,omitempty"`
 	Env                 []string                       `json:"-"`
 }
@@ -1258,6 +1259,7 @@ func NewRebuildInstanceCmd(f cmdutil.Factory, streams genericiooptions.IOStreams
 			}
 			compName = insCompName
 		}
+		// covert envs
 		var envVars []corev1.EnvVar
 		for _, v := range o.Env {
 			for _, envVar := range strings.Split(v, ",") {
@@ -1271,12 +1273,28 @@ func NewRebuildInstanceCmd(f cmdutil.Factory, streams genericiooptions.IOStreams
 				})
 			}
 		}
+		// covert instances
+		nodeMap := map[string]string{}
+		for _, node := range o.Nodes {
+			kv := strings.Split(node, "=")
+			if len(kv) != 2 {
+				return fmt.Errorf("unknown format for node: %s", node)
+			}
+			nodeMap[kv[0]] = kv[1]
+		}
+		var instances []appsv1alpha1.Instance
+		for _, insName := range o.InstanceNames {
+			instances = append(instances, appsv1alpha1.Instance{
+				Name:           insName,
+				TargetNodeName: nodeMap[insName],
+			})
+		}
 		o.RebuildInstanceFrom = []appsv1alpha1.RebuildInstance{
 			{
 				ComponentOps: appsv1alpha1.ComponentOps{
 					ComponentName: compName,
 				},
-				InstanceNames: o.InstanceNames,
+				Instances:     instances,
 				BackupName:    o.BackupName,
 				EnvForRestore: envVars,
 			},
@@ -1300,7 +1318,8 @@ func NewRebuildInstanceCmd(f cmdutil.Factory, streams genericiooptions.IOStreams
 	o.addCommonFlags(cmd, f)
 	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "Skip interactive approval before rebuilding the instances.gi")
 	cmd.Flags().StringVar(&o.BackupName, "backup", "", "instances will be rebuild by the specified backup.")
-	cmd.Flags().StringSliceVar(&o.InstanceNames, "instances", nil, "instances which need to rebuild.")
+	cmd.Flags().StringSliceVar(&o.InstanceNames, "instance", nil, "instance which need to rebuild.")
+	cmd.Flags().StringSliceVar(&o.Nodes, "node", nil, "specified the target node which rebuilds the instance on the node otherwise will rebuild on a randon node. format: insName1=nodeName,insName2=nodeName")
 	cmd.Flags().StringArrayVar(&o.Env, "env", []string{}, "provide the necessary env for the 'Restore' operation from the backup. format: key1=value, key2=value")
 	return cmd
 }
