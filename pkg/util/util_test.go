@@ -218,6 +218,7 @@ var _ = Describe("util", func() {
 		defer tf.Cleanup()
 
 		Expect(appsv1alpha1.AddToScheme(scheme.Scheme)).Should(Succeed())
+		Expect(appsv1beta1.AddToScheme(scheme.Scheme)).Should(Succeed())
 		mockClient := dynamicfakeclient.NewSimpleDynamicClientWithCustomListKinds(scheme.Scheme, nil, configConstraintObj, badcaseCCObject)
 		configSpec := appsv1alpha1.ComponentConfigSpec{
 			ComponentTemplateSpec: appsv1alpha1.ComponentTemplateSpec{

@@ -28,6 +28,7 @@ import (
 	metricsfakeclient "k8s.io/metrics/pkg/client/clientset/versioned/fake"
 
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
+	appsv1beta1 "github.com/apecloud/kubeblocks/apis/apps/v1beta1"
 	dpv1alpha1 "github.com/apecloud/kubeblocks/apis/dataprotection/v1alpha1"
 	extensionsv1alpha1 "github.com/apecloud/kubeblocks/apis/extensions/v1alpha1"
 	kbfakeclient "github.com/apecloud/kubeblocks/pkg/client/clientset/versioned/fake"
@@ -39,6 +40,7 @@ func FakeClientSet(objects ...runtime.Object) *kubefakeclient.Clientset {
 
 func FakeDynamicClient(objects ...runtime.Object) *dynamicfakeclient.FakeDynamicClient {
 	_ = appsv1alpha1.AddToScheme(scheme.Scheme)
+	_ = appsv1beta1.AddToScheme(scheme.Scheme)
 	_ = extensionsv1alpha1.AddToScheme(scheme.Scheme)
 	_ = dpv1alpha1.AddToScheme(scheme.Scheme)
 	return dynamicfakeclient.NewSimpleDynamicClient(scheme.Scheme, objects...)
