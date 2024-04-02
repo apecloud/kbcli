@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
+	appsv1beta1 "github.com/apecloud/kubeblocks/apis/apps/v1beta1"
 	"github.com/apecloud/kubeblocks/pkg/constant"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -379,8 +380,8 @@ func GetConfigMapByName(dynamic dynamic.Interface, namespace, name string) (*cor
 	return cmObj, nil
 }
 
-func GetConfigConstraintByName(dynamic dynamic.Interface, name string) (*appsv1alpha1.ConfigConstraint, error) {
-	ccObj := &appsv1alpha1.ConfigConstraint{}
+func GetConfigConstraintByName(dynamic dynamic.Interface, name string) (*appsv1beta1.ConfigConstraint, error) {
+	ccObj := &appsv1beta1.ConfigConstraint{}
 	if err := util.GetK8SClientObject(dynamic, ccObj, types.ConfigConstraintGVR(), "", name); err != nil {
 		return nil, err
 	}

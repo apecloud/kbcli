@@ -26,6 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
+	appsv1beta1 "github.com/apecloud/kubeblocks/apis/apps/v1beta1"
 	"github.com/apecloud/kubeblocks/pkg/configuration/core"
 
 	"github.com/apecloud/kbcli/pkg/types"
@@ -39,7 +40,7 @@ type configSpecMeta struct {
 	ConfigMap *corev1.ConfigMap
 
 	ConfigSpec       *appsv1alpha1.ComponentConfigSpec
-	ConfigConstraint *appsv1alpha1.ConfigConstraint
+	ConfigConstraint *appsv1beta1.ConfigConstraint
 }
 
 type ConfigRelatedObjects struct {
@@ -116,7 +117,7 @@ func (w *configObjectsWrapper) configConstraint(specName string, out *configSpec
 			Namespace: "",
 			Name:      specName,
 		}
-		out.ConfigConstraint = &appsv1alpha1.ConfigConstraint{}
+		out.ConfigConstraint = &appsv1beta1.ConfigConstraint{}
 		return util.GetResourceObjectFromGVR(types.ConfigConstraintGVR(), key, w.cli, out.ConfigConstraint)
 	}
 	return w.objectWrapper(fn)

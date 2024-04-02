@@ -44,6 +44,7 @@ import (
 	"k8s.io/kubectl/pkg/util/templates"
 
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
+	appsv1beta1 "github.com/apecloud/kubeblocks/apis/apps/v1beta1"
 	dpv1alpha1 "github.com/apecloud/kubeblocks/apis/dataprotection/v1alpha1"
 	cfgcore "github.com/apecloud/kubeblocks/pkg/configuration/core"
 	"github.com/apecloud/kubeblocks/pkg/constant"
@@ -458,7 +459,7 @@ func (o *UpdateOptions) reconfigureLogVariables(c *appsv1alpha1.Cluster, cd *app
 			buf             bytes.Buffer
 			keyName         string
 			configTemplate  *corev1.ConfigMap
-			formatter       *appsv1alpha1.FormatterConfig
+			formatter       *appsv1beta1.FormatterConfig
 			logTPL          *template.Template
 			logVariables    map[string]string
 			unstructuredObj *unstructured.Unstructured
@@ -477,7 +478,7 @@ func (o *UpdateOptions) reconfigureLogVariables(c *appsv1alpha1.Cluster, cd *app
 			return err
 		}
 		// TODO: very hack logic for ini config file
-		formatter.FormatterOptions = appsv1alpha1.FormatterOptions{IniConfig: &appsv1alpha1.IniConfig{SectionName: defaultSectionName}}
+		formatter.FormatterAction = appsv1beta1.FormatterAction{IniConfig: &appsv1beta1.IniConfig{SectionName: defaultSectionName}}
 		if logVariables, err = cfgcore.TransformConfigFileToKeyValueMap(keyName, formatter, buf.Bytes()); err != nil {
 			return err
 		}
@@ -517,7 +518,7 @@ func findFirstConfigSpec(
 	return &configSpecs[0], nil
 }
 
-func findConfigTemplateInfo(dynamic dynamic.Interface, configSpec *appsv1alpha1.ComponentConfigSpec) (*corev1.ConfigMap, *appsv1alpha1.FormatterConfig, error) {
+func findConfigTemplateInfo(dynamic dynamic.Interface, configSpec *appsv1alpha1.ComponentConfigSpec) (*corev1.ConfigMap, *appsv1beta1.FormatterConfig, error) {
 	if configSpec == nil {
 		return nil, nil, errors.New("configTemplateSpec is nil")
 	}
