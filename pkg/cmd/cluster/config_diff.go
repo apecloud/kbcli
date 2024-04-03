@@ -31,6 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
+	appsv1beta1 "github.com/apecloud/kubeblocks/apis/apps/v1beta1"
 	"github.com/apecloud/kubeblocks/pkg/configuration/core"
 	"github.com/apecloud/kubeblocks/pkg/constant"
 	"github.com/apecloud/kubeblocks/pkg/unstructured"
@@ -224,7 +225,7 @@ func (o *configDiffOptions) maybeCompareOps(base *appsv1alpha1.OpsRequest, diff 
 func (o *configDiffOptions) diffConfig(tplName string) ([]core.VisualizedParam, map[string]unstructured.ConfigObject, error) {
 	var (
 		tpl              *appsv1alpha1.ComponentConfigSpec
-		configConstraint = &appsv1alpha1.ConfigConstraint{}
+		configConstraint = &appsv1beta1.ConfigConstraint{}
 	)
 
 	tplList, err := util.GetConfigTemplateList(o.clusterName, o.baseOptions.namespace, o.baseOptions.dynamic, o.componentName, true)

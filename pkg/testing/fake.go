@@ -39,6 +39,7 @@ import (
 	"k8s.io/utils/pointer"
 
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
+	appsv1beta1 "github.com/apecloud/kubeblocks/apis/apps/v1beta1"
 	dpv1alpha1 "github.com/apecloud/kubeblocks/apis/dataprotection/v1alpha1"
 	extensionsv1alpha1 "github.com/apecloud/kubeblocks/apis/extensions/v1alpha1"
 	storagev1alpha1 "github.com/apecloud/kubeblocks/apis/storage/v1alpha1"
@@ -796,13 +797,13 @@ func FakeConfigMap(cmName string, namespace string, data map[string]string) *cor
 	return cm
 }
 
-func FakeConfigConstraint(ccName string) *appsv1alpha1.ConfigConstraint {
-	cm := &appsv1alpha1.ConfigConstraint{
+func FakeConfigConstraint(ccName string) *appsv1beta1.ConfigConstraint {
+	cm := &appsv1beta1.ConfigConstraint{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: ccName,
 		},
-		Spec: appsv1alpha1.ConfigConstraintSpec{
-			FormatterConfig: &appsv1alpha1.FormatterConfig{},
+		Spec: appsv1beta1.ConfigConstraintSpec{
+			FormatterConfig: &appsv1beta1.FormatterConfig{},
 		},
 	}
 	return cm

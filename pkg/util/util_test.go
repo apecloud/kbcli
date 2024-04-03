@@ -40,6 +40,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
+	appsv1beta1 "github.com/apecloud/kubeblocks/apis/apps/v1beta1"
 	cfgcore "github.com/apecloud/kubeblocks/pkg/configuration/core"
 	"github.com/apecloud/kubeblocks/pkg/constant"
 	testapps "github.com/apecloud/kubeblocks/pkg/testutil/apps"
@@ -202,21 +203,22 @@ var _ = Describe("util", func() {
 		)
 
 		configConstraintObj := testapps.NewCustomizedObj("resources/mysql-config-constraint.yaml",
-			&appsv1alpha1.ConfigConstraint{}, testapps.WithNamespacedName(ccName, ""), func(cc *appsv1alpha1.ConfigConstraint) {
+			&appsv1beta1.ConfigConstraint{}, testapps.WithNamespacedName(ccName, ""), func(cc *appsv1beta1.ConfigConstraint) {
 				if ccContext, err := testdata.GetTestDataFileContent("/cue_testdata/mysql_for_cli.cue"); err == nil {
-					cc.Spec.ConfigurationSchema = &appsv1alpha1.CustomParametersValidation{
+					cc.Spec.ConfigSchema = &appsv1beta1.ConfigSchema{
 						CUE: string(ccContext),
 					}
 				}
 			})
 		badcaseCCObject := configConstraintObj.DeepCopy()
-		badcaseCCObject.Spec.CfgSchemaTopLevelName = "badcase"
+		badcaseCCObject.Spec.ConfigSchemaTopLevelKey = "badcase"
 		badcaseCCObject.SetName("badcase")
 
 		tf := cmdtesting.NewTestFactory().WithNamespace(testNS)
 		defer tf.Cleanup()
 
 		Expect(appsv1alpha1.AddToScheme(scheme.Scheme)).Should(Succeed())
+		Expect(appsv1beta1.AddToScheme(scheme.Scheme)).Should(Succeed())
 		mockClient := dynamicfakeclient.NewSimpleDynamicClientWithCustomListKinds(scheme.Scheme, nil, configConstraintObj, badcaseCCObject)
 		configSpec := appsv1alpha1.ComponentConfigSpec{
 			ComponentTemplateSpec: appsv1alpha1.ComponentTemplateSpec{

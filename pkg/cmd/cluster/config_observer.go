@@ -167,18 +167,18 @@ func (r *configObserverOptions) printExplainConfigure(configSpecs configSpecsTyp
 	}
 
 	confSpec := tpl.ConfigConstraint.Spec
-	if confSpec.ConfigurationSchema == nil {
+	if confSpec.ConfigSchema == nil {
 		fmt.Printf("\n%s\n", fmt.Sprintf(notConfigSchemaPrompt, printer.BoldYellow(tplName)))
 		return nil
 	}
 
-	schema := confSpec.ConfigurationSchema.DeepCopy()
-	if schema.Schema == nil {
+	schema := confSpec.ConfigSchema.DeepCopy()
+	if schema.SchemaInJSON == nil {
 		if schema.CUE == "" {
 			fmt.Printf("\n%s\n", fmt.Sprintf(notConfigSchemaPrompt, printer.BoldYellow(tplName)))
 			return nil
 		}
-		apiSchema, err := openapi.GenerateOpenAPISchema(schema.CUE, confSpec.CfgSchemaTopLevelName)
+		apiSchema, err := openapi.GenerateOpenAPISchema(schema.CUE, confSpec.ConfigSchemaTopLevelKey)
 		if err != nil {
 			return cfgcore.WrapError(err, "failed to generate open api schema")
 		}
@@ -186,9 +186,9 @@ func (r *configObserverOptions) printExplainConfigure(configSpecs configSpecsTyp
 			fmt.Printf("\n%s\n", cue2openAPISchemaFailedPrompt)
 			return nil
 		}
-		schema.Schema = apiSchema
+		schema.SchemaInJSON = apiSchema
 	}
-	return r.printConfigConstraint(schema.Schema,
+	return r.printConfigConstraint(schema.SchemaInJSON,
 		cfgutil.NewSet(confSpec.StaticParameters...),
 		cfgutil.NewSet(confSpec.DynamicParameters...),
 		cfgutil.NewSet(confSpec.ImmutableParameters...))

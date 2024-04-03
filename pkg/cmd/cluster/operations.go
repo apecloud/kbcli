@@ -1304,7 +1304,7 @@ func NewRebuildInstanceCmd(f cmdutil.Factory, streams genericiooptions.IOStreams
 	cmd := &cobra.Command{
 		Use:               "rebuild-instance NAME",
 		Short:             "Rebuild the specified instances in the cluster.",
-		Example:           restartExample,
+		Example:           rebuildExample,
 		ValidArgsFunction: util.ResourceNameCompletionFunc(f, types.ClusterGVR()),
 		Run: func(cmd *cobra.Command, args []string) {
 			o.Args = args
