@@ -100,6 +100,7 @@ const (
 const (
 	AppsAPIGroup                        = "apps.kubeblocks.io"
 	AppsAPIVersion                      = "v1alpha1"
+	AppsAPIBetaVersion                  = "v1beta1"
 	ResourcePods                        = "pods"
 	ResourceClusters                    = "clusters"
 	ResourceClusterDefs                 = "clusterdefinitions"
@@ -401,7 +402,7 @@ func PVGVR() schema.GroupVersionResource {
 }
 
 func ConfigConstraintGVR() schema.GroupVersionResource {
-	return schema.GroupVersionResource{Group: AppsAPIGroup, Version: AppsAPIVersion, Resource: ResourceConfigConstraintVersions}
+	return schema.GroupVersionResource{Group: AppsAPIGroup, Version: AppsAPIBetaVersion, Resource: ResourceConfigConstraintVersions}
 }
 
 func StorageClassGVR() schema.GroupVersionResource {

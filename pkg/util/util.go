@@ -71,6 +71,7 @@ import (
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
+	appsv1beta1 "github.com/apecloud/kubeblocks/apis/apps/v1beta1"
 	"github.com/apecloud/kubeblocks/pkg/configuration/core"
 	"github.com/apecloud/kubeblocks/pkg/configuration/openapi"
 	cfgutil "github.com/apecloud/kubeblocks/pkg/configuration/util"
@@ -608,7 +609,7 @@ func enableReconfiguring(component *appsv1alpha1.ConfigurationSpec) bool {
 func IsSupportReconfigureParams(tpl appsv1alpha1.ComponentConfigSpec, values map[string]*string, cli dynamic.Interface) (bool, error) {
 	var (
 		err              error
-		configConstraint = appsv1alpha1.ConfigConstraint{}
+		configConstraint = appsv1beta1.ConfigConstraint{}
 	)
 
 	if err := GetResourceObjectFromGVR(types.ConfigConstraintGVR(), client.ObjectKey{
@@ -618,22 +619,22 @@ func IsSupportReconfigureParams(tpl appsv1alpha1.ComponentConfigSpec, values map
 		return false, err
 	}
 
-	if configConstraint.Spec.ConfigurationSchema == nil {
+	if configConstraint.Spec.ConfigSchema == nil {
 		return true, nil
 	}
 
-	schema := configConstraint.Spec.ConfigurationSchema.DeepCopy()
-	if schema.Schema == nil {
-		schema.Schema, err = openapi.GenerateOpenAPISchema(schema.CUE, configConstraint.Spec.CfgSchemaTopLevelName)
+	schema := configConstraint.Spec.ConfigSchema.DeepCopy()
+	if schema.SchemaInJSON == nil {
+		schema.SchemaInJSON, err = openapi.GenerateOpenAPISchema(schema.CUE, configConstraint.Spec.ConfigSchemaTopLevelKey)
 		if err != nil {
 			return false, err
 		}
-		if schema.Schema == nil {
+		if schema.SchemaInJSON == nil {
 			return true, nil
 		}
 	}
 
-	schemaSpec := schema.Schema.Properties["spec"]
+	schemaSpec := schema.SchemaInJSON.Properties["spec"]
 	for key := range values {
 		if _, ok := schemaSpec.Properties[key]; !ok {
 			return false, nil
@@ -643,7 +644,7 @@ func IsSupportReconfigureParams(tpl appsv1alpha1.ComponentConfigSpec, values map
 }
 
 func ValidateParametersModified(tpl *appsv1alpha1.ComponentConfigSpec, parameters sets.Set[string], cli dynamic.Interface) (err error) {
-	cc := appsv1alpha1.ConfigConstraint{}
+	cc := appsv1beta1.ConfigConstraint{}
 	ccKey := client.ObjectKey{
 		Namespace: "",
 		Name:      tpl.ConfigConstraintRef,
@@ -654,7 +655,7 @@ func ValidateParametersModified(tpl *appsv1alpha1.ComponentConfigSpec, parameter
 	return ValidateParametersModified2(parameters, cc.Spec)
 }
 
-func ValidateParametersModified2(parameters sets.Set[string], cc appsv1alpha1.ConfigConstraintSpec) error {
+func ValidateParametersModified2(parameters sets.Set[string], cc appsv1beta1.ConfigConstraintSpec) error {
 	if len(cc.ImmutableParameters) == 0 {
 		return nil
 	}

@@ -36,6 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
+	appsv1beta1 "github.com/apecloud/kubeblocks/apis/apps/v1beta1"
 	cfgcm "github.com/apecloud/kubeblocks/pkg/configuration/config_manager"
 	"github.com/apecloud/kubeblocks/pkg/configuration/core"
 	"github.com/apecloud/kubeblocks/pkg/configuration/validate"
@@ -120,7 +121,7 @@ func (o *editConfigOptions) runWithConfigConstraints(cfgEditContext *configEditC
 		Namespace: "",
 		Name:      configSpec.ConfigConstraintRef,
 	}
-	configConstraint := appsv1alpha1.ConfigConstraint{}
+	configConstraint := appsv1beta1.ConfigConstraint{}
 	if err := util.GetResourceObjectFromGVR(types.ConfigConstraintGVR(), configConstraintKey, o.Dynamic, &configConstraint); err != nil {
 		return err
 	}
@@ -175,7 +176,7 @@ func (o *editConfigOptions) runWithConfigConstraints(cfgEditContext *configEditC
 	return fn()
 }
 
-func generateReconfiguringPrompt(fileUpdated bool, configPatch *core.ConfigPatchInfo, cc *appsv1alpha1.ConfigConstraintSpec, fileName string) (string, error) {
+func generateReconfiguringPrompt(fileUpdated bool, configPatch *core.ConfigPatchInfo, cc *appsv1beta1.ConfigConstraintSpec, fileName string) (string, error) {
 	if fileUpdated {
 		return restartConfirmPrompt, nil
 	}
@@ -186,7 +187,7 @@ func generateReconfiguringPrompt(fileUpdated bool, configPatch *core.ConfigPatch
 	}
 
 	confirmPrompt := confirmApplyReconfigurePrompt
-	if !dynamicUpdated || !cfgcm.IsSupportReload(cc.ReloadOptions) {
+	if !dynamicUpdated || !cfgcm.IsSupportReload(cc.DynamicReloadAction) {
 		confirmPrompt = restartConfirmPrompt
 	}
 	return confirmPrompt, nil

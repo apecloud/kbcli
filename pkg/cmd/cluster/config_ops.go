@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
+	appsv1beta1 "github.com/apecloud/kubeblocks/apis/apps/v1beta1"
 	cfgcm "github.com/apecloud/kubeblocks/pkg/configuration/config_manager"
 	"github.com/apecloud/kubeblocks/pkg/configuration/core"
 	"github.com/apecloud/kubeblocks/pkg/controllerutil"
@@ -142,7 +143,7 @@ func (o *configOpsOptions) validateConfigParams(tpl *appsv1alpha1.ComponentConfi
 		Namespace: "",
 		Name:      tpl.ConfigConstraintRef,
 	}
-	configConstraint := appsv1alpha1.ConfigConstraint{}
+	configConstraint := appsv1beta1.ConfigConstraint{}
 	if err := util.GetResourceObjectFromGVR(types.ConfigConstraintGVR(), configConstraintKey, o.Dynamic, &configConstraint); err != nil {
 		return err
 	}
@@ -163,7 +164,7 @@ func (o *configOpsOptions) validateConfigParams(tpl *appsv1alpha1.ComponentConfi
 	return o.checkChangedParamsAndDoubleConfirm(&configConstraint.Spec, newConfigData, tpl)
 }
 
-func (o *configOpsOptions) checkChangedParamsAndDoubleConfirm(cc *appsv1alpha1.ConfigConstraintSpec, data map[string]string, tpl *appsv1alpha1.ComponentConfigSpec) error {
+func (o *configOpsOptions) checkChangedParamsAndDoubleConfirm(cc *appsv1beta1.ConfigConstraintSpec, data map[string]string, tpl *appsv1alpha1.ComponentConfigSpec) error {
 	mockEmptyData := func(m map[string]string) map[string]string {
 		r := make(map[string]string, len(data))
 		for key := range m {
@@ -172,7 +173,7 @@ func (o *configOpsOptions) checkChangedParamsAndDoubleConfirm(cc *appsv1alpha1.C
 		return r
 	}
 
-	if !cfgcm.IsSupportReload(cc.ReloadOptions) {
+	if !cfgcm.IsSupportReload(cc.DynamicReloadAction) {
 		return o.confirmReconfigureWithRestart()
 	}
 
