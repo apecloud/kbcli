@@ -207,7 +207,7 @@ See the [Reference Documentation](https://kubeblocks.io/docs/preview/user_docs/c
 
 ## Contributing to kbcli
 
-See the [Development Guide](https://github.com/apecloud/kubeblocks/blob/main/docs/DEVELOPING.md) to get started with building and developing.
+See the [Contributing Guide](https://github.com/apecloud/kbcli/blob/main/CONTRIBUTING.md) to get started with building and developing.
 
 ## Code of Conduct
 
