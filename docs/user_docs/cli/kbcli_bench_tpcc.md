@@ -15,7 +15,7 @@ kbcli bench tpcc [Step] [BenchmarkName] [flags]
   kbcli bench tpcc mytest --cluster mycluster --user xxx --password xxx --database mydb
   
   # tpcc on a cluster, but with cpu and memory limits set
-  kbcli bench tpcc mytest --cluster mycluster --user xxx --password xxx --database mydb --cpu 1 --memory 1Gi
+  kbcli bench tpcc mytest --cluster mycluster --user xxx --password xxx --database mydb --limit-cpu 1 --limit-memory 1Gi
   
   # tpcc on a cluster with cleanup, only cleanup by deleting the testdata
   kbcli bench tpcc cleanup mytest --cluster mycluster --user xxx --password xxx --database mydb
