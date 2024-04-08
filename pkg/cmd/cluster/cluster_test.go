@@ -43,12 +43,8 @@ import (
 
 var _ = Describe("Cluster", func() {
 	const (
-		testComponentPath                    = "../../testing/testdata/component.yaml"
-		testComponentWithClassPath           = "../../testing/testdata/component_with_class_1c1g.yaml"
-		testComponentWithInvalidClassPath    = "../../testing/testdata/component_with_invalid_class.yaml"
-		testComponentWithResourcePath        = "../../testing/testdata/component_with_resource_1c1g.yaml"
-		testComponentWithInvalidResourcePath = "../../testing/testdata/component_with_invalid_resource.yaml"
-		testClusterPath                      = "../../testing/testdata/cluster.yaml"
+		testComponentPath = "../../testing/testdata/component.yaml"
+		testClusterPath   = "../../testing/testdata/cluster.yaml"
 	)
 
 	const (
@@ -191,13 +187,6 @@ var _ = Describe("Cluster", func() {
 
 		It("should succeed if create cluster by file without class and resource", func() {
 			o.SetFile = testComponentPath
-			Expect(o.Complete()).Should(Succeed())
-			Expect(o.Validate()).Should(Succeed())
-			Run()
-		})
-
-		It("should succeed if create cluster by file with resource", func() {
-			o.SetFile = testComponentWithResourcePath
 			Expect(o.Complete()).Should(Succeed())
 			Expect(o.Validate()).Should(Succeed())
 			Run()

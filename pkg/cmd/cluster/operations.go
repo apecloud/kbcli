@@ -375,7 +375,7 @@ func (o *OperationsOptions) validateVScale(cluster *appsv1alpha1.Cluster) error 
 		return fmt.Errorf("cpu or memory must be specified")
 	}
 
-	fillClassParams := func(comp *appsv1alpha1.ClusterComponentSpec) error {
+	fillResource := func(comp *appsv1alpha1.ClusterComponentSpec) error {
 		requests := make(corev1.ResourceList)
 		if o.CPU != "" {
 			cpu, err := resource.ParseQuantity(o.CPU)
@@ -401,7 +401,7 @@ func (o *OperationsOptions) validateVScale(cluster *appsv1alpha1.Cluster) error 
 			if comp.Name != name {
 				continue
 			}
-			if err := fillClassParams(&comp); err != nil {
+			if err := fillResource(&comp); err != nil {
 				return err
 			}
 		}

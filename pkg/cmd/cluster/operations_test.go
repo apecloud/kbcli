@@ -37,7 +37,6 @@ import (
 
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	"github.com/apecloud/kubeblocks/pkg/constant"
-	testapps "github.com/apecloud/kubeblocks/pkg/testutil/apps"
 
 	"github.com/apecloud/kbcli/pkg/testing"
 )
@@ -67,22 +66,6 @@ var _ = Describe("operations", func() {
 		clusterWithOneComp.Spec.ComponentSpecs = []appsv1alpha1.ClusterComponentSpec{
 			clusterWithOneComp.Spec.ComponentSpecs[0],
 		}
-		clusterWithOneComp.Spec.ComponentSpecs[0].ClassDefRef = &appsv1alpha1.ClassDefRef{Class: testapps.Class1c1gName}
-		classDef := testapps.NewComponentClassDefinitionFactory("custom", clusterWithOneComp.Spec.ClusterDefRef, testing.ComponentDefName).
-			AddClasses([]appsv1alpha1.ComponentClass{testapps.Class1c1g}).
-			GetObject()
-		resourceConstraint := testapps.NewComponentResourceConstraintFactory(testapps.DefaultResourceConstraintName).
-			AddConstraints(testapps.ProductionResourceConstraint).
-			AddSelector(appsv1alpha1.ClusterResourceConstraintSelector{
-				ClusterDefRef: testing.ClusterDefName,
-				Components: []appsv1alpha1.ComponentResourceConstraintSelector{
-					{
-						ComponentDefRef: testing.ComponentDefName,
-						Rules:           []string{"c1"},
-					},
-				},
-			}).
-			GetObject()
 
 		// init cluster with one component and componentDefinition
 		clusterWithCompDef := clusterWithOneComp.DeepCopy()
@@ -115,7 +98,7 @@ var _ = Describe("operations", func() {
 		tf.Client = &clientfake.RESTClient{}
 		tf.FakeDynamicClient = testing.FakeDynamicClient(testing.FakeClusterDef(),
 			testing.FakeClusterVersion(), testing.FakeCompDef(), clusterWithTwoComps, clusterWithOneComp, clusterWithCompDef,
-			classDef, &pods.Items[0], &pods.Items[1], &podsWithCompDef.Items[0], &podsWithCompDef.Items[1], resourceConstraint, opsDef)
+			&pods.Items[0], &pods.Items[1], &podsWithCompDef.Items[0], &podsWithCompDef.Items[1], opsDef)
 	})
 
 	AfterEach(func() {
