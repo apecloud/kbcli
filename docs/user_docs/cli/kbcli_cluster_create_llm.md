@@ -23,7 +23,7 @@ kbcli cluster create llm NAME [flags]
 ```
       --availability-policy string   The availability policy of cluster. Legal values [none, node, zone]. (default "node")
       --cpu float                    CPU cores. Value range [0, 64].
-      --cpu-mode                     Set to true if no GPU is available
+      --cpu-mode                     Set to true if no GPU is available, default true (default true)
       --extra-args string            extra arguments that will be passed to run model (default "--trust-remote-code")
       --gpu float                    GPU cores. Value range [0, 64]. (default 1)
   -h, --help                         help for llm

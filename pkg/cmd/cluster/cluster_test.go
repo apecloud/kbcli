@@ -43,12 +43,8 @@ import (
 
 var _ = Describe("Cluster", func() {
 	const (
-		testComponentPath                    = "../../testing/testdata/component.yaml"
-		testComponentWithClassPath           = "../../testing/testdata/component_with_class_1c1g.yaml"
-		testComponentWithInvalidClassPath    = "../../testing/testdata/component_with_invalid_class.yaml"
-		testComponentWithResourcePath        = "../../testing/testdata/component_with_resource_1c1g.yaml"
-		testComponentWithInvalidResourcePath = "../../testing/testdata/component_with_invalid_resource.yaml"
-		testClusterPath                      = "../../testing/testdata/cluster.yaml"
+		testComponentPath = "../../testing/testdata/component.yaml"
+		testClusterPath   = "../../testing/testdata/cluster.yaml"
 	)
 
 	const (
@@ -177,69 +173,6 @@ var _ = Describe("Cluster", func() {
 			Expect(o.Validate()).Should(HaveOccurred())
 		})
 
-		It("should succeed if component with valid class", func() {
-			o.Values = []string{fmt.Sprintf("type=%s,class=%s", testing.ComponentDefName, testapps.Class1c1gName)}
-			Expect(o.Complete()).Should(Succeed())
-			Expect(o.Validate()).Should(Succeed())
-			Run()
-		})
-
-		It("should fail if component with invalid class", func() {
-			o.Values = []string{fmt.Sprintf("type=%s,class=class-not-exists", testing.ComponentDefName)}
-			Expect(o.Complete()).Should(HaveOccurred())
-		})
-
-		It("should succeed if component with resource meets the resource constraint", func() {
-			o.Values = []string{fmt.Sprintf("type=%s,cpu=1,memory=1Gi", testing.ComponentDefName)}
-			Expect(o.Complete()).Should(Succeed())
-			Expect(o.Validate()).Should(Succeed())
-			Run()
-		})
-
-		It("should succeed if component with resource with smaller unit meets the constraint", func() {
-			o.Values = []string{fmt.Sprintf("type=%s,cpu=1000m,memory=1024Mi", testing.ComponentDefName)}
-			Expect(o.Complete()).Should(Succeed())
-			Expect(o.Validate()).Should(Succeed())
-			Run()
-		})
-
-		It("should fail if component with resource not meets the constraint", func() {
-			o.Values = []string{fmt.Sprintf("type=%s,cpu=1,memory=100Gi", testing.ComponentDefName)}
-			Expect(o.Complete()).Should(HaveOccurred())
-		})
-
-		It("should succeed if component with cpu meets the constraint", func() {
-			o.Values = []string{fmt.Sprintf("type=%s,cpu=1", testing.ComponentDefName)}
-			Expect(o.Complete()).Should(Succeed())
-			Expect(o.Validate()).Should(Succeed())
-			Run()
-		})
-
-		It("should fail if component with cpu not meets the constraint", func() {
-			o.Values = []string{fmt.Sprintf("type=%s,cpu=1024", testing.ComponentDefName)}
-			Expect(o.Complete()).Should(HaveOccurred())
-		})
-
-		It("should fail if component with memory not meets the constraint", func() {
-			o.Values = []string{fmt.Sprintf("type=%s,memory=1Ti", testing.ComponentDefName)}
-			Expect(o.Complete()).Should(HaveOccurred())
-		})
-
-		It("should succeed if component doesn't have class definition", func() {
-			o.Values = []string{fmt.Sprintf("type=%s,cpu=3,memory=7Gi", testing.ExtraComponentDefName)}
-			Expect(o.Complete()).Should(Succeed())
-			Expect(o.Validate()).Should(Succeed())
-			Run()
-		})
-
-		It("should fail if component with storage not meets the constraint", func() {
-			o.Values = []string{fmt.Sprintf("type=%s,storage=500Mi", testing.ComponentDefName)}
-			Expect(o.Complete()).Should(HaveOccurred())
-
-			o.Values = []string{fmt.Sprintf("type=%s,storage=1Pi", testing.ComponentDefName)}
-			Expect(o.Complete()).Should(HaveOccurred())
-		})
-
 		It("should fail if create cluster by non-existed file", func() {
 			o.SetFile = "test.yaml"
 			Expect(o.Complete()).Should(HaveOccurred())
@@ -257,25 +190,6 @@ var _ = Describe("Cluster", func() {
 			Expect(o.Complete()).Should(Succeed())
 			Expect(o.Validate()).Should(Succeed())
 			Run()
-		})
-
-		It("should succeed if create cluster by file with class", func() {
-			o.SetFile = testComponentWithClassPath
-			Expect(o.Complete()).Should(Succeed())
-			Expect(o.Validate()).Should(Succeed())
-			Run()
-		})
-
-		It("should succeed if create cluster by file with resource", func() {
-			o.SetFile = testComponentWithResourcePath
-			Expect(o.Complete()).Should(Succeed())
-			Expect(o.Validate()).Should(Succeed())
-			Run()
-		})
-
-		It("should fail if create cluster by file with non-existed class", func() {
-			o.SetFile = testComponentWithInvalidClassPath
-			Expect(o.Complete()).Should(HaveOccurred())
 		})
 
 		It("should succeed if create cluster with a complete config file", func() {

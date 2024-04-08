@@ -28,7 +28,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/apecloud/kubeblocks/pkg/controller/component"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -65,8 +64,6 @@ func getResource(res corev1.ResourceRequirements, name corev1.ResourceName) inte
 }
 
 var _ = Describe("create", func() {
-	var clsMgr = &component.Manager{}
-
 	Context("setEnableAllLogs Test", func() {
 		var cluster *appsv1alpha1.Cluster
 		var clusterDef *appsv1alpha1.ClusterDefinition
@@ -140,13 +137,12 @@ var _ = Describe("create", func() {
 		} else {
 			Expect(*comp.VolumeClaimTemplates[0].Spec.StorageClassName).Should(Equal(storageClassName))
 		}
-
 	}
 
 	It("build default cluster component without environment", func() {
 		dynamic := testing.FakeDynamicClient(testing.FakeClusterDef())
 		cd, _ := cluster.GetClusterDefByName(dynamic, testing.ClusterDefName)
-		comps, err := buildClusterComp(cd, nil, clsMgr, 15, false)
+		comps, err := buildClusterComp(cd, nil, 15, false)
 		Expect(err).ShouldNot(HaveOccurred())
 		checkComponent(comps, "20Gi", 1, "1", "1Gi", "", 0)
 	})
@@ -158,7 +154,7 @@ var _ = Describe("create", func() {
 		viper.Set(types.CfgKeyClusterDefaultMemory, "2Gi")
 		dynamic := testing.FakeDynamicClient(testing.FakeClusterDef())
 		cd, _ := cluster.GetClusterDefByName(dynamic, testing.ClusterDefName)
-		comps, err := buildClusterComp(cd, nil, clsMgr, 15, false)
+		comps, err := buildClusterComp(cd, nil, 15, false)
 		Expect(err).ShouldNot(HaveOccurred())
 		checkComponent(comps, "5Gi", 1, "2", "2Gi", "", 0)
 	})
@@ -175,13 +171,13 @@ var _ = Describe("create", func() {
 				keyStorageClass: "test",
 			},
 		}
-		comps, err := buildClusterComp(cd, setsMap, clsMgr, 0, false)
+		comps, err := buildClusterComp(cd, setsMap, 0, false)
 		Expect(err).Should(Succeed())
 		checkComponent(comps, "10Gi", 10, "10", "2Gi", "test", 0)
 
 		setsMap[testing.ComponentDefName][keySwitchPolicy] = "invalid"
 		cd.Spec.ComponentDefs[0].WorkloadType = appsv1alpha1.Replication
-		_, err = buildClusterComp(cd, setsMap, clsMgr, 0, false)
+		_, err = buildClusterComp(cd, setsMap, 0, false)
 		Expect(err).Should(HaveOccurred())
 	})
 
@@ -203,13 +199,13 @@ var _ = Describe("create", func() {
 				keyStorageClass: "test-other",
 			},
 		}
-		comps, err := buildClusterComp(cd, setsMap, clsMgr, 15, false)
+		comps, err := buildClusterComp(cd, setsMap, 15, false)
 		Expect(err).Should(Succeed())
 		checkComponent(comps, "10Gi", 10, "10", "2Gi", "test", 0)
 		checkComponent(comps, "5Gi", 5, "5", "1Gi", "test-other", 1)
 		setsMap[testing.ComponentDefName][keySwitchPolicy] = "invalid"
 		cd.Spec.ComponentDefs[0].WorkloadType = appsv1alpha1.Replication
-		_, err = buildClusterComp(cd, setsMap, clsMgr, 15, false)
+		_, err = buildClusterComp(cd, setsMap, 15, false)
 		Expect(err).Should(HaveOccurred())
 	})
 
@@ -250,14 +246,13 @@ var _ = Describe("create", func() {
 				true,
 			},
 			{
-				[]string{"cpu=1,memory=2Gi,storage=10Gi,class=general-1c2g"},
+				[]string{"cpu=1,memory=2Gi,storage=10Gi"},
 				[]string{"my-comp"},
 				map[string]map[setKey]string{
 					"my-comp": {
 						keyCPU:     "1",
 						keyMemory:  "2Gi",
 						keyStorage: "10Gi",
-						keyClass:   "general-1c2g",
 					},
 				},
 				true,
@@ -316,20 +311,18 @@ var _ = Describe("create", func() {
 				true,
 			},
 			{
-				[]string{"type=comp1,cpu=1,memory=2Gi,class=general-2c4g", "type=comp2,storage=10Gi,cpu=2,class=mo-1c8g,replicas=3"},
+				[]string{"type=comp1,cpu=1,memory=2Gi", "type=comp2,storage=10Gi,cpu=2,replicas=3"},
 				[]string{"comp1", "comp2"},
 				map[string]map[setKey]string{
 					"comp1": {
 						keyType:   "comp1",
 						keyCPU:    "1",
 						keyMemory: "2Gi",
-						keyClass:  "general-2c4g",
 					},
 					"comp2": {
 						keyType:     "comp2",
 						keyCPU:      "2",
 						keyStorage:  "10Gi",
-						keyClass:    "mo-1c8g",
 						keyReplicas: "3",
 					},
 				},
@@ -650,7 +643,7 @@ var _ = Describe("create", func() {
 	})
 
 	It("rebuild clusterComponentSpec VolumeClaimTemplates by --pvc", func() {
-		comps, err := buildClusterComp(mockCD([]string{"comp1", "comp2"}), nil, clsMgr, 0, false)
+		comps, err := buildClusterComp(mockCD([]string{"comp1", "comp2"}), nil, 0, false)
 
 		Expect(err).Should(Succeed())
 		Expect(comps).ShouldNot(BeNil())

@@ -37,7 +37,6 @@ import (
 
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	"github.com/apecloud/kubeblocks/pkg/constant"
-	testapps "github.com/apecloud/kubeblocks/pkg/testutil/apps"
 
 	"github.com/apecloud/kbcli/pkg/testing"
 )
@@ -67,22 +66,6 @@ var _ = Describe("operations", func() {
 		clusterWithOneComp.Spec.ComponentSpecs = []appsv1alpha1.ClusterComponentSpec{
 			clusterWithOneComp.Spec.ComponentSpecs[0],
 		}
-		clusterWithOneComp.Spec.ComponentSpecs[0].ClassDefRef = &appsv1alpha1.ClassDefRef{Class: testapps.Class1c1gName}
-		classDef := testapps.NewComponentClassDefinitionFactory("custom", clusterWithOneComp.Spec.ClusterDefRef, testing.ComponentDefName).
-			AddClasses([]appsv1alpha1.ComponentClass{testapps.Class1c1g}).
-			GetObject()
-		resourceConstraint := testapps.NewComponentResourceConstraintFactory(testapps.DefaultResourceConstraintName).
-			AddConstraints(testapps.ProductionResourceConstraint).
-			AddSelector(appsv1alpha1.ClusterResourceConstraintSelector{
-				ClusterDefRef: testing.ClusterDefName,
-				Components: []appsv1alpha1.ComponentResourceConstraintSelector{
-					{
-						ComponentDefRef: testing.ComponentDefName,
-						Rules:           []string{"c1"},
-					},
-				},
-			}).
-			GetObject()
 
 		// init cluster with one component and componentDefinition
 		clusterWithCompDef := clusterWithOneComp.DeepCopy()
@@ -115,7 +98,7 @@ var _ = Describe("operations", func() {
 		tf.Client = &clientfake.RESTClient{}
 		tf.FakeDynamicClient = testing.FakeDynamicClient(testing.FakeClusterDef(),
 			testing.FakeClusterVersion(), testing.FakeCompDef(), clusterWithTwoComps, clusterWithOneComp, clusterWithCompDef,
-			classDef, &pods.Items[0], &pods.Items[1], &podsWithCompDef.Items[0], &podsWithCompDef.Items[1], resourceConstraint, opsDef)
+			&pods.Items[0], &pods.Items[1], &podsWithCompDef.Items[0], &podsWithCompDef.Items[1], opsDef)
 	})
 
 	AfterEach(func() {
@@ -231,43 +214,17 @@ var _ = Describe("operations", func() {
 		Expect(o.CompleteComponentsFlag()).Should(Succeed())
 		Expect(o.ComponentNames[0]).Should(Equal(testing.ComponentName))
 
-		By("validate invalid class")
-		o.Class = "class-not-exists"
-		in.Write([]byte(o.Name + "\n"))
-		Expect(o.Validate()).Should(HaveOccurred())
-
-		By("expect to validate success with class")
-		o.Class = testapps.Class1c1gName
-		in.Write([]byte(o.Name + "\n"))
-		Expect(o.Validate()).ShouldNot(HaveOccurred())
-
 		By("validate invalid resource")
-		o.Class = ""
-		o.CPU = "100"
-		o.Memory = "100Gi"
-		in.Write([]byte(o.Name + "\n"))
-		Expect(o.Validate()).Should(HaveOccurred())
-
-		By("validate invalid resource")
-		o.Class = ""
 		o.CPU = "1g"
 		o.Memory = "100Gi"
 		in.Write([]byte(o.Name + "\n"))
 		Expect(o.Validate()).Should(HaveOccurred())
 
 		By("validate invalid resource")
-		o.Class = ""
 		o.CPU = "1"
 		o.Memory = "100MB"
 		in.Write([]byte(o.Name + "\n"))
 		Expect(o.Validate()).Should(HaveOccurred())
-
-		By("expect to validate success with resource")
-		o.Class = ""
-		o.CPU = "1"
-		o.Memory = "1Gi"
-		in.Write([]byte(o.Name + "\n"))
-		Expect(o.Validate()).ShouldNot(HaveOccurred())
 	})
 
 	It("Hscale Ops", func() {
