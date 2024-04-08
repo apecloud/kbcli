@@ -15,7 +15,7 @@ kbcli bench sysbench [Step] [BenchmarkName] [flags]
   kbcli bench sysbench mytest --cluster mycluster --user xxx --password xxx --database mydb
   
   # sysbench on a cluster, but with cpu and memory limits set
-  kbcli bench sysbench mytest --cluster mycluster --user xxx --password xxx --database mydb --cpu 1 --memory 1Gi
+  kbcli bench sysbench mytest --cluster mycluster --user xxx --password xxx --database mydb --limit-cpu 1 --limit-memory 1Gi
   
   # sysbench run on a cluster with cleanup, only cleanup by deleting the testdata
   kbcli bench sysbench cleanup mytest --cluster mycluster --user xxx --password xxx --database mydb
