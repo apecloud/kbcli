@@ -26,6 +26,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 )
@@ -243,7 +244,11 @@ func GetImageRegistryByProvider(client kubernetes.Interface) (string, error) {
 		if !strings.HasPrefix(region, "china") {
 			registry = "docker.io"
 		}
+	case TKEProvider:
+		cnRegions := sets.New("ap-guangzhou", "ap-shanghai", "ap-nanjing", "ap-beijing", "ap-chengdu", "ap-chongqing")
+		if !cnRegions.Has(region) {
+			registry = "docker.io"
+		}
 	}
-
 	return registry, nil
 }

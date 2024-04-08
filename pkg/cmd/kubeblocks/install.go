@@ -314,14 +314,38 @@ func (o *InstallOptions) Install() error {
 		return err
 	}
 
-	for _, s := range o.ValueOpts.Values {
-		if split := strings.Split(s, "="); split[0] == types.ImageRegistryKey && len(split) == 2 {
-			if err := writeImageRegistryKey(split[1]); err != nil {
-				return err
+	getImageRegistry := func() string {
+		registry := viperx.GetString(types.CfgKeyImageRegistry)
+		if registry != "" {
+			return registry
+		}
+
+		// get from values options
+		for _, s := range o.ValueOpts.Values {
+			if split := strings.Split(s, "="); split[0] == types.ImageRegistryKey && len(split) == 2 {
+				registry = split[1]
+				break
 			}
 		}
+
+		// user do not specify image registry, get default image registry based on K8s provider and region
+		if registry == "" {
+			registry, err = util.GetImageRegistryByProvider(o.Client)
+			if err != nil {
+				fmt.Fprintf(o.ErrOut, "Failed to get image registry by provider: %v\n", err)
+				return ""
+			}
+		}
+		return registry
 	}
 
+	imageRegistry := getImageRegistry()
+	if imageRegistry != "" {
+		klog.V(1).Infof("Use image registry %s", imageRegistry)
+		if err := writeImageRegistryKey(imageRegistry); err != nil {
+			return err
+		}
+	}
 	s.Success()
 
 	// wait for auto-install addons to be ready
