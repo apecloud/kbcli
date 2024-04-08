@@ -43,7 +43,6 @@ import (
 	"github.com/apecloud/kbcli/pkg/cmd/backuprepo"
 	"github.com/apecloud/kbcli/pkg/cmd/bench"
 	"github.com/apecloud/kbcli/pkg/cmd/builder"
-	"github.com/apecloud/kbcli/pkg/cmd/class"
 	"github.com/apecloud/kbcli/pkg/cmd/cluster"
 	"github.com/apecloud/kbcli/pkg/cmd/clusterdefinition"
 	"github.com/apecloud/kbcli/pkg/cmd/clusterversion"
@@ -202,7 +201,6 @@ A Command Line Interface for KubeBlocks`,
 		dashboard.NewDashboardCmd(f, ioStreams),
 		clusterversion.NewClusterVersionCmd(f, ioStreams),
 		clusterdefinition.NewClusterDefinitionCmd(f, ioStreams),
-		class.NewClassCommand(f, ioStreams),
 		alert.NewAlertCmd(f, ioStreams),
 		addon.NewAddonCmd(f, ioStreams),
 		migration.NewMigrationCmd(f, ioStreams),

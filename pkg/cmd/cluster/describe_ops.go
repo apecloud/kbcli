@@ -272,18 +272,9 @@ func (o *describeOpsOptions) getVerticalScalingCommand(spec appsv1alpha1.OpsRequ
 	for i := range componentNameSlice {
 		commands[i] = fmt.Sprintf("kbcli cluster vscale %s --components=%s",
 			spec.ClusterRef, strings.Join(componentNameSlice[i], ","))
-		clsRef := spec.VerticalScalingList[i].ClassDefRef
-		if clsRef != nil {
-			class := clsRef.Class
-			if clsRef.Name != "" {
-				class = fmt.Sprintf("%s:%s", clsRef.Name, class)
-			}
-			commands[i] += fmt.Sprintf("--class=%s", class)
-		} else {
-			resource := resourceSlice[i].(corev1.ResourceRequirements)
-			commands[i] += o.addResourceFlag("cpu", resource.Limits.Cpu())
-			commands[i] += o.addResourceFlag("memory", resource.Limits.Memory())
-		}
+		resource := resourceSlice[i].(corev1.ResourceRequirements)
+		commands[i] += o.addResourceFlag("cpu", resource.Limits.Cpu())
+		commands[i] += o.addResourceFlag("memory", resource.Limits.Memory())
 	}
 	return commands
 }

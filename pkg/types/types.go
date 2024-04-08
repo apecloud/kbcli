@@ -155,8 +155,6 @@ const (
 
 // Labels
 const (
-	ClassProviderLabelKey = "class.kubeblocks.io/provider"
-
 	AddonProviderLabelKey = "addon.kubeblocks.io/provider"
 	// ProviderLabelKey was used as the label for addon providers before version 0.8.0
 	ProviderLabelKey     = "kubeblocks.io/provider"
