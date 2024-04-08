@@ -31,7 +31,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/apecloud/kubeblocks/pkg/controller/component"
 	"github.com/ghodss/yaml"
 	"github.com/robfig/cron/v3"
 	"github.com/spf13/cobra"
@@ -63,7 +62,6 @@ import (
 
 	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/cluster"
-	classutil "github.com/apecloud/kbcli/pkg/cmd/class"
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
@@ -166,7 +164,6 @@ type setKey string
 const (
 	keyType         setKey = "type"
 	keyCPU          setKey = "cpu"
-	keyClass        setKey = "class"
 	keyMemory       setKey = "memory"
 	keyReplicas     setKey = "replicas"
 	keyStorage      setKey = "storage"
@@ -293,7 +290,7 @@ func NewCreateCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.
 	cmd.Flags().StringVar(&o.ClusterDefRef, "cluster-definition", "", "Specify cluster definition, run \"kbcli cd list\" to show all available cluster definitions")
 	cmd.Flags().StringVar(&o.ClusterVersionRef, "cluster-version", "", "Specify cluster version, run \"kbcli cv list\" to show all available cluster versions, use the latest version if not specified")
 	cmd.Flags().StringVarP(&o.SetFile, "set-file", "f", "", "Use yaml file, URL, or stdin to set the cluster resource")
-	cmd.Flags().StringArrayVar(&o.Values, "set", []string{}, "Set the cluster resource including cpu, memory, replicas and storage, each set corresponds to a component.(e.g. --set cpu=1,memory=1Gi,replicas=3,storage=20Gi or --set class=general-1c1g)")
+	cmd.Flags().StringArrayVar(&o.Values, "set", []string{}, "Set the cluster resource including cpu, memory, replicas and storage, each set corresponds to a component.(e.g. --set cpu=1,memory=1Gi,replicas=3,storage=20Gi)")
 	cmd.Flags().BoolVar(&o.CreateOnlySet, "create-only-set", false, "Create components exclusively configured in 'set'")
 	cmd.Flags().StringArrayVar(&o.Storages, "pvc", []string{}, "Set the cluster detail persistent volume claim, each '--pvc' corresponds to a component, and will override the simple configurations about storage by --set (e.g. --pvc type=mysql,name=data,mode=ReadWriteOnce,size=20Gi --pvc type=mysql,name=log,mode=ReadWriteOnce,size=1Gi)")
 	cmd.Flags().StringArrayVar(&o.ServiceRef, "service-reference", []string{}, "Set the other KubeBlocks cluster dependencies, each '--service-reference' corresponds to a cluster service. (e.g --service-reference name=pulsarZookeeper,cluster=zookeeper,namespace=default)")
@@ -589,10 +586,6 @@ func (o *CreateOptions) buildComponents(clusterCompSpecs []appsv1alpha1.ClusterC
 	if err != nil {
 		return nil, err
 	}
-	clsMgr, resourceConstraintList, err := classutil.GetManager(o.Dynamic, o.ClusterDefRef)
-	if err != nil {
-		return nil, err
-	}
 
 	compSets, err := buildCompSetsMap(o.Values, cd)
 	if err != nil {
@@ -613,8 +606,6 @@ func (o *CreateOptions) buildComponents(clusterCompSpecs []appsv1alpha1.ClusterC
 			case keyCPU:
 				comp.Resources.Requests[corev1.ResourceCPU] = setComp.Resources.Requests[corev1.ResourceCPU]
 				comp.Resources.Limits[corev1.ResourceCPU] = setComp.Resources.Limits[corev1.ResourceCPU]
-			case keyClass:
-				comp.ClassDefRef = setComp.ClassDefRef
 			case keyMemory:
 				comp.Resources.Requests[corev1.ResourceMemory] = setComp.Resources.Requests[corev1.ResourceMemory]
 				comp.Resources.Limits[corev1.ResourceMemory] = setComp.Resources.Limits[corev1.ResourceMemory]
@@ -633,7 +624,7 @@ func (o *CreateOptions) buildComponents(clusterCompSpecs []appsv1alpha1.ClusterC
 	}
 
 	if clusterCompSpecs != nil {
-		setsCompSpecs, err := buildClusterComp(cd, compSets, clsMgr, o.MonitoringInterval, o.CreateOnlySet)
+		setsCompSpecs, err := buildClusterComp(cd, compSets, o.MonitoringInterval, o.CreateOnlySet)
 		if err != nil {
 			return nil, err
 		}
@@ -647,7 +638,7 @@ func (o *CreateOptions) buildComponents(clusterCompSpecs []appsv1alpha1.ClusterC
 			compSpecs = append(compSpecs, &comp)
 		}
 	} else {
-		compSpecs, err = buildClusterComp(cd, compSets, clsMgr, o.MonitoringInterval, o.CreateOnlySet)
+		compSpecs, err = buildClusterComp(cd, compSets, o.MonitoringInterval, o.CreateOnlySet)
 		if err != nil {
 			return nil, err
 		}
@@ -667,11 +658,6 @@ func (o *CreateOptions) buildComponents(clusterCompSpecs []appsv1alpha1.ClusterC
 
 	var comps []map[string]interface{}
 	for _, compSpec := range compSpecs {
-		// validate component classes
-		if err = classutil.ValidateResources(clsMgr, resourceConstraintList, o.ClusterDefRef, compSpec); err != nil {
-			return nil, err
-		}
-
 		// cpu oversell
 		if o.CPUOversellRatio > 1 {
 			cpuRequest := compSpec.Resources.Requests[corev1.ResourceCPU]
@@ -1006,7 +992,6 @@ func setEnableAllLogs(c *appsv1alpha1.Cluster, cd *appsv1alpha1.ClusterDefinitio
 
 func buildClusterComp(cd *appsv1alpha1.ClusterDefinition,
 	setsMap map[string]map[setKey]string,
-	clsMgr *component.Manager,
 	monitoringInterval uint8,
 	createOnlySet bool) ([]*appsv1alpha1.ClusterComponentSpec, error) {
 	// get value from set values and environment variables, the second return value is
@@ -1106,33 +1091,9 @@ func buildClusterComp(cd *appsv1alpha1.ClusterDefinition,
 			Replicas:        int32(setReplicas),
 		}
 
-		// class has higher priority than other resource related parameters
-		resourceList := make(corev1.ResourceList)
-		if clsMgr.HasClass(compObj.ComponentDefRef, component.Any) {
-			if className := getVal(&c, keyClass, sets); className != "" {
-				clsDefRef := appsv1alpha1.ClassDefRef{}
-				parts := strings.SplitN(className, ":", 2)
-				if len(parts) == 1 {
-					clsDefRef.Class = parts[0]
-				} else {
-					clsDefRef.Name = parts[0]
-					clsDefRef.Class = parts[1]
-				}
-				compObj.ClassDefRef = &clsDefRef
-			} else {
-				resourceList = corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse(getVal(&c, keyCPU, sets)),
-					corev1.ResourceMemory: resource.MustParse(getVal(&c, keyMemory, sets)),
-				}
-			}
-		} else {
-			if className := getVal(&c, keyClass, sets); className != "" {
-				return nil, fmt.Errorf("can not find class %s for component type %s", className, c.Name)
-			}
-			resourceList = corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse(getVal(&c, keyCPU, sets)),
-				corev1.ResourceMemory: resource.MustParse(getVal(&c, keyMemory, sets)),
-			}
+		resourceList := corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse(getVal(&c, keyCPU, sets)),
+			corev1.ResourceMemory: resource.MustParse(getVal(&c, keyMemory, sets)),
 		}
 		compObj.Resources = corev1.ResourceRequirements{
 			// deepcopy to make requests and limits point to different resources
@@ -1621,7 +1582,6 @@ func setKeys() []string {
 		string(keyStorage),
 		string(keyMemory),
 		string(keyReplicas),
-		string(keyClass),
 		string(keyStorageClass),
 		string(keySwitchPolicy),
 		string(keyMonitor),

@@ -231,43 +231,17 @@ var _ = Describe("operations", func() {
 		Expect(o.CompleteComponentsFlag()).Should(Succeed())
 		Expect(o.ComponentNames[0]).Should(Equal(testing.ComponentName))
 
-		By("validate invalid class")
-		o.Class = "class-not-exists"
-		in.Write([]byte(o.Name + "\n"))
-		Expect(o.Validate()).Should(HaveOccurred())
-
-		By("expect to validate success with class")
-		o.Class = testapps.Class1c1gName
-		in.Write([]byte(o.Name + "\n"))
-		Expect(o.Validate()).ShouldNot(HaveOccurred())
-
 		By("validate invalid resource")
-		o.Class = ""
-		o.CPU = "100"
-		o.Memory = "100Gi"
-		in.Write([]byte(o.Name + "\n"))
-		Expect(o.Validate()).Should(HaveOccurred())
-
-		By("validate invalid resource")
-		o.Class = ""
 		o.CPU = "1g"
 		o.Memory = "100Gi"
 		in.Write([]byte(o.Name + "\n"))
 		Expect(o.Validate()).Should(HaveOccurred())
 
 		By("validate invalid resource")
-		o.Class = ""
 		o.CPU = "1"
 		o.Memory = "100MB"
 		in.Write([]byte(o.Name + "\n"))
 		Expect(o.Validate()).Should(HaveOccurred())
-
-		By("expect to validate success with resource")
-		o.Class = ""
-		o.CPU = "1"
-		o.Memory = "1Gi"
-		in.Write([]byte(o.Name + "\n"))
-		Expect(o.Validate()).ShouldNot(HaveOccurred())
 	})
 
 	It("Hscale Ops", func() {

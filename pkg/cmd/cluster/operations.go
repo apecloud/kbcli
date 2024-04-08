@@ -49,7 +49,6 @@ import (
 
 	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/cluster"
-	classutil "github.com/apecloud/kbcli/pkg/cmd/class"
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
@@ -79,10 +78,8 @@ type OperationsOptions struct {
 	ClusterVersionRef string `json:"clusterVersionRef"`
 
 	// VerticalScaling options
-	CPU         string                   `json:"cpu"`
-	Memory      string                   `json:"memory"`
-	Class       string                   `json:"class"`
-	ClassDefRef appsv1alpha1.ClassDefRef `json:"classDefRef,omitempty"`
+	CPU    string `json:"cpu"`
+	Memory string `json:"memory"`
 
 	// HorizontalScaling options
 	Replicas int `json:"replicas"`
@@ -374,50 +371,28 @@ func (o *OperationsOptions) validateVolumeExpansion() error {
 }
 
 func (o *OperationsOptions) validateVScale(cluster *appsv1alpha1.Cluster) error {
-	if o.Class != "" && (o.CPU != "" || o.Memory != "") {
-		return fmt.Errorf("class and cpu/memory cannot be both specified")
-	}
-	if o.Class == "" && o.CPU == "" && o.Memory == "" {
-		return fmt.Errorf("class or cpu/memory must be specified")
-	}
-
-	clsMgr, resourceConstraintList, err := classutil.GetManager(o.Dynamic, cluster.Spec.ClusterDefRef)
-	if err != nil {
-		return err
+	if o.CPU == "" && o.Memory == "" {
+		return fmt.Errorf("cpu or memory must be specified")
 	}
 
 	fillClassParams := func(comp *appsv1alpha1.ClusterComponentSpec) error {
-		if o.Class != "" {
-			clsDefRef := appsv1alpha1.ClassDefRef{}
-			parts := strings.SplitN(o.Class, ":", 2)
-			if len(parts) == 1 {
-				clsDefRef.Class = parts[0]
-			} else {
-				clsDefRef.Name = parts[0]
-				clsDefRef.Class = parts[1]
+		requests := make(corev1.ResourceList)
+		if o.CPU != "" {
+			cpu, err := resource.ParseQuantity(o.CPU)
+			if err != nil {
+				return fmt.Errorf("cannot parse '%v', %v", o.CPU, err)
 			}
-			comp.ClassDefRef = &clsDefRef
-			comp.Resources = corev1.ResourceRequirements{}
-		} else {
-			comp.ClassDefRef = &appsv1alpha1.ClassDefRef{}
-			requests := make(corev1.ResourceList)
-			if o.CPU != "" {
-				cpu, err := resource.ParseQuantity(o.CPU)
-				if err != nil {
-					return fmt.Errorf("cannot parse '%v', %v", o.CPU, err)
-				}
-				requests[corev1.ResourceCPU] = cpu
-			}
-			if o.Memory != "" {
-				memory, err := resource.ParseQuantity(o.Memory)
-				if err != nil {
-					return fmt.Errorf("cannot parse '%v', %v", o.Memory, err)
-				}
-				requests[corev1.ResourceMemory] = memory
-			}
-			requests.DeepCopyInto(&comp.Resources.Requests)
-			requests.DeepCopyInto(&comp.Resources.Limits)
+			requests[corev1.ResourceCPU] = cpu
 		}
+		if o.Memory != "" {
+			memory, err := resource.ParseQuantity(o.Memory)
+			if err != nil {
+				return fmt.Errorf("cannot parse '%v', %v", o.Memory, err)
+			}
+			requests[corev1.ResourceMemory] = memory
+		}
+		requests.DeepCopyInto(&comp.Resources.Requests)
+		requests.DeepCopyInto(&comp.Resources.Limits)
 		return nil
 	}
 
@@ -427,10 +402,6 @@ func (o *OperationsOptions) validateVScale(cluster *appsv1alpha1.Cluster) error 
 				continue
 			}
 			if err := fillClassParams(&comp); err != nil {
-				return err
-			}
-			// validate component classes
-			if err = classutil.ValidateResources(clsMgr, resourceConstraintList, cluster.Spec.ClusterDefRef, &comp); err != nil {
 				return err
 			}
 		}
@@ -732,9 +703,6 @@ func NewUpgradeCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 var verticalScalingExample = templates.Examples(`
 		# scale the computing resources of specified components, separate with commas for multiple components
 		kbcli cluster vscale mycluster --components=mysql --cpu=500m --memory=500Mi
-
-		# scale the computing resources of specified components by class, run command 'kbcli class list --cluster-definition cluster-definition-name' to get available classes
-		kbcli cluster vscale mycluster --components=mysql --class=general-2c4g
 `)
 
 // NewVerticalScalingCmd creates a vertical scaling command
@@ -757,7 +725,6 @@ func NewVerticalScalingCmd(f cmdutil.Factory, streams genericiooptions.IOStreams
 	o.addCommonFlags(cmd, f)
 	cmd.Flags().StringVar(&o.CPU, "cpu", "", "Request and limit size of component cpu")
 	cmd.Flags().StringVar(&o.Memory, "memory", "", "Request and limit size of component memory")
-	cmd.Flags().StringVar(&o.Class, "class", "", "Component class")
 	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "Skip interactive approval before vertically scaling the cluster")
 	_ = cmd.MarkFlagRequired("components")
 	return cmd
