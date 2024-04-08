@@ -298,6 +298,7 @@ func (o *InstallOptions) Install() error {
 	if err = o.installChart(); err != nil {
 		return err
 	}
+
 	// save KB image.registry config
 	writeImageRegistryKey := func(registry string) error {
 		viperx.Set(types.CfgKeyImageRegistry, registry)

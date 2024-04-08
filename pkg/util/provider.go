@@ -27,6 +27,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/klog/v2"
 )
 
 type K8sProvider string
@@ -159,4 +160,90 @@ func GetK8sSemVer(version string) string {
 		return ""
 	}
 	return removeFirstChart(strArr[0])
+}
+
+// GetImageRegistryByProvider returns the image registry based on the k8s provider,
+// for different providers, we will use different image registry.
+//
+// Now, KubeBlocks has two image registries: docker.io and infracreate-registry.cn-zhangjiakou.cr.aliyuncs.com.
+// KubeBlocks default image registry is infracreate-registry.cn-zhangjiakou.cr.aliyuncs.com,
+// for some providers, or some regions, we should use docker.io as the image registry.
+func GetImageRegistryByProvider(client kubernetes.Interface) (string, error) {
+	v, err := GetK8sVersion(client.Discovery())
+	if err != nil {
+		return "", err
+	}
+
+	getImageRegistryByProvider := func(p K8sProvider) string {
+		switch p {
+		case GKEProvider:
+			return "docker.io"
+		case UnknownProvider:
+			return ""
+		default:
+			return ""
+		}
+	}
+
+	var nodes *corev1.NodeList
+	provider := GetK8sProviderFromVersion(v)
+	if provider == UnknownProvider {
+		nodes, err = client.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{})
+		if err != nil {
+			klog.Info("Failed to get nodes list", err)
+			return "", err
+		}
+		provider = GetK8sProviderFromNodes(nodes)
+	}
+
+	// get image registry by kubernetes provider
+	registry := getImageRegistryByProvider(provider)
+	if registry != "" {
+		return registry, nil
+	}
+
+	// can not get image registry by provider, get it by region
+	if nodes == nil {
+		nodes, err = client.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{})
+		if err != nil {
+			klog.Info("Failed to get nodes list", err)
+			return "", err
+		}
+	}
+
+	getRegion := func() string {
+		for _, node := range nodes.Items {
+			region := node.Labels["topology.kubernetes.io/region"]
+			if region != "" {
+				return region
+			}
+		}
+		return ""
+	}
+
+	region := getRegion()
+	if region == "" {
+		klog.Info("Failed to get region from nodes")
+		return "", nil
+	}
+
+	// Region info:
+	// aws: https://docs.aws.amazon.com/zh_cn/AWSEC2/latest/UserGuide/using-regions-availability-zones.html
+	//   there are two regions in China: cn-north-1, cn-northwest-1
+	// aliyun: https://help.aliyun.com/document_detail/40654.html
+	// azure: https://azure.microsoft.com/en-us/explore/global-infrastructure/data-residency/#select-geography
+	// huawei: https://developer.huaweicloud.com/endpoint
+	// tencent: https://www.tencentcloud.com/zh/document/product/213/6091
+	switch provider {
+	case EKSProvider, ACKProvider:
+		if !strings.HasPrefix(region, "cn-") {
+			registry = "docker.io"
+		}
+	case AKSProvider:
+		if !strings.HasPrefix(region, "china") {
+			registry = "docker.io"
+		}
+	}
+
+	return registry, nil
 }
