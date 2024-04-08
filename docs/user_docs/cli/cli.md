@@ -52,6 +52,7 @@ Run a benchmark.
 * [kbcli bench redis-benchmark](kbcli_bench_redis-benchmark.md)	 - Run redis-benchmark on a cluster
 * [kbcli bench sysbench](kbcli_bench_sysbench.md)	 - run a SysBench benchmark
 * [kbcli bench tpcc](kbcli_bench_tpcc.md)	 - Run tpcc benchmark
+* [kbcli bench tpcds](kbcli_bench_tpcds.md)	 - Run TPC-DS benchmark
 * [kbcli bench tpch](kbcli_bench_tpch.md)	 - Run tpch benchmark
 * [kbcli bench ycsb](kbcli_bench_ycsb.md)	 - Run YCSB benchmark on a cluster
 

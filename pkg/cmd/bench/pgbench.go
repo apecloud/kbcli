@@ -46,7 +46,7 @@ var pgbenchExample = templates.Examples(`
 	kbcli bench pgbench mytest --cluster pgcluster --database postgres --user xxx --password xxx
 
 	# pgbench run on a cluster, but with cpu and memory limits set
-	kbcli bench pgbench mytest --cluster pgcluster --database postgres --user xxx --password xxx --cpu 1 --memory 1Gi
+	kbcli bench pgbench mytest --cluster pgcluster --database postgres --user xxx --password xxx --limit-cpu 1 --limit-memory 1Gi
 	
 	# pgbench run on a cluster with cleanup, only cleanup by deleting the testdata
 	kbcli bench pgbench cleanup mytest --cluster pgcluster --database postgres --user xxx --password xxx

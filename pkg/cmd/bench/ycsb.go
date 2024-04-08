@@ -53,7 +53,7 @@ var ycsbExample = templates.Examples(`
 	kbcli bench ycsb mytest --cluster mycluster --user xxx --password xxx --database mydb
 
 	# ycsb on a cluster, but with cpu and memory limits set
-	kbcli bench ycsb mytest --cluster mycluster --user xxx --password xxx --database mydb --cpu 1 --memory 1Gi
+	kbcli bench ycsb mytest --cluster mycluster --user xxx --password xxx --database mydb --limit-cpu 1 --limit-memory 1Gi
 	
 	# ycsb on a cluster with cleanup, only cleanup by deleting the testdata
 	kbcli bench ycsb cleanup mytest --cluster mycluster --user xxx --password xxx --database mydb

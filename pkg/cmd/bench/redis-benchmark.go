@@ -46,7 +46,7 @@ var redisBenchExample = templates.Examples(`
 	kbcli bench redis-benchmark mytest --cluster rediscluster --clients 50 --requests 10000 --password xxx
 
 	# redis-benchmark run on a cluster, but with cpu and memory limits set
-	kbcli bench redis-benchmark mytest --cluster rediscluster --clients 50 --requests 10000 --cpu 1 --memory 1Gi --password xxx
+	kbcli bench redis-benchmark mytest --cluster rediscluster --clients 50 --requests 10000 --limit-cpu 1 --limit-memory 1Gi --password xxx
 
 	# redis-benchmark run on a cluster, just test set/get
 	kbcli bench redis-benchmark mytest --cluster rediscluster --clients 50 --requests 10000 --tests set,get --password xxx

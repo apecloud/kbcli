@@ -39,39 +39,43 @@ import (
 )
 
 var (
-	tpchDriverMap = map[string]string{
-		"mysql": "mysql",
+	tpcdsDriverMap = map[string]string{
+		"mysql":      "mysql",
+		"postgresql": "postgresql",
 	}
-	tpchSupportedDrivers = []string{"mysql"}
+	tpcdsSupportedDrivers = []string{"mysql", "postgresql"}
 )
 
-var tpchExample = templates.Examples(`
-	# tpch on a cluster, that will exec for all steps, cleanup, prepare and run
-	kbcli bench tpch mytest --cluster mycluster --user xxx --password xxx --database mydb
-
-	# tpch on a cluster, but with cpu and memory limits set
-	kbcli bench tpch mytest --cluster mycluster --user xxx --password xxx --database mydb --limit-cpu 1 --limit-memory 1Gi
-
-	# tpch on a cluster with run, just run by running the test
-	kbcli bench tpch run mytest --cluster mycluster --user xxx --password xxx --database mydb
-`)
-
-type TpchOptions struct {
+type TpcdsOptions struct {
 	BenchBaseOptions
-	Size int
+
+	Size   int
+	UseKey bool
 }
 
-func NewTpchCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := &TpchOptions{
+var tpcdsExample = templates.Examples(`
+	# tpcds on a cluster, that will exec for all steps, cleanup, prepare and run
+	kbcli bench tpcds mytest --cluster mycluster --user xxx --password xxx --database mydb
+
+	# tpcds on a cluster, but with cpu and memory limits set
+	kbcli bench tpcds mytest --cluster mycluster --user xxx --password xxx --database mydb --limit-cpu 1 --limit-memory 1Gi
+
+	# tpcds on a cluster with 10GB data
+	kbcli bench tpcds mytest --cluster mycluster --user xxx --password xxx --database mydb --size 10
+`)
+
+func NewTpcdsCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
+	o := &TpcdsOptions{
 		BenchBaseOptions: BenchBaseOptions{
 			IOStreams: streams,
 			factory:   f,
 		},
 	}
+
 	cmd := &cobra.Command{
-		Use:     "tpch [Step] [BenchmarkName]",
-		Short:   "Run tpch benchmark",
-		Example: tpchExample,
+		Use:     "tpcds [Step] [Benchmark]",
+		Short:   "Run TPC-DS benchmark",
+		Example: tpcdsExample,
 		Run: func(cmd *cobra.Command, args []string) {
 			cmdutil.CheckErr(o.Complete(args))
 			cmdutil.CheckErr(o.Validate())
@@ -80,22 +84,23 @@ func NewTpchCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Co
 	}
 
 	o.AddFlags(cmd)
-	cmd.Flags().IntVar(&o.Size, "size", 1, "specify the overall database size scaling parameter, 1 means 1GB")
+	cmd.Flags().IntVar(&o.Size, "size", 1, "specify the scale factor of the benchmark, 1 means 1GB data")
+	cmd.Flags().BoolVar(&o.UseKey, "use-key", false, "specify whether to create pk and fk, it will take extra time to create the keys")
 
 	return cmd
 }
 
-func (o *TpchOptions) Complete(args []string) error {
+func (o *TpcdsOptions) Complete(args []string) error {
 	var err error
 	var driver string
 	var host string
 	var port int
 
-	if err = o.BenchBaseOptions.BaseComplete(); err != nil {
+	if err := o.BenchBaseOptions.BaseComplete(); err != nil {
 		return err
 	}
 
-	o.Step, o.name = parseStepAndName(args, "tpch")
+	o.Step, o.name = parseStepAndName(args, "tpcds")
 
 	o.namespace, _, err = o.factory.ToRawKubeConfigLoader().Namespace()
 	if err != nil {
@@ -135,7 +140,7 @@ func (o *TpchOptions) Complete(args []string) error {
 	}
 
 	// don't overwrite the driver if it's already set
-	if v, ok := tpchDriverMap[driver]; ok && o.Driver == "" {
+	if v, ok := tpcdsDriverMap[driver]; ok && o.Driver == "" {
 		o.Driver = v
 	}
 
@@ -148,45 +153,41 @@ func (o *TpchOptions) Complete(args []string) error {
 	return nil
 }
 
-func (o *TpchOptions) Validate() error {
+func (o *TpcdsOptions) Validate() error {
 	if err := o.BenchBaseOptions.BaseValidate(); err != nil {
 		return err
 	}
 
 	var supported bool
-	for _, v := range tpchDriverMap {
+	for _, v := range tpcdsDriverMap {
 		if o.Driver == v {
 			supported = true
 			break
 		}
 	}
 	if !supported {
-		return fmt.Errorf("tpch now only supports drivers in [%s], current cluster driver is %s",
-			strings.Join(tpchSupportedDrivers, ", "), o.Driver)
+		return fmt.Errorf("tpcds now only supports drivers in [%s], current cluster driver is %s",
+			strings.Join(tpcdsSupportedDrivers, ","), o.Driver)
 	}
 
 	if o.User == "" {
 		return fmt.Errorf("user is required")
 	}
 
-	if o.Database == "" {
-		return fmt.Errorf("database is required")
-	}
-
 	return nil
 }
 
-func (o *TpchOptions) Run() error {
-	tpch := v1alpha1.Tpch{
+func (o *TpcdsOptions) Run() error {
+	tpcds := v1alpha1.Tpcds{
 		TypeMeta: metav1.TypeMeta{
-			Kind:       "Tpch",
-			APIVersion: types.TpchGVR().GroupVersion().String(),
+			Kind:       "Tpcds",
+			APIVersion: types.TpcdsGVR().GroupVersion().String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      o.name,
 			Namespace: o.namespace,
 		},
-		Spec: v1alpha1.TpchSpec{
+		Spec: v1alpha1.TpcdsSpec{
 			BenchCommon: v1alpha1.BenchCommon{
 				ExtraArgs:   o.ExtraArgs,
 				Step:        o.Step,
@@ -200,23 +201,24 @@ func (o *TpchOptions) Run() error {
 					Database: o.Database,
 				},
 			},
-			Size: o.Size,
+			Size:   o.Size,
+			UseKey: o.UseKey,
 		},
 	}
 
 	// set cpu and memory if specified
-	setCPUAndMemory(&tpch.Spec.BenchCommon, o.RequestCPU, o.RequestMemory, o.LimitCPU, o.LimitMemory)
+	setCPUAndMemory(&tpcds.Spec.BenchCommon, o.RequestCPU, o.RequestMemory, o.LimitCPU, o.LimitMemory)
 
 	obj := &unstructured.Unstructured{
 		Object: map[string]interface{}{},
 	}
-	data, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&tpch)
+	data, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&tpcds)
 	if err != nil {
 		return err
 	}
 	obj.SetUnstructuredContent(data)
 
-	obj, err = o.dynamic.Resource(types.TpchGVR()).Namespace(o.namespace).Create(context.TODO(), obj, metav1.CreateOptions{})
+	obj, err = o.dynamic.Resource(types.TpcdsGVR()).Namespace(o.namespace).Create(context.TODO(), obj, metav1.CreateOptions{})
 	if err != nil {
 		return err
 	}
