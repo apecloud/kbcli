@@ -15,7 +15,7 @@ kbcli bench tpch [Step] [BenchmarkName] [flags]
   kbcli bench tpch mytest --cluster mycluster --user xxx --password xxx --database mydb
   
   # tpch on a cluster, but with cpu and memory limits set
-  kbcli bench tpch mytest --cluster mycluster --user xxx --password xxx --database mydb --cpu 1 --memory 1Gi
+  kbcli bench tpch mytest --cluster mycluster --user xxx --password xxx --database mydb --limit-cpu 1 --limit-memory 1Gi
   
   # tpch on a cluster with run, just run by running the test
   kbcli bench tpch run mytest --cluster mycluster --user xxx --password xxx --database mydb
@@ -36,6 +36,7 @@ kbcli bench tpch [Step] [BenchmarkName] [flags]
       --port int                the port of database
       --request-cpu string      the request cpu of benchmark
       --request-memory string   the request memory of benchmark
+      --size int                specify the overall database size scaling parameter, 1 means 1GB (default 1)
       --tolerations strings     Tolerations for benchmark, such as '"dev=true:NoSchedule,large=true:NoSchedule"'
       --user string             the user of database
 ```

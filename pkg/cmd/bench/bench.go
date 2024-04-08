@@ -197,6 +197,7 @@ func NewBenchCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.C
 		NewPgBenchCmd(f, streams),
 		NewYcsbCmd(f, streams),
 		NewTpccCmd(f, streams),
+		NewTpcdsCmd(f, streams),
 		NewTpchCmd(f, streams),
 		NewRedisBenchmarkCmd(f, streams),
 		newListCmd(f, streams),

@@ -6,7 +6,7 @@ require (
 	cuelang.org/go v0.8.0
 	github.com/99designs/keyring v1.2.2
 	github.com/Masterminds/semver/v3 v3.2.1
-	github.com/apecloud/kubebench v0.0.0-20240313105909-ba8654f654fc
+	github.com/apecloud/kubebench v0.0.0-20240327101848-6a031d3f4ebe
 	github.com/apecloud/kubeblocks v0.9.0-beta.1
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
 	github.com/benbjohnson/clock v1.3.5
