@@ -125,7 +125,7 @@ kbcli cluster create [NAME] [flags]
       --rbac-enabled                           Specify whether rbac resources will be created by kbcli, otherwise KubeBlocks server will try to create rbac resources
       --restore-to-time string                 Set a time for point in time recovery
       --service-reference stringArray          Set the other KubeBlocks cluster dependencies, each '--service-reference' corresponds to a cluster service. (e.g --service-reference name=pulsarZookeeper,cluster=zookeeper,namespace=default)
-      --set stringArray                        Set the cluster resource including cpu, memory, replicas and storage, each set corresponds to a component.(e.g. --set cpu=1,memory=1Gi,replicas=3,storage=20Gi or --set class=general-1c1g)
+      --set stringArray                        Set the cluster resource including cpu, memory, replicas and storage, each set corresponds to a component.(e.g. --set cpu=1,memory=1Gi,replicas=3,storage=20Gi)
   -f, --set-file string                        Use yaml file, URL, or stdin to set the cluster resource
       --tenancy string                         Tenancy options, one of: (SharedNode, DedicatedNode) (default "SharedNode")
       --termination-policy string              Termination policy, one of: (DoNotTerminate, Halt, Delete, WipeOut) (default "Delete")
