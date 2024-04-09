@@ -296,7 +296,8 @@ func createOrUpdateCRDS(dynamic dynamic.Interface, kbVersion string) error {
 		return err
 	}
 	if resp.StatusCode == http.StatusNotFound {
-		return fmt.Errorf("failed to download CRDs from %s, not found", crdsURL)
+		fmt.Printf("not found CRDs from %s, please specify the right version", crdsURL)
+		return nil
 	} else if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("failed to download CRDs from %s", crdsURL)
 	}

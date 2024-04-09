@@ -33,6 +33,8 @@ import (
 
 const (
 	topologyRegionLabel = "topology.kubernetes.io/region"
+
+	dockerRegistry = "docker.io"
 )
 
 type K8sProvider string
@@ -182,8 +184,8 @@ func GetImageRegistryByProvider(client kubernetes.Interface) (string, error) {
 	getImageRegistryByProvider := func(p K8sProvider) string {
 		switch p {
 		case GKEProvider:
-			return "docker.io"
-		case UnknownProvider:
+			return dockerRegistry
+		case UnknownProvider, KINDProvider, K3SProvider:
 			return ""
 		default:
 			return ""
@@ -240,18 +242,20 @@ func GetImageRegistryByProvider(client kubernetes.Interface) (string, error) {
 	// huawei: https://developer.huaweicloud.com/endpoint
 	// tencent: https://www.tencentcloud.com/zh/document/product/213/6091
 	switch provider {
+	case GKEProvider:
+		registry = dockerRegistry
 	case EKSProvider, ACKProvider:
 		if !strings.HasPrefix(region, "cn-") {
-			registry = "docker.io"
+			registry = dockerRegistry
 		}
 	case AKSProvider:
 		if !strings.HasPrefix(region, "china") {
-			registry = "docker.io"
+			registry = dockerRegistry
 		}
 	case TKEProvider:
 		cnRegions := sets.New("ap-guangzhou", "ap-shanghai", "ap-nanjing", "ap-beijing", "ap-chengdu", "ap-chongqing")
 		if !cnRegions.Has(region) {
-			registry = "docker.io"
+			registry = dockerRegistry
 		}
 	}
 	return registry, nil
