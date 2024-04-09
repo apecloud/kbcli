@@ -31,6 +31,10 @@ import (
 	"k8s.io/klog/v2"
 )
 
+const (
+	topologyRegionLabel = "topology.kubernetes.io/region"
+)
+
 type K8sProvider string
 
 const (
@@ -214,7 +218,7 @@ func GetImageRegistryByProvider(client kubernetes.Interface) (string, error) {
 
 	getRegion := func() string {
 		for _, node := range nodes.Items {
-			region := node.Labels["topology.kubernetes.io/region"]
+			region := node.Labels[topologyRegionLabel]
 			if region != "" {
 				return region
 			}

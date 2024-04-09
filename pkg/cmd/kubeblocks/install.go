@@ -295,24 +295,6 @@ func (o *InstallOptions) Install() error {
 	// install KubeBlocks
 	s = spinner.New(o.Out, spinnerMsg("Install KubeBlocks "+o.Version))
 	defer s.Fail()
-	if err = o.installChart(); err != nil {
-		return err
-	}
-
-	// save KB image.registry config
-	writeImageRegistryKey := func(registry string) error {
-		viperx.Set(types.CfgKeyImageRegistry, registry)
-		v := viperx.GetViper()
-		err := v.WriteConfig()
-		if errors.As(err, &viper.ConfigFileNotFoundError{}) {
-			dir, err := util.GetCliHomeDir()
-			if err != nil {
-				return err
-			}
-			return viper.WriteConfigAs(filepath.Join(dir, "config.yaml"))
-		}
-		return err
-	}
 
 	getImageRegistry := func() string {
 		registry := viperx.GetString(types.CfgKeyImageRegistry)
@@ -338,10 +320,33 @@ func (o *InstallOptions) Install() error {
 		}
 		return registry
 	}
-
 	imageRegistry := getImageRegistry()
 	if imageRegistry != "" {
 		klog.V(1).Infof("Use image registry %s", imageRegistry)
+		o.ValueOpts.Values = append(o.ValueOpts.Values, fmt.Sprintf("%s=%s", types.ImageRegistryKey, imageRegistry))
+	}
+
+	if err = o.installChart(); err != nil {
+		return err
+	}
+
+	// save KB image.registry config
+	writeImageRegistryKey := func(registry string) error {
+		viperx.Set(types.CfgKeyImageRegistry, registry)
+		v := viperx.GetViper()
+		err := v.WriteConfig()
+		if errors.As(err, &viper.ConfigFileNotFoundError{}) {
+			dir, err := util.GetCliHomeDir()
+			if err != nil {
+				return err
+			}
+			return viper.WriteConfigAs(filepath.Join(dir, "config.yaml"))
+		}
+		return err
+	}
+
+	// if imageRegistry is not empty, save it to config file and used by addon
+	if imageRegistry != "" {
 		if err := writeImageRegistryKey(imageRegistry); err != nil {
 			return err
 		}
