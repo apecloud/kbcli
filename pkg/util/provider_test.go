@@ -26,16 +26,20 @@ import (
 	. "github.com/onsi/gomega"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/apecloud/kbcli/pkg/testing"
 )
 
 var _ = Describe("provider util", func() {
 
-	buildNodes := func(provider string) *corev1.NodeList {
+	buildNodes := func(provider string, labels map[string]string) *corev1.NodeList {
 		return &corev1.NodeList{
 			Items: []corev1.Node{
 				{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: labels,
+					},
 					Spec: corev1.NodeSpec{
 						ProviderID: fmt.Sprintf("%s://blabla", provider),
 					},
@@ -58,7 +62,7 @@ var _ = Describe("provider util", func() {
 				"1.25.0",
 				UnknownProvider,
 				false,
-				buildNodes(""),
+				buildNodes("", nil),
 			},
 			{
 				"EKS with unique version identifier",
@@ -66,7 +70,7 @@ var _ = Describe("provider util", func() {
 				"1.25.0",
 				EKSProvider,
 				true,
-				buildNodes(""),
+				buildNodes("", nil),
 			},
 			{
 				"EKS with providerID",
@@ -74,7 +78,7 @@ var _ = Describe("provider util", func() {
 				"1.25.0",
 				EKSProvider,
 				true,
-				buildNodes("aws"),
+				buildNodes("aws", nil),
 			},
 			{
 				"GKE with unique version identifier",
@@ -82,7 +86,7 @@ var _ = Describe("provider util", func() {
 				"1.24.9",
 				GKEProvider,
 				true,
-				buildNodes(""),
+				buildNodes("", nil),
 			},
 			{
 				"GKE with providerID",
@@ -90,7 +94,7 @@ var _ = Describe("provider util", func() {
 				"1.24.9",
 				GKEProvider,
 				true,
-				buildNodes("gce"),
+				buildNodes("gce", nil),
 			},
 			{
 				"TKE with unique version identifier",
@@ -98,7 +102,7 @@ var _ = Describe("provider util", func() {
 				"1.24.4",
 				TKEProvider,
 				true,
-				buildNodes(""),
+				buildNodes("", nil),
 			},
 			{
 				"TKE with providerID",
@@ -106,7 +110,7 @@ var _ = Describe("provider util", func() {
 				"1.24.9",
 				TKEProvider,
 				true,
-				buildNodes("qcloud"),
+				buildNodes("qcloud", nil),
 			},
 			{
 				"ACK with unique version identifier, as ACK don't have providerID",
@@ -114,7 +118,7 @@ var _ = Describe("provider util", func() {
 				"1.24.6",
 				ACKProvider,
 				true,
-				buildNodes(""),
+				buildNodes("", nil),
 			},
 			{
 				"AKS with providerID, as AKS don't have unique version identifier",
@@ -122,7 +126,7 @@ var _ = Describe("provider util", func() {
 				"1.24.9",
 				AKSProvider,
 				true,
-				buildNodes("azure"),
+				buildNodes("azure", nil),
 			},
 		}
 
@@ -134,6 +138,69 @@ var _ = Describe("provider util", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(p).Should(Equal(c.expectProvider))
 			Expect(p.IsCloud()).Should(Equal(c.isCloud))
+		}
+	})
+
+	It("GetImageRegistry", func() {
+		buildNodeWithRegion := func(provider, region string) *corev1.NodeList {
+			labels := map[string]string{
+				topologyRegionLabel: region,
+			}
+			return buildNodes(provider, labels)
+		}
+
+		cases := []struct {
+			description           string
+			version               string
+			region                string
+			expectedImageRegistry string
+			nodes                 *corev1.NodeList
+		}{
+			{
+				"Unknown provider",
+				"v1.25.0",
+				"",
+				"",
+				buildNodes("", nil),
+			},
+			{
+				"EKS with region us-west-2",
+				"v1.25.0-eks-123456",
+				"us-west-2",
+				"docker.io",
+				buildNodeWithRegion("aws", "us-west-2"),
+			},
+			{
+				// GCP DOES NOT have region with 'cn-*' prefix, so it should always
+				// use 'docker.io' as the default registry.
+				"GKE with region cn-north-1",
+				"v1.24.9-gke.3200",
+				"cn-north-1",
+				"docker.io",
+				buildNodeWithRegion("gce", "cn-north-1"),
+			},
+			{
+				"TKE with region ap-guangzhou",
+				"v1.24.4-tke.5",
+				"ap-guangzhou",
+				"",
+				buildNodeWithRegion("qcloud", "ap-guangzhou"),
+			},
+			{
+				"ACK with region cn-zhangjiakou",
+				"v1.24.6-aliyun.1",
+				"cn-zhangjiakou",
+				"",
+				buildNodeWithRegion("", "cn-zhangjiakou"),
+			},
+		}
+
+		for _, c := range cases {
+			By(c.description)
+			client := testing.FakeClientSet(c.nodes)
+			registry, err := GetImageRegistryByProvider(client)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(registry).Should(Equal(c.expectedImageRegistry))
 		}
 	})
 })
