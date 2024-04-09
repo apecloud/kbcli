@@ -295,9 +295,41 @@ func (o *InstallOptions) Install() error {
 	// install KubeBlocks
 	s = spinner.New(o.Out, spinnerMsg("Install KubeBlocks "+o.Version))
 	defer s.Fail()
+
+	getImageRegistry := func() string {
+		registry := viperx.GetString(types.CfgKeyImageRegistry)
+		if registry != "" {
+			return registry
+		}
+
+		// get from values options
+		for _, s := range o.ValueOpts.Values {
+			if split := strings.Split(s, "="); split[0] == types.ImageRegistryKey && len(split) == 2 {
+				registry = split[1]
+				break
+			}
+		}
+
+		// user do not specify image registry, get default image registry based on K8s provider and region
+		if registry == "" {
+			registry, err = util.GetImageRegistryByProvider(o.Client)
+			if err != nil {
+				fmt.Fprintf(o.ErrOut, "Failed to get image registry by provider: %v\n", err)
+				return ""
+			}
+		}
+		return registry
+	}
+	imageRegistry := getImageRegistry()
+	if imageRegistry != "" {
+		klog.V(1).Infof("Use image registry %s", imageRegistry)
+		o.ValueOpts.Values = append(o.ValueOpts.Values, fmt.Sprintf("%s=%s", types.ImageRegistryKey, imageRegistry))
+	}
+
 	if err = o.installChart(); err != nil {
 		return err
 	}
+
 	// save KB image.registry config
 	writeImageRegistryKey := func(registry string) error {
 		viperx.Set(types.CfgKeyImageRegistry, registry)
@@ -313,14 +345,12 @@ func (o *InstallOptions) Install() error {
 		return err
 	}
 
-	for _, s := range o.ValueOpts.Values {
-		if split := strings.Split(s, "="); split[0] == types.ImageRegistryKey && len(split) == 2 {
-			if err := writeImageRegistryKey(split[1]); err != nil {
-				return err
-			}
+	// if imageRegistry is not empty, save it to config file and used by addon
+	if imageRegistry != "" {
+		if err := writeImageRegistryKey(imageRegistry); err != nil {
+			return err
 		}
 	}
-
 	s.Success()
 
 	// wait for auto-install addons to be ready

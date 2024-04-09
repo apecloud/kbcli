@@ -42,7 +42,6 @@ import (
 const k8sCRD = "CustomResourceDefinition"
 const TYPE = "type"
 const PROPERTIES = "properties"
-const ADDITIONALPROPERTIES = "additionalProperties"
 const REQUIRED = "required"
 
 // APIPath is the key name to record the API fullpath
