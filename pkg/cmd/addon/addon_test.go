@@ -111,6 +111,38 @@ var _ = Describe("Manage applications related to KubeBlocks", func() {
 		})
 	})
 
+	When("Validate at disable an addon", func() {
+		It("should return error", func() {
+
+			o := &addonCmdOpts{
+				PatchOptions:     action.NewPatchOptions(tf, streams, types.AddonGVR()),
+				Factory:          tf,
+				IOStreams:        streams,
+				addonEnableFlags: &addonEnableFlags{},
+				complete:         addonEnableDisableHandler,
+			}
+
+			addonObj := testing.FakeAddon("addon-test")
+			o.addon = *addonObj
+			codec := scheme.Codecs.LegacyCodec(scheme.Scheme.PrioritizedVersionsAllGroups()...)
+			httpResp := func(obj runtime.Object) *http.Response {
+				return &http.Response{StatusCode: http.StatusOK, Header: cmdtesting.DefaultHeader(), Body: cmdtesting.ObjBody(codec, obj)}
+			}
+			tf.Client = &restfake.RESTClient{
+				GroupVersion:         schema.GroupVersion{Group: "version", Version: ""},
+				NegotiatedSerializer: resource.UnstructuredPlusDefaultContentConfig().NegotiatedSerializer,
+				Client: restfake.CreateHTTPClient(func(req *http.Request) (*http.Response, error) {
+					urlPrefix := "/version"
+					return map[string]*http.Response{
+						urlPrefix: httpResp(testing.FakeServices()),
+					}[req.URL.Path], nil
+				}),
+			}
+			tf.FakeDynamicClient = fake.NewSimpleDynamicClient(scheme.Scheme, addonObj)
+			Expect(o.validate()).Should(HaveOccurred())
+		})
+	})
+
 	// When("Enable an addon", func() {
 	// 	It("should set addon.spec.install.enabled=true", func() {
 	// 		By("Checking install helm chart by fake helm action config")
