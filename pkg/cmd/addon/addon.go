@@ -266,15 +266,17 @@ func newDisableCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 	cmd := &cobra.Command{
 		Use:               "disable ADDON_NAME",
 		Short:             "Disable an addon.",
-		Args:              cobra.ExactArgs(1),
+		Args:              cobra.MinimumNArgs(1), // This will accept more than one argument rather than keeping the args to exact
 		ValidArgsFunction: util.ResourceNameCompletionFunc(f, types.AddonGVR()),
 		Run: func(cmd *cobra.Command, args []string) {
-			util.CheckErr(o.init(args))
-			util.CheckErr(o.fetchAddonObj())
-			util.CheckErr(o.checkBeforeDisable())
-			util.CheckErr(o.complete(o, cmd, args))
-			util.CheckErr(o.CmdComplete(cmd))
-			util.CheckErr(o.Run())
+			for _, name := range args { // This loop will fetch all the addons mentioned in the command and will remove them one by one.
+				util.CheckErr(o.init([]string{name}))
+				util.CheckErr(o.fetchAddonObj())
+				util.CheckErr(o.checkBeforeDisable())
+				util.CheckErr(o.complete(o, cmd, []string{name}))
+				util.CheckErr(o.CmdComplete(cmd))
+				util.CheckErr(o.Run())
+			}
 		},
 	}
 	cmd.Flags().BoolVar(&o.autoApprove, "auto-approve", false, "Skip interactive approval before disabling addon")
