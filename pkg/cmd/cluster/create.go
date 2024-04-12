@@ -171,7 +171,7 @@ const (
 	keySwitchPolicy setKey = "switchPolicy"
 	keyCompNum      setKey = "compNum"
 	keyUnknown      setKey = "unknown"
-	keyMonitor      setKey = "monitor"
+	keyMonitor      setKey = "monitorEnabled"
 )
 
 var setKeyCfg = map[setKey]string{
@@ -217,8 +217,8 @@ type UpdatableFlags struct {
 	TerminationPolicy string `json:"terminationPolicy"`
 
 	// Add-on switches for cluster observability
-	MonitoringInterval uint8 `json:"monitor"`
-	EnableAllLogs      bool  `json:"enableAllLogs"`
+	EnableMetrics bool `json:"monitor"`
+	EnableAllLogs bool `json:"enableAllLogs"`
 
 	// Configuration and options for cluster affinity and tolerations
 	PodAntiAffinity string `json:"podAntiAffinity"`
@@ -624,7 +624,7 @@ func (o *CreateOptions) buildComponents(clusterCompSpecs []appsv1alpha1.ClusterC
 	}
 
 	if clusterCompSpecs != nil {
-		setsCompSpecs, err := buildClusterComp(cd, compSets, o.MonitoringInterval, o.CreateOnlySet)
+		setsCompSpecs, err := buildClusterComp(cd, compSets, o.EnableMetrics, o.CreateOnlySet)
 		if err != nil {
 			return nil, err
 		}
@@ -638,7 +638,7 @@ func (o *CreateOptions) buildComponents(clusterCompSpecs []appsv1alpha1.ClusterC
 			compSpecs = append(compSpecs, &comp)
 		}
 	} else {
-		compSpecs, err = buildClusterComp(cd, compSets, o.MonitoringInterval, o.CreateOnlySet)
+		compSpecs, err = buildClusterComp(cd, compSets, o.EnableMetrics, o.CreateOnlySet)
 		if err != nil {
 			return nil, err
 		}
@@ -992,7 +992,7 @@ func setEnableAllLogs(c *appsv1alpha1.Cluster, cd *appsv1alpha1.ClusterDefinitio
 
 func buildClusterComp(cd *appsv1alpha1.ClusterDefinition,
 	setsMap map[string]map[setKey]string,
-	monitoringInterval uint8,
+	monitorEnabled bool,
 	createOnlySet bool) ([]*appsv1alpha1.ClusterComponentSpec, error) {
 	// get value from set values and environment variables, the second return value is
 	// true if the value is from environment variables
@@ -1134,7 +1134,7 @@ func buildClusterComp(cd *appsv1alpha1.ClusterDefinition,
 		// set component monitor
 		monitor := getVal(&c, keyMonitor, sets)
 		if monitor == "" {
-			compObj.Monitor = monitoringInterval != 0
+			compObj.Monitor = monitorEnabled
 		} else {
 			compObj.Monitor, err = strconv.ParseBool(monitor)
 			if err != nil {
@@ -1264,7 +1264,7 @@ func generateClusterName(dynamic dynamic.Interface, namespace string) (string, e
 
 func (f *UpdatableFlags) addFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&f.PodAntiAffinity, "pod-anti-affinity", "Preferred", "Pod anti-affinity type, one of: (Preferred, Required)")
-	cmd.Flags().Uint8Var(&f.MonitoringInterval, "monitoring-interval", 0, "The monitoring interval of cluster, 0 is disabled, the unit is second, any non-zero value means enabling monitoring.")
+	cmd.Flags().BoolVar(&f.EnableMetrics, "monitorEnabled", false, "Enable or disable monitoring")
 	cmd.Flags().BoolVar(&f.EnableAllLogs, "enable-all-logs", false, "Enable advanced application all log extraction, set to true will ignore enabledLogs of component level, default is false")
 	cmd.Flags().StringVar(&f.TerminationPolicy, "termination-policy", "Delete", "Termination policy, one of: (DoNotTerminate, Halt, Delete, WipeOut)")
 	cmd.Flags().StringArrayVar(&f.TopologyKeys, "topology-keys", nil, "Topology keys for affinity")
