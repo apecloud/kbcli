@@ -283,8 +283,8 @@ func (o *UpdateOptions) buildPatch() error {
 		"tolerations": {field: "tolerations", obj: spec, fn: buildTolObj},
 
 		// monitor and logs
-		"monitoring-interval": {field: "monitor", obj: nil, fn: buildComps},
-		"enable-all-logs":     {field: "enable-all-logs", obj: nil, fn: buildComps},
+		"monitor-enabled": {field: "monitor", obj: nil, fn: buildComps},
+		"enable-all-logs": {field: "enable-all-logs", obj: nil, fn: buildComps},
 
 		// backup config
 		"backup-enabled":                   {field: "enabled", obj: nil, fn: buildBackup},
@@ -603,13 +603,16 @@ func buildLogsReconfiguringOps(clusterName, namespace, compName, configName, key
 }
 
 func (o *UpdateOptions) updateMonitor(val string) error {
-	intVal, err := strconv.ParseInt(val, 10, 32)
+	enabled, err := strconv.ParseBool(val)
 	if err != nil {
 		return err
 	}
 
 	for i := range o.cluster.Spec.ComponentSpecs {
-		o.cluster.Spec.ComponentSpecs[i].Monitor = intVal != 0
+		// TODO: update kb version depend
+		// 1. add metrics sidecar to the component
+		// 2. enable monitor
+		o.cluster.Spec.ComponentSpecs[i].Monitor = enabled
 	}
 	return nil
 }
