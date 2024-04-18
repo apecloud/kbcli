@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # Copyright (C) 2022-2024 ApeCloud Co., Ltd
 #
@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# kbcli location
 : ${CLI_INSTALL_DIR:="/usr/local/bin"}
 : ${CLI_BREW_INSTALL_DIR:="/opt/homebrew/bin"}
 
@@ -29,33 +30,29 @@ CLI_FILENAME=kbcli
 CLI_FILE="${CLI_INSTALL_DIR}/${CLI_FILENAME}"
 CLI_BREW_FILE="${CLI_BREW_INSTALL_DIR}/${CLI_FILENAME}"
 
-TOKEN="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"
-REPO="apecloud/kubeblocks"
+REPO="apecloud/kbcli"
 GITHUB="https://api.github.com"
-DOWNLOAD_BASE="https://github.com/${REPO}/releases/download"
-FILE="kbcli-darwin-arm64-v0.3.0.tar.gz" # the name of your release asset file, e.g. build.tar.gz
+GITLAB_REPO="85948"
+GITLAB="https://jihulab.com/api/v4/projects"
+COUNTRY_CODE=""
 
-gh_curl() {
-    curl -H "Authorization: token $TOKEN" \
-         -H "Accept: application/vnd.github.v3.raw" \
-         $@
+getCountryCode() {
+    COUNTRY_CODE=`curl -m 20 --connect-timeout 10 -s https://ifconfig.io/country_code`
 }
 
 getSystemInfo() {
     ARCH=$(uname -m)
     case $ARCH in
-        armv7*) ARCH="arm";;
-        aarch64) ARCH="arm64";;
-        x86_64) ARCH="amd64";;
+        armv7*) ARCH="arm" ;;
+        aarch64) ARCH="arm64" ;;
+        x86_64) ARCH="amd64" ;;
     esac
 
     OS=$(echo $(uname) | tr '[:upper:]' '[:lower:]')
 
     # Most linux distro needs root permission to copy the file to /usr/local/bin
-    if [ "$OS" == "linux" ] || [ "$OS" == "darwin" ]; then
-        if [ "$CLI_INSTALL_DIR" == "/usr/local/bin" ]; then
-            USE_SUDO="true"
-        fi
+    if [[ "$OS" == "linux" || "$OS" == "darwin" ]] && [ "$CLI_INSTALL_DIR" == "/usr/local/bin" ]; then
+        USE_SUDO="true"
     fi
 }
 
@@ -95,7 +92,7 @@ checkHttpRequestCLI() {
     fi
 }
 
-checkExistingCli() {
+checkExistingCLI() {
     if [ -f "$CLI_FILE" ]; then
         echo -e "\nkbcli is detected: $CLI_FILE"
         echo -e "\nPlease uninstall first"
@@ -109,31 +106,51 @@ checkExistingCli() {
     fi
 }
 
+getLatestRelease() {
+    latest_release=""
+    if [[ "$COUNTRY_CODE" == "CN" || "$COUNTRY_CODE" == "" ]]; then
+        releaseURL=$GITLAB/$GITLAB_REPO/repository/tags/latest
+        if [ "$HTTP_REQUEST_CLI" == "curl" ]; then
+            latest_release=`curl -s $releaseURL | grep 'message'|awk 'NR==1{print $1}'`
+        else
+            latest_release=`wget -q --header="Accept: application/json" -O - $releaseURL | grep 'tag_name'|awk 'NR==1{print $1}'`
+        fi
+        latest_release=${latest_release#*"message\":\""}
+        latest_release=${latest_release%%"\","*}
+    else
+        releaseURL=$GITHUB/repos/$REPO/releases/latest
+        if [ "$HTTP_REQUEST_CLI" == "curl" ]; then
+            latest_release=$(curl -s $releaseURL | grep \"tag_name\" | awk 'NR==1{print $2}' | sed -n 's/\"\(.*\)\",/\1/p')
+        else
+            latest_release=$(wget -q --header="Accept: application/json" -O - $releaseURL | grep \"tag_name\" | awk 'NR==1{print $2}' | sed -n 's/\"\(.*\)\",/\1/p')
+        fi
+    fi
+    ret_val=$latest_release
+}
+
 downloadFile() {
     LATEST_RELEASE_TAG=$1
 
-    if [ "$LATEST_RELEASE_TAG" = "latest" ]; then
-        LATEST_RELEASE_TAG=$(gh_curl -s $GITHUB/repos/$REPO/releases/latest | grep '.tag_name' | awk -F: '{print $2}' | sed 's/,//g;s/\"//g;s/ //g')
-    fi
-
     CLI_ARTIFACT="${CLI_FILENAME}-${OS}-${ARCH}-${LATEST_RELEASE_TAG}.tar.gz"
-    asset_id=$(gh_curl -s $GITHUB/repos/$REPO/releases/tags/$LATEST_RELEASE_TAG | grep -B 2 "\"name\": \"$CLI_ARTIFACT\"" | grep -w id | awk -F: '{print $2}' | sed 's/,//g;s/\"//g;s/ //g')
-
-    if [ "$asset_id" = "null" ] || [ -z "$asset_id" ]; then
-        echo "ERROR: LATEST_RELEASE_TAG not found $LATEST_RELEASE_TAG"
-        exit 1
+    DOWNLOAD_BASE="https://github.com/$REPO/releases/download"
+    if [[ "$COUNTRY_CODE" == "CN" || "$COUNTRY_CODE" == "" ]]; then
+        DOWNLOAD_BASE="$GITLAB/$GITLAB_REPO/packages/generic/kubeblocks"
     fi
+    DOWNLOAD_URL="${DOWNLOAD_BASE}/${LATEST_RELEASE_TAG}/${CLI_ARTIFACT}"
 
     # Create the temp directory
     CLI_TMP_ROOT=$(mktemp -dt kbcli-install-XXXXXX)
     ARTIFACT_TMP_FILE="$CLI_TMP_ROOT/$CLI_ARTIFACT"
 
     echo "Downloading ..."
-    DOWNLOAD_ASSET_URL="https://$TOKEN:@api.github.com/repos/$REPO/releases/assets/$asset_id"
-    httpstatus=$(curl -SL -q -w "%{http_code}" --header 'Accept:application/octet-stream' "$DOWNLOAD_ASSET_URL" -o "$ARTIFACT_TMP_FILE")
+    if [ "$HTTP_REQUEST_CLI" == "curl" ]; then
+        curl -SL --header 'Accept:application/octet-stream' "$DOWNLOAD_URL" -o "$ARTIFACT_TMP_FILE"
+    else
+        wget -q --show-progress -O "$ARTIFACT_TMP_FILE" "$DOWNLOAD_URL"
+    fi
 
-    if [[ "$httpstatus" != "200" || ! -f "$ARTIFACT_TMP_FILE" ]]; then
-        echo "Failed to download $CLI_ARTIFACT"
+    if [[ $? -ne 0 || ! -f "$ARTIFACT_TMP_FILE" ]]; then
+        echo "Failed to download $CLI_ARTIFACT."
         exit 1
     fi
 }
@@ -155,6 +172,7 @@ installFile() {
         kbcli version
         echo -e "Make sure your docker service is running and begin your journey with kbcli:\n"
         echo -e "\t$CLI_FILENAME playground init"
+        echo -e ""
     else
         echo "Failed to install $CLI_FILENAME"
         exit 1
@@ -189,12 +207,13 @@ trap "fail_trap" EXIT
 
 getSystemInfo
 verifySupported
-checkExistingCli
+checkExistingCLI
 checkHttpRequestCLI
+getCountryCode
 
 if [ -z "$1" ]; then
     echo "Getting the latest kbcli ..."
-    ret_val="latest"
+    getLatestRelease
 elif [[ $1 == v* ]]; then
     ret_val=$1
 else
