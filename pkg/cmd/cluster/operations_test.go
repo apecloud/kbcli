@@ -185,7 +185,7 @@ var _ = Describe("operations", func() {
 		}
 		o := initCommonOperationOps(appsv1alpha1.VolumeExpansionType, clusterName, true, persistentVolumeClaim)
 		By("validate volumeExpansion when components is null")
-		Expect(o.Validate()).To(MatchError(`missing components or shardings, please specify the "--components" or "--shardings" flag for multi-components cluster`))
+		Expect(o.Validate()).To(MatchError(`missing components or shardings, please specify the "--components" or "--shardings" flag for the cluster`))
 
 		By("validate volumeExpansion when vct-names is null")
 		o.ComponentNames = []string{compName}
