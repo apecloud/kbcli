@@ -176,6 +176,14 @@ func GetClusterDefByName(dynamic dynamic.Interface, name string) (*appsv1alpha1.
 	return clusterDef, nil
 }
 
+func GetComponentDefByName(dynamic dynamic.Interface, name string) (*appsv1alpha1.ComponentDefinition, error) {
+	componentDef := &appsv1alpha1.ComponentDefinition{}
+	if err := util.GetK8SClientObject(dynamic, componentDef, types.CompDefGVR(), "", name); err != nil {
+		return nil, err
+	}
+	return componentDef, nil
+}
+
 func GetDefaultCompName(cd *appsv1alpha1.ClusterDefinition) (string, error) {
 	if len(cd.Spec.ComponentDefs) >= 1 {
 		return cd.Spec.ComponentDefs[0].Name, nil
@@ -284,7 +292,7 @@ func GetDefaultVersion(dynamic dynamic.Interface, clusterDef string) (string, er
 
 	defaultVersion := ""
 	for _, item := range versionList.Items {
-		if k, ok := item.Annotations[constant.DefaultClusterVersionAnnotationKey]; !ok || k != "true" {
+		if k, ok := item.Annotations[types.KBDefaultClusterVersionAnnotationKey]; !ok || k != "true" {
 			continue
 		}
 		if defaultVersion != "" {
