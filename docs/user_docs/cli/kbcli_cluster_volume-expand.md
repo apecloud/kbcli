@@ -25,6 +25,7 @@ kbcli cluster volume-expand NAME [flags]
   -h, --help                             help for volume-expand
       --name string                      OpsRequest name. if not specified, it will be randomly generated
   -o, --output format                    Prints the output in the specified format. Allowed values: JSON and YAML (default yaml)
+      --shardings strings                sharding names to this operations
       --storage string                   Volume storage size (required)
       --ttlSecondsAfterSucceed int       Time to live after the OpsRequest succeed
   -t, --volume-claim-templates strings   VolumeClaimTemplate names in components (required)
