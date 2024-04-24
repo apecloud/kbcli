@@ -113,7 +113,8 @@ content: {
 				}]
 			},
 			 for _, sName in options.shardingNames {
-            	shardingName: sName
+                componentName: sName
+                isSharding: true
             	volumeClaimTemplates: [ for _, vctName in options.vctNames {
             		name:    vctName
             		storage: options.storage
@@ -126,7 +127,8 @@ content: {
 				replicas:      options.replicas
 			},
 			for _, sName in options.shardingNames {
-            	shardingName: sName
+                componentName: sName
+                isSharding: true
             	replicas:      options.replicas
            }]
 		}
@@ -135,7 +137,8 @@ content: {
 				componentName: cName
 			},
 			for _, sName in options.shardingNames {
-             shardingName: sName
+               componentName: sName
+               isSharding: true
            }]
 		}
 		if options.type == "VerticalScaling" {
@@ -159,7 +162,8 @@ content: {
 				}
 			},
 			 for _, sName in options.shardingNames {
-            				shardingName: sName
+            				componentName: sName
+                            isSharding: true
             				requests: {
             					if options.memory != "" {
             						memory: options.memory
@@ -225,7 +229,8 @@ content: {
 					}]
 				},
 				for _, sName in options.shardingNames {
-                					shardName: sName
+                					componentName: sName
+                                    isSharding: true
                 					configurations: [ {
                 						name: options.cfgTemplateName
                 						if options.forceRestart {
@@ -266,7 +271,8 @@ content: {
 				}]
 			},
 			for _, sName in options.shardingNames {
-            				shardName: sName
+                            componentName: sName
+                            isSharding: true
             				if options.exposeEnabled == "true" {
             					switch: "Enable"
             				}
@@ -305,7 +311,7 @@ content: {
 		if options.type == "Custom" {
 			customSpec: {
 			    opsDefinitionRef: options.opsDefinitionName
-			    items: [
+			    components: [
 			       {
 			         componentName: options.component
 			         parameters: options.params
