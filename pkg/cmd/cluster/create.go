@@ -262,9 +262,10 @@ type CreateOptions struct {
 	MemoryOversellRatio float64  `json:"-"`
 
 	// backup name to restore in creation
-	Backup              string `json:"backup,omitempty"`
-	RestoreTime         string `json:"restoreTime,omitempty"`
-	VolumeRestorePolicy string `json:"-"`
+	Backup                          string `json:"backup,omitempty"`
+	RestoreTime                     string `json:"restoreTime,omitempty"`
+	VolumeRestorePolicy             string `json:"-"`
+	ReadyRestoreAfterClusterRunning bool
 
 	// backup config
 	BackupConfig *appsv1alpha1.ClusterBackup `json:"backupConfig,omitempty"`
@@ -305,6 +306,7 @@ func NewCreateCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.
 	cmd.Flags().StringVar(&o.Backup, "backup", "", "Set a source backup to restore data")
 	cmd.Flags().StringVar(&o.RestoreTime, "restore-to-time", "", "Set a time for point in time recovery")
 	cmd.Flags().StringVar(&o.VolumeRestorePolicy, "volume-restore-policy", "Parallel", "the volume claim restore policy, supported values: [Serial, Parallel]")
+	cmd.Flags().BoolVar(&o.ReadyRestoreAfterClusterRunning, "do-ready-restore-after-cluster-running", false, "do ready restore after cluster running")
 	cmd.Flags().BoolVar(&o.RBACEnabled, "rbac-enabled", false, "Specify whether rbac resources will be created by kbcli, otherwise KubeBlocks server will try to create rbac resources")
 	cmd.PersistentFlags().BoolVar(&o.EditBeforeCreate, "edit", o.EditBeforeCreate, "Edit the API resource before creating")
 	cmd.PersistentFlags().StringVar(&o.DryRun, "dry-run", "none", `Must be "client", or "server". If with client strategy, only print the object that would be sent, and no data is actually sent. If with server strategy, submit the server-side request, but no data is persistent.`)
@@ -418,7 +420,8 @@ func setBackup(o *CreateOptions, components []map[string]interface{}) error {
 		_ = runtime.DefaultUnstructuredConverter.FromUnstructured(v, &compSpec)
 		componentSpecs = append(componentSpecs, compSpec)
 	}
-	restoreAnnotation, err := restore.GetRestoreFromBackupAnnotation(backup, componentSpecs, o.VolumeRestorePolicy, restoreTimeStr, false)
+	restoreAnnotation, err := restore.GetRestoreFromBackupAnnotation(backup, componentSpecs, o.VolumeRestorePolicy,
+		restoreTimeStr, false, o.ReadyRestoreAfterClusterRunning)
 	if err != nil {
 		return err
 	}
