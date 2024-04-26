@@ -117,7 +117,7 @@ type OperationsOptions struct {
 }
 
 func newBaseOperationsOptions(f cmdutil.Factory, streams genericiooptions.IOStreams,
-	opsType appsv1alpha1.OpsType, HasComponentNamesFlag bool) *OperationsOptions {
+	opsType appsv1alpha1.OpsType, hasComponentNamesFlag bool) *OperationsOptions {
 	customOutPut := func(opt *action.CreateOptions) {
 		output := fmt.Sprintf("OpsRequest %s created successfully, you can view the progress:", opt.Name)
 		printer.PrintLine(output)
@@ -130,7 +130,7 @@ func newBaseOperationsOptions(f cmdutil.Factory, streams genericiooptions.IOStre
 		KeyValues:             map[string]*string{},
 		HasPatch:              true,
 		OpsType:               opsType,
-		HasComponentNamesFlag: HasComponentNamesFlag,
+		HasComponentNamesFlag: hasComponentNamesFlag,
 		AutoApprove:           false,
 		CreateOptions: action.CreateOptions{
 			Factory:         f,
