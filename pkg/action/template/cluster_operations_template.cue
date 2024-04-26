@@ -27,7 +27,6 @@ options: {
 	component:              string
 	instance:               string
 	componentNames: [...string]
-	shardingNames: [...string]
 	rebuildInstanceFrom: [
 	  ...{
 	     componentName: string
@@ -111,35 +110,18 @@ content: {
 					name:    vctName
 					storage: options.storage
 				}]
-			},
-			 for _, sName in options.shardingNames {
-                componentName: sName
-                isSharding: true
-            	volumeClaimTemplates: [ for _, vctName in options.vctNames {
-            		name:    vctName
-            		storage: options.storage
-            	}]
-            }]
+			}]
 		}
 		if options.type == "HorizontalScaling" {
 			horizontalScaling: [ for _, cName in options.componentNames {
 				componentName: cName
 				replicas:      options.replicas
-			},
-			for _, sName in options.shardingNames {
-                componentName: sName
-                isSharding: true
-            	replicas:      options.replicas
-           }]
+			}]
 		}
 		if options.type == "Restart" {
 			restart: [ for _, cName in options.componentNames {
 				componentName: cName
-			},
-			for _, sName in options.shardingNames {
-               componentName: sName
-               isSharding: true
-           }]
+			}]
 		}
 		if options.type == "VerticalScaling" {
 			verticalScaling: [ for _, cName in options.componentNames {
@@ -160,27 +142,7 @@ content: {
 						cpu: options.cpu
 					}
 				}
-			},
-			 for _, sName in options.shardingNames {
-            				componentName: sName
-                            isSharding: true
-            				requests: {
-            					if options.memory != "" {
-            						memory: options.memory
-            					}
-            					if options.cpu != "" {
-            						cpu: options.cpu
-            					}
-            				}
-            				limits: {
-            					if options.memory != "" {
-            						memory: options.memory
-            					}
-            					if options.cpu != "" {
-            						cpu: options.cpu
-            					}
-            				}
-            			}]
+			}]
 		}
 		if options.type == "Reconfiguring" {
 			if len(options.componentNames) == 1 {
@@ -227,29 +189,7 @@ content: {
 							}
 						}]
 					}]
-				},
-				for _, sName in options.shardingNames {
-                					componentName: sName
-                                    isSharding: true
-                					configurations: [ {
-                						name: options.cfgTemplateName
-                						if options.forceRestart {
-                							policy: "simple"
-                						}
-                						keys: [{
-                							key: options.cfgFile
-                							if options.fileContent != "" {
-                								fileContent: options.fileContent
-                							}
-                							if options.hasPatch {
-                								parameters: [ for k, v in options.keyValues {
-                									key:   k
-                									value: v
-                								}]
-                							}
-                						}]
-                					}]
-                				}]
+				}]
 			}
 		}
 		if options.type == "Expose" {
@@ -269,25 +209,7 @@ content: {
 					}
 
 				}]
-			},
-			for _, sName in options.shardingNames {
-                            componentName: sName
-                            isSharding: true
-            				if options.exposeEnabled == "true" {
-            					switch: "Enable"
-            				}
-            				if options.exposeEnabled == "false" {
-            					switch: "Disable"
-            				}
-            				services: [ for _, svc in options.services {
-            					name:        svc.name
-            					serviceType: svc.serviceType
-            					if len(svc.annotations) > 0 {
-            						annotations: svc.annotations
-            					}
-
-            				}]
-            			}]
+			}]
 		}
 		if options.type == "Switchover" {
 			switchover: [{

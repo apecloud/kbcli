@@ -35,7 +35,6 @@ kbcli cluster configure NAME --set key=value[,key=value] [--components=component
   -o, --output format                  Prints the output in the specified format. Allowed values: JSON and YAML (default yaml)
       --replace                        Boolean flag to enable replacing config file. Default with false.
       --set strings                    Specify parameters list to be updated. For more details, refer to 'kbcli cluster describe-config'.
-      --shardings strings              sharding names to this operations
       --ttlSecondsAfterSucceed int     Time to live after the OpsRequest succeed
 ```
 
