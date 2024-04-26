@@ -27,6 +27,7 @@ import (
 	"github.com/apecloud/kubeblocks/pkg/constant"
 
 	"github.com/apecloud/kbcli/pkg/testing"
+	"github.com/apecloud/kbcli/pkg/types"
 )
 
 var _ = Describe("helper", func() {
@@ -101,7 +102,7 @@ var _ = Describe("helper", func() {
 		Expect(defaultVer).Should(BeEmpty())
 
 		By("set default version, should return default version")
-		cv1.Annotations = map[string]string{constant.DefaultClusterVersionAnnotationKey: "true"}
+		cv1.Annotations = map[string]string{types.KBDefaultClusterVersionAnnotationKey: "true"}
 		dynamic = testing.FakeDynamicClient(testing.FakeClusterDef(), testing.FakeClusterVersion(), cv1, cv2)
 		defaultVer, err = GetDefaultVersion(dynamic, clusterDefName)
 		Expect(err).Should(Succeed())

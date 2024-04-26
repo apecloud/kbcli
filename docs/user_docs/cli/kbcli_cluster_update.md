@@ -68,7 +68,7 @@ kbcli cluster update NAME [flags]
       --edit                                   Edit the API resource
       --enable-all-logs                        Enable advanced application all log extraction, set to true will ignore enabledLogs of component level, default is false
   -h, --help                                   help for update
-      --monitoring-interval uint8              The monitoring interval of cluster, 0 is disabled, the unit is second, any non-zero value means enabling monitoring.
+      --monitor-enabled                        Enable or disable monitoring
       --node-labels stringToString             Node label selector (default [])
   -o, --output string                          Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).
       --pitr-enabled                           Specify whether enabled point in time recovery

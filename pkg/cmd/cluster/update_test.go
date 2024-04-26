@@ -88,11 +88,12 @@ var _ = Describe("cluster update", func() {
 
 		It("set monitoring interval", func() {
 			fakeCluster := testing.FakeCluster("c1", "default")
-			tf.FakeDynamicClient = testing.FakeDynamicClient(fakeCluster)
-			Expect(cmd.Flags().Set("monitoring-interval", "15")).Should(Succeed())
+			fakeClusterDef := testing.FakeClusterDef()
+			tf.FakeDynamicClient = testing.FakeDynamicClient(fakeCluster, fakeClusterDef)
+			Expect(cmd.Flags().Set("monitor-enabled", "true")).Should(Succeed())
 			Expect(o.CmdComplete(cmd, args)).Should(Succeed())
 			Expect(o.Complete()).Should(Succeed())
-			Expect(o.Patch).Should(ContainSubstring("\"monitor\":true"))
+			Expect(o.Patch).Should(ContainSubstring("\"monitorEnabled\":true"))
 		})
 
 		It("set enable-all-logs", func() {

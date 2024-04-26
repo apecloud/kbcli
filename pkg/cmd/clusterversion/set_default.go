@@ -159,7 +159,7 @@ func patchDefaultClusterVersionAnnotations(client dynamic.Interface, cvName stri
 	patchData := map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"annotations": map[string]interface{}{
-				constant.DefaultClusterVersionAnnotationKey: value,
+				types.KBDefaultClusterVersionAnnotationKey: value,
 			},
 		},
 	}
@@ -189,7 +189,7 @@ func getMapsBetweenCvAndCd(client dynamic.Interface) (map[string]string, map[str
 		if annotations == nil {
 			continue
 		}
-		if annotations[constant.DefaultClusterVersionAnnotationKey] == annotationTrueValue {
+		if annotations[types.KBDefaultClusterVersionAnnotationKey] == annotationTrueValue {
 			cdToDefaultCv[labels[constant.ClusterDefLabelKey]] = name
 		}
 	}

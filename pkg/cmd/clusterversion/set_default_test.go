@@ -37,6 +37,7 @@ import (
 	"github.com/apecloud/kubeblocks/pkg/constant"
 
 	"github.com/apecloud/kbcli/pkg/testing"
+	"github.com/apecloud/kbcli/pkg/types"
 )
 
 var _ = Describe("set-default", func() {
@@ -116,10 +117,10 @@ var _ = Describe("set-default", func() {
 		cv := testing.FakeClusterVersion()
 		Expect(isDefault(cv)).Should(Equal(annotationFalseValue))
 		cv.SetAnnotations(map[string]string{
-			constant.DefaultClusterVersionAnnotationKey: annotationFalseValue,
+			types.KBDefaultClusterVersionAnnotationKey: annotationFalseValue,
 		})
 		Expect(isDefault(cv)).Should(Equal(annotationFalseValue))
-		cv.Annotations[constant.DefaultClusterVersionAnnotationKey] = annotationTrueValue
+		cv.Annotations[types.KBDefaultClusterVersionAnnotationKey] = annotationTrueValue
 		Expect(isDefault(cv)).Should(Equal(annotationTrueValue))
 	})
 

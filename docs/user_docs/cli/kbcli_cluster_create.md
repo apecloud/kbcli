@@ -116,7 +116,7 @@ kbcli cluster create [NAME] [flags]
   -h, --help                                   help for create
       --label stringArray                      Set labels for cluster resources
       --memory-oversell-ratio float            Set oversell ratio of memory, set to 10 means 10 times oversell (default 1)
-      --monitoring-interval uint8              The monitoring interval of cluster, 0 is disabled, the unit is second, any non-zero value means enabling monitoring.
+      --monitor-enabled                        Enable or disable monitoring
       --node-labels stringToString             Node label selector (default [])
   -o, --output format                          Prints the output in the specified format. Allowed values: JSON and YAML (default yaml)
       --pitr-enabled                           Specify whether enabled point in time recovery

@@ -482,7 +482,7 @@ func (u *upgradeHandlerTo7) transformStatefulSet(dynamic dynamic.Interface, obj 
 		return err
 	}
 	updateStrategy, _, _ := unstructured.NestedString(obj.Object, "spec", "updateStrategy")
-	rsm := builder.NewReplicatedStateMachineBuilder(obj.GetNamespace(), obj.GetName()).
+	rsm := builder.NewInstanceSetBuilder(obj.GetNamespace(), obj.GetName()).
 		AddAnnotationsInMap(obj.GetAnnotations()).
 		AddLabelsInMap(obj.GetLabels()).
 		SetServiceName(serviceName).
