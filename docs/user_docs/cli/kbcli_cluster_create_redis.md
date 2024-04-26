@@ -26,8 +26,8 @@ kbcli cluster create redis NAME [flags]
   -h, --help                              help for redis
       --host-network-accessible           Specify whether the cluster can be accessed from within the VPC.
       --memory float                      Memory, the unit is Gi. Value range [0.5, 1000]. (default 0.5)
-      --mode string                       Cluster topology mode. Legal values [standalone, replication, cluster]. (default "replication")
-      --monitoring-interval int           The monitoring interval of cluster, 0 is disabled, the unit is second. Value range [0, 60].
+      --mode string                       Cluster topology mode. Legal values [standalone, replication, cluster, sentinel]. (default "replication")
+      --monitor-enabled                   Enable or disable monitor.
       --node-port-enabled                 Whether NodePort service is enabled, default is true
       --publicly-accessible               Specify whether the cluster can be accessed from the public internet.
       --rbac-enabled                      Specify whether rbac resources will be created by client, otherwise KubeBlocks server will try to create rbac resources.
@@ -39,6 +39,7 @@ kbcli cluster create redis NAME [flags]
       --sentinel.replicas float           Sentinel component replicas Value range [1, 5]. (default 3)
       --sentinel.storage float            Sentinel component storage size, the unit is Gi. Value range [1, 1024]. (default 20)
       --storage float                     Storage size, the unit is Gi. Value range [1, 10000]. (default 20)
+      --storage-class-name string         Storage class name of the data volume
       --tenancy string                    The tenancy of cluster. Legal values [SharedNode, DedicatedNode]. (default "SharedNode")
       --termination-policy string         The termination policy of cluster. Legal values [DoNotTerminate, Halt, Delete, WipeOut]. (default "Delete")
       --twemproxy.cpu float               twemproxy component cpu cores. Value range [0.1, 8]. (default 0.2)

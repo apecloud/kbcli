@@ -28,7 +28,7 @@ kbcli cluster create xinference NAME [flags]
   -h, --help                         help for xinference
       --host-network-accessible      Specify whether the cluster can be accessed from within the VPC.
       --memory float                 Memory, the unit is Gi. Value range [0.5, 1000]. (default 6)
-      --monitoring-interval int      The monitoring interval of cluster, 0 is disabled, the unit is second. Value range [0, 60].
+      --monitor-enabled              Enable or disable monitor.
       --publicly-accessible          Specify whether the cluster can be accessed from the public internet.
       --rbac-enabled                 Specify whether rbac resources will be created by client, otherwise KubeBlocks server will try to create rbac resources.
       --replicas int                 The number of replicas, for standalone mode, the replicas is 1, for replication mode, the default replicas is 2. Value range [1, 5]. (default 1)
