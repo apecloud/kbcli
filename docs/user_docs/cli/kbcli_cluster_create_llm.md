@@ -30,7 +30,7 @@ kbcli cluster create llm NAME [flags]
       --host-network-accessible      Specify whether the cluster can be accessed from within the VPC.
       --memory float                 Memory, the unit is Gi. Value range [0, 1000].
       --model string                 Model name (default "facebook/opt-125m")
-      --monitoring-interval int      The monitoring interval of cluster, 0 is disabled, the unit is second. Value range [0, 60].
+      --monitor-enabled              Enable or disable monitor.
       --publicly-accessible          Specify whether the cluster can be accessed from the public internet.
       --quantize string              Model's quantized file name, only work for CPU mode
       --rbac-enabled                 Specify whether rbac resources will be created by client, otherwise KubeBlocks server will try to create rbac resources.
