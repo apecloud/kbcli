@@ -248,7 +248,7 @@ func (o *statusOptions) showAddons() {
 	for _, addon := range o.addons {
 		if addon.Labels == nil {
 			provider = notAvailable
-		} else if provider, ok = addon.Labels[constant.AddonProviderLabelKey]; !ok {
+		} else if provider, ok = addon.Labels[types.KBAddonProviderLabelKey]; !ok {
 			provider = notAvailable
 		}
 		tbl.AddRow(addon.Name, addon.Status.Phase, addon.Spec.Type, provider)
@@ -497,7 +497,7 @@ func computeMetricByWorkloads(ctx context.Context, ns string, workloads []*unstr
 	computeMetrics := func(namespace, name string, matchLabels string) {
 		if pods, err := mc.MetricsV1beta1().PodMetricses(namespace).List(ctx, metav1.ListOptions{LabelSelector: matchLabels}); err != nil {
 			if klog.V(1).Enabled() {
-				klog.Errorf("failed to get pod metrics for %s/%s, selector: , error: %v", namespace, name, matchLabels, err)
+				klog.Errorf("failed to get pod metrics for %s/%s, selector: %v, error: %v", namespace, name, matchLabels, err)
 			}
 		} else {
 			cpuUsage, memUsage := int64(0), int64(0)

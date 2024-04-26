@@ -164,7 +164,7 @@ func (o *PluginListOptions) ListPlugins() ([]string, []error) {
 		files, err := os.ReadDir(dir)
 		if err != nil {
 			if _, ok := err.(*os.PathError); ok {
-				klog.V(1).Info("Unable to read directory %q from your PATH: %v. Skipping...\n", dir, err)
+				klog.V(1).Infof("Unable to read directory %q from your PATH: %v. Skipping...\n", dir, err)
 				continue
 			}
 

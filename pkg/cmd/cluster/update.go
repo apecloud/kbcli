@@ -25,6 +25,7 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"text/template"
@@ -47,6 +48,7 @@ import (
 	appsv1beta1 "github.com/apecloud/kubeblocks/apis/apps/v1beta1"
 	dpv1alpha1 "github.com/apecloud/kubeblocks/apis/dataprotection/v1alpha1"
 	cfgcore "github.com/apecloud/kubeblocks/pkg/configuration/core"
+	cfgutil "github.com/apecloud/kubeblocks/pkg/configuration/util"
 	"github.com/apecloud/kubeblocks/pkg/constant"
 	"github.com/apecloud/kubeblocks/pkg/controller/configuration"
 	"github.com/apecloud/kubeblocks/pkg/dataprotection/utils"
@@ -283,8 +285,8 @@ func (o *UpdateOptions) buildPatch() error {
 		"tolerations": {field: "tolerations", obj: spec, fn: buildTolObj},
 
 		// monitor and logs
-		"monitoring-interval": {field: "monitor", obj: nil, fn: buildComps},
-		"enable-all-logs":     {field: "enable-all-logs", obj: nil, fn: buildComps},
+		"monitor-enabled": {field: "monitor", obj: nil, fn: buildComps},
+		"enable-all-logs": {field: "enable-all-logs", obj: nil, fn: buildComps},
 
 		// backup config
 		"backup-enabled":                   {field: "enabled", obj: nil, fn: buildBackup},
@@ -603,13 +605,30 @@ func buildLogsReconfiguringOps(clusterName, namespace, compName, configName, key
 }
 
 func (o *UpdateOptions) updateMonitor(val string) error {
-	intVal, err := strconv.ParseInt(val, 10, 32)
+	enabled, err := strconv.ParseBool(val)
 	if err != nil {
 		return err
 	}
 
+	var cd *appsv1alpha1.ClusterDefinition
+	if o.cluster.Spec.ClusterDefRef != "" {
+		cd, err = cluster.GetClusterDefByName(o.dynamic, o.cluster.Spec.ClusterDefRef)
+		if err != nil {
+			return err
+		}
+	}
+
 	for i := range o.cluster.Spec.ComponentSpecs {
-		o.cluster.Spec.ComponentSpecs[i].Monitor = intVal != 0
+		// 1. add metrics sidecar to the component
+		// 2. enable monitor
+		component := &o.cluster.Spec.ComponentSpecs[i]
+		component.MonitorEnabled = cfgutil.ToPointer(enabled)
+		if !enabled {
+			continue
+		}
+		if err := o.updateMetricsSidecar(component, cd); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -676,4 +695,46 @@ func (o *UpdateOptions) updateBackupPitrEnabled(val string) error {
 	}
 	o.cluster.Spec.Backup.PITREnabled = &boolVal
 	return nil
+}
+
+func (o *UpdateOptions) updateMetricsSidecar(component *appsv1alpha1.ClusterComponentSpec, cd *appsv1alpha1.ClusterDefinition) error {
+	var sidecars []appsv1alpha1.SidecarContainerSpec
+	var builtinMonitor bool
+
+	if cd != nil && component.ComponentDefRef != "" {
+		componentDef := cd.GetComponentDefByName(component.ComponentDefRef)
+		if componentDef == nil {
+			return fmt.Errorf("not fount component[%s] in clusterdefinitions[%s]", component.ComponentDefRef, cd.Name)
+		}
+		builtinMonitor = componentDef.BuiltinMonitorContainer != nil
+		sidecars = componentDef.SidecarContainerSpecs
+	} else if component.ComponentDef != "" {
+		componentDef, err := cluster.GetComponentDefByName(o.dynamic, component.ComponentDef)
+		if err != nil {
+			return err
+		}
+		builtinMonitor = componentDef.Spec.BuiltinMonitorContainer != nil
+		sidecars = componentDef.Spec.SidecarContainerSpecs
+	}
+
+	// builtin monitor container
+	if builtinMonitor {
+		return nil
+	}
+
+	// sidecar monitor container
+	for _, sidecar := range sidecars {
+		if isMetricsContainer(&sidecar) {
+			if !slices.Contains(component.Sidecars, sidecar.Name) {
+				component.Sidecars = append(component.Sidecars, sidecar.Name)
+			}
+		}
+	}
+	return nil
+}
+
+func isMetricsContainer(sidecarContainer *appsv1alpha1.SidecarContainerSpec) bool {
+	return sidecarContainer.Monitor != nil &&
+		sidecarContainer.Monitor.SidecarKind == appsv1alpha1.MetricsKind &&
+		sidecarContainer.Monitor.ScrapeConfig != nil
 }

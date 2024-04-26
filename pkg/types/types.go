@@ -235,6 +235,15 @@ const (
 	ImageRegistryKey = "image.registry"
 )
 
+// Migrate some const from kubeblocks to kbcli
+const (
+	// KBDefaultClusterVersionAnnotationKey specifies the default cluster version.
+	KBDefaultClusterVersionAnnotationKey = "kubeblocks.io/is-default-cluster-version"
+
+	// KBAddonProviderLabelKey marks the addon provider
+	KBAddonProviderLabelKey = "kubeblocks.io/provider"
+)
+
 var (
 	// KubeBlocksRepoName helm repo name for kubeblocks
 	KubeBlocksRepoName = "kubeblocks"

@@ -45,6 +45,7 @@ import (
 	"github.com/apecloud/kubeblocks/pkg/generics"
 
 	"github.com/apecloud/kbcli/pkg/printer"
+	"github.com/apecloud/kbcli/pkg/types"
 )
 
 type templateRenderWorkflow struct {
@@ -213,7 +214,7 @@ func NewWorkflowTemplateRender(helmTemplateDir string, opts RenderedOptions, clu
 				if clusterVersion != "" {
 					return object.GetName() == clusterVersion
 				}
-				return object.GetAnnotations() != nil && object.GetAnnotations()[constant.DefaultClusterVersionAnnotationKey] == "true"
+				return object.GetAnnotations() != nil && object.GetAnnotations()[types.KBDefaultClusterVersionAnnotationKey] == "true"
 			})
 		if clusterVersion == "" && cvObj == nil {
 			cvObj = GetTypedResourceObjectBySignature(allObjects, generics.ClusterVersionSignature)
@@ -327,7 +328,7 @@ func generateComponentObjects(w *templateRenderWorkflow, reqCtx intctrlutil.Requ
 		return nil, nil, err
 	}
 	dag := graph.NewDAG()
-	root := builder.NewReplicatedStateMachineBuilder(cluster.Namespace, fmt.Sprintf("%s-%s", cluster.Name, compName)).GetObject()
+	root := builder.NewInstanceSetBuilder(cluster.Namespace, fmt.Sprintf("%s-%s", cluster.Name, compName)).GetObject()
 	model.NewGraphClient(nil).Root(dag, nil, root, nil)
 
 	compSpec := cluster.Spec.GetComponentByName(compName)
