@@ -59,12 +59,11 @@ import (
 const oceanbase = "oceanbase"
 
 type OperationsOptions struct {
-	action.CreateOptions            `json:"-"`
-	HasCompNamesOrShardingNamesFlag bool `json:"-"`
+	action.CreateOptions  `json:"-"`
+	HasComponentNamesFlag bool `json:"-"`
 	// AutoApprove when set true, skip the double check.
 	AutoApprove            bool     `json:"-"`
 	ComponentNames         []string `json:"componentNames,omitempty"`
-	ShardingNames          []string `json:"shardingNames,omitempty"`
 	OpsRequestName         string   `json:"opsRequestName"`
 	TTLSecondsAfterSucceed int      `json:"ttlSecondsAfterSucceed"`
 	Force                  bool     `json:"force"`
@@ -118,7 +117,7 @@ type OperationsOptions struct {
 }
 
 func newBaseOperationsOptions(f cmdutil.Factory, streams genericiooptions.IOStreams,
-	opsType appsv1alpha1.OpsType, hasCompNamesOrShardingNamesFlag bool) *OperationsOptions {
+	opsType appsv1alpha1.OpsType, HasComponentNamesFlag bool) *OperationsOptions {
 	customOutPut := func(opt *action.CreateOptions) {
 		output := fmt.Sprintf("OpsRequest %s created successfully, you can view the progress:", opt.Name)
 		printer.PrintLine(output)
@@ -128,11 +127,11 @@ func newBaseOperationsOptions(f cmdutil.Factory, streams genericiooptions.IOStre
 
 	o := &OperationsOptions{
 		// nil cannot be set to a map struct in CueLang, so init the map of KeyValues.
-		KeyValues:                       map[string]*string{},
-		HasPatch:                        true,
-		OpsType:                         opsType,
-		HasCompNamesOrShardingNamesFlag: hasCompNamesOrShardingNamesFlag,
-		AutoApprove:                     false,
+		KeyValues:             map[string]*string{},
+		HasPatch:              true,
+		OpsType:               opsType,
+		HasComponentNamesFlag: HasComponentNamesFlag,
+		AutoApprove:           false,
 		CreateOptions: action.CreateOptions{
 			Factory:         f,
 			IOStreams:       streams,
@@ -156,9 +155,8 @@ func (o *OperationsOptions) addCommonFlags(cmd *cobra.Command, f cmdutil.Factory
 	cmd.Flags().IntVar(&o.TTLSecondsAfterSucceed, "ttlSecondsAfterSucceed", 0, "Time to live after the OpsRequest succeed")
 	cmd.Flags().StringVar(&o.DryRun, "dry-run", "none", `Must be "client", or "server". If with client strategy, only print the object that would be sent, and no data is actually sent. If with server strategy, submit the server-side request, but no data is persistent.`)
 	cmd.Flags().Lookup("dry-run").NoOptDefVal = "unchanged"
-	if o.HasCompNamesOrShardingNamesFlag {
+	if o.HasComponentNamesFlag {
 		flags.AddComponentsFlag(f, cmd, &o.ComponentNames, "Component names to this operations")
-		cmd.Flags().StringSliceVar(&o.ShardingNames, "shardings", nil, "sharding names to this operations")
 	}
 }
 
@@ -168,7 +166,7 @@ func (o *OperationsOptions) CompleteRestartOps() error {
 	if o.Name == "" {
 		return makeMissingClusterNameErr()
 	}
-	if len(o.ComponentNames) != 0 || len(o.ShardingNames) != 0 {
+	if len(o.ComponentNames) != 0 {
 		return nil
 	}
 	clusterObj, err := cluster.GetClusterByName(o.Dynamic, o.Name, o.Namespace)
@@ -176,12 +174,12 @@ func (o *OperationsOptions) CompleteRestartOps() error {
 		return err
 	}
 	componentSpecs := clusterObj.Spec.ComponentSpecs
-	o.ComponentNames = make([]string, len(componentSpecs))
+	o.ComponentNames = make([]string, 0)
 	for i := range componentSpecs {
-		o.ComponentNames[i] = componentSpecs[i].Name
+		o.ComponentNames = append(o.ComponentNames, componentSpecs[i].Name)
 	}
 	for i := range clusterObj.Spec.ShardingSpecs {
-		o.ShardingNames = append(o.ShardingNames, clusterObj.Spec.ShardingSpecs[i].Name)
+		o.ComponentNames = append(o.ComponentNames, clusterObj.Spec.ShardingSpecs[i].Name)
 	}
 	return nil
 }
@@ -427,8 +425,8 @@ func (o *OperationsOptions) Validate() error {
 	}
 
 	// common validate for componentOps
-	if o.HasCompNamesOrShardingNamesFlag && len(o.ComponentNames) == 0 && len(o.ShardingNames) == 0 {
-		return fmt.Errorf(`missing components or shardings, please specify the "--components" or "--shardings" flag for the cluster`)
+	if o.HasComponentNamesFlag && len(o.ComponentNames) == 0 {
+		return fmt.Errorf(`missing components, please specify the "--components" flag for the cluster`)
 	}
 
 	switch o.OpsType {
@@ -730,7 +728,7 @@ func NewVerticalScalingCmd(f cmdutil.Factory, streams genericiooptions.IOStreams
 	cmd.Flags().StringVar(&o.CPU, "cpu", "", "Request and limit size of component cpu")
 	cmd.Flags().StringVar(&o.Memory, "memory", "", "Request and limit size of component memory")
 	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "Skip interactive approval before vertically scaling the cluster")
-	cmd.MarkFlagsOneRequired("components", "shardings")
+	_ = cmd.MarkFlagRequired("components")
 	return cmd
 }
 
@@ -761,7 +759,7 @@ func NewHorizontalScalingCmd(f cmdutil.Factory, streams genericiooptions.IOStrea
 	cmd.Flags().IntVar(&o.Replicas, "replicas", 0, "Replicas with the specified components")
 	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "Skip interactive approval before horizontally scaling the cluster")
 	_ = cmd.MarkFlagRequired("replicas")
-	cmd.MarkFlagsOneRequired("components", "shardings")
+	_ = cmd.MarkFlagRequired("components")
 	return cmd
 }
 
@@ -793,7 +791,7 @@ func NewVolumeExpansionCmd(f cmdutil.Factory, streams genericiooptions.IOStreams
 	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "Skip interactive approval before expanding the cluster volume")
 	_ = cmd.MarkFlagRequired("volume-claim-templates")
 	_ = cmd.MarkFlagRequired("storage")
-	cmd.MarkFlagsOneRequired("components", "shardings")
+	_ = cmd.MarkFlagRequired("components")
 	return cmd
 }
 
