@@ -416,7 +416,7 @@ func setBackup(o *CreateOptions, cluster *appsv1alpha1.Cluster) error {
 	// 	_ = runtime.DefaultUnstructuredConverter.FromUnstructured(v, &compSpec)
 	// 	componentSpecs = append(componentSpecs, compSpec)
 	// }
-	restoreAnnotation, err := restore.GetRestoreFromBackupAnnotation(backup, cluster, o.VolumeRestorePolicy, restoreTimeStr, false)
+	restoreAnnotation, err := restore.GetRestoreFromBackupAnnotation(backup, o.VolumeRestorePolicy, restoreTimeStr, false)
 	if err != nil {
 		return err
 	}

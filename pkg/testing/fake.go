@@ -42,7 +42,6 @@ import (
 	appsv1beta1 "github.com/apecloud/kubeblocks/apis/apps/v1beta1"
 	dpv1alpha1 "github.com/apecloud/kubeblocks/apis/dataprotection/v1alpha1"
 	extensionsv1alpha1 "github.com/apecloud/kubeblocks/apis/extensions/v1alpha1"
-	storagev1alpha1 "github.com/apecloud/kubeblocks/apis/storage/v1alpha1"
 	workloadsv1alpha1 "github.com/apecloud/kubeblocks/apis/workloads/v1alpha1"
 	"github.com/apecloud/kubeblocks/pkg/constant"
 	dptypes "github.com/apecloud/kubeblocks/pkg/dataprotection/types"
@@ -1120,16 +1119,16 @@ func FakeEventForObject(name string, namespace string, object string) *corev1.Ev
 	}
 }
 
-func FakeStorageProvider(name string, mutateFunc func(obj *storagev1alpha1.StorageProvider)) *storagev1alpha1.StorageProvider {
-	storageProvider := &storagev1alpha1.StorageProvider{
+func FakeStorageProvider(name string, mutateFunc func(obj *dpv1alpha1.StorageProvider)) *dpv1alpha1.StorageProvider {
+	storageProvider := &dpv1alpha1.StorageProvider{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: fmt.Sprintf("%s/%s", types.StorageAPIGroup, types.StorageAPIVersion),
+			APIVersion: fmt.Sprintf("%s/%s", types.DPAPIGroup, types.DPAPIVersion),
 			Kind:       "StorageProvider",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
-		Spec: storagev1alpha1.StorageProviderSpec{
+		Spec: dpv1alpha1.StorageProviderSpec{
 			CSIDriverName: "fake-csi-s3",
 			CSIDriverSecretTemplate: `
 accessKeyId: {{ index .Parameters "accessKeyId" }}
@@ -1141,7 +1140,7 @@ region: {{ index .Parameters "region" }}
 endpoint: {{ index .Parameters "endpoint" }}
 mountOptions: {{ index .Parameters "mountOptions" | default "" }}
 `,
-			ParametersSchema: &storagev1alpha1.ParametersSchema{
+			ParametersSchema: &dpv1alpha1.ParametersSchema{
 				OpenAPIV3Schema: &apiextensionsv1.JSONSchemaProps{
 					Type: "object",
 					Properties: map[string]apiextensionsv1.JSONSchemaProps{

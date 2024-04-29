@@ -40,7 +40,6 @@ import (
 	"k8s.io/kubectl/pkg/util/templates"
 
 	dpv1alpha1 "github.com/apecloud/kubeblocks/apis/dataprotection/v1alpha1"
-	storagev1alpha1 "github.com/apecloud/kubeblocks/apis/storage/v1alpha1"
 	dptypes "github.com/apecloud/kubeblocks/pkg/dataprotection/types"
 
 	"github.com/apecloud/kbcli/pkg/printer"
@@ -70,7 +69,7 @@ type updateOptions struct {
 
 	repo            *dpv1alpha1.BackupRepo
 	storageProvider string
-	providerObject  *storagev1alpha1.StorageProvider
+	providerObject  *dpv1alpha1.StorageProvider
 	isDefault       bool
 	repoName        string
 	config          map[string]string
@@ -158,11 +157,8 @@ func (o *updateOptions) parseFlags(cmd *cobra.Command, args []string, f cmdutil.
 		o.repo = repo
 		// Get provider info from API server
 		o.storageProvider = repo.Spec.StorageProviderRef
-		provider := &storagev1alpha1.StorageProvider{}
-		if err := util.GetK8SClientObject(o.dynamic, provider, types.StorageProviderGVR(), "", o.storageProvider); err != nil {
-			if apierrors.IsNotFound(err) {
-				return nil, fmt.Errorf("storage provider \"%s\" is not found", o.storageProvider)
-			}
+		provider, err := getStorageProvider(o.dynamic, o.storageProvider)
+		if err != nil {
 			return nil, err
 		}
 		o.providerObject = provider
