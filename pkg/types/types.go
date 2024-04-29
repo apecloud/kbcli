@@ -354,6 +354,10 @@ func AddonGVR() schema.GroupVersionResource {
 }
 
 func StorageProviderGVR() schema.GroupVersionResource {
+	return schema.GroupVersionResource{Group: DPAPIGroup, Version: DPAPIVersion, Resource: ResourceStorageProviders}
+}
+
+func LegacyStorageProviderGVR() schema.GroupVersionResource {
 	return schema.GroupVersionResource{Group: StorageAPIGroup, Version: StorageAPIVersion, Resource: ResourceStorageProviders}
 }
 

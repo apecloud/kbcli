@@ -46,7 +46,6 @@ import (
 	"golang.org/x/exp/slices"
 
 	dpv1alpha1 "github.com/apecloud/kubeblocks/apis/dataprotection/v1alpha1"
-	storagev1alpha1 "github.com/apecloud/kubeblocks/apis/storage/v1alpha1"
 	dptypes "github.com/apecloud/kubeblocks/pkg/dataprotection/types"
 
 	"github.com/apecloud/kbcli/pkg/printer"
@@ -78,7 +77,7 @@ type createOptions struct {
 
 	accessMethod    string
 	storageProvider string
-	providerObject  *storagev1alpha1.StorageProvider
+	providerObject  *dpv1alpha1.StorageProvider
 	isDefault       bool
 	pvReclaimPolicy string
 	volumeCapacity  string
@@ -206,12 +205,8 @@ func (o *createOptions) parseProviderFlags(cmd *cobra.Command, args []string, f 
 	cmd.Example = ""
 	return flags.BuildFlagsWithOpenAPISchema(cmd, args, func() (*apiextensionsv1.JSONSchemaProps, error) {
 		// Get provider info from API server
-		provider := &storagev1alpha1.StorageProvider{}
-		err := util.GetK8SClientObject(o.dynamic, provider, types.StorageProviderGVR(), "", o.storageProvider)
+		provider, err := getStorageProvider(o.dynamic, o.storageProvider)
 		if err != nil {
-			if apierrors.IsNotFound(err) {
-				return nil, fmt.Errorf("storage provider \"%s\" is not found", o.storageProvider)
-			}
 			return nil, err
 		}
 		o.providerObject = provider
@@ -475,7 +470,11 @@ func registerFlagCompletionFunc(cmd *cobra.Command, f cmdutil.Factory) {
 	util.CheckErr(cmd.RegisterFlagCompletionFunc(
 		providerFlagName,
 		func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-			return utilcomp.CompGetResource(f, util.GVRToString(types.StorageProviderGVR()), toComplete), cobra.ShellCompDirectiveNoFileComp
+			candidates := utilcomp.CompGetResource(f, util.GVRToString(types.StorageProviderGVR()), toComplete)
+			if len(candidates) == 0 {
+				candidates = utilcomp.CompGetResource(f, util.GVRToString(types.LegacyStorageProviderGVR()), toComplete)
+			}
+			return candidates, cobra.ShellCompDirectiveNoFileComp
 		}))
 	util.CheckErr(cmd.RegisterFlagCompletionFunc(
 		"access-method",
