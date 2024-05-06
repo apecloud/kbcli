@@ -96,7 +96,7 @@ content: {
 		}
 	}
 	spec: {
-		clusterRef:             options.name
+		clusterName:             options.name
 		type:                   options.type
 		ttlSecondsAfterSucceed: options.ttlSecondsAfterSucceed
 		force: options.force

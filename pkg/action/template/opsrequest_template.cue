@@ -19,7 +19,7 @@
 options: {
 	opsRequestName: 	string
 	namespace: 				string
-	clusterRef: 			string
+	clusterName: 			string
 	opsType: 						string
 	backupSpec: 			{}
 	restoreSpec: 			{}
@@ -35,14 +35,14 @@ content: {
 		namespace: options.namespace
 	}
 	spec: {
-		clusterRef: options.clusterRef
+		clusterName: options.clusterName
 		type: options.opsType
 		force: options.force
 		if options.opsType == "Backup" {
-			backupSpec: options.backupSpec
+			backup: options.backupSpec
 		}
 		if options.opsType == "Restore" {
-			restoreSpec: options.restoreSpec
+			restore: options.restoreSpec
 		}
 		ttlSecondsAfterSucceed: 30
 	}
