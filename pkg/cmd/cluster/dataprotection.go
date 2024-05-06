@@ -127,7 +127,7 @@ const TrueValue = "true"
 
 type CreateBackupOptions struct {
 	BackupSpec     appsv1alpha1.BackupSpec `json:"backupSpec"`
-	ClusterRef     string                  `json:"clusterRef"`
+	ClusterName    string                  `json:"clusterName"`
 	OpsType        string                  `json:"opsType"`
 	OpsRequestName string                  `json:"opsRequestName"`
 	Force          bool                    `json:"force"`
@@ -162,10 +162,10 @@ func (o *CreateBackupOptions) CompleteBackup() error {
 		o.BackupSpec.BackupName = strings.Join([]string{"backup", o.Namespace, o.Name, time.Now().Format("20060102150405")}, "-")
 	}
 
-	// set ops type, ops request name and clusterRef
+	// set ops type, ops request name and clusterName
 	o.OpsType = string(appsv1alpha1.BackupType)
 	o.OpsRequestName = o.BackupSpec.BackupName
-	o.ClusterRef = o.Name
+	o.ClusterName = o.Name
 
 	return o.CreateOptions.Complete()
 }
@@ -505,7 +505,7 @@ func completeForDeleteBackup(o *action.DeleteOptions, args []string) error {
 
 type CreateRestoreOptions struct {
 	RestoreSpec    appsv1alpha1.RestoreSpec `json:"restoreSpec"`
-	ClusterRef     string                   `json:"clusterRef"`
+	ClusterName    string                   `json:"clusterName"`
 	OpsType        string                   `json:"opsType"`
 	OpsRequestName string                   `json:"opsRequestName"`
 	Force          bool                     `json:"force"`
@@ -529,9 +529,9 @@ func (o *CreateRestoreOptions) Validate() error {
 		o.Name = name
 	}
 
-	// set ops type, ops request name and clusterRef
+	// set ops type, ops request name and clusterName
 	o.OpsType = string(appsv1alpha1.RestoreType)
-	o.ClusterRef = o.Name
+	o.ClusterName = o.Name
 	o.OpsRequestName = o.Name
 
 	return nil
