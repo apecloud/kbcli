@@ -79,8 +79,8 @@ var _ = Describe("operations", func() {
 		opsDef := &appsv1alpha1.OpsDefinition{
 			ObjectMeta: metav1.ObjectMeta{Name: opsDefName},
 			Spec: appsv1alpha1.OpsDefinitionSpec{
-				ComponentDefinitionRefs: []appsv1alpha1.ComponentDefinitionRef{
-					{Name: testing.CompDefName},
+				ComponentInfos: []appsv1alpha1.ComponentInfo{
+					{ComponentDefinitionName: testing.CompDefName},
 				},
 				ParametersSchema: &appsv1alpha1.ParametersSchema{
 					OpenAPIV3Schema: &apiextensionsv1.JSONSchemaProps{
@@ -125,8 +125,8 @@ var _ = Describe("operations", func() {
 				Namespace: testing.Namespace,
 			},
 			Spec: appsv1alpha1.OpsRequestSpec{
-				ClusterRef: "test-cluster",
-				Type:       opsType,
+				ClusterName: "test-cluster",
+				Type:        opsType,
 			},
 			Status: appsv1alpha1.OpsRequestStatus{
 				Phase: phase,

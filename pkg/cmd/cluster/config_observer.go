@@ -267,7 +267,7 @@ func (r *configObserverOptions) printConfigureHistory(component string) error {
 		tplNames := getTemplateNameFromOps(ops.Spec)
 		keyNames := getKeyNameFromOps(ops.Spec)
 		tbl.AddRow(ops.Name,
-			ops.Spec.ClusterRef,
+			ops.Spec.GetClusterName(),
 			components,
 			tplNames,
 			keyNames,

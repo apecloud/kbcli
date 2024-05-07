@@ -166,7 +166,7 @@ func (o *describeOpsOptions) printOpsRequest(ops *appsv1alpha1.OpsRequest) error
 		// first pair string
 		printer.NewPair("  Name", ops.Name),
 		printer.NewPair("NameSpace", ops.Namespace),
-		printer.NewPair("Cluster", ops.Spec.ClusterRef),
+		printer.NewPair("Cluster", ops.Spec.GetClusterName()),
 		printer.NewPair("Type", string(ops.Spec.Type)),
 	)
 
@@ -234,7 +234,7 @@ func (o *describeOpsOptions) getRestartCommand(spec appsv1alpha1.OpsRequestSpec)
 		componentNames[i] = v.ComponentName
 	}
 	return []string{
-		fmt.Sprintf("kbcli cluster restart %s --components=%s", spec.ClusterRef,
+		fmt.Sprintf("kbcli cluster restart %s --components=%s", spec.GetClusterName(),
 			strings.Join(componentNames, ",")),
 	}
 }
@@ -242,7 +242,7 @@ func (o *describeOpsOptions) getRestartCommand(spec appsv1alpha1.OpsRequestSpec)
 // getUpgradeCommand gets the command of the Upgrade OpsRequest.
 func (o *describeOpsOptions) getUpgradeCommand(spec appsv1alpha1.OpsRequestSpec) []string {
 	return []string{
-		fmt.Sprintf("kbcli cluster upgrade %s --cluster-version=%s", spec.ClusterRef,
+		fmt.Sprintf("kbcli cluster upgrade %s --cluster-version=%s", spec.GetClusterName(),
 			spec.Upgrade.ClusterVersionRef),
 	}
 }
@@ -271,7 +271,7 @@ func (o *describeOpsOptions) getVerticalScalingCommand(spec appsv1alpha1.OpsRequ
 	commands := make([]string, len(componentNameSlice))
 	for i := range componentNameSlice {
 		commands[i] = fmt.Sprintf("kbcli cluster vscale %s --components=%s",
-			spec.ClusterRef, strings.Join(componentNameSlice[i], ","))
+			spec.GetClusterName(), strings.Join(componentNameSlice[i], ","))
 		resource := resourceSlice[i].(corev1.ResourceRequirements)
 		commands[i] += o.addResourceFlag("cpu", resource.Limits.Cpu())
 		commands[i] += o.addResourceFlag("memory", resource.Limits.Memory())
@@ -295,7 +295,7 @@ func (o *describeOpsOptions) getHorizontalScalingCommand(spec appsv1alpha1.OpsRe
 	commands := make([]string, len(componentNameSlice))
 	for i := range componentNameSlice {
 		commands[i] = fmt.Sprintf("kbcli cluster hscale %s --components=%s --replicas=%d",
-			spec.ClusterRef, strings.Join(componentNameSlice[i], ","), replicasSlice[i].(int32))
+			spec.GetClusterName(), strings.Join(componentNameSlice[i], ","), replicasSlice[i].(int32))
 	}
 	return commands
 }
@@ -315,7 +315,7 @@ func (o *describeOpsOptions) getVolumeExpansionCommand(spec appsv1alpha1.OpsRequ
 		for i := range vctNameSlice {
 			storage := storageSlice[i].(resource.Quantity)
 			commands = append(commands, fmt.Sprintf("kbcli cluster volume-expand %s --components=%s --volume-claim-template-names=%s --storage=%s",
-				spec.ClusterRef, v.ComponentName, strings.Join(vctNameSlice[i], ","), storage.String()))
+				spec.GetClusterName(), v.ComponentName, strings.Join(vctNameSlice[i], ","), storage.String()))
 		}
 	}
 	return commands
@@ -324,7 +324,7 @@ func (o *describeOpsOptions) getVolumeExpansionCommand(spec appsv1alpha1.OpsRequ
 // getReconfiguringCommand gets the command of the VolumeExpansion command.
 func (o *describeOpsOptions) getReconfiguringCommand(spec appsv1alpha1.OpsRequestSpec) []string {
 	if spec.Reconfigure != nil {
-		return generateReconfiguringCommand(spec.ClusterRef, spec.Reconfigure, []string{spec.Reconfigure.ComponentName})
+		return generateReconfiguringCommand(spec.GetClusterName(), spec.Reconfigure, []string{spec.Reconfigure.ComponentName})
 	}
 
 	if len(spec.Reconfigures) == 0 {
@@ -334,10 +334,10 @@ func (o *describeOpsOptions) getReconfiguringCommand(spec appsv1alpha1.OpsReques
 	for i, reconfigure := range spec.Reconfigures {
 		components[i] = reconfigure.ComponentName
 	}
-	return generateReconfiguringCommand(spec.ClusterRef, &spec.Reconfigures[0], components)
+	return generateReconfiguringCommand(spec.GetClusterName(), &spec.Reconfigures[0], components)
 }
 
-func generateReconfiguringCommand(clusterRef string, updatedParams *appsv1alpha1.Reconfigure, components []string) []string {
+func generateReconfiguringCommand(clusterName string, updatedParams *appsv1alpha1.Reconfigure, components []string) []string {
 	if len(updatedParams.Configurations) == 0 {
 		return nil
 	}
@@ -351,7 +351,7 @@ func generateReconfiguringCommand(clusterRef string, updatedParams *appsv1alpha1
 	commandArgs = append(commandArgs, "kbcli")
 	commandArgs = append(commandArgs, "cluster")
 	commandArgs = append(commandArgs, "configure")
-	commandArgs = append(commandArgs, clusterRef)
+	commandArgs = append(commandArgs, clusterName)
 	commandArgs = append(commandArgs, fmt.Sprintf("--components=%s", strings.Join(components, ",")))
 	commandArgs = append(commandArgs, fmt.Sprintf("--config-spec=%s", configuration.Name))
 
