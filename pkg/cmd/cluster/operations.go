@@ -1104,8 +1104,8 @@ func (o *CustomOperations) validateAndCompleteComponentName() error {
 	}
 	// check if the custom ops supports the component or complete the component for the cluster
 	supportedComponentDefs := map[string]struct{}{}
-	for _, v := range opsDef.Spec.ComponentDefinitionRefs {
-		supportedComponentDefs[v.Name] = struct{}{}
+	for _, v := range opsDef.Spec.ComponentInfos {
+		supportedComponentDefs[v.ComponentDefinitionName] = struct{}{}
 	}
 	if len(supportedComponentDefs) > 0 {
 		// check if the ops supports the input component
@@ -1263,9 +1263,9 @@ func NewRebuildInstanceCmd(f cmdutil.Factory, streams genericiooptions.IOStreams
 				ComponentOps: appsv1alpha1.ComponentOps{
 					ComponentName: compName,
 				},
-				Instances:     instances,
-				BackupName:    o.BackupName,
-				EnvForRestore: envVars,
+				Instances:  instances,
+				BackupName: o.BackupName,
+				RestoreEnv: envVars,
 			},
 		}
 		return nil

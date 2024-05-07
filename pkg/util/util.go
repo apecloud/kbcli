@@ -864,9 +864,11 @@ func NewOpsRequestForReconfiguring(opsName, namespace, clusterName string) *apps
 			Namespace: namespace,
 		},
 		Spec: appsv1alpha1.OpsRequestSpec{
-			ClusterRef:  clusterName,
+			ClusterName: clusterName,
 			Type:        appsv1alpha1.ReconfiguringType,
-			Reconfigure: &appsv1alpha1.Reconfigure{},
+			SpecificOpsRequest: appsv1alpha1.SpecificOpsRequest{
+				Reconfigure: &appsv1alpha1.Reconfigure{},
+			},
 		},
 	}
 }

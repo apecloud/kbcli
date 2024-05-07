@@ -62,8 +62,8 @@ var _ = Describe("Expose", func() {
 				Namespace: namespace,
 			},
 			Spec: appsv1alpha1.OpsRequestSpec{
-				ClusterRef: "test-cluster",
-				Type:       "Restart",
+				ClusterName: "test-cluster",
+				Type:        "Restart",
 			},
 			Status: appsv1alpha1.OpsRequestStatus{
 				Phase: phase,

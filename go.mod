@@ -7,7 +7,7 @@ require (
 	github.com/99designs/keyring v1.2.2
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/apecloud/kubebench v0.0.0-20240327101848-6a031d3f4ebe
-	github.com/apecloud/kubeblocks v0.9.0-beta.15
+	github.com/apecloud/kubeblocks v0.9.0-beta.18
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
 	github.com/benbjohnson/clock v1.3.5
 	github.com/briandowns/spinner v1.23.0

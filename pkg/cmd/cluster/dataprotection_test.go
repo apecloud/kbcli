@@ -243,7 +243,7 @@ var _ = Describe("DataProtection", func() {
 					CueTemplateName: "backup_template.cue",
 					Name:            testing.ClusterName,
 				},
-				BackupSpec: appsv1alpha1.BackupSpec{
+				BackupSpec: appsv1alpha1.Backup{
 					BackupPolicyName: otherBackupPolicy.Name,
 					BackupMethod:     testing.BackupMethodName,
 				},
