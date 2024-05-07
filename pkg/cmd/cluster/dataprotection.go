@@ -193,15 +193,17 @@ func (o *CreateBackupOptions) Validate() error {
 	}
 
 	// check if the backup method exists in backup policy
-	exist := false
+	exist, methods := false, make([]string, 0)
 	for _, method := range backupPolicy.Spec.BackupMethods {
+		methods = append(methods, method.Name)
 		if o.BackupSpec.BackupMethod == method.Name {
 			exist = true
 			break
 		}
 	}
 	if !exist {
-		return fmt.Errorf("specified backup method does not exist")
+		return fmt.Errorf("specified backup method %s does not exist in backup policy %s, available methods: [%s]\n",
+			o.BackupSpec.BackupMethod, backupPolicy.Name, strings.Join(methods, ", "))
 	}
 
 	// TODO: check if pvc exists
