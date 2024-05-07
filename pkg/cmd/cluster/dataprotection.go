@@ -191,6 +191,21 @@ func (o *CreateBackupOptions) Validate() error {
 	if o.BackupSpec.BackupMethod == "" {
 		return fmt.Errorf("backup method can not be empty, you can specify it by --method")
 	}
+
+	// check if the backup method exists in backup policy
+	exist, availableMethods := false, make([]string, 0)
+	for _, method := range backupPolicy.Spec.BackupMethods {
+		availableMethods = append(availableMethods, method.Name)
+		if o.BackupSpec.BackupMethod == method.Name {
+			exist = true
+			break
+		}
+	}
+	if !exist {
+		return fmt.Errorf("specified backup method %s does not exist in backup policy %s, available methods: [%s]\n",
+			o.BackupSpec.BackupMethod, backupPolicy.Name, strings.Join(availableMethods, ", "))
+	}
+
 	// TODO: check if pvc exists
 
 	// valid retention period
