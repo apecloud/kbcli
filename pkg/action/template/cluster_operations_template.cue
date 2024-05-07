@@ -231,7 +231,7 @@ content: {
             rebuildFrom: options.rebuildInstanceFrom
         }
 		if options.type == "Custom" {
-			customSpec: {
+			custom: {
 			    opsDefinitionRef: options.opsDefinitionName
 			    components: [
 			       {
