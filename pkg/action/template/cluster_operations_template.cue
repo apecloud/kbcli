@@ -232,7 +232,7 @@ content: {
         }
 		if options.type == "Custom" {
 			custom: {
-			    opsDefinitionRef: options.opsDefinitionName
+			    opsDefinitionName: options.opsDefinitionName
 			    components: [
 			       {
 			         componentName: options.component
