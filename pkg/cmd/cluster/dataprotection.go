@@ -193,8 +193,8 @@ func (o *CreateBackupOptions) Validate() error {
 	}
 
 	// check if the backup method exists in backup policy
-	supportMethods, exist := backupPolicy.Spec.BackupMethods, false
-	for _, method := range supportMethods {
+	exist := false
+	for _, method := range backupPolicy.Spec.BackupMethods {
 		if o.BackupSpec.BackupMethod == method.Name {
 			exist = true
 			break
