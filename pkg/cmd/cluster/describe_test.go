@@ -121,7 +121,7 @@ var _ = Describe("Expose", func() {
 			*testing.FakeBackupSchedule("backup-schedule-test", "backup-policy-test"),
 		}
 
-		showDataProtection(fakeBackupPolicies, fakeBackupSchedules, "test-repository", out)
+		showDataProtection(fakeBackupPolicies, fakeBackupSchedules, "test-repository", "", "", out)
 		strs := strings.Split(out.String(), "\n")
 		Expect(strs).ShouldNot(BeEmpty())
 	})

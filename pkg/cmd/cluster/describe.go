@@ -23,8 +23,11 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"sort"
 	"strings"
+	"time"
 
+	"github.com/apecloud/kubeblocks/pkg/constant"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,6 +41,7 @@ import (
 
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	dpv1alpha1 "github.com/apecloud/kubeblocks/apis/dataprotection/v1alpha1"
+	dptypes "github.com/apecloud/kubeblocks/pkg/dataprotection/types"
 	"github.com/apecloud/kubeblocks/pkg/dataprotection/utils/boolptr"
 
 	"github.com/apecloud/kbcli/pkg/cluster"
@@ -169,7 +173,11 @@ func (o *describeOptions) describeCluster(name string) error {
 	if err != nil {
 		return err
 	}
-	showDataProtection(o.BackupPolicies, o.BackupSchedules, defaultBackupRepo, o.Out)
+	recoverableTime, continuousMethod, err := o.getBackupRecoverableTime()
+	if err != nil {
+		return err
+	}
+	showDataProtection(o.BackupPolicies, o.BackupSchedules, defaultBackupRepo, continuousMethod, recoverableTime, o.Out)
 
 	// events
 	showEvents(o.Cluster.Name, o.Cluster.Namespace, o.Out)
@@ -251,11 +259,17 @@ func showEndpoints(c *appsv1alpha1.Cluster, svcList *corev1.ServiceList, out io.
 	tbl.Print()
 }
 
-func showDataProtection(backupPolicies []dpv1alpha1.BackupPolicy, backupSchedules []dpv1alpha1.BackupSchedule, defaultBackupRepo string, out io.Writer) {
+func showDataProtection(backupPolicies []dpv1alpha1.BackupPolicy, backupSchedules []dpv1alpha1.BackupSchedule, defaultBackupRepo, continuousMethod, recoverableTimeRange string, out io.Writer) {
 	if len(backupPolicies) == 0 || len(backupSchedules) == 0 {
 		return
 	}
-	tbl := newTbl(out, "\nData Protection:", "BACKUP-REPO", "AUTO-BACKUP", "BACKUP-SCHEDULE", "BACKUP-METHOD", "BACKUP-RETENTION")
+	tbl := newTbl(out, "\nData Protection:", "BACKUP-REPO", "AUTO-BACKUP", "BACKUP-SCHEDULE", "BACKUP-METHOD", "BACKUP-RETENTION", "RECOVERABLE-TIME")
+	getEnableString := func(enable bool) string {
+		if enable {
+			return "Enabled"
+		}
+		return "Disabled"
+	}
 	for _, schedule := range backupSchedules {
 		backupRepo := defaultBackupRepo
 		for _, policy := range backupPolicies {
@@ -267,34 +281,77 @@ func showDataProtection(backupPolicies []dpv1alpha1.BackupPolicy, backupSchedule
 			}
 		}
 		for _, schedulePolicy := range schedule.Spec.Schedules {
-			if !boolptr.IsSetToTrue(schedulePolicy.Enabled) {
-				continue
+			if recoverableTimeRange != "" && continuousMethod == schedulePolicy.BackupMethod {
+				// continuous backup with recoverable time
+				tbl.AddRow(backupRepo, getEnableString(boolptr.IsSetToTrue(schedulePolicy.Enabled)), schedulePolicy.CronExpression, schedulePolicy.BackupMethod, schedulePolicy.RetentionPeriod.String(), recoverableTimeRange)
+			} else if boolptr.IsSetToTrue(schedulePolicy.Enabled) {
+				tbl.AddRow(backupRepo, "Enabled", schedulePolicy.CronExpression, schedulePolicy.BackupMethod, schedulePolicy.RetentionPeriod.String(), "")
 			}
-
-			tbl.AddRow(backupRepo, "Enabled", schedulePolicy.CronExpression, schedulePolicy.BackupMethod, schedulePolicy.RetentionPeriod.String())
 		}
 	}
 	tbl.Print()
 }
 
-//	 getBackupRecoverableTime returns the recoverable time range string
-//	func getBackupRecoverableTime(backups []dpv1alpha1.Backup) string {
-//	recoverabelTime := dpv1alpha1.GetRecoverableTimeRange(backups)
-//	var result string
-//	for _, i := range recoverabelTime {
-//		result = addTimeRange(result, i.StartTime, i.StopTime)
-//	}
-//	if result == "" {
-//		return printer.NoneString
-//	}
-//	return result
-//	}
+// getBackupRecoverableTime returns the recoverable time range string
+func (o *describeOptions) getBackupRecoverableTime() (string, string, error) {
+	continuousBackups, err := o.getBackupList(dpv1alpha1.BackupTypeContinuous)
+	if err != nil {
+		return "", "", err
+	}
+	if len(continuousBackups) == 0 {
+		return "", "", nil
+	}
+	continuousBackup := continuousBackups[0]
+	if continuousBackup.GetStartTime() == nil || continuousBackup.GetEndTime() == nil {
+		return "", "", nil
+	}
+	fullBackups, err := o.getBackupList(dpv1alpha1.BackupTypeFull)
+	if err != nil {
+		return "", "", err
+	}
+	sortBackup(fullBackups, false)
+	for _, backup := range fullBackups {
+		completeTime := backup.GetEndTime()
+		if completeTime != nil && !completeTime.Before(continuousBackup.GetStartTime()) {
+			return fmt.Sprintf("%s ~ %s", util.TimeFormatWithDuration(completeTime, time.Second),
+				util.TimeFormatWithDuration(continuousBackup.GetEndTime(), time.Second)), continuousBackup.Spec.BackupMethod, nil
+		}
+	}
+	return "", "", nil
+}
 
-//	func addTimeRange(result string, start, end *metav1.Time) string {
-//		if result != "" {
-//			result += ", "
-//		}
-//		result += fmt.Sprintf("%s ~ %s", util.TimeFormatWithDuration(start, time.Second),
-//			util.TimeFormatWithDuration(end, time.Second))
-//		return result
-//	}
+func (o *describeOptions) getBackupList(backupType dpv1alpha1.BackupType) ([]*dpv1alpha1.Backup, error) {
+	backupList, err := o.dynamic.Resource(types.BackupGVR()).Namespace(o.namespace).List(context.TODO(), metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("%s=%s,%s=%s",
+			constant.AppInstanceLabelKey, o.Cluster.Name,
+			dptypes.BackupTypeLabelKey, backupType),
+	})
+	if err != nil {
+		return nil, err
+	}
+	var backups []*dpv1alpha1.Backup
+	for i := range backupList.Items {
+		fullBackup := &dpv1alpha1.Backup{}
+		if err = runtime.DefaultUnstructuredConverter.FromUnstructured(backupList.Items[i].Object, fullBackup); err != nil {
+			return nil, err
+		}
+		backups = append(backups, fullBackup)
+	}
+	return backups, nil
+}
+
+func sortBackup(backups []*dpv1alpha1.Backup, reverse bool) []*dpv1alpha1.Backup {
+	sort.Slice(backups, func(i, j int) bool {
+		if reverse {
+			i, j = j, i
+		}
+		if backups[i].GetEndTime() == nil {
+			return false
+		}
+		if backups[j].GetEndTime() == nil {
+			return true
+		}
+		return backups[i].GetEndTime().Before(backups[j].GetEndTime())
+	})
+	return backups
+}

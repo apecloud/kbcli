@@ -126,11 +126,11 @@ var (
 const TrueValue = "true"
 
 type CreateBackupOptions struct {
-	BackupSpec     appsv1alpha1.BackupSpec `json:"backupSpec"`
-	ClusterName    string                  `json:"clusterName"`
-	OpsType        string                  `json:"opsType"`
-	OpsRequestName string                  `json:"opsRequestName"`
-	Force          bool                    `json:"force"`
+	BackupSpec     appsv1alpha1.Backup `json:"backupSpec"`
+	ClusterName    string              `json:"clusterName"`
+	OpsType        string              `json:"opsType"`
+	OpsRequestName string              `json:"opsRequestName"`
+	Force          bool                `json:"force"`
 
 	action.CreateOptions `json:"-"`
 }
@@ -504,11 +504,11 @@ func completeForDeleteBackup(o *action.DeleteOptions, args []string) error {
 }
 
 type CreateRestoreOptions struct {
-	RestoreSpec    appsv1alpha1.RestoreSpec `json:"restoreSpec"`
-	ClusterName    string                   `json:"clusterName"`
-	OpsType        string                   `json:"opsType"`
-	OpsRequestName string                   `json:"opsRequestName"`
-	Force          bool                     `json:"force"`
+	RestoreSpec    appsv1alpha1.Restore `json:"restoreSpec"`
+	ClusterName    string               `json:"clusterName"`
+	OpsType        string               `json:"opsType"`
+	OpsRequestName string               `json:"opsRequestName"`
+	Force          bool                 `json:"force"`
 
 	action.CreateOptions `json:"-"`
 }
@@ -567,7 +567,7 @@ func NewCreateRestoreCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) 
 	}
 
 	cmd.Flags().StringVar(&o.RestoreSpec.BackupName, "backup", "", "Backup name")
-	cmd.Flags().StringVar(&o.RestoreSpec.RestoreTimeStr, "restore-to-time", "", "point in time recovery(PITR)")
+	cmd.Flags().StringVar(&o.RestoreSpec.RestorePointInTime, "restore-to-time", "", "point in time recovery(PITR)")
 	cmd.Flags().StringVar(&o.RestoreSpec.VolumeRestorePolicy, "volume-restore-policy", "Parallel", "the volume claim restore policy, supported values: [Serial, Parallel]")
 	return cmd
 }

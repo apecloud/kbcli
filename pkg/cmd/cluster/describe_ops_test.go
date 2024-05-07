@@ -111,8 +111,8 @@ var _ = Describe("Expose", func() {
 				Namespace: namespace,
 			},
 			Spec: appsv1alpha1.OpsRequestSpec{
-				ClusterRef: "test-cluster",
-				Type:       opsType,
+				ClusterName: "test-cluster",
+				Type:        opsType,
 			},
 		}
 	}
