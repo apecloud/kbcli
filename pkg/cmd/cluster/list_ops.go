@@ -145,7 +145,7 @@ func (o *opsListOptions) printOpsList() error {
 		if len(o.opsType) != 0 && !o.containsIgnoreCase(o.opsType, opsType) {
 			continue
 		}
-		tblPrinter.AddRow(ops.Name, ops.GetNamespace(), opsType, ops.Spec.GetClusterName, getComponentNameFromOps(ops), phase, ops.Status.Progress, util.TimeFormat(&ops.CreationTimestamp))
+		tblPrinter.AddRow(ops.Name, ops.GetNamespace(), opsType, ops.Spec.GetClusterName(), getComponentNameFromOps(ops), phase, ops.Status.Progress, util.TimeFormat(&ops.CreationTimestamp))
 	}
 	if tblPrinter.Tbl.Length() != 0 {
 		tblPrinter.Print()
