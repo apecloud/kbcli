@@ -190,14 +190,6 @@ const (
 	ResourceStorageProviders = "storageproviders"
 )
 
-// Migration API group
-const (
-	MigrationAPIGroup          = "datamigration.apecloud.io"
-	MigrationAPIVersion        = "v1alpha1"
-	ResourceMigrationTasks     = "migrationtasks"
-	ResourceMigrationTemplates = "migrationtemplates"
-)
-
 // Crd Api group
 const (
 	CustomResourceDefinitionAPIGroup   = "apiextensions.k8s.io"
@@ -466,22 +458,6 @@ func RoleBindingGVR() schema.GroupVersionResource {
 
 func ServiceAccountGVR() schema.GroupVersionResource {
 	return schema.GroupVersionResource{Group: corev1.GroupName, Version: K8sCoreAPIVersion, Resource: ServiceAccounts}
-}
-
-func MigrationTaskGVR() schema.GroupVersionResource {
-	return schema.GroupVersionResource{
-		Group:    MigrationAPIGroup,
-		Version:  MigrationAPIVersion,
-		Resource: ResourceMigrationTasks,
-	}
-}
-
-func MigrationTemplateGVR() schema.GroupVersionResource {
-	return schema.GroupVersionResource{
-		Group:    MigrationAPIGroup,
-		Version:  MigrationAPIVersion,
-		Resource: ResourceMigrationTemplates,
-	}
 }
 
 func CustomResourceDefinitionGVR() schema.GroupVersionResource {
