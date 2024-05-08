@@ -58,4 +58,18 @@ var _ = Describe("version", func() {
 		cliVersion, _ = gv.NewVersion("v0.6.3")
 		Expect(kbVersion.Equal(cliVersion)).Should(BeTrue())
 	})
+
+	It("version match", func() {
+		kbVersion, _ := gv.NewVersion("0.6.0-alpha.23")
+		cliVersion, _ := gv.NewVersion("0.6.1-alpha.23")
+		Expect(CheckVersionMatch(cliVersion, kbVersion)).Should(BeTrue())
+
+		kbVersion, _ = gv.NewVersion("0.6.0-alpha.23")
+		cliVersion, _ = gv.NewVersion("v0.6.23")
+		Expect(CheckVersionMatch(cliVersion, kbVersion)).Should(BeTrue())
+
+		kbVersion, _ = gv.NewVersion("0.7.0-alpha.23")
+		cliVersion, _ = gv.NewVersion("0.6.0-beta.23")
+		Expect(CheckVersionMatch(cliVersion, kbVersion)).Should(BeFalse())
+	})
 })
