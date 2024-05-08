@@ -21,6 +21,7 @@ package version
 
 import (
 	"fmt"
+	"reflect"
 	"runtime"
 
 	gv "github.com/hashicorp/go-version"
@@ -84,7 +85,11 @@ func (o *versionOptions) Run(f cmdutil.Factory) {
 		return
 	}
 
-	if !kbVersion.Equal(cliVersion) {
+	if !checkVersionMatch(kbVersion, cliVersion) {
 		fmt.Printf("WARNING: version difference between kbcli (%s) and kubeblocks (%s) \n", v.Cli, v.KubeBlocks)
 	}
+}
+
+func checkVersionMatch(cliVersion *gv.Version, kbVersion *gv.Version) bool {
+	return reflect.DeepEqual(cliVersion.Segments64(), kbVersion.Segments64())
 }
