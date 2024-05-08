@@ -211,7 +211,9 @@ var _ = Describe("util", func() {
 				}
 			})
 		badcaseCCObject := configConstraintObj.DeepCopy()
-		badcaseCCObject.Spec.ConfigSchemaTopLevelKey = "badcase"
+		if badcaseCCObject.Spec.ConfigSchema != nil {
+			badcaseCCObject.Spec.ConfigSchema.TopLevelKey = "badcase"
+		}
 		badcaseCCObject.SetName("badcase")
 
 		tf := cmdtesting.NewTestFactory().WithNamespace(testNS)

@@ -173,11 +173,11 @@ func (o *configOpsOptions) checkChangedParamsAndDoubleConfirm(cc *appsv1beta1.Co
 		return r
 	}
 
-	if !cfgcm.IsSupportReload(cc.DynamicReloadAction) {
+	if !cfgcm.IsSupportReload(cc.ReloadAction) {
 		return o.confirmReconfigureWithRestart()
 	}
 
-	configPatch, restart, err := core.CreateConfigPatch(mockEmptyData(data), data, cc.FormatterConfig.Format, tpl.Keys, o.FileContent != "")
+	configPatch, restart, err := core.CreateConfigPatch(mockEmptyData(data), data, cc.FileFormatConfig.Format, tpl.Keys, o.FileContent != "")
 	if err != nil {
 		return err
 	}

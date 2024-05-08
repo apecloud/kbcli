@@ -802,7 +802,7 @@ func FakeConfigConstraint(ccName string) *appsv1beta1.ConfigConstraint {
 			Name: ccName,
 		},
 		Spec: appsv1beta1.ConfigConstraintSpec{
-			FormatterConfig: &appsv1beta1.FormatterConfig{},
+			FileFormatConfig: &appsv1beta1.FileFormatConfig{},
 		},
 	}
 	return cm

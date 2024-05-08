@@ -625,7 +625,7 @@ func IsSupportReconfigureParams(tpl appsv1alpha1.ComponentConfigSpec, values map
 
 	schema := configConstraint.Spec.ConfigSchema.DeepCopy()
 	if schema.SchemaInJSON == nil {
-		schema.SchemaInJSON, err = openapi.GenerateOpenAPISchema(schema.CUE, configConstraint.Spec.ConfigSchemaTopLevelKey)
+		schema.SchemaInJSON, err = openapi.GenerateOpenAPISchema(schema.CUE, schema.TopLevelKey)
 		if err != nil {
 			return false, err
 		}
