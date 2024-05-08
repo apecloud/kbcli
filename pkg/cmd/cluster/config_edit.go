@@ -125,7 +125,7 @@ func (o *editConfigOptions) runWithConfigConstraints(cfgEditContext *configEditC
 	if err := util.GetResourceObjectFromGVR(types.ConfigConstraintGVR(), configConstraintKey, o.Dynamic, &configConstraint); err != nil {
 		return err
 	}
-	formatterConfig := configConstraint.Spec.FormatterConfig
+	formatterConfig := configConstraint.Spec.FileFormatConfig
 	if formatterConfig == nil {
 		return core.MakeError("config spec[%s] not support reconfiguring!", configSpec.Name)
 	}
@@ -140,12 +140,12 @@ func (o *editConfigOptions) runWithConfigConstraints(cfgEditContext *configEditC
 
 	fmt.Fprintf(o.Out, "Config patch(updated parameters): \n%s\n\n", string(configPatch.UpdateConfig[o.CfgFile]))
 	if !o.enableDelete {
-		if err := core.ValidateConfigPatch(configPatch, configConstraint.Spec.FormatterConfig); err != nil {
+		if err := core.ValidateConfigPatch(configPatch, configConstraint.Spec.FileFormatConfig); err != nil {
 			return err
 		}
 	}
 
-	params := core.GenerateVisualizedParamsList(configPatch, configConstraint.Spec.FormatterConfig, nil)
+	params := core.GenerateVisualizedParamsList(configPatch, configConstraint.Spec.FileFormatConfig, nil)
 	// check immutable parameters
 	if len(configConstraint.Spec.ImmutableParameters) > 0 {
 		if err = util.ValidateParametersModified2(sets.KeySet(fromKeyValuesToMap(params, o.CfgFile)), configConstraint.Spec); err != nil {
@@ -187,7 +187,7 @@ func generateReconfiguringPrompt(fileUpdated bool, configPatch *core.ConfigPatch
 	}
 
 	confirmPrompt := confirmApplyReconfigurePrompt
-	if !dynamicUpdated || !cfgcm.IsSupportReload(cc.DynamicReloadAction) {
+	if !dynamicUpdated || !cfgcm.IsSupportReload(cc.ReloadAction) {
 		confirmPrompt = restartConfirmPrompt
 	}
 	return confirmPrompt, nil
