@@ -158,16 +158,6 @@ Data protection command.
 * [kbcli dataprotection restore](kbcli_dataprotection_restore.md)	 - Restore a new cluster from backup
 
 
-## [environment](kbcli_environment.md)
-
-kbcli environment allows you to manage cloud environment. This command is currently only applicable to cloud, and currently does not support switching the environment of the local k8s cluster.
-
-* [kbcli environment current](kbcli_environment_current.md)	 - Get the currently used environment.
-* [kbcli environment describe](kbcli_environment_describe.md)	 - Get the description information of a environment.
-* [kbcli environment list](kbcli_environment_list.md)	 - List all created environments.
-* [kbcli environment use](kbcli_environment_use.md)	 - Use another environment that you have already created.
-
-
 ## [fault](kbcli_fault.md)
 
 Inject faults to pod.
@@ -197,18 +187,6 @@ KubeBlocks operation commands.
 * [kbcli kubeblocks upgrade](kbcli_kubeblocks_upgrade.md)	 - Upgrade KubeBlocks.
 
 
-## [login](kbcli_login.md)
-
-Authenticate with the KubeBlocks Cloud
-
-
-
-## [logout](kbcli_logout.md)
-
-Log out of the KubeBlocks Cloud
-
-
-
 ## [migration](kbcli_migration.md)
 
 Data migration between two data sources.
@@ -225,16 +203,6 @@ Data migration between two data sources.
 
 Print the list of flags inherited by all commands.
 
-
-
-## [org](kbcli_org.md)
-
-kbcli org is used to manage cloud organizations and is only suitable for interacting with cloud.
-
-* [kbcli org current](kbcli_org_current.md)	 - Get current organization.
-* [kbcli org describe](kbcli_org_describe.md)	 - Get the description information of an organization.
-* [kbcli org list](kbcli_org_list.md)	 - List all organizations you have joined.
-* [kbcli org switch](kbcli_org_switch.md)	 - Switch to another organization you are already a member of.
 
 
 ## [playground](kbcli_playground.md)

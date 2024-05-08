@@ -27,7 +27,4 @@ const (
 	CfgKeyClusterDefaultMemory      = "CLUSTER_DEFAULT_MEMORY"
 	CfgKeyHelmRepoURL               = "HELM_REPO_URL"
 	CfgKeyImageRegistry             = "IMAGE_REGISTRY"
-	CfgKeyOpenAPIServer             = "OPENAPI_SERVER"
-	CfgKeyAuthURL                   = "AUTH_URL"
-	CfgKeyClientID                  = "CLIENT_ID"
 )

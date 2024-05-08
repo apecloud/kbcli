@@ -202,7 +202,7 @@ func (o *CreateBackupOptions) Validate() error {
 		}
 	}
 	if !exist {
-		return fmt.Errorf("specified backup method %s does not exist in backup policy %s, available methods: [%s]\n",
+		return fmt.Errorf("specified backup method %s does not exist in backup policy %s, available methods: [%s]",
 			o.BackupSpec.BackupMethod, backupPolicy.Name, strings.Join(availableMethods, ", "))
 	}
 

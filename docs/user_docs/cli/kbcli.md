@@ -64,14 +64,10 @@ kbcli [flags]
 * [kbcli clusterversion](kbcli_clusterversion.md)	 - ClusterVersion command.
 * [kbcli dashboard](kbcli_dashboard.md)	 - List and open the KubeBlocks dashboards.
 * [kbcli dataprotection](kbcli_dataprotection.md)	 - Data protection command.
-* [kbcli environment](kbcli_environment.md)	 - kbcli environment allows you to manage cloud environment. This command is currently only applicable to cloud, and currently does not support switching the environment of the local k8s cluster.
 * [kbcli fault](kbcli_fault.md)	 - Inject faults to pod.
 * [kbcli kubeblocks](kbcli_kubeblocks.md)	 - KubeBlocks operation commands.
-* [kbcli login](kbcli_login.md)	 - Authenticate with the KubeBlocks Cloud
-* [kbcli logout](kbcli_logout.md)	 - Log out of the KubeBlocks Cloud
 * [kbcli migration](kbcli_migration.md)	 - Data migration between two data sources.
 * [kbcli options](kbcli_options.md)	 - Print the list of flags inherited by all commands.
-* [kbcli org](kbcli_org.md)	 - kbcli org is used to manage cloud organizations and is only suitable for interacting with cloud.
 * [kbcli playground](kbcli_playground.md)	 - Bootstrap or destroy a playground KubeBlocks in local host or cloud.
 * [kbcli plugin](kbcli_plugin.md)	 - Provides utilities for interacting with plugins.
 * [kbcli report](kbcli_report.md)	 - report kubeblocks or cluster info.
