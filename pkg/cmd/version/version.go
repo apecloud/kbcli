@@ -84,11 +84,11 @@ func (o *versionOptions) Run(f cmdutil.Factory) {
 		return
 	}
 
-	if !CheckVersionMatch(kbVersion, cliVersion) {
+	if !checkVersionMatch(kbVersion, cliVersion) {
 		fmt.Printf("WARNING: version difference between kbcli (%s) and kubeblocks (%s) \n", v.Cli, v.KubeBlocks)
 	}
 }
 
-func CheckVersionMatch(cliVersion *gv.Version, kbVersion *gv.Version) bool {
+func checkVersionMatch(cliVersion *gv.Version, kbVersion *gv.Version) bool {
 	return cliVersion.Segments64()[0] == kbVersion.Segments64()[0] && cliVersion.Segments64()[1] == kbVersion.Segments64()[1]
 }
