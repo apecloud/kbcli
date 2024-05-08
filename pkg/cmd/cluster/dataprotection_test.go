@@ -97,7 +97,7 @@ var _ = Describe("DataProtection", func() {
 	})
 
 	Context("backup", func() {
-		initClient := func(policies ...*dpv1alpha1.BackupPolicy) {
+		initClient := func(objs ...runtime.Object) {
 			clusterDef := testing.FakeClusterDef()
 			cluster := testing.FakeCluster(testing.ClusterName, testing.Namespace)
 			clusterDefLabel := map[string]string{
@@ -108,9 +108,7 @@ var _ = Describe("DataProtection", func() {
 			objects := []runtime.Object{
 				cluster, clusterDef, &pods.Items[0],
 			}
-			for _, v := range policies {
-				objects = append(objects, v)
-			}
+			objects = append(objects, objs...)
 			tf.FakeDynamicClient = testing.FakeDynamicClient(objects...)
 		}
 
@@ -216,18 +214,27 @@ var _ = Describe("DataProtection", func() {
 			o.Dynamic = tf.FakeDynamicClient
 			Expect(o.Validate().Error()).Should(ContainSubstring("backup method can not be empty, you can specify it by --method"))
 
+			By("test without default backup repo")
+			repo := testing.FakeBackupRepo(repoName, false)
+			initClient(defaultBackupPolicy, repo)
+			o.Dynamic = tf.FakeDynamicClient
+			o.BackupSpec.BackupMethod = testing.BackupMethodName
+			Expect(o.Validate()).Should(MatchError(fmt.Errorf("No default backup repository exists")))
+
 			By("test with one default backupPolicy")
-			initClient(defaultBackupPolicy)
+			defaultRepo := testing.FakeBackupRepo("default-repo", true)
+			initClient(defaultBackupPolicy, defaultRepo)
 			o.Dynamic = tf.FakeDynamicClient
 			o.BackupSpec.BackupMethod = testing.BackupMethodName
 			Expect(o.Validate()).Should(Succeed())
 		})
 
 		It("run backup command", func() {
+			defaultRepo := testing.FakeBackupRepo("default-repo", true)
 			defaultBackupPolicy := testing.FakeBackupPolicy(policyName, testing.ClusterName)
 			otherBackupPolicy := testing.FakeBackupPolicy("otherPolicy", testing.ClusterName)
 			otherBackupPolicy.Annotations = map[string]string{}
-			initClient(defaultBackupPolicy, otherBackupPolicy)
+			initClient(defaultBackupPolicy, otherBackupPolicy, defaultRepo)
 			By("test backup with default backupPolicy")
 			cmd := NewCreateBackupCmd(tf, streams)
 			Expect(cmd).ShouldNot(BeNil())
