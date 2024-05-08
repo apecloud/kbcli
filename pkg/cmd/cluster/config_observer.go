@@ -178,7 +178,7 @@ func (r *configObserverOptions) printExplainConfigure(configSpecs configSpecsTyp
 			fmt.Printf("\n%s\n", fmt.Sprintf(notConfigSchemaPrompt, printer.BoldYellow(tplName)))
 			return nil
 		}
-		apiSchema, err := openapi.GenerateOpenAPISchema(schema.CUE, confSpec.ConfigSchemaTopLevelKey)
+		apiSchema, err := openapi.GenerateOpenAPISchema(schema.CUE, schema.TopLevelKey)
 		if err != nil {
 			return cfgcore.WrapError(err, "failed to generate open api schema")
 		}

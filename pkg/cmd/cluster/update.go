@@ -461,7 +461,7 @@ func (o *UpdateOptions) reconfigureLogVariables(c *appsv1alpha1.Cluster, cd *app
 			buf             bytes.Buffer
 			keyName         string
 			configTemplate  *corev1.ConfigMap
-			formatter       *appsv1beta1.FormatterConfig
+			formatter       *appsv1beta1.FileFormatConfig
 			logTPL          *template.Template
 			logVariables    map[string]string
 			unstructuredObj *unstructured.Unstructured
@@ -520,7 +520,7 @@ func findFirstConfigSpec(
 	return &configSpecs[0], nil
 }
 
-func findConfigTemplateInfo(dynamic dynamic.Interface, configSpec *appsv1alpha1.ComponentConfigSpec) (*corev1.ConfigMap, *appsv1beta1.FormatterConfig, error) {
+func findConfigTemplateInfo(dynamic dynamic.Interface, configSpec *appsv1alpha1.ComponentConfigSpec) (*corev1.ConfigMap, *appsv1beta1.FileFormatConfig, error) {
 	if configSpec == nil {
 		return nil, nil, errors.New("configTemplateSpec is nil")
 	}
@@ -532,7 +532,7 @@ func findConfigTemplateInfo(dynamic dynamic.Interface, configSpec *appsv1alpha1.
 	if err != nil {
 		return nil, nil, err
 	}
-	return configTemplate, configConstraint.Spec.FormatterConfig, nil
+	return configTemplate, configConstraint.Spec.FileFormatConfig, nil
 }
 
 func newConfigTemplateEngine() *template.Template {

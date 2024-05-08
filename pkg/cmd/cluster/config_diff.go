@@ -242,7 +242,7 @@ func (o *configDiffOptions) diffConfig(tplName string) ([]core.VisualizedParam, 
 		return nil, nil, err
 	}
 
-	formatCfg := configConstraint.Spec.FormatterConfig
+	formatCfg := configConstraint.Spec.FileFormatConfig
 
 	base := findTemplateStatusByName(o.baseVersion.Status.ReconfiguringStatus, tplName)
 	diff := findTemplateStatusByName(o.diffVersion.Status.ReconfiguringStatus, tplName)
