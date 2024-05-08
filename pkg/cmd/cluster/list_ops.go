@@ -106,7 +106,6 @@ func (o *opsListOptions) printOpsList() error {
 		LabelSelector: o.LabelSelector,
 		FieldSelector: o.FieldSelector,
 	}
-	fmt.Printf("%v\n", listOptions)
 	if o.AllNamespaces {
 		o.Namespace = ""
 	}
@@ -126,7 +125,6 @@ func (o *opsListOptions) printOpsList() error {
 	tblPrinter := printer.NewTablePrinter(o.Out)
 	tblPrinter.SetHeader("NAME", "NAMESPACE", "TYPE", "CLUSTER", "COMPONENT", "STATUS", "PROGRESS", "CREATED-TIME")
 	for _, obj := range opsList.Items {
-		fmt.Println(obj.GetName())
 		ops := &appsv1alpha1.OpsRequest{}
 		if err = runtime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, ops); err != nil {
 			return err
