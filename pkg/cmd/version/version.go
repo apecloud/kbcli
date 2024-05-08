@@ -21,6 +21,7 @@ package version
 
 import (
 	"fmt"
+	"reflect"
 	"runtime"
 
 	gv "github.com/hashicorp/go-version"
@@ -90,5 +91,5 @@ func (o *versionOptions) Run(f cmdutil.Factory) {
 }
 
 func checkVersionMatch(cliVersion *gv.Version, kbVersion *gv.Version) bool {
-	return cliVersion.Segments64()[0] == kbVersion.Segments64()[0] && cliVersion.Segments64()[1] == kbVersion.Segments64()[1]
+	return reflect.DeepEqual(cliVersion.Segments64(), kbVersion.Segments64())
 }
