@@ -39,21 +39,18 @@ import (
 
 	"github.com/apecloud/kbcli/pkg/cmd/addon"
 	"github.com/apecloud/kbcli/pkg/cmd/alert"
-	"github.com/apecloud/kbcli/pkg/cmd/auth"
 	"github.com/apecloud/kbcli/pkg/cmd/backuprepo"
 	"github.com/apecloud/kbcli/pkg/cmd/bench"
 	"github.com/apecloud/kbcli/pkg/cmd/builder"
 	"github.com/apecloud/kbcli/pkg/cmd/cluster"
 	"github.com/apecloud/kbcli/pkg/cmd/clusterdefinition"
 	"github.com/apecloud/kbcli/pkg/cmd/clusterversion"
-	"github.com/apecloud/kbcli/pkg/cmd/context"
 	"github.com/apecloud/kbcli/pkg/cmd/dashboard"
 	"github.com/apecloud/kbcli/pkg/cmd/dataprotection"
 	"github.com/apecloud/kbcli/pkg/cmd/fault"
 	"github.com/apecloud/kbcli/pkg/cmd/kubeblocks"
 	"github.com/apecloud/kbcli/pkg/cmd/migration"
 	"github.com/apecloud/kbcli/pkg/cmd/options"
-	"github.com/apecloud/kbcli/pkg/cmd/organization"
 	"github.com/apecloud/kbcli/pkg/cmd/playground"
 	"github.com/apecloud/kbcli/pkg/cmd/plugin"
 	"github.com/apecloud/kbcli/pkg/cmd/report"
@@ -65,13 +62,6 @@ import (
 const (
 	cliName = "kbcli"
 )
-
-// TODO: add more commands
-var cloudCmds = map[string]bool{
-	"org":     true,
-	"logout":  true,
-	"context": true,
-}
 
 func init() {
 	if _, err := util.GetCliHomeDir(); err != nil {
@@ -155,16 +145,6 @@ A Command Line Interface for KubeBlocks`,
 			if cmd.Name() == cobra.ShellCompRequestCmd {
 				kcplugin.SetupPluginCompletion(cmd, args)
 			}
-
-			commandPath := cmd.CommandPath()
-			parts := strings.Split(commandPath, " ")
-			if len(parts) < 2 {
-				return nil
-			}
-			subCommand := parts[1]
-			if cloudCmds[subCommand] && !auth.IsLoggedIn() {
-				return fmt.Errorf("use 'kbcli login' to login first")
-			}
 			return nil
 		},
 	}
@@ -189,10 +169,6 @@ A Command Line Interface for KubeBlocks`,
 
 	// Add subcommands
 	cmd.AddCommand(
-		auth.NewLogin(ioStreams),
-		auth.NewLogout(ioStreams),
-		organization.NewOrganizationCmd(ioStreams),
-		context.NewContextCmd(ioStreams),
 		playground.NewPlaygroundCmd(ioStreams),
 		kubeblocks.NewKubeBlocksCmd(f, ioStreams),
 		bench.NewBenchCmd(f, ioStreams),
