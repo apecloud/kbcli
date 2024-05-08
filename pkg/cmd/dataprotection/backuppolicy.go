@@ -37,19 +37,16 @@ var (
 		# list all backup policies
 		kbcli cluster list-backup-policy
 
-		# list backup policies with specified name
-		kbcli cluster list-backup-policy mypolicy
-
-		# list backup policies of the specified cluster
-		kbcli cluster list-backup-policy --cluster mycluster
+		# using short cmd to list backup policy of the specified cluster
+        kbcli cluster list-bp mycluster
 	`)
 
 	describeBackupPolicyExample = templates.Examples(`
-		# describe a backup policy
-		kbcli cluster describe-backup-policy mypolicy
+		# describe the default backup policy of the cluster
+		kbcli cluster describe-backup-policy cluster-name
 
-		# describe the default backup policy of the specified cluster
-		kbcli cluster describe-backup-policy --cluster mycluster
+		# describe the backup policy of the cluster with specified name
+		kbcli cluster describe-backup-policy cluster-name --name backup-policy-name
 	`)
 )
 
