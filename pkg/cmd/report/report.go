@@ -106,7 +106,7 @@ var _ reportInterface = &reportClusterOptions{}
 func NewReportCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "report [kubeblocks | cluster]",
-		Short: "report kubeblocks or cluster info.",
+		Short: "Report kubeblocks or cluster info.",
 	}
 	cmd.AddCommand(
 		newKubeblocksReportCmd(f, streams),
