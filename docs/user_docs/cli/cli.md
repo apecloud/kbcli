@@ -196,7 +196,7 @@ Provides utilities for interacting with plugins.
 
 ## [report](kbcli_report.md)
 
-report kubeblocks or cluster info.
+Report kubeblocks or cluster info.
 
 * [kbcli report cluster](kbcli_report_cluster.md)	 - Report Cluster information
 * [kbcli report kubeblocks](kbcli_report_kubeblocks.md)	 - Report KubeBlocks information, including deployments, events, logs, etc.
