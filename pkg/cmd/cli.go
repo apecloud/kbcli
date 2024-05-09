@@ -41,7 +41,6 @@ import (
 	"github.com/apecloud/kbcli/pkg/cmd/alert"
 	"github.com/apecloud/kbcli/pkg/cmd/backuprepo"
 	"github.com/apecloud/kbcli/pkg/cmd/bench"
-	"github.com/apecloud/kbcli/pkg/cmd/builder"
 	"github.com/apecloud/kbcli/pkg/cmd/cluster"
 	"github.com/apecloud/kbcli/pkg/cmd/clusterdefinition"
 	"github.com/apecloud/kbcli/pkg/cmd/clusterversion"
@@ -180,7 +179,6 @@ A Command Line Interface for KubeBlocks`,
 		addon.NewAddonCmd(f, ioStreams),
 		plugin.NewPluginCmd(ioStreams),
 		fault.NewFaultCmd(f, ioStreams),
-		builder.NewBuilderCmd(f, ioStreams),
 		report.NewReportCmd(f, ioStreams),
 		backuprepo.NewBackupRepoCmd(f, ioStreams),
 		dataprotection.NewDataProtectionCmd(f, ioStreams),

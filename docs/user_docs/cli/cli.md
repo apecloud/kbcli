@@ -57,14 +57,6 @@ Run a benchmark.
 * [kbcli bench ycsb](kbcli_bench_ycsb.md)	 - Run YCSB benchmark on a cluster
 
 
-## [builder](kbcli_builder.md)
-
-builder command.
-
-* [kbcli builder migrate-scripts](kbcli_builder_migrate-scripts.md)	 - migrate - a developer tool.
-* [kbcli builder template](kbcli_builder_template.md)	 - tpl - a developer tool integrated with KubeBlocks that can help developers quickly generate rendered configurations or scripts based on Helm templates, and discover errors in the template before creating the database cluster.
-
-
 ## [cluster](kbcli_cluster.md)
 
 Cluster command.
