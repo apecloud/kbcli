@@ -219,7 +219,15 @@ var _ = Describe("DataProtection", func() {
 			initClient(defaultBackupPolicy, repo)
 			o.Dynamic = tf.FakeDynamicClient
 			o.BackupSpec.BackupMethod = testing.BackupMethodName
-			Expect(o.Validate()).Should(MatchError(fmt.Errorf("No default backup repository exists")))
+			Expect(o.Validate()).Should(MatchError(fmt.Errorf("No default backuprepo exists")))
+
+			By("test with two default backup repos")
+			repo1 := testing.FakeBackupRepo("repo1", true)
+			repo2 := testing.FakeBackupRepo("repo2", true)
+			initClient(defaultBackupPolicy, repo1, repo2)
+			o.Dynamic = tf.FakeDynamicClient
+			o.BackupSpec.BackupMethod = testing.BackupMethodName
+			Expect(o.Validate()).Should(MatchError(fmt.Errorf("Cluster %s has multiple default backuprepos", o.Name)))
 
 			By("test with one default backupPolicy")
 			defaultRepo := testing.FakeBackupRepo("default-repo", true)

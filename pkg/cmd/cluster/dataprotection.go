@@ -219,17 +219,19 @@ func (o *CreateBackupOptions) Validate() error {
 			return err
 		}
 		if len(backupRepoList.Items) == 0 {
-			return fmt.Errorf("No backup repository found")
+			return fmt.Errorf("No backuprepo found")
 		}
-		existDefaultBackupRepo := false
+		var defaultBackupRepos []unstructured.Unstructured
 		for _, item := range backupRepoList.Items {
 			if item.GetAnnotations()[dptypes.DefaultBackupRepoAnnotationKey] == "true" {
-				existDefaultBackupRepo = true
-				break
+				defaultBackupRepos = append(defaultBackupRepos, item)
 			}
 		}
-		if !existDefaultBackupRepo {
-			return fmt.Errorf("No default backup repository exists")
+		if len(defaultBackupRepos) == 0 {
+			return fmt.Errorf("No default backuprepo exists")
+		}
+		if len(defaultBackupRepos) > 1 {
+			return fmt.Errorf("Cluster %s has multiple default backuprepos", o.Name)
 		}
 	}
 	// TODO: check if pvc exists
