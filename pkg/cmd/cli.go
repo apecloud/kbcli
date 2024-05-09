@@ -40,7 +40,6 @@ import (
 	"github.com/apecloud/kbcli/pkg/cmd/addon"
 	"github.com/apecloud/kbcli/pkg/cmd/alert"
 	"github.com/apecloud/kbcli/pkg/cmd/backuprepo"
-	"github.com/apecloud/kbcli/pkg/cmd/bench"
 	"github.com/apecloud/kbcli/pkg/cmd/cluster"
 	"github.com/apecloud/kbcli/pkg/cmd/clusterdefinition"
 	"github.com/apecloud/kbcli/pkg/cmd/clusterversion"
@@ -168,7 +167,6 @@ A Command Line Interface for KubeBlocks`,
 	cmd.AddCommand(
 		playground.NewPlaygroundCmd(ioStreams),
 		kubeblocks.NewKubeBlocksCmd(f, ioStreams),
-		bench.NewBenchCmd(f, ioStreams),
 		options.NewCmdOptions(ioStreams.Out),
 		version.NewVersionCmd(f),
 		dashboard.NewDashboardCmd(f, ioStreams),

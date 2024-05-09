@@ -253,8 +253,6 @@ github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be/go.mod h1:ySMOLuW
 github.com/antihax/optional v1.0.0/go.mod h1:uupD/76wgC+ih3iEmQUL+0Ugr19nfwCT1kdvxnR2qWY=
 github.com/antlr/antlr4/runtime/Go/antlr/v4 v4.0.0-20230305170008-8188dc5388df h1:7RFfzj4SSt6nnvCPbCqijJi1nWCd+TqAT3bYCStRC18=
 github.com/antlr/antlr4/runtime/Go/antlr/v4 v4.0.0-20230305170008-8188dc5388df/go.mod h1:pSwJ0fSY5KhvocuWSx4fz3BA8OrA1bQn+K1Eli3BRwM=
-github.com/apecloud/kubebench v0.0.0-20240327101848-6a031d3f4ebe h1:OFkCAToRcNt0VqgCndw0mw1Ke3P2XgRJLrXsNOyc3sQ=
-github.com/apecloud/kubebench v0.0.0-20240327101848-6a031d3f4ebe/go.mod h1:5IZiDkFdgiZRGLsL+FOlvPsiF9LbyU55DVj4/5vT7+4=
 github.com/apecloud/kubeblocks v0.9.0-beta.20 h1:F4t4BXH4E1AM7fV5EtdSoHiXBBn1EI6Eqe34+2w1BmY=
 github.com/apecloud/kubeblocks v0.9.0-beta.20/go.mod h1:RsLwGOD0SmBCoGjm+nyaWZQvyAJ2uELBL5pqg0fI1I4=
 github.com/apparentlymart/go-textseg v1.0.0/go.mod h1:z96Txxhf3xSFMPmb5X/1W05FF/Nj9VFpLOpjS5yuumk=
