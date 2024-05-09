@@ -41,22 +41,6 @@ BackupRepo command.
 * [kbcli backuprepo update](kbcli_backuprepo_update.md)	 - Update a backup repository.
 
 
-## [bench](kbcli_bench.md)
-
-Run a benchmark.
-
-* [kbcli bench delete](kbcli_bench_delete.md)	 - Delete a benchmark.
-* [kbcli bench describe](kbcli_bench_describe.md)	 - Describe a benchmark.
-* [kbcli bench list](kbcli_bench_list.md)	 - List all benchmarks.
-* [kbcli bench pgbench](kbcli_bench_pgbench.md)	 - Run pgbench against a PostgreSQL cluster
-* [kbcli bench redis-benchmark](kbcli_bench_redis-benchmark.md)	 - Run redis-benchmark on a cluster
-* [kbcli bench sysbench](kbcli_bench_sysbench.md)	 - run a SysBench benchmark
-* [kbcli bench tpcc](kbcli_bench_tpcc.md)	 - Run tpcc benchmark
-* [kbcli bench tpcds](kbcli_bench_tpcds.md)	 - Run TPC-DS benchmark
-* [kbcli bench tpch](kbcli_bench_tpch.md)	 - Run tpch benchmark
-* [kbcli bench ycsb](kbcli_bench_ycsb.md)	 - Run YCSB benchmark on a cluster
-
-
 ## [cluster](kbcli_cluster.md)
 
 Cluster command.
@@ -196,7 +180,7 @@ Provides utilities for interacting with plugins.
 
 ## [report](kbcli_report.md)
 
-report kubeblocks or cluster info.
+Report kubeblocks or cluster info.
 
 * [kbcli report cluster](kbcli_report_cluster.md)	 - Report Cluster information
 * [kbcli report kubeblocks](kbcli_report_kubeblocks.md)	 - Report KubeBlocks information, including deployments, events, logs, etc.

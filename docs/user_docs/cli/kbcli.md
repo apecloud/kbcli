@@ -57,7 +57,6 @@ kbcli [flags]
 * [kbcli addon](kbcli_addon.md)	 - Addon command.
 * [kbcli alert](kbcli_alert.md)	 - Manage alert receiver, include add, list and delete receiver.
 * [kbcli backuprepo](kbcli_backuprepo.md)	 - BackupRepo command.
-* [kbcli bench](kbcli_bench.md)	 - Run a benchmark.
 * [kbcli cluster](kbcli_cluster.md)	 - Cluster command.
 * [kbcli clusterdefinition](kbcli_clusterdefinition.md)	 - ClusterDefinition command.
 * [kbcli clusterversion](kbcli_clusterversion.md)	 - ClusterVersion command.
@@ -67,7 +66,7 @@ kbcli [flags]
 * [kbcli options](kbcli_options.md)	 - Print the list of flags inherited by all commands.
 * [kbcli playground](kbcli_playground.md)	 - Bootstrap or destroy a playground KubeBlocks in local host or cloud.
 * [kbcli plugin](kbcli_plugin.md)	 - Provides utilities for interacting with plugins.
-* [kbcli report](kbcli_report.md)	 - report kubeblocks or cluster info.
+* [kbcli report](kbcli_report.md)	 - Report kubeblocks or cluster info.
 * [kbcli version](kbcli_version.md)	 - Print the version information, include kubernetes, KubeBlocks and kbcli version.
 
 #### Go Back to [CLI Overview](cli.md) Homepage.
