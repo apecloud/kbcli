@@ -63,7 +63,6 @@ kbcli [flags]
 * [kbcli clusterversion](kbcli_clusterversion.md)	 - ClusterVersion command.
 * [kbcli dashboard](kbcli_dashboard.md)	 - List and open the KubeBlocks dashboards.
 * [kbcli dataprotection](kbcli_dataprotection.md)	 - Data protection command.
-* [kbcli fault](kbcli_fault.md)	 - Inject faults to pod.
 * [kbcli kubeblocks](kbcli_kubeblocks.md)	 - KubeBlocks operation commands.
 * [kbcli options](kbcli_options.md)	 - Print the list of flags inherited by all commands.
 * [kbcli playground](kbcli_playground.md)	 - Bootstrap or destroy a playground KubeBlocks in local host or cloud.
