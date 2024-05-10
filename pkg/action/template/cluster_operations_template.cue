@@ -24,6 +24,8 @@ options: {
 	typeLower:              string
 	ttlSecondsAfterSucceed: int
 	clusterVersionRef:      string
+	componentDefinitionName: string
+	serviceVersion: string
 	component:              string
 	instance:               string
 	componentNames: [...string]
@@ -76,6 +78,17 @@ options: {
 // define operation block,
 #upgrade: {
 	clusterVersionRef: options.clusterVersionRef
+	if len(options.componentNames) > 0 {
+	   components: [ for _, cName in options.componentNames {
+        				componentName: cName
+        				if options.componentDefinitionName != "nil" {
+        				  componentDefinitionName: options.componentDefinitionName
+        				}
+        				if options.serviceVersion != "nil" {
+                          serviceVersion: options.serviceVersion
+                        }
+        			}]
+	}
 }
 
 // required, k8s api resource content
