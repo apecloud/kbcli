@@ -206,6 +206,34 @@ func (o *CreateBackupOptions) Validate() error {
 			o.BackupSpec.BackupMethod, backupPolicy.Name, strings.Join(availableMethods, ", "))
 	}
 
+	// check if the backup repo exists in backup policy
+	backupRepoName := backupPolicy.Spec.BackupRepoName
+	if backupRepoName != nil {
+		_, err := o.Dynamic.Resource(types.BackupRepoGVR()).Get(context.Background(), *backupRepoName, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+	} else {
+		backupRepoList, err := o.Dynamic.Resource(types.BackupRepoGVR()).List(context.Background(), metav1.ListOptions{})
+		if err != nil {
+			return err
+		}
+		if len(backupRepoList.Items) == 0 {
+			return fmt.Errorf("No backuprepo found")
+		}
+		var defaultBackupRepos []unstructured.Unstructured
+		for _, item := range backupRepoList.Items {
+			if item.GetAnnotations()[dptypes.DefaultBackupRepoAnnotationKey] == "true" {
+				defaultBackupRepos = append(defaultBackupRepos, item)
+			}
+		}
+		if len(defaultBackupRepos) == 0 {
+			return fmt.Errorf("No default backuprepo exists")
+		}
+		if len(defaultBackupRepos) > 1 {
+			return fmt.Errorf("Cluster %s has multiple default backuprepos", o.Name)
+		}
+	}
 	// TODO: check if pvc exists
 
 	// valid retention period
