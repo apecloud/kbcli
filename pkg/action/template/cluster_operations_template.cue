@@ -17,38 +17,38 @@
 
 // required, command line input options for parameters and flags
 options: {
-	name:                   string
-	namespace:              string
-	opsRequestName:         string
-	type:                   string
-	typeLower:              string
-	ttlSecondsAfterSucceed: int
-	clusterVersionRef:      string
+	name:                    string
+	namespace:               string
+	opsRequestName:          string
+	type:                    string
+	typeLower:               string
+	ttlSecondsAfterSucceed:  int
+	clusterVersionRef:       string
 	componentDefinitionName: string
-	serviceVersion: string
-	component:              string
-	instance:               string
+	serviceVersion:          string
+	component:               string
+	instance:                string
 	componentNames: [...string]
 	rebuildInstanceFrom: [
-	  ...{
-	     componentName: string
-	     backupName?: string
-	     instances: [
-	       ...{
-	         name: string
-	         targetNodeName?: string
-	       }
-	     ]
-	     envForRestore?: [
-	       ...{
-	         name: string
-	         value: string
-	       },
-	     ]
-	  },
+		...{
+			componentName: string
+			backupName?:   string
+			instances: [
+				...{
+					name:            string
+					targetNodeName?: string
+				},
+			]
+			envForRestore?: [
+				...{
+					name:  string
+					value: string
+				},
+			]
+		},
 	]
-	cpu:    string
-	memory: string
+	cpu:      string
+	memory:   string
 	replicas: int
 	storage:  string
 	vctNames: [...string]
@@ -58,7 +58,7 @@ options: {
 	cfgTemplateName: string
 	cfgFile:         string
 	forceRestart:    bool
-	force: bool
+	force:           bool
 	services: [
 		...{
 			name:        string
@@ -68,7 +68,7 @@ options: {
 	]
 	params: [
 		...{
-			name: string
+			name:  string
 			value: string
 		},
 	]
@@ -79,15 +79,15 @@ options: {
 #upgrade: {
 	clusterVersionRef: options.clusterVersionRef
 	if len(options.componentNames) > 0 {
-	   components: [ for _, cName in options.componentNames {
-        				componentName: cName
-        				if options.componentDefinitionName != "nil" {
-        				  componentDefinitionName: options.componentDefinitionName
-        				}
-        				if options.serviceVersion != "nil" {
-                          serviceVersion: options.serviceVersion
-                        }
-        			}]
+		components: [ for _, cName in options.componentNames {
+			componentName: cName
+			if options.componentDefinitionName != "nil" {
+				componentDefinitionName: options.componentDefinitionName
+			}
+			if options.serviceVersion != "nil" {
+				serviceVersion: options.serviceVersion
+			}
+		}]
 	}
 }
 
@@ -109,10 +109,10 @@ content: {
 		}
 	}
 	spec: {
-		clusterName:             options.name
+		clusterName:            options.name
 		type:                   options.type
 		ttlSecondsAfterSucceed: options.ttlSecondsAfterSucceed
-		force: options.force
+		force:                  options.force
 		if options.type == "Upgrade" {
 			upgrade: #upgrade
 		}
@@ -240,18 +240,18 @@ content: {
 				}
 			}]
 		}
-        if options.type == "RebuildInstance" {
-            rebuildFrom: options.rebuildInstanceFrom
-        }
+		if options.type == "RebuildInstance" {
+			rebuildFrom: options.rebuildInstanceFrom
+		}
 		if options.type == "Custom" {
 			custom: {
-			    opsDefinitionName: options.opsDefinitionName
-			    components: [
-			       {
-			         componentName: options.component
-			         parameters: options.params
-			       }
-			    ]
+				opsDefinitionName: options.opsDefinitionName
+				components: [
+					{
+						componentName: options.component
+						parameters:    options.params
+					},
+				]
 			}
 		}
 	}
