@@ -146,7 +146,7 @@ var _ = Describe("operations", func() {
 		o.Namespace = testing.Namespace
 		o.Name = clusterName
 		o.OpsType = appsv1alpha1.UpgradeType
-		Expect(o.Validate()).To(MatchError("missing cluster-version"))
+		Expect(o.Validate()).To(MatchError("missing cluster-version or components"))
 
 		By("expect to validate success")
 		o.ClusterVersionRef = "test-cluster-version"
