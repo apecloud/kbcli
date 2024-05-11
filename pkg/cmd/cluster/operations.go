@@ -75,7 +75,9 @@ type OperationsOptions struct {
 	OpsTypeLower string `json:"typeLower"`
 
 	// Upgrade options
-	ClusterVersionRef string `json:"clusterVersionRef"`
+	ClusterVersionRef       string `json:"clusterVersionRef"`
+	ComponentDefinitionName string `json:"componentDefinitionName"`
+	ServiceVersion          string `json:"serviceVersion"`
 
 	// VerticalScaling options
 	CPU    string `json:"cpu"`
@@ -325,10 +327,13 @@ func (o *OperationsOptions) CompleteHaEnabled() {
 }
 
 func (o *OperationsOptions) validateUpgrade() error {
-	if len(o.ClusterVersionRef) == 0 {
-		return fmt.Errorf("missing cluster-version")
+	if len(o.ClusterVersionRef) > 0 {
+		return nil
 	}
-	return nil
+	if len(o.ComponentNames) > 0 {
+		return nil
+	}
+	return fmt.Errorf("missing cluster-version or components")
 }
 
 func (o *OperationsOptions) validateVolumeExpansion() error {
@@ -683,6 +688,8 @@ var upgradeExample = templates.Examples(`
 // NewUpgradeCmd creates an upgrade command
 func NewUpgradeCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
 	o := newBaseOperationsOptions(f, streams, appsv1alpha1.UpgradeType, false)
+	compDefFlag := "component-definition"
+	serviceVersionFlag := "service-version"
 	cmd := &cobra.Command{
 		Use:               "upgrade NAME",
 		Short:             "Upgrade the cluster version.",
@@ -697,8 +704,11 @@ func NewUpgradeCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 		},
 	}
 	o.addCommonFlags(cmd, f)
-	cmd.Flags().StringVar(&o.ClusterVersionRef, "cluster-version", "", "Reference cluster version (required)")
+	cmd.Flags().StringVar(&o.ClusterVersionRef, "cluster-version", "", "Referring to the ClusterVersion CR(deprecated)")
+	cmd.Flags().StringVar(&o.ComponentDefinitionName, compDefFlag, "nil", "Referring to the ComponentDefinition")
+	cmd.Flags().StringVar(&o.ServiceVersion, serviceVersionFlag, "nil", "Referring to the serviceVersion that is provided by ComponentDefinition and ComponentVersion")
 	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "Skip interactive approval before upgrading the cluster")
+	flags.AddComponentsFlag(f, cmd, &o.ComponentNames, "Component names to this operations")
 	return cmd
 }
 
