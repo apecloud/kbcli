@@ -167,12 +167,12 @@ func (r *configObserverOptions) printExplainConfigure(configSpecs configSpecsTyp
 	}
 
 	confSpec := tpl.ConfigConstraint.Spec
-	if confSpec.ConfigSchema == nil {
+	if confSpec.ParametersSchema == nil {
 		fmt.Printf("\n%s\n", fmt.Sprintf(notConfigSchemaPrompt, printer.BoldYellow(tplName)))
 		return nil
 	}
 
-	schema := confSpec.ConfigSchema.DeepCopy()
+	schema := confSpec.ParametersSchema.DeepCopy()
 	if schema.SchemaInJSON == nil {
 		if schema.CUE == "" {
 			fmt.Printf("\n%s\n", fmt.Sprintf(notConfigSchemaPrompt, printer.BoldYellow(tplName)))
