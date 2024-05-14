@@ -90,10 +90,10 @@ var _ = Describe("cluster update", func() {
 			fakeCluster := testing.FakeCluster("c1", "default")
 			fakeClusterDef := testing.FakeClusterDef()
 			tf.FakeDynamicClient = testing.FakeDynamicClient(fakeCluster, fakeClusterDef)
-			Expect(cmd.Flags().Set("monitor-enabled", "true")).Should(Succeed())
+			Expect(cmd.Flags().Set("disable-exporter", "false")).Should(Succeed())
 			Expect(o.CmdComplete(cmd, args)).Should(Succeed())
 			Expect(o.Complete()).Should(Succeed())
-			Expect(o.Patch).Should(ContainSubstring("\"monitorEnabled\":true"))
+			Expect(o.Patch).Should(ContainSubstring("\"disableExporter\":false"))
 		})
 
 		It("set enable-all-logs", func() {

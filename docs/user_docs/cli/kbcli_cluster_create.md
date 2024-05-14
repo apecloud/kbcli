@@ -110,13 +110,13 @@ kbcli cluster create [NAME] [flags]
       --cluster-version string                 Specify cluster version, run "kbcli cv list" to show all available cluster versions, use the latest version if not specified
       --cpu-oversell-ratio float               Set oversell ratio of CPU, set to 10 means 10 times oversell (default 1)
       --create-only-set                        Create components exclusively configured in 'set'
+      --disable-exporter                       Enable or disable monitoring (default true)
       --dry-run string[="unchanged"]           Must be "client", or "server". If with client strategy, only print the object that would be sent, and no data is actually sent. If with server strategy, submit the server-side request, but no data is persistent. (default "none")
       --edit                                   Edit the API resource before creating
       --enable-all-logs                        Enable advanced application all log extraction, set to true will ignore enabledLogs of component level, default is false
   -h, --help                                   help for create
       --label stringArray                      Set labels for cluster resources
       --memory-oversell-ratio float            Set oversell ratio of memory, set to 10 means 10 times oversell (default 1)
-      --monitor-enabled                        Enable or disable monitoring
       --node-labels stringToString             Node label selector (default [])
   -o, --output format                          Prints the output in the specified format. Allowed values: JSON and YAML (default yaml)
       --pitr-enabled                           Specify whether enabled point in time recovery

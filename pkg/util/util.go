@@ -619,11 +619,11 @@ func IsSupportReconfigureParams(tpl appsv1alpha1.ComponentConfigSpec, values map
 		return false, err
 	}
 
-	if configConstraint.Spec.ConfigSchema == nil {
+	if configConstraint.Spec.ParametersSchema == nil {
 		return true, nil
 	}
 
-	schema := configConstraint.Spec.ConfigSchema.DeepCopy()
+	schema := configConstraint.Spec.ParametersSchema.DeepCopy()
 	if schema.SchemaInJSON == nil {
 		schema.SchemaInJSON, err = openapi.GenerateOpenAPISchema(schema.CUE, schema.TopLevelKey)
 		if err != nil {
