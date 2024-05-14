@@ -32,7 +32,6 @@ kbcli cluster create postgresql NAME [flags]
       --rbac-enabled                 Specify whether rbac resources will be created by client, otherwise KubeBlocks server will try to create rbac resources.
       --replicas int                 The number of replicas, for standalone mode, the replicas is 1, for replication mode, the default replicas is 2. Value range [1, 5]. (default 1)
       --storage float                Storage size, the unit is Gi. Value range [1, 10000]. (default 20)
-      --storage-class-name string    Storage class name of the data volume
       --tenancy string               The tenancy of cluster. Legal values [SharedNode, DedicatedNode]. (default "SharedNode")
       --termination-policy string    The termination policy of cluster. Legal values [DoNotTerminate, Halt, Delete, WipeOut]. (default "Delete")
       --version string               Cluster version.
