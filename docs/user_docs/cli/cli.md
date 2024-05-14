@@ -19,17 +19,6 @@ Addon command.
 * [kbcli addon upgrade](kbcli_addon_upgrade.md)	 - Upgrade an existed addon to latest version or a specified version
 
 
-## [alert](kbcli_alert.md)
-
-Manage alert receiver, include add, list and delete receiver.
-
-* [kbcli alert add-receiver](kbcli_alert_add-receiver.md)	 - Add alert receiver, such as email, slack, webhook and so on.
-* [kbcli alert config-smtpserver](kbcli_alert_config-smtpserver.md)	 - Set smtp server config
-* [kbcli alert delete-receiver](kbcli_alert_delete-receiver.md)	 - Delete alert receiver.
-* [kbcli alert list-receivers](kbcli_alert_list-receivers.md)	 - List all alert receivers.
-* [kbcli alert list-smtpserver](kbcli_alert_list-smtpserver.md)	 - List alert smtp servers config.
-
-
 ## [backuprepo](kbcli_backuprepo.md)
 
 BackupRepo command.

@@ -23,11 +23,11 @@ kbcli cluster create mongodb NAME [flags]
 ```
       --availability-policy string   The availability policy of cluster. Legal values [none, node, zone]. (default "node")
       --cpu float                    CPU cores. Value range [0.5, 64]. (default 0.5)
+      --disable-exporter             Enable or disable monitor. (default true)
   -h, --help                         help for mongodb
       --host-network-accessible      Specify whether the cluster can be accessed from within the VPC.
       --memory float                 Memory, the unit is Gi. Value range [0.5, 1000]. (default 0.5)
       --mode string                  Cluster topology mode. Legal values [standalone, replicaset]. (default "standalone")
-      --monitor-enabled              Enable or disable monitor.
       --publicly-accessible          Specify whether the cluster can be accessed from the public internet.
       --rbac-enabled                 Specify whether rbac resources will be created by client, otherwise KubeBlocks server will try to create rbac resources.
       --replicas int                 The number of replicas, for standalone mode, the replicas is 1, for replicaset mode, the default replicas is 3. Value range [1, 5]. (default 1)
