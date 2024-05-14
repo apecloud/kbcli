@@ -25,6 +25,7 @@ import (
 	"net/http"
 	"time"
 
+	cfgutil "github.com/apecloud/kubeblocks/pkg/configuration/util"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -194,7 +195,7 @@ var _ = Describe("Expose", func() {
 		By("test describe Upgrade")
 		describeOps(appsv1alpha1.UpgradeType, func(ops *appsv1alpha1.OpsRequest) {
 			ops.Spec.Upgrade = &appsv1alpha1.Upgrade{
-				ClusterVersionRef: clusterVersionName,
+				ClusterVersionRef: cfgutil.ToPointer(clusterVersionName),
 			}
 		})
 

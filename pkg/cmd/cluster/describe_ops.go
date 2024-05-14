@@ -242,7 +242,7 @@ func (o *describeOpsOptions) getRestartCommand(spec appsv1alpha1.OpsRequestSpec)
 // getUpgradeCommand gets the command of the Upgrade OpsRequest.
 func (o *describeOpsOptions) getUpgradeCommand(spec appsv1alpha1.OpsRequestSpec) []string {
 	return []string{
-		fmt.Sprintf("kbcli cluster upgrade %s --cluster-version=%s", spec.GetClusterName(),
+		fmt.Sprintf("kbcli cluster upgrade %s --cluster-version=%v", spec.GetClusterName(),
 			spec.Upgrade.ClusterVersionRef),
 	}
 }
