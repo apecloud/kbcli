@@ -40,6 +40,7 @@ import (
 	cmdtesting "k8s.io/kubectl/pkg/cmd/testing"
 
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
+	cfgutil "github.com/apecloud/kubeblocks/pkg/configuration/util"
 
 	clitesting "github.com/apecloud/kbcli/pkg/testing"
 	"github.com/apecloud/kbcli/pkg/types"
@@ -194,7 +195,7 @@ var _ = Describe("Expose", func() {
 		By("test describe Upgrade")
 		describeOps(appsv1alpha1.UpgradeType, func(ops *appsv1alpha1.OpsRequest) {
 			ops.Spec.Upgrade = &appsv1alpha1.Upgrade{
-				ClusterVersionRef: clusterVersionName,
+				ClusterVersionRef: cfgutil.ToPointer(clusterVersionName),
 			}
 		})
 

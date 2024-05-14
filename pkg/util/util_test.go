@@ -205,14 +205,14 @@ var _ = Describe("util", func() {
 		configConstraintObj := testapps.NewCustomizedObj("resources/mysql-config-constraint.yaml",
 			&appsv1beta1.ConfigConstraint{}, testapps.WithNamespacedName(ccName, ""), func(cc *appsv1beta1.ConfigConstraint) {
 				if ccContext, err := testdata.GetTestDataFileContent("/cue_testdata/mysql_for_cli.cue"); err == nil {
-					cc.Spec.ConfigSchema = &appsv1beta1.ConfigSchema{
+					cc.Spec.ParametersSchema = &appsv1beta1.ParametersSchema{
 						CUE: string(ccContext),
 					}
 				}
 			})
 		badcaseCCObject := configConstraintObj.DeepCopy()
-		if badcaseCCObject.Spec.ConfigSchema != nil {
-			badcaseCCObject.Spec.ConfigSchema.TopLevelKey = "badcase"
+		if badcaseCCObject.Spec.ParametersSchema != nil {
+			badcaseCCObject.Spec.ParametersSchema.TopLevelKey = "badcase"
 		}
 		badcaseCCObject.SetName("badcase")
 

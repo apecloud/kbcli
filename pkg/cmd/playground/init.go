@@ -507,7 +507,7 @@ func (o *initOptions) createCluster() error {
 	c.Name = kbClusterName
 	c.UpdatableFlags = cmdcluster.UpdatableFlags{
 		TerminationPolicy: "WipeOut",
-		EnableMetrics:     false,
+		DisableExporter:   false,
 		PodAntiAffinity:   "Preferred",
 		Tenancy:           "SharedNode",
 	}
