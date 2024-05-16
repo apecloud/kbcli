@@ -61,14 +61,14 @@ func registerUpgradeHandler(fromVersions []string, toVersion string, upgradeHand
 
 	var majorMinorFromVersions []string
 	for _, v := range fromVersions {
-		majorMinorFromVersion := getMajorMinorVersion(v)
+		majorMinorFromVersion := GetMajorMinorVersion(v)
 		if majorMinorFromVersion == "" {
 			panic(formatErr(v))
 		}
 		majorMinorFromVersions = append(majorMinorFromVersions, majorMinorFromVersion)
 	}
 
-	majorMinorToVersion := getMajorMinorVersion(toVersion)
+	majorMinorToVersion := GetMajorMinorVersion(toVersion)
 	if majorMinorToVersion == "" {
 		panic(formatErr(toVersion))
 	}
@@ -80,8 +80,8 @@ func registerUpgradeHandler(fromVersions []string, toVersion string, upgradeHand
 
 // getUpgradeHandler gets the upgrade handler according to fromVersion and toVersion from upgradeHandlerMapper.
 func getUpgradeHandler(fromVersion, toVersion string) upgradeHandler {
-	majorMinorFromVersion := getMajorMinorVersion(fromVersion)
-	majorMinorToVersion := getMajorMinorVersion(toVersion)
+	majorMinorFromVersion := GetMajorMinorVersion(fromVersion)
+	majorMinorToVersion := GetMajorMinorVersion(toVersion)
 	handlerRecorder, ok := upgradeHandlerMapper[majorMinorToVersion]
 	if !ok {
 		return nil
@@ -123,7 +123,7 @@ func ValidateUpgradeVersion(fromVersion, toVersion string) error {
 	return nil
 }
 
-func getMajorMinorVersion(version string) string {
+func GetMajorMinorVersion(version string) string {
 	vs := strings.Split(version, ".")
 	if len(vs) < 2 {
 		return ""

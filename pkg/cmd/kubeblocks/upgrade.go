@@ -31,6 +31,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	apitypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
@@ -44,6 +45,7 @@ import (
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
 	"github.com/apecloud/kbcli/pkg/util/breakingchange"
+	"github.com/apecloud/kbcli/pkg/util/conversion"
 	"github.com/apecloud/kbcli/pkg/util/helm"
 	"github.com/apecloud/kbcli/pkg/util/prompt"
 )
@@ -205,11 +207,29 @@ func (o *InstallOptions) Upgrade() error {
 		return err
 	}
 
+	// save old version crs
+	conversionMeta := conversion.NewVersionConversion(o.Dynamic, o.OldVersion, o.Version)
+	s = spinner.New(o.Out, spinnerMsg("Conversion old version[%s] CRs to new version[%s]", o.OldVersion, o.Version))
+	defer s.Fail()
+	var unstructuredObjects []unstructured.Unstructured
+	if unstructuredObjects, err = conversion.FetchAndConversionResources(conversionMeta); err != nil {
+		return fmt.Errorf("conversion crs failed: %s", err.Error())
+	}
+	s.Success()
+
 	// create or update crds
 	s = spinner.New(o.Out, spinnerMsg("Upgrade CRDs"))
 	defer s.Fail()
 	if err = createOrUpdateCRDS(o.Dynamic, o.Version); err != nil {
 		return fmt.Errorf("upgrade crds failed: %s", err.Error())
+	}
+	s.Success()
+
+	// conversion new version crs
+	s = spinner.New(o.Out, spinnerMsg("update new version CRs"))
+	defer s.Fail()
+	if err = conversion.UpdateNewVersionResources(conversionMeta, unstructuredObjects); err != nil {
+		return fmt.Errorf("update new crs failed: %s", err.Error())
 	}
 	s.Success()
 
