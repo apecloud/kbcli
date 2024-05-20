@@ -409,6 +409,10 @@ func ConfigConstraintGVR() schema.GroupVersionResource {
 	return schema.GroupVersionResource{Group: AppsAPIGroup, Version: AppsAPIBetaVersion, Resource: ResourceConfigConstraintVersions}
 }
 
+func ConfigConstraintOldGVR() schema.GroupVersionResource {
+	return schema.GroupVersionResource{Group: AppsAPIGroup, Version: AppsAPIVersion, Resource: ResourceConfigConstraintVersions}
+}
+
 func StorageClassGVR() schema.GroupVersionResource {
 	return schema.GroupVersionResource{
 		Group:    "storage.k8s.io",
