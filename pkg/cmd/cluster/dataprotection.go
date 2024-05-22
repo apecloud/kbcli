@@ -425,7 +425,7 @@ func PrintBackupList(o ListBackupOptions) error {
 			}
 		}
 		if availableReplicas != nil {
-			statusString = fmt.Sprintf("%s(AvailablePods: %d)", statusString, availableReplicas)
+			statusString = fmt.Sprintf("%s(AvailablePods: %d)", statusString, *availableReplicas)
 		}
 		tbl.AddRow(backup.Name, backup.Namespace, sourceCluster, backup.Spec.BackupMethod, statusString, backup.Status.TotalSize,
 			durationStr, util.TimeFormat(&backup.CreationTimestamp), util.TimeFormat(backup.Status.CompletionTimestamp),
