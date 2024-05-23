@@ -5,7 +5,7 @@ title: kbcli cluster edit-config
 Edit the config file of the component.
 
 ```
-kbcli cluster edit-config NAME [--component=component-name] [--config-spec=config-spec-name] [--config-file=config-file] [flags]
+kbcli cluster edit-config NAME [--components=component-name] [--config-spec=config-spec-name] [--config-file=config-file] [flags]
 ```
 
 ### Examples

@@ -30,7 +30,7 @@ var (
 	missingClusterArgErrMassage        = "cluster name should be specified, using --help."
 	missingUpdatedParametersErrMessage = "missing updated parameters, using --help."
 
-	multiComponentsErrorMessage     = "when multi components exist, specify a component, using --component"
+	multiComponentsErrorMessage     = "when multi components exisst, specify a component, using --components"
 	multiConfigTemplateErrorMessage = "when multi config templates exist, specify a config template,  using --config-spec"
 	multiConfigFileErrorMessage     = "when multi config files exist, specify a config file, using --config-file"
 
