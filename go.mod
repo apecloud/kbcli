@@ -8,7 +8,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/StudioSol/set v1.0.0
 	github.com/apecloud/kubebench v0.0.0-20240103064917-92a20332c817
-	github.com/apecloud/kubeblocks v0.8.3-beta.11
+	github.com/apecloud/kubeblocks v0.8.4-beta.0
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
 	github.com/benbjohnson/clock v1.3.5
 	github.com/briandowns/spinner v1.23.0
