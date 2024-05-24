@@ -18,6 +18,8 @@ env:
   GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
   PASSPHRASE: ${{ secrets.PASSPHRASE }}
 
+run-name: Release KBCLI ${{ github.ref_name }}
+
 jobs:
   create-release-jihulab:
     if: ${{ ! contains(github.ref_name, 'v0.5.') && ! contains(github.ref_name, 'v0.6.') && ! contains(github.ref_name, 'v0.7.') }}
