@@ -59,6 +59,8 @@ func (e *embedConfig) getChartFileName() string {
 var (
 	// run `make generate` to generate this embed file
 	//go:embed charts/apecloud-mysql-cluster.tgz
+	apecloudmysqlChart embed.FS
+	//go:embed charts/mysql-cluster.tgz
 	mysqlChart embed.FS
 	//go:embed charts/postgresql-cluster.tgz
 	postgresqlChart embed.FS
@@ -84,12 +86,16 @@ func IsBuiltinCharts(clusterType ClusterType) bool {
 
 func init() {
 	embedChartConfigs := map[string]*embedConfig{
-		"mysql": {
-			chartFS: mysqlChart,
+		"apecloud-mysql": {
+			chartFS: apecloudmysqlChart,
 			name:    "apecloud-mysql-cluster.tgz",
 			alias:   "",
 		},
-
+		"mysql": {
+			chartFS: mysqlChart,
+			name:    "mysql-cluster.tgz",
+			alias:   "",
+		},
 		"postgresql": {
 			chartFS: postgresqlChart,
 			name:    "postgresql-cluster.tgz",

@@ -43,9 +43,7 @@ import (
 )
 
 var (
-	resetValFlagNames = []string{
-		cluster.VersionSchemaProp.String(),
-	}
+	resetValFlagNames = []string{}
 )
 
 // addCreateFlags adds the flags for creating a cluster, these flags are built by the cluster schema.

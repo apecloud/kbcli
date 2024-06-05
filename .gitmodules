@@ -1,4 +1,4 @@
 [submodule "addons"]
 	path = addons
 	url = https://github.com/apecloud/kubeblocks-addons.git
-    branch = main
+    branch = support/update-apecloud-mysql-for-kbcli
