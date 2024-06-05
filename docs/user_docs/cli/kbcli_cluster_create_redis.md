@@ -47,7 +47,7 @@ kbcli cluster create redis NAME [flags]
       --twemproxy.memory float            twemproxy component memory, the unit is Gi. Value range [0.1, 4]. (default 0.2)
       --twemproxy.replicas float          twemproxy component replicas Value range [1, 5]. (default 3)
       --use-legacy-comp-def               if useLegacyCompDef is false ,cluster will be rendered by compDef rather than componentDefRef in cluster definition
-      --version string                    Cluster version.
+      --version string                    Cluster version. (default "redis-7.0.6")
 ```
 
 ### Options inherited from parent commands
