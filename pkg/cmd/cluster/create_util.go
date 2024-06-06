@@ -20,7 +20,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package cluster
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -30,22 +29,12 @@ import (
 	"golang.org/x/exp/slices"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
-	utilcomp "k8s.io/kubectl/pkg/util/completion"
 	"k8s.io/kubectl/pkg/util/templates"
 	"sigs.k8s.io/yaml"
 
-	"github.com/apecloud/kubeblocks/pkg/constant"
-
 	"github.com/apecloud/kbcli/pkg/cluster"
-	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
 	"github.com/apecloud/kbcli/pkg/util/flags"
-)
-
-var (
-	resetValFlagNames = []string{
-		cluster.VersionSchemaProp.String(),
-	}
 )
 
 // addCreateFlags adds the flags for creating a cluster, these flags are built by the cluster schema.
@@ -64,12 +53,6 @@ func addCreateFlags(cmd *cobra.Command, f cmdutil.Factory, c *cluster.ChartInfo)
 		return err
 	}
 
-	// reset some flags default value, such as version, a suitable version will be chosen
-	// by cli if user doesn't specify the version
-	resetFlagsValue(cmd.Flags())
-
-	// register completion function for some generic flag
-	registerFlagCompFunc(cmd, f, c)
 	return nil
 }
 
@@ -102,32 +85,6 @@ func getValuesFromFlags(fs *flag.FlagSet) map[string]interface{} {
 		values[strcase.LowerCamelCase(f.Name)] = val
 	})
 	return values
-}
-
-// resetFlagsValue reset the default value of some flags
-func resetFlagsValue(fs *flag.FlagSet) {
-	fs.VisitAll(func(f *flag.Flag) {
-		for _, n := range resetValFlagNames {
-			if n == f.Name {
-				f.DefValue = ""
-				_ = f.Value.Set("")
-			}
-		}
-	})
-}
-
-func registerFlagCompFunc(cmd *cobra.Command, f cmdutil.Factory, c *cluster.ChartInfo) {
-	_ = cmd.RegisterFlagCompletionFunc(string(cluster.VersionSchemaProp),
-		func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-			var versions []string
-			if c != nil && c.ClusterDef != "" {
-				label := fmt.Sprintf("%s=%s", constant.ClusterDefLabelKey, c.ClusterDef)
-				versions = util.CompGetResourceWithLabels(f, cmd, util.GVRToString(types.ClusterVersionGVR()), []string{label}, toComplete)
-			} else {
-				versions = utilcomp.CompGetResource(f, util.GVRToString(types.ClusterVersionGVR()), toComplete)
-			}
-			return versions, cobra.ShellCompDirectiveNoFileComp
-		})
 }
 
 // buildCreateSubCmdsExamples builds the creation examples for the specified ClusterType type.

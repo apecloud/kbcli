@@ -40,7 +40,6 @@ import (
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 
 	"github.com/apecloud/kbcli/pkg/action"
-	"github.com/apecloud/kbcli/pkg/cluster"
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/testing"
 	"github.com/apecloud/kbcli/pkg/types"
@@ -48,7 +47,7 @@ import (
 
 var _ = Describe("create cluster by cluster type", func() {
 	const (
-		clusterType = "mysql"
+		clusterType = "apecloud-mysql"
 	)
 
 	var (
@@ -117,12 +116,8 @@ var _ = Describe("create cluster by cluster type", func() {
 		Expect(o.ChartInfo.ClusterDef).Should(Equal(apeCloudMysql))
 
 		By("validate")
-		o.ChartInfo.ClusterDef = testing.ClusterDefName
-		cv := testing.FakeClusterVersion()
-		o.Values[cluster.VersionSchemaProp.String()] = cv.Name
-		o.Dynamic = testing.FakeDynamicClient(testing.FakeClusterDef(), cv)
+		o.Dynamic = testing.FakeDynamicClient()
 		Expect(o.validate()).Should(Succeed())
-		Expect(o.Values[cluster.VersionSchemaProp.String()]).Should(Equal(testing.ClusterVersionName))
 
 		By("run")
 		o.DryRun = "client"

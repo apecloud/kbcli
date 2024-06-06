@@ -35,7 +35,7 @@ kbcli cluster create mongodb NAME [flags]
       --storage-class-name string    Storage class name of the data volume
       --tenancy string               The tenancy of cluster. Legal values [SharedNode, DedicatedNode]. (default "SharedNode")
       --termination-policy string    The termination policy of cluster. Legal values [DoNotTerminate, Halt, Delete, WipeOut]. (default "Delete")
-      --version string               Cluster version.
+      --version string               Cluster version. (default "mongodb-5.0.14")
 ```
 
 ### Options inherited from parent commands

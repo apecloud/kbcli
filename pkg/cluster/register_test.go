@@ -31,7 +31,7 @@ import (
 var _ = Describe("cluster register", func() {
 	It("test builtin chart", func() {
 		mysql := &embedConfig{
-			chartFS: mysqlChart,
+			chartFS: apecloudmysqlChart,
 			name:    "apecloud-mysql-cluster.tgz",
 			alias:   "",
 		}

@@ -46,7 +46,7 @@ kbcli cluster create kafka NAME [flags]
       --storage-enable               Enable storage for Kafka.
       --tenancy string               The tenancy of cluster. Legal values [SharedNode, DedicatedNode]. (default "SharedNode")
       --termination-policy string    The termination policy of cluster. Legal values [DoNotTerminate, Halt, Delete, WipeOut]. (default "Delete")
-      --version string               Cluster version.
+      --version string               Cluster version. (default "kafka-3.3.2")
 ```
 
 ### Options inherited from parent commands
