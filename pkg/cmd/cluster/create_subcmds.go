@@ -155,9 +155,6 @@ func (o *CreateSubCmdsOptions) complete(cmd *cobra.Command) error {
 }
 
 func (o *CreateSubCmdsOptions) validate() error {
-	if err := o.validateVersion(); err != nil {
-		return err
-	}
 	return cluster.ValidateValues(o.ChartInfo, o.Values)
 }
 
@@ -242,28 +239,25 @@ func (o *CreateSubCmdsOptions) Run() error {
 
 func (o *CreateSubCmdsOptions) validateVersion() error {
 	var err error
-	cv, ok := o.Values[cluster.VersionSchemaProp.String()].(string)
-	if ok && cv != "" {
-		if err = cluster.ValidateClusterVersion(o.Dynamic, o.ChartInfo.ClusterDef, cv); err == nil {
+	version, ok := o.Values[cluster.VersionSchemaProp.String()].(string)
+	if ok && version != "" {
+		if err = cluster.ValidateClusterVersionByComponentDef(o.Dynamic, o.ChartInfo.ComponentDef, version); err == nil {
 			return nil
 		}
-		if err = cluster.ValidateClusterVersionByComponentDef(o.Dynamic, o.ChartInfo.ComponentDef, cv); err == nil {
-			return nil
-		}
-		return fmt.Errorf("cluster version \"%s\" does not exist", cv)
+		return fmt.Errorf("cluster version \"%s\" does not exist", version)
 	}
 	if o.ChartInfo.ClusterDef != "" {
-		cv, _ = cluster.GetDefaultVersion(o.Dynamic, o.ChartInfo.ClusterDef)
+		version, _ = cluster.GetDefaultVersion(o.Dynamic, o.ChartInfo.ClusterDef)
 	}
 	if len(o.ChartInfo.ComponentDef) != 0 {
-		cv, _ = cluster.GetDefaultVersionByCompDefs(o.Dynamic, o.ChartInfo.ComponentDef)
+		version, _ = cluster.GetDefaultVersionByCompDefs(o.Dynamic, o.ChartInfo.ComponentDef)
 	}
-	if cv == "" {
+	if version == "" {
 		return fmt.Errorf(": failed to find default cluster version referencing cluster definition or component definition")
 	}
 
 	// set cluster version
-	o.Values[cluster.VersionSchemaProp.String()] = cv
+	o.Values[cluster.VersionSchemaProp.String()] = version
 
 	dryRun, err := o.GetDryRunStrategy()
 	if err != nil {
@@ -274,7 +268,7 @@ func (o *CreateSubCmdsOptions) validateVersion() error {
 		return nil
 	}
 
-	fmt.Fprintf(o.Out, "Info: --version is not specified, %s is applied by default.\n", cv)
+	fmt.Fprintf(o.Out, "Info: --version is not specified, %s is applied by default.\n", version)
 	return nil
 }
 
