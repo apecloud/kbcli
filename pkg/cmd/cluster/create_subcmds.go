@@ -237,41 +237,6 @@ func (o *CreateSubCmdsOptions) Run() error {
 	return nil
 }
 
-func (o *CreateSubCmdsOptions) validateVersion() error {
-	var err error
-	version, ok := o.Values[cluster.VersionSchemaProp.String()].(string)
-	if ok && version != "" {
-		if err = cluster.ValidateClusterVersionByComponentDef(o.Dynamic, o.ChartInfo.ComponentDef, version); err == nil {
-			return nil
-		}
-		return fmt.Errorf("cluster version \"%s\" does not exist", version)
-	}
-	if o.ChartInfo.ClusterDef != "" {
-		version, _ = cluster.GetDefaultVersion(o.Dynamic, o.ChartInfo.ClusterDef)
-	}
-	if len(o.ChartInfo.ComponentDef) != 0 {
-		version, _ = cluster.GetDefaultVersionByCompDefs(o.Dynamic, o.ChartInfo.ComponentDef)
-	}
-	if version == "" {
-		return fmt.Errorf(": failed to find default cluster version referencing cluster definition or component definition")
-	}
-
-	// set cluster version
-	o.Values[cluster.VersionSchemaProp.String()] = version
-
-	dryRun, err := o.GetDryRunStrategy()
-	if err != nil {
-		return err
-	}
-	// if dryRun is set, run in quiet mode, avoid to output yaml file with the info
-	if dryRun != action.DryRunNone {
-		return nil
-	}
-
-	fmt.Fprintf(o.Out, "Info: --version is not specified, %s is applied by default.\n", version)
-	return nil
-}
-
 // getObjectsInfo returns all objects in helm charts along with their GVK information.
 func (o *CreateSubCmdsOptions) getObjectsInfo() ([]*objectInfo, error) {
 	// move values that belong to sub chart to sub map
