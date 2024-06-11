@@ -71,11 +71,12 @@ type Options struct {
 	HelmCfg *helm.Config
 
 	// Namespace is the current namespace the command running in
-	Namespace string
-	Client    kubernetes.Interface
-	Dynamic   dynamic.Interface
-	Timeout   time.Duration
-	Wait      bool
+	Namespace  string
+	Client     kubernetes.Interface
+	Dynamic    dynamic.Interface
+	Timeout    time.Duration
+	Wait       bool
+	WaitAddons bool
 }
 
 type InstallOptions struct {
@@ -159,6 +160,7 @@ func newInstallCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 	cmd.Flags().BoolVar(&o.Check, "check", true, "Check kubernetes environment before installation")
 	cmd.Flags().DurationVar(&o.Timeout, "timeout", 300*time.Second, "Time to wait for installing KubeBlocks, such as --timeout=10m")
 	cmd.Flags().BoolVar(&o.Wait, "wait", true, "Wait for KubeBlocks to be ready, including all the auto installed add-ons. It will wait for a --timeout period")
+	cmd.Flags().BoolVar(&o.WaitAddons, "wait-addons", true, "Wait for auto installed add-ons. It will wait for a --timeout period")
 	cmd.Flags().BoolVar(&p.force, flagForce, p.force, "If present, just print fail item and continue with the following steps")
 	cmd.Flags().StringVar(&o.PodAntiAffinity, "pod-anti-affinity", "", "Pod anti-affinity type, one of: (Preferred, Required)")
 	cmd.Flags().StringArrayVar(&o.TopologyKeys, "topology-keys", nil, "Topology keys for affinity")
@@ -345,7 +347,7 @@ You can check the KubeBlocks status by running "kbcli kubeblocks status"
 
 // waitAddonsEnabled waits for auto-install addons status to be enabled
 func (o *InstallOptions) waitAddonsEnabled() error {
-	if !o.Wait {
+	if !o.Wait || !o.WaitAddons {
 		return nil
 	}
 
