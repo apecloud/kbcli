@@ -38,6 +38,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	clientfake "k8s.io/client-go/rest/fake"
 	cmdtesting "k8s.io/kubectl/pkg/cmd/testing"
+	"k8s.io/utils/pointer"
 
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	cfgutil "github.com/apecloud/kubeblocks/pkg/configuration/util"
@@ -239,7 +240,7 @@ var _ = Describe("Expose", func() {
 					ComponentOps: appsv1alpha1.ComponentOps{
 						ComponentName: componentName,
 					},
-					Replicas: 1,
+					Replicas: pointer.Int32(1),
 				},
 			}
 		})

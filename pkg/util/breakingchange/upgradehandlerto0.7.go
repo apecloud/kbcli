@@ -462,7 +462,7 @@ func (u *upgradeHandlerTo7) transformStatefulSet(dynamic dynamic.Interface, obj 
 		return nil
 	}
 	// create a rsm
-	serviceName, _, _ := unstructured.NestedString(obj.Object, "spec", "serviceName")
+	// serviceName, _, _ := unstructured.NestedString(obj.Object, "spec", "serviceName")
 	matchLabels, _, _ := unstructured.NestedStringMap(obj.Object, "spec", "selector", "matchLabels")
 	replicas, _, _ := unstructured.NestedInt64(obj.Object, "spec", "replicas")
 	podManagementPolicy, _, _ := unstructured.NestedString(obj.Object, "spec", "podManagementPolicy")
@@ -485,7 +485,7 @@ func (u *upgradeHandlerTo7) transformStatefulSet(dynamic dynamic.Interface, obj 
 	rsm := builder.NewInstanceSetBuilder(obj.GetNamespace(), obj.GetName()).
 		AddAnnotationsInMap(obj.GetAnnotations()).
 		AddLabelsInMap(obj.GetLabels()).
-		SetServiceName(serviceName).
+		// SetServiceName(serviceName).
 		AddMatchLabelsInMap(matchLabels).
 		SetReplicas(int32(replicas)).
 		SetPodManagementPolicy(v1.PodManagementPolicyType(podManagementPolicy)).
