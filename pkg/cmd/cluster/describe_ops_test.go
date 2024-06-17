@@ -239,7 +239,7 @@ var _ = Describe("Expose", func() {
 					ComponentOps: appsv1alpha1.ComponentOps{
 						ComponentName: componentName,
 					},
-					Replicas: 1,
+					Replicas: cfgutil.ToPointer[int32](1),
 				},
 			}
 		})
