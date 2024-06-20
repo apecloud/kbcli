@@ -309,10 +309,13 @@ func (o *describeOptions) getBackupRecoverableTime() (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
+	isTimeInRange := func(t metav1.Time, start *metav1.Time, end *metav1.Time) bool {
+		return !t.Before(start) && !t.After(end.Time)
+	}
 	sortBackup(fullBackups, false)
 	for _, backup := range fullBackups {
 		completeTime := backup.GetEndTime()
-		if completeTime != nil && !completeTime.Before(continuousBackup.GetStartTime()) {
+		if completeTime != nil && isTimeInRange(*completeTime, continuousBackup.GetStartTime(), continuousBackup.GetEndTime()) {
 			return fmt.Sprintf("%s ~ %s", util.TimeFormatWithDuration(completeTime, time.Second),
 				util.TimeFormatWithDuration(continuousBackup.GetEndTime(), time.Second)), continuousBackup.Spec.BackupMethod, nil
 		}
