@@ -32,6 +32,10 @@ type VersionConversionMeta struct {
 	ToVersion   string
 }
 
+func (version VersionConversionMeta) NeedConversion() bool {
+	return version.FromVersion != version.ToVersion
+}
+
 func NewVersionConversion(dynamic dynamic.Interface, fromVersion, toVersion string) *VersionConversionMeta {
 	return &VersionConversionMeta{
 		Ctx:         context.Background(),

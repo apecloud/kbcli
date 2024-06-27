@@ -34,6 +34,7 @@ import (
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	utilcomp "k8s.io/kubectl/pkg/util/completion"
 	"k8s.io/kubectl/pkg/util/templates"
+	ctrl "sigs.k8s.io/controller-runtime"
 
 	viper "github.com/apecloud/kubeblocks/pkg/viperx"
 
@@ -197,8 +198,12 @@ A Command Line Interface for KubeBlocks`,
 	utilcomp.SetFactoryForCompletion(f)
 	registerCompletionFuncForGlobalFlags(cmd, f)
 
-	cobra.OnInitialize(initConfig)
+	cobra.OnInitialize(initConfig, initLog)
 	return cmd
+}
+
+func initLog() {
+	ctrl.SetLogger(klog.NewKlogr())
 }
 
 // initConfig reads in config file and ENV variables if set.
