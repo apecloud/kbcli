@@ -262,11 +262,8 @@ func checkAndPatchCCRequiredFields(dynamic dynamic.Interface, object *unstructur
 	}
 
 	_, found, err := unstructured.NestedString(object.Object, "spec", "fileFormatConfig", "format")
-	if err != nil {
+	if err != nil || found {
 		return err
-	}
-	if found {
-		return nil
 	}
 
 	patchBytes, _ := json.Marshal(patchData)
