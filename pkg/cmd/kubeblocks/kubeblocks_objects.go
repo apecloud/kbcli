@@ -21,6 +21,7 @@ package kubeblocks
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -34,6 +35,7 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	extensionsv1alpha1 "github.com/apecloud/kubeblocks/apis/extensions/v1alpha1"
 	"github.com/apecloud/kubeblocks/pkg/constant"
@@ -233,6 +235,14 @@ func deleteObjects(dynamic dynamic.Interface, gvr schema.GroupVersionResource, o
 			continue
 		}
 
+		// hack delete configconstraint cr
+		if gvr == types.ConfigConstraintGVR() {
+			klog.V(1).Infof("process configconstraints v1beta1 cr: %s", s.GetName())
+			if err := checkAndPatchCCRequiredFields(dynamic, &s); err != nil {
+				return err
+			}
+		}
+
 		klog.V(1).Infof("remove finalizers of %s %s", gvr.String(), s.GetName())
 		if _, err := dynamic.Resource(gvr).Namespace(s.GetNamespace()).Patch(context.TODO(), s.GetName(), k8sapitypes.JSONPatchType,
 			[]byte("[{\"op\": \"remove\", \"path\": \"/metadata/finalizers\"}]"), metav1.PatchOptions{}); err != nil && !apierrors.IsNotFound(err) {
@@ -240,6 +250,33 @@ func deleteObjects(dynamic dynamic.Interface, gvr schema.GroupVersionResource, o
 		}
 	}
 	return nil
+}
+
+func checkAndPatchCCRequiredFields(dynamic dynamic.Interface, object *unstructured.Unstructured) error {
+	patchData := map[string]interface{}{
+		"spec": map[string]interface{}{
+			"fileFormatConfig": map[string]interface{}{
+				"format": "yaml",
+			},
+		},
+	}
+
+	_, found, err := unstructured.NestedString(object.Object, "spec", "fileFormatConfig", "format")
+	if err != nil {
+		return err
+	}
+	if found {
+		return nil
+	}
+
+	patchBytes, _ := json.Marshal(patchData)
+	_, err = dynamic.Resource(types.ConfigConstraintGVR()).Patch(context.TODO(),
+		object.GetName(),
+		k8sapitypes.MergePatchType,
+		patchBytes,
+		metav1.PatchOptions{},
+	)
+	return client.IgnoreNotFound(err)
 }
 
 func getRemainedResource(objs kbObjects) map[string][]string {
