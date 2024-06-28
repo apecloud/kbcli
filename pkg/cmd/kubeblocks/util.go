@@ -67,7 +67,10 @@ func getGVRByCRD(crd *unstructured.Unstructured) (*schema.GroupVersionResource, 
 
 func getVersionFromCRD(crd *unstructured.Unstructured) string {
 	versions, found, err := unstructured.NestedFieldNoCopy(crd.Object, "spec", "versions")
-	if err != nil || !found {
+	if err != nil || !found || versions == nil {
+		return types.AppsAPIVersion
+	}
+	if _, ok := versions.([]interface{}); !ok {
 		return types.AppsAPIVersion
 	}
 
