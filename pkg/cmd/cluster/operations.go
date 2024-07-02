@@ -613,6 +613,14 @@ func (o *OperationsOptions) validateExpose() error {
 		return fmt.Errorf("invalid expose type %q", o.ExposeType)
 	}
 
+	if o.ExposeSubType != "" {
+		switch o.ExposeSubType {
+		case "", util.LoadBalancer, util.NodePort:
+		default:
+			return fmt.Errorf("invalid expose subtype %q", o.ExposeSubType)
+		}
+	}
+
 	switch strings.ToLower(o.ExposeEnabled) {
 	case util.EnableValue, util.DisableValue:
 	default:
