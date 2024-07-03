@@ -64,6 +64,7 @@ options: {
 			name:        string
 			serviceType: string
 			annotations: {...}
+			roleSelector?: string
 		},
 	]
 	params: [
@@ -219,6 +220,9 @@ content: {
 					serviceType: svc.serviceType
 					if len(svc.annotations) > 0 {
 						annotations: svc.annotations
+					}
+					if len(svc.roleSelector) > 0 {
+						roleSelector: svc.roleSelector
 					}
 
 				}]
