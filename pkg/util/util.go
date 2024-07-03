@@ -566,6 +566,81 @@ func GetResourceObjectFromGVR(gvr schema.GroupVersionResource, key client.Object
 	return apiruntime.DefaultUnstructuredConverter.FromUnstructured(unstructuredObj.Object, k8sObj)
 }
 
+func GetDefaultRoleSelector(cli dynamic.Interface,
+	cluster *appsv1alpha1.Cluster,
+	compDefName string,
+	clusterCompDefRefName string) (string, error) {
+	if len(compDefName) > 0 {
+		compDef, err := GetCompDefByName(cli, compDefName)
+		if err != nil {
+			return "", err
+		}
+		if len(compDef.Spec.Roles) == 0 {
+			return "", nil
+		}
+		for _, role := range compDef.Spec.Roles {
+			if role.Writable && role.Serviceable {
+				return role.Name, nil
+			}
+		}
+		return "", nil
+	}
+	if cluster.Spec.ClusterDefRef != "" && clusterCompDefRefName != "" {
+		clusterDef, err := GetClusterDefByName(cli, cluster.Spec.ClusterDefRef)
+		if err != nil {
+			return "", err
+		}
+		clusterCompDef := clusterDef.GetComponentDefByName(clusterCompDefRefName)
+		if clusterCompDef == nil {
+			return "", fmt.Errorf("referenced cluster component definition is not defined: %s", clusterCompDefRefName)
+		}
+		switch clusterCompDef.WorkloadType {
+		case appsv1alpha1.Replication:
+			return constant.Primary, nil
+		case appsv1alpha1.Consensus:
+			if clusterCompDef.ConsensusSpec != nil {
+				return clusterCompDef.ConsensusSpec.Leader.Name, nil
+			}
+			return constant.Leader, nil
+		case appsv1alpha1.Stateful:
+			if clusterCompDef.RSMSpec != nil {
+				for _, role := range clusterCompDef.RSMSpec.Roles {
+					if role.IsLeader {
+						return role.Name, nil
+					}
+				}
+			}
+		}
+	}
+	return "", nil
+}
+
+// GetCompDefByName gets the ComponentDefinition object by the name.
+func GetCompDefByName(cli dynamic.Interface, compDefName string) (*appsv1alpha1.ComponentDefinition, error) {
+	compDef := &appsv1alpha1.ComponentDefinition{}
+	compDefKey := client.ObjectKey{
+		Namespace: "",
+		Name:      compDefName,
+	}
+	if err := GetResourceObjectFromGVR(types.ClusterDefGVR(), compDefKey, cli, &compDef); err != nil {
+		return nil, err
+	}
+	return compDef, nil
+}
+
+// GetClusterDefByName gets the ClusterDefinition object by the name.
+func GetClusterDefByName(cli dynamic.Interface, clusterDefName string) (*appsv1alpha1.ClusterDefinition, error) {
+	clusterDef := &appsv1alpha1.ClusterDefinition{}
+	clusterDefKey := client.ObjectKey{
+		Namespace: "",
+		Name:      clusterDefName,
+	}
+	if err := GetResourceObjectFromGVR(types.ClusterDefGVR(), clusterDefKey, cli, &clusterDef); err != nil {
+		return nil, err
+	}
+	return clusterDef, nil
+}
+
 // GetComponentsFromResource returns name of component.
 func GetComponentsFromResource(namespace, clusterName string, componentSpecs []appsv1alpha1.ClusterComponentSpec, cli dynamic.Interface) ([]string, error) {
 	componentNames := make([]string, 0, len(componentSpecs))
@@ -748,6 +823,9 @@ type ExposeType string
 const (
 	ExposeToVPC      ExposeType = "vpc"
 	ExposeToInternet ExposeType = "internet"
+
+	NodePort     string = "NodePort"
+	LoadBalancer string = "LoadBalancer"
 
 	EnableValue  string = "true"
 	DisableValue string = "false"
