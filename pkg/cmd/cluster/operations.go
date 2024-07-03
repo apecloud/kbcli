@@ -613,12 +613,10 @@ func (o *OperationsOptions) validateExpose() error {
 		return fmt.Errorf("invalid expose type %q", o.ExposeType)
 	}
 
-	if o.ExposeSubType != "" {
-		switch o.ExposeSubType {
-		case "", util.LoadBalancer, util.NodePort:
-		default:
-			return fmt.Errorf("invalid expose subtype %q", o.ExposeSubType)
-		}
+	switch o.ExposeSubType {
+	case util.LoadBalancer, util.NodePort:
+	default:
+		return fmt.Errorf("invalid expose subtype %q", o.ExposeSubType)
 	}
 
 	switch strings.ToLower(o.ExposeEnabled) {
@@ -644,6 +642,14 @@ func (o *OperationsOptions) fillExpose() error {
 		return err
 	}
 
+	if len(o.ComponentNames) == 0 {
+		return fmt.Errorf("there are multiple components in cluster, please use --components to specify the component for expose")
+	}
+	if len(o.ComponentNames) > 1 {
+		return fmt.Errorf("only one component can be exposed at a time")
+	}
+	componentName := o.ComponentNames[0]
+
 	// default expose to internet
 	exposeType := util.ExposeType(o.ExposeType)
 	if exposeType == "" {
@@ -655,22 +661,15 @@ func (o *OperationsOptions) fillExpose() error {
 		return err
 	}
 
-	if o.Component == "" {
-		if len(clusterObj.Spec.ComponentSpecs) > 1 {
-			return fmt.Errorf("there are multiple components in cluster, please use --component to specify the component for promote")
-		}
-		o.Component = clusterObj.Spec.ComponentSpecs[0].Name
-	}
-
 	var componentSpec *appsv1alpha1.ClusterComponentSpec
 	for _, compSpec := range clusterObj.Spec.ComponentSpecs {
-		if compSpec.Name == o.Component {
+		if compSpec.Name == componentName {
 			componentSpec = &compSpec
 			break
 		}
 	}
 	if componentSpec == nil {
-		return fmt.Errorf("component %s not found", o.Component)
+		return fmt.Errorf("component %s not found", componentName)
 	}
 
 	annotations, err := util.GetExposeAnnotations(provider, exposeType)
