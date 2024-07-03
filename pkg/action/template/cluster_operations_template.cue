@@ -221,9 +221,7 @@ content: {
 					if len(svc.annotations) > 0 {
 						annotations: svc.annotations
 					}
-					if len(svc.roleSelector) > 0 {
-						roleSelector: svc.roleSelector
-					}
+					roleSelector: *svc.roleSelector | ""
 
 				}]
 			}]
