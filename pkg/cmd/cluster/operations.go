@@ -625,10 +625,6 @@ func (o *OperationsOptions) validateExpose() error {
 		return fmt.Errorf("invalid value for enable flag: %s", o.ExposeEnabled)
 	}
 
-	if util.ExposeType(o.ExposeType) == util.ExposeToInternet && o.ExposeSubType != "" {
-		return fmt.Errorf("expose subtype is not supported for expose to internet")
-	}
-
 	return nil
 }
 
