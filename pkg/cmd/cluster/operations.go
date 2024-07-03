@@ -688,9 +688,12 @@ func (o *OperationsOptions) fillExpose() error {
 		svc.ServiceType = corev1.ServiceTypeLoadBalancer
 	}
 
-	svc.RoleSelector, err = util.GetDefaultRoleSelector(o.Dynamic, clusterObj, componentSpec.ComponentDef, componentSpec.ComponentDefRef)
+	roleSelector, err := util.GetDefaultRoleSelector(o.Dynamic, clusterObj, componentSpec.ComponentDef, componentSpec.ComponentDefRef)
 	if err != nil {
 		return err
+	}
+	if len(roleSelector) > 0 {
+		svc.RoleSelector = roleSelector
 	}
 	o.Services = append(o.Services, svc)
 	return nil
