@@ -622,7 +622,7 @@ func GetCompDefByName(cli dynamic.Interface, compDefName string) (*appsv1alpha1.
 		Namespace: "",
 		Name:      compDefName,
 	}
-	if err := GetResourceObjectFromGVR(types.ClusterDefGVR(), compDefKey, cli, &compDef); err != nil {
+	if err := GetResourceObjectFromGVR(types.CompDefGVR(), compDefKey, cli, &compDef); err != nil {
 		return nil, err
 	}
 	return compDef, nil
