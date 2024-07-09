@@ -595,6 +595,11 @@ func (o *InstallOptions) buildChart() *helm.InstallOpts {
 	}
 }
 
+func (o *InstallOptions) disableHelmPreHookJob() {
+	// disable kubeblocks helm pre hook job
+	o.ValueOpts.Values = append(o.ValueOpts.Values, "crd.enabled=false")
+}
+
 func versionExists(version string) (bool, error) {
 	if version == "" {
 		return true, nil
