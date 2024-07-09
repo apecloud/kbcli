@@ -239,6 +239,7 @@ func (o *InstallOptions) Upgrade() error {
 
 	s = spinner.New(o.Out, spinnerMsg("Upgrading KubeBlocks "+msg))
 	defer s.Fail()
+	o.disableHelmPreHookJob()
 	// upgrade KubeBlocks chart
 	if err = o.upgradeChart(); err != nil {
 		return err
