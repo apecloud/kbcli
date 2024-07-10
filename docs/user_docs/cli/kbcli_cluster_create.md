@@ -161,6 +161,7 @@ kbcli cluster create [NAME] [flags]
 ### SEE ALSO
 
 * [kbcli cluster](kbcli_cluster.md)	 - Cluster command.
+* [kbcli cluster create apecloud-mysql](kbcli_cluster_create_apecloud-mysql.md)	 - Create a apecloud-mysql cluster.
 * [kbcli cluster create elasticsearch](kbcli_cluster_create_elasticsearch.md)	 - Create a elasticsearch cluster.
 * [kbcli cluster create kafka](kbcli_cluster_create_kafka.md)	 - Create a kafka cluster.
 * [kbcli cluster create llm](kbcli_cluster_create_llm.md)	 - Create a llm cluster.
