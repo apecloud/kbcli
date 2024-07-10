@@ -208,14 +208,16 @@ func (o *InstallOptions) Upgrade() error {
 	}
 
 	// save old version crs
-	conversionMeta := conversion.NewVersionConversion(o.Dynamic, o.OldVersion, o.Version)
-	s = spinner.New(o.Out, spinnerMsg("Conversion old version[%s] CRs to new version[%s]", o.OldVersion, o.Version))
-	defer s.Fail()
 	var unstructuredObjects []unstructured.Unstructured
-	if unstructuredObjects, err = conversion.FetchAndConversionResources(conversionMeta); err != nil {
-		return fmt.Errorf("conversion crs failed: %s", err.Error())
+	conversionMeta := conversion.NewVersionConversion(o.Dynamic, o.OldVersion, o.Version)
+	if conversionMeta.NeedConversion() {
+		s = spinner.New(o.Out, spinnerMsg("Conversion old version[%s] CRs to new version[%s]", o.OldVersion, o.Version))
+		defer s.Fail()
+		if unstructuredObjects, err = conversion.FetchAndConversionResources(conversionMeta); err != nil {
+			return fmt.Errorf("conversion crs failed: %s", err.Error())
+		}
+		s.Success()
 	}
-	s.Success()
 
 	// create or update crds
 	s = spinner.New(o.Out, spinnerMsg("Upgrade CRDs"))
@@ -226,15 +228,18 @@ func (o *InstallOptions) Upgrade() error {
 	s.Success()
 
 	// conversion new version crs
-	s = spinner.New(o.Out, spinnerMsg("update new version CRs"))
-	defer s.Fail()
-	if err = conversion.UpdateNewVersionResources(conversionMeta, unstructuredObjects); err != nil {
-		return fmt.Errorf("update new crs failed: %s", err.Error())
+	if conversionMeta.NeedConversion() {
+		s = spinner.New(o.Out, spinnerMsg("update new version CRs"))
+		defer s.Fail()
+		if err = conversion.UpdateNewVersionResources(conversionMeta, unstructuredObjects); err != nil {
+			return fmt.Errorf("update new crs failed: %s", err.Error())
+		}
+		s.Success()
 	}
-	s.Success()
 
 	s = spinner.New(o.Out, spinnerMsg("Upgrading KubeBlocks "+msg))
 	defer s.Fail()
+	o.disableHelmPreHookJob()
 	// upgrade KubeBlocks chart
 	if err = o.upgradeChart(); err != nil {
 		return err

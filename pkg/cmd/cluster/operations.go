@@ -101,6 +101,7 @@ type OperationsOptions struct {
 
 	// Expose options
 	ExposeType    string                    `json:"-"`
+	ExposeSubType string                    `json:"-"`
 	ExposeEnabled string                    `json:"exposeEnabled,omitempty"`
 	Services      []appsv1alpha1.OpsService `json:"services,omitempty"`
 
@@ -612,11 +613,18 @@ func (o *OperationsOptions) validateExpose() error {
 		return fmt.Errorf("invalid expose type %q", o.ExposeType)
 	}
 
+	switch o.ExposeSubType {
+	case util.LoadBalancer, util.NodePort:
+	default:
+		return fmt.Errorf("invalid expose subtype %q", o.ExposeSubType)
+	}
+
 	switch strings.ToLower(o.ExposeEnabled) {
 	case util.EnableValue, util.DisableValue:
 	default:
 		return fmt.Errorf("invalid value for enable flag: %s", o.ExposeEnabled)
 	}
+
 	return nil
 }
 
@@ -630,10 +638,34 @@ func (o *OperationsOptions) fillExpose() error {
 		return err
 	}
 
+	if len(o.ComponentNames) == 0 {
+		return fmt.Errorf("there are multiple components in cluster, please use --components to specify the component for expose")
+	}
+	if len(o.ComponentNames) > 1 {
+		return fmt.Errorf("only one component can be exposed at a time")
+	}
+	componentName := o.ComponentNames[0]
+
 	// default expose to internet
 	exposeType := util.ExposeType(o.ExposeType)
 	if exposeType == "" {
 		exposeType = util.ExposeToInternet
+	}
+
+	clusterObj, err := cluster.GetClusterByName(o.Dynamic, o.Name, o.Namespace)
+	if err != nil {
+		return err
+	}
+
+	var componentSpec *appsv1alpha1.ClusterComponentSpec
+	for _, compSpec := range clusterObj.Spec.ComponentSpecs {
+		if compSpec.Name == componentName {
+			componentSpec = &compSpec
+			break
+		}
+	}
+	if componentSpec == nil {
+		return fmt.Errorf("component %s not found", componentName)
 	}
 
 	annotations, err := util.GetExposeAnnotations(provider, exposeType)
@@ -641,12 +673,29 @@ func (o *OperationsOptions) fillExpose() error {
 		return err
 	}
 
-	o.Services = append(o.Services, appsv1alpha1.OpsService{
+	svc := appsv1alpha1.OpsService{
 		// currently, we use the expose type as service name
 		Name:        string(exposeType),
-		ServiceType: corev1.ServiceTypeLoadBalancer,
 		Annotations: annotations,
-	})
+	}
+	if exposeType == util.ExposeToVPC {
+		if o.ExposeSubType == "" {
+			svc.ServiceType = corev1.ServiceTypeLoadBalancer
+		} else {
+			svc.ServiceType = corev1.ServiceType(o.ExposeSubType)
+		}
+	} else {
+		svc.ServiceType = corev1.ServiceTypeLoadBalancer
+	}
+
+	roleSelector, err := util.GetDefaultRoleSelector(o.Dynamic, clusterObj, componentSpec.ComponentDef, componentSpec.ComponentDefRef)
+	if err != nil {
+		return err
+	}
+	if len(roleSelector) > 0 {
+		svc.RoleSelector = roleSelector
+	}
+	o.Services = append(o.Services, svc)
 	return nil
 }
 
@@ -838,11 +887,15 @@ func NewExposeCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.
 	}
 	o.addCommonFlags(cmd, f)
 	cmd.Flags().StringVar(&o.ExposeType, "type", "", "Expose type, currently supported types are 'vpc', 'internet'")
+	cmd.Flags().StringVar(&o.ExposeSubType, "sub-type", "LoadBalancer", "Expose sub type, currently supported types are 'NodePort', 'LoadBalancer', only available if type is vpc")
 	cmd.Flags().StringVar(&o.ExposeEnabled, "enable", "", "Enable or disable the expose, values can be true or false")
 	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "Skip interactive approval before exposing the cluster")
 
 	util.CheckErr(cmd.RegisterFlagCompletionFunc("type", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		return []string{string(util.ExposeToVPC), string(util.ExposeToInternet)}, cobra.ShellCompDirectiveNoFileComp
+	}))
+	util.CheckErr(cmd.RegisterFlagCompletionFunc("sub-type", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		return []string{util.NodePort, util.LoadBalancer}, cobra.ShellCompDirectiveNoFileComp
 	}))
 	util.CheckErr(cmd.RegisterFlagCompletionFunc("enable", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		return []string{"true", "false"}, cobra.ShellCompDirectiveNoFileComp

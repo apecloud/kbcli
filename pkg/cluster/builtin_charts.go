@@ -74,6 +74,8 @@ var (
 	llmChart embed.FS
 	//go:embed charts/xinference-cluster.tgz
 	xinferenceChart embed.FS
+	//go:embed charts/elasticsearch-cluster.tgz
+	elasticsearchChart embed.FS
 )
 
 var builtinClusterTypes = map[ClusterType]bool{}
@@ -129,6 +131,12 @@ func init() {
 		"xinference": {
 			chartFS: xinferenceChart,
 			name:    "xinference-cluster.tgz",
+			alias:   "",
+		},
+
+		"elasticsearch": {
+			chartFS: elasticsearchChart,
+			name:    "elasticsearch-cluster.tgz",
 			alias:   "",
 		},
 	}
