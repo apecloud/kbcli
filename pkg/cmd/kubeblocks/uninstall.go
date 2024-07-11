@@ -97,7 +97,7 @@ func newUninstallCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cob
 	cmd.Flags().BoolVar(&o.removePVs, "remove-pvs", false, "Remove PersistentVolume or not")
 	cmd.Flags().BoolVar(&o.removePVCs, "remove-pvcs", false, "Remove PersistentVolumeClaim or not")
 	cmd.Flags().BoolVar(&o.RemoveNamespace, "remove-namespace", false, "Remove default created \"kb-system\" namespace or not")
-	cmd.Flags().DurationVar(&o.Timeout, "timeout", 300*time.Second, "Time to wait for uninstalling KubeBlocks, such as --timeout=5m")
+	cmd.Flags().DurationVar(&o.Timeout, "timeout", 600*time.Second, "Time to wait for uninstalling KubeBlocks, such as --timeout=5m")
 	cmd.Flags().BoolVar(&o.Wait, "wait", true, "Wait for KubeBlocks to be uninstalled, including all the add-ons. It will wait for a --timeout period")
 	return cmd
 }

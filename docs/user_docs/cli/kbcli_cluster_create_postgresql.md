@@ -35,7 +35,7 @@ kbcli cluster create postgresql NAME [flags]
       --storage-class-name string    Storage class name of the data volume
       --tenancy string               The tenancy of cluster. Legal values [SharedNode, DedicatedNode]. (default "SharedNode")
       --termination-policy string    The termination policy of cluster. Legal values [DoNotTerminate, Halt, Delete, WipeOut]. (default "Delete")
-      --version string               Cluster version. (default "postgresql-14.8.0")
+      --version string               Cluster version. (default "postgresql-15.7.0")
 ```
 
 ### Options inherited from parent commands
