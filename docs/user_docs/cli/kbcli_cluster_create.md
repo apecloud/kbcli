@@ -166,8 +166,10 @@ kbcli cluster create [NAME] [flags]
 * [kbcli cluster create llm](kbcli_cluster_create_llm.md)	 - Create a llm cluster.
 * [kbcli cluster create mongodb](kbcli_cluster_create_mongodb.md)	 - Create a mongodb cluster.
 * [kbcli cluster create mysql](kbcli_cluster_create_mysql.md)	 - Create a mysql cluster.
+* [kbcli cluster create oriol](kbcli_cluster_create_oriol.md)	 - Create a oriol cluster.
 * [kbcli cluster create postgresql](kbcli_cluster_create_postgresql.md)	 - Create a postgresql cluster.
 * [kbcli cluster create redis](kbcli_cluster_create_redis.md)	 - Create a redis cluster.
+* [kbcli cluster create tidb](kbcli_cluster_create_tidb.md)	 - Create a tidb cluster.
 * [kbcli cluster create xinference](kbcli_cluster_create_xinference.md)	 - Create a xinference cluster.
 
 #### Go Back to [CLI Overview](cli.md) Homepage.
