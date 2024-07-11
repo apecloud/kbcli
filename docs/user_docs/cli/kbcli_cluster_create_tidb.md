@@ -1,40 +1,38 @@
 ---
-title: kbcli cluster create mysql
+title: kbcli cluster create tidb
 ---
 
-Create a mysql cluster.
+Create a tidb cluster.
 
 ```
-kbcli cluster create mysql NAME [flags]
+kbcli cluster create tidb NAME [flags]
 ```
 
 ### Examples
 
 ```
   # Create a cluster with the default values
-  kbcli cluster create mysql
+  kbcli cluster create tidb
   
   # Create a cluster with the specified cpu, memory and storage
-  kbcli cluster create mysql --cpu 1 --memory 2 --storage 10
+  kbcli cluster create tidb --cpu 1 --memory 2 --storage 10
 ```
 
 ### Options
 
 ```
-      --availability-policy string   The availability policy of cluster. Legal values [none, node, zone]. (default "node")
-      --cpu float                    CPU cores. Value range [0.5, 64]. (default 1)
-      --disable-exporter             Enable or disable monitor. (default true)
-  -h, --help                         help for mysql
-      --host-network-accessible      Specify whether the cluster can be accessed from within the VPC.
-      --memory float                 Memory, the unit is Gi. Value range [0.5, 1000]. (default 1)
-      --mode string                  Cluster topology mode. Legal values [standalone, replication, raftGroup]. (default "standalone")
-      --publicly-accessible          Specify whether the cluster can be accessed from the public internet.
-      --rbac-enabled                 Specify whether rbac resources will be created by client, otherwise KubeBlocks server will try to create rbac resources.
-      --replicas int                 The number of replicas. Value range [1, 5]. (default 1)
-      --storage float                Storage size, the unit is Gi. Value range [1, 10000]. (default 20)
-      --tenancy string               The tenancy of cluster. Legal values [SharedNode, DedicatedNode]. (default "SharedNode")
-      --termination-policy string    The termination policy of cluster. Legal values [DoNotTerminate, Halt, Delete, WipeOut]. (default "Delete")
-      --version string               Cluster version, run "kbcli cv list --devel" to see all versions. Legal values [mysql-8.0.33, mysql-5.7.44]. (default "mysql-8.0")
+  -h, --help                        help for tidb
+      --pd.cpu float                CPU cores. Value range [2, 64]. (default 2)
+      --pd.memory float             Memory, the unit is Gi. Value range [4, 1000]. (default 4)
+      --pd.replicas int             The number of replicas Value range [1, 5]. (default 3)
+      --pd.storage float            Storage size, the unit is Gi. Value range [1, 10000]. (default 20)
+      --termination-policy string   The termination policy of cluster. Legal values [DoNotTerminate, Halt, Delete, WipeOut]. (default "Delete")
+      --tidb.cpu float              CPU cores. Value range [2, 64]. (default 2)
+      --tidb.replicas int           The number of replicas Value range [1, 5]. (default 2)
+      --tikv.cpu float              CPU cores. Value range [2, 64]. (default 2)
+      --tikv.memory float           Memory, the unit is Gi. Value range [4, 1000]. (default 4)
+      --tikv.replicas int           The number of replicas Value range [1, 5]. (default 3)
+      --tikv.storage float          Storage size, the unit is Gi. Value range [1, 10000]. (default 20)
 ```
 
 ### Options inherited from parent commands
