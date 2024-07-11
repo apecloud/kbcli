@@ -76,6 +76,8 @@ var (
 	xinferenceChart embed.FS
 	//go:embed charts/elasticsearch-cluster.tgz
 	elasticsearchChart embed.FS
+	//go:embed charts/qdrant-cluster.tgz
+	qdrantChart embed.FS
 )
 
 var builtinClusterTypes = map[ClusterType]bool{}
@@ -137,6 +139,12 @@ func init() {
 		"elasticsearch": {
 			chartFS: elasticsearchChart,
 			name:    "elasticsearch-cluster.tgz",
+			alias:   "",
+		},
+
+		"qdrant": {
+			chartFS: qdrantChart,
+			name:    "qdrant-cluster.tgz",
 			alias:   "",
 		},
 	}
