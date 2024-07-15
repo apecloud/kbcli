@@ -164,7 +164,7 @@ goimports: goimportstool ## Run goimports against code.
 
 
 ##@ CLI
-K3S_VERSION ?= v1.23.8+k3s1
+K3S_VERSION ?= v1.30.2+k3s2
 K3D_VERSION ?= 5.4.4
 K3S_IMG_TAG ?= $(subst +,-,$(K3S_VERSION))
 FETCH_ADDON_ENABLED ?= true
