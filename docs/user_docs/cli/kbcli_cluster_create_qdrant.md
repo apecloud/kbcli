@@ -30,11 +30,11 @@ kbcli cluster create qdrant NAME [flags]
       --publicly-accessible          Specify whether the cluster can be accessed from the public internet.
       --rbac-enabled                 Specify whether rbac resources will be created by client, otherwise KubeBlocks server will try to create rbac resources.
       --replicas int                 The number of replicas. Value range [1, 16]. (default 1)
-      --service-version string       The version of Qdrant. (default "1.10.1")
       --storage float                Storage size, the unit is Gi. Value range [1, 10000]. (default 20)
       --storage-class-name string    Storage class name of the data volume
       --tenancy string               The tenancy of cluster. Legal values [SharedNode, DedicatedNode]. (default "SharedNode")
       --termination-policy string    The termination policy of cluster. Legal values [DoNotTerminate, Halt, Delete, WipeOut]. (default "Delete")
+      --version string               The version of Qdrant. (default "1.10.0")
 ```
 
 ### Options inherited from parent commands
