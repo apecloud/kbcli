@@ -167,7 +167,7 @@ func (o *ConnectOptions) runShowExample() error {
 	// connect cluster from localhost
 	if o.privateEndPoint {
 		fmt.Fprintf(o.Out, "# cluster %s does not have public endpoints, you can run following command and connect cluster from localhost\n"+
-			"kubectl port-forward service/%s %s:%s\n\n", o.clusterName, o.svc.Name, info.Port, info.Port)
+			"kubectl port-forward -n %s service/%s %s:%s\n\n", o.clusterName, o.Namespace, o.svc.Name, info.Port, info.Port)
 		info.Host = "127.0.0.1"
 	}
 
