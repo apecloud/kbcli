@@ -34,7 +34,7 @@ kbcli cluster create qdrant NAME [flags]
       --storage-class-name string    Storage class name of the data volume
       --tenancy string               The tenancy of cluster. Legal values [SharedNode, DedicatedNode]. (default "SharedNode")
       --termination-policy string    The termination policy of cluster. Legal values [DoNotTerminate, Halt, Delete, WipeOut]. (default "Delete")
-      --version string               The version of Qdrant. (default "1.10.0")
+      --version string               The version of Qdrant.
 ```
 
 ### Options inherited from parent commands
