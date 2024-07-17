@@ -28,6 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/klog/v2"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 
 	"github.com/apecloud/kbcli/pkg/action"
@@ -155,10 +156,14 @@ func (o *CreateSubCmdsOptions) complete(cmd *cobra.Command) error {
 }
 
 func (o *CreateSubCmdsOptions) validate() error {
+	if err := o.validateVersion(); err != nil {
+		return err
+	}
 	return cluster.ValidateValues(o.ChartInfo, o.Values)
 }
 
 func (o *CreateSubCmdsOptions) Run() error {
+
 	objs, err := o.getObjectsInfo()
 	if err != nil {
 		return err
@@ -232,6 +237,46 @@ func (o *CreateSubCmdsOptions) Run() error {
 		if err = p.PrintObj(resObj, o.Out); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func (o *CreateSubCmdsOptions) validateVersion() error {
+	var err error
+	cv, ok := o.Values[cluster.VersionSchemaProp.String()].(string)
+	if ok && cv != "" {
+		if err = cluster.ValidateClusterVersion(o.Dynamic, o.ChartInfo.ClusterDef, cv); err == nil {
+			return nil
+		}
+		if err = cluster.ValidateClusterVersionByComponentDef(o.Dynamic, o.ChartInfo.ComponentDef, cv); err == nil {
+			return nil
+		}
+		return fmt.Errorf("cluster version \"%s\" does not exist", cv)
+	}
+	if o.ChartInfo.ClusterDef != "" {
+		cv, _ = cluster.GetDefaultVersion(o.Dynamic, o.ChartInfo.ClusterDef)
+	}
+	if len(o.ChartInfo.ComponentDef) != 0 {
+		cv, _ = cluster.GetDefaultVersionByCompDefs(o.Dynamic, o.ChartInfo.ComponentDef)
+	}
+	if cv == "" {
+		klog.V(1).Info("failed to find default cluster version referencing cluster definition or component definition")
+	}
+
+	// set cluster version
+	o.Values[cluster.VersionSchemaProp.String()] = cv
+
+	dryRun, err := o.GetDryRunStrategy()
+	if err != nil {
+		return err
+	}
+	// if dryRun is set, run in quiet mode, avoid to output yaml file with the info
+	if dryRun != action.DryRunNone {
+		return nil
+	}
+
+	if cv != "" {
+		fmt.Fprintf(o.Out, "Info: --version is not specified, %s is applied by default.\n", cv)
 	}
 	return nil
 }
