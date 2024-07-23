@@ -294,8 +294,15 @@ func (o *describeOpsOptions) getHorizontalScalingCommand(spec appsv1alpha1.OpsRe
 		spec.HorizontalScalingList, convertObject, getCompName)
 	commands := make([]string, len(componentNameSlice))
 	for i := range componentNameSlice {
+		replicaPtr := replicasSlice[i].(*int32)
+		var replica int32
+		if replicaPtr != nil {
+			replica = *replicaPtr
+		} else {
+			replica = 0
+		}
 		commands[i] = fmt.Sprintf("kbcli cluster hscale %s --components=%s --replicas=%d",
-			spec.GetClusterName(), strings.Join(componentNameSlice[i], ","), replicasSlice[i].(int32))
+			spec.GetClusterName(), strings.Join(componentNameSlice[i], ","), replica)
 	}
 	return commands
 }
