@@ -85,7 +85,7 @@ func (o *CreateUserOptions) Run() error {
 		return errors.New("not support yet")
 	}
 
-	err = lorryClient.CreateUser(context.Background(), o.UserName, o.Password, "")
+	err = lorryClient.CreateUser(context.Background(), o.UserName, o.Password, "", "")
 	if err != nil {
 		o.printGeneralInfo("fail", err.Error())
 		return err
