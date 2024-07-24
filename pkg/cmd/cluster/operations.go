@@ -475,15 +475,6 @@ func (o *OperationsOptions) validatePromote(cluster *appsv1alpha1.Cluster) error
 		return fmt.Errorf("cluster.Spec.ComponentSpecs cannot be empty")
 	}
 
-	// check clusterDefinition exist
-	clusterDefKey := client.ObjectKey{
-		Namespace: "",
-		Name:      cluster.Spec.ClusterDefRef,
-	}
-	if err := util.GetResourceObjectFromGVR(types.ClusterDefGVR(), clusterDefKey, o.Dynamic, &clusterDefObj); err != nil {
-		return err
-	}
-
 	getAndValidatePod := func(targetRoles ...string) error {
 		// if the instance is not specified, do not need to check the validity of the instance
 		if o.Instance == "" || o.CharacterType == oceanbase {
@@ -514,6 +505,15 @@ func (o *OperationsOptions) validatePromote(cluster *appsv1alpha1.Cluster) error
 
 	// TODO(xingran): this will be removed in the future.
 	validateBaseOnClusterCompDef := func() error {
+		// check clusterDefinition exist
+		clusterDefKey := client.ObjectKey{
+			Namespace: "",
+			Name:      cluster.Spec.ClusterDefRef,
+		}
+		if err := util.GetResourceObjectFromGVR(types.ClusterDefGVR(), clusterDefKey, o.Dynamic, &clusterDefObj); err != nil {
+			return err
+		}
+
 		var clusterCompDefObj *appsv1alpha1.ClusterComponentDefinition
 		for _, clusterCompDef := range clusterDefObj.Spec.ComponentDefs {
 			if clusterCompDef.Name == cluster.Spec.GetComponentDefRefName(componentName) {
