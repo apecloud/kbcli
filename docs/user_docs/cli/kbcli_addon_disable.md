@@ -8,6 +8,16 @@ Disable an addon.
 kbcli addon disable ADDON_NAME [flags]
 ```
 
+### Examples
+
+```
+  # Disable "prometheus" addon
+  kbcli addon disable prometheus
+  
+  # Disable addons in batch
+  kbcli addon disable prometheus csi-s3
+```
+
 ### Options
 
 ```
