@@ -189,7 +189,7 @@ func newEnableCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.
 	cmd := &cobra.Command{
 		Use:               "enable ADDON_NAME",
 		Short:             "Enable an addon.",
-		Args:              cobra.ExactArgs(1),
+		Args:              cobra.MinimumNArgs(1),
 		ValidArgsFunction: util.ResourceNameCompletionFunc(f, types.AddonGVR()),
 		Example: templates.Examples(`
     	# Enabled "prometheus" addon
@@ -212,14 +212,19 @@ func newEnableCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.
 
 		# Force enabled "csi-s3" addon
 		kbcli addon enable csi-s3 --force
+
+		# Enable addons in batch
+		kbcli addon enable prometheus csi-s3
 `),
 		Run: func(cmd *cobra.Command, args []string) {
-			util.CheckErr(o.init(args))
-			util.CheckErr(o.fetchAddonObj())
-			util.CheckErr(o.validate())
-			util.CheckErr(o.complete(o, cmd, args))
-			util.CheckErr(o.CmdComplete(cmd))
-			util.CheckErr(o.Run())
+			for _, name := range args { // This loop will fetch all the addons mentioned in the command and will install them one by one.
+				util.CheckErr(o.init([]string{name}))
+				util.CheckErr(o.fetchAddonObj())
+				util.CheckErr(o.validate())
+				util.CheckErr(o.complete(o, cmd, []string{name}))
+				util.CheckErr(o.CmdComplete(cmd))
+				util.CheckErr(o.Run())
+			}
 		},
 	}
 	cmd.Flags().StringArrayVar(&o.addonEnableFlags.MemorySets, "memory", []string{},
@@ -268,6 +273,13 @@ func newDisableCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 		Short:             "Disable an addon.",
 		Args:              cobra.ExactArgs(1),
 		ValidArgsFunction: util.ResourceNameCompletionFunc(f, types.AddonGVR()),
+		Example: templates.Examples(`
+			# Disable "prometheus" addon
+			kbcli addon disable prometheus
+
+			# Disable addons in batch
+			kbcli addon disable prometheus csi-s3
+`),
 		Run: func(cmd *cobra.Command, args []string) {
 			util.CheckErr(o.init(args))
 			util.CheckErr(o.fetchAddonObj())
