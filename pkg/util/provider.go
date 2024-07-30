@@ -172,8 +172,8 @@ func GetK8sSemVer(version string) string {
 // GetImageRegistryByProvider returns the image registry based on the k8s provider,
 // for different providers, we will use different image registry.
 //
-// Now, KubeBlocks has two image registries: docker.io and infracreate-registry.cn-zhangjiakou.cr.aliyuncs.com.
-// KubeBlocks default image registry is infracreate-registry.cn-zhangjiakou.cr.aliyuncs.com,
+// Now, KubeBlocks has two image registries: docker.io and apecloud-registry.cn-zhangjiakou.cr.aliyuncs.com.
+// KubeBlocks default image registry is apecloud-registry.cn-zhangjiakou.cr.aliyuncs.com,
 // for some providers, or some regions, we should use docker.io as the image registry.
 func GetImageRegistryByProvider(client kubernetes.Interface) (string, error) {
 	v, err := GetK8sVersion(client.Discovery())
