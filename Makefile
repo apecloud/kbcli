@@ -212,16 +212,16 @@ build-single-kbcli-embed-chart.%:
 
 .PHONY: build-kbcli-embed-chart
 build-kbcli-embed-chart: helmtool fetch-addons create-kbcli-embed-charts-dir \
-	build-single-kbcli-embed-chart.apecloud-mysql-cluster \
-	build-single-kbcli-embed-chart.mysql-cluster \
-	build-single-kbcli-embed-chart.redis-cluster \
-	build-single-kbcli-embed-chart.postgresql-cluster \
-	build-single-kbcli-embed-chart.kafka-cluster \
-	build-single-kbcli-embed-chart.mongodb-cluster \
-	build-single-kbcli-embed-chart.llm-cluster \
-	build-single-kbcli-embed-chart.xinference-cluster \
-	build-single-kbcli-embed-chart.elasticsearch-cluster \
-	build-single-kbcli-embed-chart.qdrant-cluster
+	build-single-kbcli-embed-chart.apecloud-mysql \
+	build-single-kbcli-embed-chart.mysql \
+	build-single-kbcli-embed-chart.redis \
+	build-single-kbcli-embed-chart.postgresql \
+	build-single-kbcli-embed-chart.kafka \
+	build-single-kbcli-embed-chart.mongodb \
+	build-single-kbcli-embed-chart.llm \
+	build-single-kbcli-embed-chart.xinference \
+	build-single-kbcli-embed-chart.elasticsearch \
+	build-single-kbcli-embed-chart.qdrant
 
 .PHONY: kbcli
 kbcli: build-checks kbcli-fast ## Build bin/kbcli.
