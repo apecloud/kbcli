@@ -86,7 +86,7 @@ var _ = Describe("create cluster by cluster type", func() {
 
 	It("create mysql cluster command", func() {
 		By("create commands")
-		cmds := buildCreateSubCmds(createOptions)
+		cmds := BuildCreateSubCmds(createOptions)
 		Expect(cmds).ShouldNot(BeNil())
 		Expect(cmds[0].HasFlags()).Should(BeTrue())
 
@@ -110,14 +110,14 @@ var _ = Describe("create cluster by cluster type", func() {
 		o.Client = testing.FakeClientSet()
 		fakeDiscovery1, _ := o.Client.Discovery().(*fakediscovery.FakeDiscovery)
 		fakeDiscovery1.FakedServerVersion = &version.Info{Major: "1", Minor: "27", GitVersion: "v1.27.0"}
-		Expect(o.complete(mysqlCmd)).Should(Succeed())
+		Expect(o.Complete(mysqlCmd)).Should(Succeed())
 		Expect(o.Name).ShouldNot(BeEmpty())
 		Expect(o.Values).ShouldNot(BeNil())
 		Expect(o.ChartInfo.ClusterDef).Should(Equal(apeCloudMysql))
 
 		By("validate")
 		o.Dynamic = testing.FakeDynamicClient()
-		Expect(o.validate()).Should(Succeed())
+		Expect(o.Validate()).Should(Succeed())
 
 		By("run")
 		o.DryRun = "client"
