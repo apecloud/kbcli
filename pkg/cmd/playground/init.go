@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package playground
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -29,15 +30,19 @@ import (
 	gv "github.com/hashicorp/go-version"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+
 	"golang.org/x/exp/slices"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/rand"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	"k8s.io/klog/v2"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
 
 	cp "github.com/apecloud/kbcli/pkg/cloudprovider"
+	"github.com/apecloud/kbcli/pkg/cluster"
 	cmdcluster "github.com/apecloud/kbcli/pkg/cmd/cluster"
 	"github.com/apecloud/kbcli/pkg/cmd/kubeblocks"
 	"github.com/apecloud/kbcli/pkg/printer"
@@ -47,6 +52,7 @@ import (
 	"github.com/apecloud/kbcli/pkg/util/helm"
 	"github.com/apecloud/kbcli/pkg/util/prompt"
 	"github.com/apecloud/kbcli/version"
+	"github.com/apecloud/kubeblocks/pkg/constant"
 )
 
 var (
@@ -419,6 +425,9 @@ func (o *initOptions) installKBAndCluster(info *cp.K8sClusterInfo) error {
 	}
 	s := spinner.New(o.Out, spinnerMsg("Create cluster %s (%s)", kbClusterName, clusterInfo))
 	defer s.Fail()
+	if err = o.waitClusterDef(); err != nil {
+		return errors.Wrapf(err, "failed to find clusterDefinition %s", o.clusterDef)
+	}
 	if err = o.createCluster(); err != nil && !apierrors.IsAlreadyExists(err) {
 		return errors.Wrapf(err, "failed to create cluster %s", kbClusterName)
 	}
@@ -519,7 +528,14 @@ func (o *initOptions) createCluster() error {
 		// if we are running on cloud, create cluster with three replicas
 		c.Values = append(c.Values, "replicas=3")
 	}
-
+	if err := o.checkClusterVersion(c); err != nil {
+		// if kubeblocks version greater than 1.0.0-alpha.0 or clusterVersion is not found
+		// within 30s, create cluster by create subcommand
+		if apierrors.IsNotFound(err) {
+			return o.createClusterBySubcmd(c)
+		}
+		return err
+	}
 	if err := c.CreateOptions.Complete(); err != nil {
 		return err
 	}
@@ -530,6 +546,99 @@ func (o *initOptions) createCluster() error {
 		return err
 	}
 	return c.Run()
+}
+
+func (o *initOptions) checkClusterVersion(createOption *cmdcluster.CreateOptions) error {
+	v1, _ := gv.NewVersion("1.0.0-alpha.0")
+	version, _ := gv.NewVersion(o.kbVersion)
+	if len(o.kbVersion) == 0 || !version.LessThan(v1) {
+		// kubeblocks version greater than 1.0.0-alpha.0, there is no clusterVersion
+		return apierrors.NewNotFound(types.ClusterVersionGVR().GroupResource(), createOption.ClusterVersionRef)
+	}
+	// kubeblocks version less than 1.0.0-alpha.0, check clusterVersion
+	// assume clusterVersion is not defined if cannot find cluterVersion within 30s
+	dynamic, err := createOption.Factory.DynamicClient()
+	if err != nil {
+		return err
+	}
+	conditionFunc := func(_ context.Context) (bool, error) {
+		objs, err := dynamic.Resource(types.ClusterVersionGVR()).List(context.TODO(), metav1.ListOptions{
+			LabelSelector: fmt.Sprintf("%s=%s", constant.ClusterDefLabelKey, createOption.ClusterDefRef),
+		})
+		if err != nil && !apierrors.IsNotFound(err) {
+			return false, err
+		}
+		if objs == nil || len(objs.Items) == 0 {
+			return false, nil
+		}
+		return true, nil
+	}
+	// wait clusterVersion to be found, or a 30-second timeout
+	if err := wait.PollUntilContextTimeout(context.Background(), 5*time.Second, 30*time.Second, true, conditionFunc); err != nil {
+		if err == context.DeadlineExceeded {
+			return apierrors.NewNotFound(types.ClusterVersionGVR().GroupResource(), createOption.ClusterVersionRef)
+		}
+		return err
+	}
+	return nil
+}
+
+func (o *initOptions) createClusterBySubcmd(createOption *cmdcluster.CreateOptions) error {
+	opt, err := cmdcluster.NewSubCmdsOptions(&createOption.CreateOptions, cluster.ClusterType(o.clusterDef))
+	if err != nil {
+		return err
+	}
+	opt.CreateOptions.Format = "yaml"
+	if err := opt.CreateOptions.Complete(); err != nil {
+		return nil
+	}
+	if err := opt.Complete(&cobra.Command{}); err != nil {
+		return nil
+	}
+	if opt.Values == nil {
+		opt.Values = map[string]interface{}{}
+	}
+	// if we are running on local, create cluster with one replica
+	if o.cloudProvider == cp.Local {
+		opt.Values["replicas"] = int(1)
+	} else {
+		// if we are running on cloud, create cluster with three replicas
+		opt.Values["replicas"] = int(3)
+		if o.clusterDef == "apecloud-mysql" {
+			opt.Values["mode"] = "raftGroup"
+		}
+	}
+	if err := opt.Validate(); err != nil {
+		return err
+	}
+	if err := opt.Run(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (o *initOptions) waitClusterDef() error {
+	f := util.NewFactory()
+	dynamic, err := f.DynamicClient()
+	if err != nil {
+		return err
+	}
+	conditionFunc := func(_ context.Context) (bool, error) {
+		_, err := dynamic.Resource(types.ClusterDefGVR()).Get(context.Background(), o.clusterDef, metav1.GetOptions{})
+		if err == nil {
+			return true, nil
+		}
+		if apierrors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	// wait clusterDefinition to be found, or timeout
+	if err := wait.PollUntilContextTimeout(context.Background(), 5*time.Second, o.Timeout, true, conditionFunc); err != nil {
+		return err
+	}
+	return nil
 }
 
 // checkExistedCluster checks playground kubernetes cluster exists or not, a kbcli client only

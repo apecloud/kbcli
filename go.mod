@@ -19,7 +19,7 @@ require (
 	github.com/go-git/go-git/v5 v5.6.1
 	github.com/go-logr/logr v1.4.1
 	github.com/google/uuid v1.6.0
-	github.com/hashicorp/go-version v1.6.0
+	github.com/hashicorp/go-version v1.7.0
 	github.com/hashicorp/hc-install v0.5.2
 	github.com/hashicorp/terraform-exec v0.18.0
 	github.com/jedib0t/go-pretty/v6 v6.4.6

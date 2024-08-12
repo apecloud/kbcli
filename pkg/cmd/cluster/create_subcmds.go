@@ -68,7 +68,7 @@ func NewSubCmdsOptions(createOptions *action.CreateOptions, t cluster.ClusterTyp
 	return o, nil
 }
 
-func buildCreateSubCmds(createOptions *action.CreateOptions) []*cobra.Command {
+func BuildCreateSubCmds(createOptions *action.CreateOptions) []*cobra.Command {
 	var cmds []*cobra.Command
 
 	for _, t := range cluster.SupportedTypes() {
@@ -86,8 +86,8 @@ func buildCreateSubCmds(createOptions *action.CreateOptions) []*cobra.Command {
 			Run: func(cmd *cobra.Command, args []string) {
 				o.Args = args
 				cmdutil.CheckErr(o.CreateOptions.Complete())
-				cmdutil.CheckErr(o.complete(cmd))
-				cmdutil.CheckErr(o.validate())
+				cmdutil.CheckErr(o.Complete(cmd))
+				cmdutil.CheckErr(o.Validate())
 				cmdutil.CheckErr(o.Run())
 			},
 		}
@@ -102,7 +102,7 @@ func buildCreateSubCmds(createOptions *action.CreateOptions) []*cobra.Command {
 	return cmds
 }
 
-func (o *CreateSubCmdsOptions) complete(cmd *cobra.Command) error {
+func (o *CreateSubCmdsOptions) Complete(cmd *cobra.Command) error {
 	var err error
 
 	// if name is not specified, generate a random cluster name
@@ -154,7 +154,7 @@ func (o *CreateSubCmdsOptions) complete(cmd *cobra.Command) error {
 	return nil
 }
 
-func (o *CreateSubCmdsOptions) validate() error {
+func (o *CreateSubCmdsOptions) Validate() error {
 	return cluster.ValidateValues(o.ChartInfo, o.Values)
 }
 
