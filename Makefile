@@ -202,9 +202,9 @@ build-single-kbcli-embed-chart.%: chart=$(word 2,$(subst ., ,$@))
 build-single-kbcli-embed-chart.%:
 	$(HELM) dependency update addons/addons-cluster/$(chart) --skip-refresh
 	$(HELM) package addons/addons-cluster/$(chart)
-	- bash -c "diff <($(HELM) template $(chart)-*.tgz) <($(HELM) template pkg/cluster/charts/$(chart).tgz)" > chart.diff
+	- bash -c "diff <($(HELM) template $(chart)-*.tgz) <($(HELM) template pkg/cluster/charts/$(chart)-cluster.tgz)" > chart.diff
 	@if [ -s chart.diff ]; then \
- 	  mv $(chart)-*.tgz pkg/cluster/charts/$(chart).tgz; \
+ 	  mv $(chart)-*.tgz pkg/cluster/charts/$(chart)-cluster.tgz; \
  	else \
  	  rm $(chart)-*.tgz; \
 	fi
