@@ -28,10 +28,8 @@ kbcli cluster create etcd NAME [flags]
       --client-service.role string                   Role for clientService (default "leader")
       --client-service.type string                   Etcd service type, valid options are ExternalName, ClusterIP, NodePort, and LoadBalancer (default "ClusterIP")
       --disable-exporter                             Enable or disable monitor. (default true)
-      --fullname-override string                     Override the full name of the chart
   -h, --help                                         help for etcd
       --host-network-accessible                      Specify whether the cluster can be accessed from within the VPC.
-      --name-override string                         Override the name of the chart
       --peer-service.name string                     When name is not empty, peerService will be enabled
       --peer-service.type string                     Etcd peerService type, recommended option is LoadBalancer (default "LoadBalancer")
       --persistence.data.size string                 Size of data volume (default "1Gi")
@@ -40,6 +38,11 @@ kbcli cluster create etcd NAME [flags]
       --publicly-accessible                          Specify whether the cluster can be accessed from the public internet.
       --rbac-enabled                                 Specify whether rbac resources will be created by client, otherwise KubeBlocks server will try to create rbac resources.
       --replicas int                                 Number of replicas (default 3)
+      --resources.limits.cpu float                   CPU cores limits for etcd component. Value range [0, 64].
+      --resources.limits.memory float                Memory limits for etcd component, the unit is Gi. Value range [0, 1000].
+      --resources.requests.cpu float                 CPU cores requests for etcd component. Value range [0, 64].
+      --resources.requests.memory float              Memory requests etcd component, the unit is Gi. Value range [0, 1000].
+      --resources.requests.storage float             Storage requests for etcd component, the unit is Gi. Value range [0, 10000].
       --tenancy string                               The tenancy of cluster. Legal values [SharedNode, DedicatedNode]. (default "SharedNode")
       --termination-policy string                    The termination policy of cluster. Legal values [DoNotTerminate, Halt, Delete, WipeOut]. (default "Delete")
       --tls-enable                                   Enable TLS for etcd cluster
