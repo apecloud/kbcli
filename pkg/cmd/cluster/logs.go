@@ -44,6 +44,10 @@ import (
 	"github.com/apecloud/kbcli/pkg/util"
 )
 
+const (
+	ComponentStatusDefaultPodName = "Unknown"
+)
+
 var (
 	logsExample = templates.Examples(`
 		# Return snapshot logs from cluster mycluster with default primary instance (stdout)

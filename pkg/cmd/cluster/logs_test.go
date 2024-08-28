@@ -202,3 +202,28 @@ var _ = Describe("logs", func() {
 		Expect(cmd).Should(Equal(""))
 	})
 })
+
+func mockPod() *corev1.Pod {
+	return &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            "foo",
+			Namespace:       "test",
+			ResourceVersion: "10",
+			Labels: map[string]string{
+				"app.kubernetes.io/name": "mysql-apecloud-mysql",
+			},
+		},
+		Spec: corev1.PodSpec{
+			RestartPolicy: corev1.RestartPolicyAlways,
+			DNSPolicy:     corev1.DNSClusterFirst,
+			Containers: []corev1.Container{
+				{
+					Name: "bar",
+				},
+			},
+		},
+		Status: corev1.PodStatus{
+			Phase: corev1.PodRunning,
+		},
+	}
+}

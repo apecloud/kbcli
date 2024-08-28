@@ -377,7 +377,18 @@ func GetPodComponentName(pod *corev1.Pod) string {
 	if pod.Labels == nil {
 		return ""
 	}
+	if compName, ok := pod.Labels[constant.KBAppShardingNameLabelKey]; ok {
+		return compName
+	}
 	return pod.Labels[constant.KBAppComponentLabelKey]
+}
+
+func IsShardingComponent(labels map[string]string) bool {
+	return labels[constant.KBAppShardingNameLabelKey] != ""
+}
+
+func IsShardingWithComponentName(cluster *appsv1alpha1.Cluster, compName string) bool {
+	return cluster.Spec.GetShardingByName(compName) != nil
 }
 
 func GetConfigMapByName(dynamic dynamic.Interface, namespace, name string) (*corev1.ConfigMap, error) {
@@ -394,6 +405,24 @@ func GetConfigConstraintByName(dynamic dynamic.Interface, name string) (*appsv1b
 		return nil, err
 	}
 	return ccObj, nil
+}
+
+func ListShardingComponents(dynamic dynamic.Interface, clusterName, clusterNamespace, componentName string) ([]*appsv1alpha1.Component, error) {
+	unstructuredObjList, err := dynamic.Resource(types.ComponentGVR()).Namespace(clusterNamespace).List(context.TODO(), metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("%s=%s,%s=%s", constant.AppInstanceLabelKey, clusterName, constant.KBAppShardingNameLabelKey, componentName),
+	})
+	if err != nil {
+		return nil, nil
+	}
+	var components []*appsv1alpha1.Component
+	for i := range unstructuredObjList.Items {
+		comp := &appsv1alpha1.Component{}
+		if err = runtime.DefaultUnstructuredConverter.FromUnstructured(unstructuredObjList.Items[i].UnstructuredContent(), comp); err != nil {
+			return nil, err
+		}
+		components = append(components, comp)
+	}
+	return components, nil
 }
 
 func GetServiceRefs(cd *appsv1alpha1.ClusterDefinition) []string {
