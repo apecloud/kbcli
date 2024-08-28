@@ -53,6 +53,7 @@ import (
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
+	"github.com/apecloud/kbcli/pkg/util/breakingchange"
 )
 
 type addonEnableFlags struct {
@@ -73,6 +74,10 @@ func (r *addonEnableFlags) useDefault() bool {
 		len(r.ReplicaCountSets) == 0 &&
 		len(r.StorageClassSets) == 0 &&
 		len(r.TolerationsSet) == 0
+}
+
+func (r *addonEnableFlags) noChange() bool {
+	return r.useDefault() && len(r.SetValues) == 0
 }
 
 type addonCmdOpts struct {
@@ -341,6 +346,9 @@ func (o *addonCmdOpts) validate() error {
 	if o.addon.Spec.Installable == nil {
 		return nil
 	}
+	if err := checkBreakingChange(o); err != nil {
+		return err
+	}
 	for _, s := range o.addon.Spec.Installable.Selectors {
 		if !s.MatchesFromConfig() {
 			return fmt.Errorf("addon %s INSTALLABLE-SELECTOR has no matching requirement", o.Names)
@@ -351,6 +359,24 @@ func (o *addonCmdOpts) validate() error {
 		fmt.Fprintf(o.Out, "failed to install/upgrade plugins: %v\n", err)
 	}
 
+	return nil
+}
+
+func checkBreakingChange(o *addonCmdOpts) error {
+	if o.addonEnableFlags.noChange() {
+		return nil
+	}
+	client, err := o.Factory.KubernetesClientSet()
+	if err != nil {
+		return err
+	}
+	v, err := util.GetVersionInfo(client)
+	if err != nil {
+		return err
+	}
+	if err = breakingchange.ValidatePatchUpgradeVersion(o.Out, o.addon.Name, v.KubeBlocks, getAddonVersion(&o.addon)); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -764,6 +790,11 @@ func (o *addonCmdOpts) buildPatch(flags []*pflag.Flag) error {
 	helm := map[string]interface{}{}
 
 	if o.addonEnableFlags != nil {
+		// skip patching if no change detected, to avoid breaking change
+		if o.addonEnableFlags.noChange() && o.addon.Status.Phase == extensionsv1alpha1.AddonEnabled {
+			o.PatchOptions.SkipPatch = true
+			return nil
+		}
 		if o.addon.Status.Phase == extensionsv1alpha1.AddonFailed {
 			status["phase"] = nil
 		}

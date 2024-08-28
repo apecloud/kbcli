@@ -22,6 +22,7 @@ package breakingchange
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/user"
 	"strconv"
@@ -34,6 +35,8 @@ import (
 	"k8s.io/client-go/dynamic"
 	"sigs.k8s.io/yaml"
 
+	"github.com/Masterminds/semver/v3"
+	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kubeblocks/pkg/constant"
 )
 
@@ -142,6 +145,32 @@ func fillResourcesMap(dynamic dynamic.Interface, resourcesMap map[string][]unstr
 		objArr := resourcesMap[namespace]
 		objArr = append(objArr, v)
 		resourcesMap[namespace] = objArr
+	}
+	return nil
+}
+
+func ValidatePatchUpgradeVersion(out io.Writer, name, kbVersion, addonVersion string) error {
+	kb, err := semver.NewVersion(kbVersion)
+	if err != nil {
+		return err
+	}
+	addon, err := semver.NewVersion(addonVersion)
+	if err != nil {
+		return err
+	}
+	version09 := semver.New(0, 9, 0, "alpha.0", "")
+	isIrregularVersion := func() bool {
+		p := map[string]string{
+			"milvus": "2.3.2",
+		}
+		if v, ok := p[name]; ok && v == addonVersion {
+			return true
+		}
+		return false
+	}
+	if !kb.LessThan(version09) && (addon.LessThan(version09) || isIrregularVersion()) {
+		printer.Warning(out, `%s-%s upgrade is not compatible with KubeBlocks %s, you can specify "--force" to upgrade%s`, name, addonVersion, kbVersion, "\n")
+		return fmt.Errorf("this upgrade may cause unexpected errors, it's not recommended to upgrade. ")
 	}
 	return nil
 }
