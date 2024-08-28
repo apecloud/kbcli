@@ -36,8 +36,9 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kubeblocks/pkg/constant"
+
+	"github.com/apecloud/kbcli/pkg/printer"
 )
 
 var upgradeHandlerMapper = map[string]upgradeHandlerRecorder{}
@@ -169,8 +170,8 @@ func ValidatePatchUpgradeVersion(out io.Writer, name, kbVersion, addonVersion st
 		return false
 	}
 	if !kb.LessThan(version09) && (addon.LessThan(version09) || isIrregularVersion()) {
-		printer.Warning(out, `%s-%s upgrade is not compatible with KubeBlocks %s, you can specify "--force" to upgrade%s`, name, addonVersion, kbVersion, "\n")
-		return fmt.Errorf("this upgrade may cause unexpected errors, it's not recommended to upgrade. ")
+		printer.Warning(out, `%s-%s is not compatible with KubeBlocks %s, you should run "kbcli addon upgrade %s" first%s`, name, addonVersion, kbVersion, name, "\n")
+		return fmt.Errorf(`this enable operation may cause unexpected errors, you can specify "--force" to enable.`)
 	}
 	return nil
 }

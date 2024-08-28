@@ -363,7 +363,7 @@ func (o *addonCmdOpts) validate() error {
 }
 
 func checkBreakingChange(o *addonCmdOpts) error {
-	if o.addonEnableFlags.noChange() {
+	if o.addonEnableFlags.noChange() && o.addon.Status.Phase == extensionsv1alpha1.AddonEnabled {
 		return nil
 	}
 	client, err := o.Factory.KubernetesClientSet()
