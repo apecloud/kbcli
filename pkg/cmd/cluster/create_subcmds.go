@@ -133,13 +133,22 @@ func (o *CreateSubCmdsOptions) complete(cmd *cobra.Command) error {
 	if !ok {
 		return fmt.Errorf("cannot find spec in cluster object")
 	}
+	if o.ChartInfo.ComponentDef == nil {
+		o.ChartInfo.ComponentDef = []string{}
+	}
 	if compSpec, ok := spec["componentSpecs"].([]interface{}); ok {
-		if o.ChartInfo.ComponentDef == nil {
-			o.ChartInfo.ComponentDef = []string{}
-		}
 		for i := range compSpec {
 			comp := compSpec[i].(map[string]interface{})
 			if compDef, ok := comp["componentDef"]; ok {
+				o.ChartInfo.ComponentDef = append(o.ChartInfo.ComponentDef, compDef.(string))
+			}
+		}
+	}
+	if shardingSpec, ok := spec["shardingSpecs"].([]interface{}); ok {
+		for i := range shardingSpec {
+			shard := shardingSpec[i].(map[string]interface{})
+			compSpec := shard["template"].(map[string]interface{})
+			if compDef, ok := compSpec["componentDef"]; ok {
 				o.ChartInfo.ComponentDef = append(o.ChartInfo.ComponentDef, compDef.(string))
 			}
 		}
@@ -148,7 +157,7 @@ func (o *CreateSubCmdsOptions) complete(cmd *cobra.Command) error {
 		o.ChartInfo.ClusterDef = clusterDef
 	}
 	if o.ChartInfo.ClusterDef == "" && len(o.ChartInfo.ComponentDef) == 0 {
-		return fmt.Errorf("cannot find clusterDefinitionRef in cluster spec or componentDef in componentSpecs")
+		return fmt.Errorf("cannot find clusterDefinitionRef in cluster spec or componentDef in componentSpecs or shardingSpecs")
 	}
 
 	return nil
