@@ -71,6 +71,7 @@ type PatchOptions struct {
 	fieldManager                 string
 
 	EditBeforeUpdate bool
+
 	genericiooptions.IOStreams
 }
 
