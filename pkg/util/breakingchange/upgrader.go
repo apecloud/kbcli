@@ -171,7 +171,7 @@ func ValidatePatchUpgradeVersion(out io.Writer, name, kbVersion, addonVersion st
 	}
 	if !kb.LessThan(version09) && (addon.LessThan(version09) || isIrregularVersion()) {
 		printer.Warning(out, `%s-%s is not compatible with KubeBlocks %s, you should run "kbcli addon upgrade %s" first%s`, name, addonVersion, kbVersion, name, "\n")
-		return fmt.Errorf(`this enable operation may cause unexpected errors, you can specify "--force" to enable.`)
+		return fmt.Errorf(`this enable operation may cause unexpected errors, you can specify "--force" to enable`)
 	}
 	return nil
 }

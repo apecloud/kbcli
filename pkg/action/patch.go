@@ -71,7 +71,6 @@ type PatchOptions struct {
 	fieldManager                 string
 
 	EditBeforeUpdate bool
-	SkipPatch        bool
 	genericiooptions.IOStreams
 }
 
@@ -125,10 +124,6 @@ func (o *PatchOptions) complete() error {
 func (o *PatchOptions) Run() error {
 	if err := o.complete(); err != nil {
 		return err
-	}
-
-	if o.SkipPatch {
-		return nil
 	}
 
 	if len(o.Patch) == 0 {

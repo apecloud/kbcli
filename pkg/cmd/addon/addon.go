@@ -790,11 +790,6 @@ func (o *addonCmdOpts) buildPatch(flags []*pflag.Flag) error {
 	helm := map[string]interface{}{}
 
 	if o.addonEnableFlags != nil {
-		// skip patching if no change detected, to avoid breaking change
-		if o.addonEnableFlags.noChange() && o.addon.Status.Phase == extensionsv1alpha1.AddonEnabled {
-			o.PatchOptions.SkipPatch = true
-			return nil
-		}
 		if o.addon.Status.Phase == extensionsv1alpha1.AddonFailed {
 			status["phase"] = nil
 		}
