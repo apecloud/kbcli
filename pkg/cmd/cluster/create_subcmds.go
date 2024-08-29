@@ -147,9 +147,10 @@ func (o *CreateSubCmdsOptions) complete(cmd *cobra.Command) error {
 	if shardingSpec, ok := spec["shardingSpecs"].([]interface{}); ok {
 		for i := range shardingSpec {
 			shard := shardingSpec[i].(map[string]interface{})
-			compSpec := shard["template"].(map[string]interface{})
-			if compDef, ok := compSpec["componentDef"]; ok {
-				o.ChartInfo.ComponentDef = append(o.ChartInfo.ComponentDef, compDef.(string))
+			if compSpec, ok := shard["template"].(map[string]interface{}); ok {
+				if compDef, ok := compSpec["componentDef"]; ok {
+					o.ChartInfo.ComponentDef = append(o.ChartInfo.ComponentDef, compDef.(string))
+				}
 			}
 		}
 	}
