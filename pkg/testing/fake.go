@@ -159,6 +159,7 @@ func FakeCluster(name, namespace string, conditions ...metav1.Condition) *appsv1
 				{
 					Name:            ComponentName + "-1",
 					ComponentDefRef: ComponentDefName,
+					ComponentDef:    CompDefName,
 					Replicas:        replicas,
 					Resources: corev1.ResourceRequirements{
 						Requests: corev1.ResourceList{

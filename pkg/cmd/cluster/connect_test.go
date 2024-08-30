@@ -72,7 +72,8 @@ var _ = Describe("connection", func() {
 		}
 
 		tf.Client = tf.UnstructuredClient
-		tf.FakeDynamicClient = testing.FakeDynamicClient(cluster, testing.FakeCompDef(), &services.Items[0], &pods.Items[0], &pods.Items[1], &pods.Items[2])
+		tf.FakeDynamicClient = testing.FakeDynamicClient(cluster, testing.FakeCompDef(),
+			&services.Items[0], &pods.Items[0], &pods.Items[1], &pods.Items[2])
 		streams = genericiooptions.NewTestIOStreamsDiscard()
 	})
 
@@ -99,14 +100,14 @@ var _ = Describe("connection", func() {
 		// set instance name and cluster name, should fail
 		o.PodName = "test-pod-0"
 		Expect(o.Validate([]string{testing.ClusterName})).Should(HaveOccurred())
-		o.componentName = "test-component"
+		o.clusterComponentName = "test-component"
 		Expect(o.Validate([]string{})).Should(HaveOccurred())
 
 		// unset pod name
 		o.PodName = ""
 		Expect(o.Validate([]string{testing.ClusterName})).Should(Succeed())
 		// unset component name
-		o.componentName = ""
+		o.clusterComponentName = ""
 		Expect(o.Validate([]string{testing.ClusterName})).Should(Succeed())
 	})
 
@@ -143,11 +144,11 @@ var _ = Describe("connection", func() {
 		o := initOption(nil)
 		Expect(o.runShowExample()).Should(Succeed())
 		Expect(o.services).Should(HaveLen(4))
-		Expect(o.accounts).Should(HaveLen(1))
+		Expect(o.accounts).Should(HaveLen(2))
 
 		By("specify one component")
 		o = initOption(func(o *ConnectOptions) {
-			o.componentName = testing.ComponentName
+			o.clusterComponentName = testing.ComponentName
 		})
 		Expect(o.runShowExample()).Should(Succeed())
 		Expect(o.services).Should(HaveLen(4))

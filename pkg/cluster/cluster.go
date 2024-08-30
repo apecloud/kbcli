@@ -22,6 +22,7 @@ package cluster
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -313,7 +314,7 @@ func (o *ClusterObjects) GetClusterInfo() *ClusterInfo {
 	}
 
 	primaryComponent := FindClusterComp(o.Cluster, o.ClusterDef.Spec.ComponentDefs[0].Name)
-	internalEndpoints, externalEndpoints := GetComponentEndpoints(o.Services, primaryComponent)
+	internalEndpoints, externalEndpoints := GetComponentEndpoints(o.Nodes, o.Services, primaryComponent.Name)
 	if len(internalEndpoints) > 0 {
 		cluster.InternalEP = strings.Join(internalEndpoints, ",")
 	}
@@ -325,63 +326,150 @@ func (o *ClusterObjects) GetClusterInfo() *ClusterInfo {
 
 func (o *ClusterObjects) GetComponentInfo() []*ComponentInfo {
 	var comps []*ComponentInfo
-	for _, c := range o.Cluster.Spec.ComponentSpecs {
-		// get all pods belonging to current component
-		var pods []corev1.Pod
+	setComponentInfos := func(compSpec appsv1alpha1.ClusterComponentSpec,
+		resources corev1.ResourceRequirements,
+		storages []appsv1alpha1.ClusterComponentVolumeClaimTemplate,
+		replicas int32,
+		clusterCompName string,
+		templateName string,
+		isSharding bool) {
+		// get all pods belonging to current component and instance template
+		var (
+			pods []corev1.Pod
+			// a unique name identifier for component object and labeled with "apps.kubeblocks.io/component-name"
+			componentName string
+		)
 		for _, p := range o.Pods.Items {
-			if n, ok := p.Labels[constant.KBAppComponentLabelKey]; ok && n == c.Name {
-				pods = append(pods, p)
+			if isSharding && p.Labels[constant.KBAppShardingNameLabelKey] != clusterCompName {
+				continue
 			}
+			if !isSharding && p.Labels[constant.KBAppComponentLabelKey] != clusterCompName {
+				continue
+			}
+			insTplName := appsv1alpha1.GetInstanceTemplateName(o.Cluster.Name,
+				p.Labels[constant.KBAppComponentLabelKey], p.Name)
+			if insTplName != templateName {
+				continue
+			}
+			componentName = p.Labels[constant.KBAppComponentLabelKey]
+			pods = append(pods, p)
 		}
-
 		// current component has no derived pods
 		if len(pods) == 0 {
-			continue
+			return
 		}
-
 		image := types.None
 		if len(pods) > 0 {
-			image = pods[0].Spec.Containers[0].Image
+			var images []string
+			for _, con := range pods[0].Spec.Containers {
+				if !slices.Contains(images, con.Image) {
+					images = append(images, con.Image)
+				}
+			}
+			image = strings.Join(images, "\n")
 		}
 
 		running, waiting, succeeded, failed := util.GetPodStatus(pods)
 		comp := &ComponentInfo{
-			Name:      c.Name,
-			NameSpace: o.Cluster.Namespace,
-			Type:      c.ComponentDefRef,
-			Cluster:   o.Cluster.Name,
-			Replicas:  fmt.Sprintf("%d / %d", c.Replicas, len(pods)),
-			Status:    fmt.Sprintf("%d / %d / %d / %d ", running, waiting, succeeded, failed),
-			Image:     image,
+			Name:                 clusterCompName,
+			InstanceTemplateName: templateName,
+			NameSpace:            o.Cluster.Namespace,
+			ComponentDef:         compSpec.ComponentDef,
+			Cluster:              o.Cluster.Name,
+			Replicas:             fmt.Sprintf("%d / %d", replicas, len(pods)),
+			Status:               fmt.Sprintf("%d / %d / %d / %d ", running, waiting, succeeded, failed),
+			Image:                image,
 		}
-		comp.CPU, comp.Memory = getResourceInfo(c.Resources.Requests, c.Resources.Limits)
-		comp.Storage = o.getStorageInfo(&c)
+		comp.CPU, comp.Memory = getResourceInfo(resources.Requests, resources.Limits)
+		comp.Storage = o.getStorageInfo(storages, componentName)
 		comps = append(comps, comp)
 	}
+	buildComponentInfos := func(compSpec appsv1alpha1.ClusterComponentSpec, clusterCompName string, isSharding bool) {
+		var tplReplicas int32
+		for _, ins := range compSpec.Instances {
+			resources := compSpec.Resources
+			if ins.Resources != nil {
+				resources = *ins.Resources
+			}
+			vcts := o.getCompTemplateVolumeClaimTemplates(&compSpec, ins)
+			setComponentInfos(compSpec, resources, vcts, ins.GetReplicas(), clusterCompName, ins.Name, isSharding)
+		}
+		setComponentInfos(compSpec, compSpec.Resources, compSpec.VolumeClaimTemplates,
+			compSpec.Replicas-tplReplicas, clusterCompName, "", isSharding)
+	}
+	for _, c := range o.Cluster.Spec.ComponentSpecs {
+		buildComponentInfos(c, c.Name, false)
+	}
+	for _, c := range o.Cluster.Spec.ShardingSpecs {
+		buildComponentInfos(c.Template, c.Name, true)
+	}
 	return comps
+}
+
+// getCompTemplateVolumeClaimTemplates merges volume claim for instance template
+func (o *ClusterObjects) getCompTemplateVolumeClaimTemplates(compSpec *appsv1alpha1.ClusterComponentSpec,
+	template appsv1alpha1.InstanceTemplate) []appsv1alpha1.ClusterComponentVolumeClaimTemplate {
+	var vcts []appsv1alpha1.ClusterComponentVolumeClaimTemplate
+	for i := range compSpec.VolumeClaimTemplates {
+		insVctIndex := -1
+		for j := range template.VolumeClaimTemplates {
+			if template.VolumeClaimTemplates[j].Name == compSpec.VolumeClaimTemplates[i].Name {
+				insVctIndex = j
+				break
+			}
+		}
+		if insVctIndex != -1 {
+			vcts = append(vcts, template.VolumeClaimTemplates[insVctIndex])
+		} else {
+			vcts = append(vcts, compSpec.VolumeClaimTemplates[i])
+		}
+	}
+	return vcts
 }
 
 func (o *ClusterObjects) GetInstanceInfo() []*InstanceInfo {
 	var instances []*InstanceInfo
 	for _, pod := range o.Pods.Items {
+		componentName := getLabelVal(pod.Labels, constant.KBAppComponentLabelKey)
 		instance := &InstanceInfo{
 			Name:        pod.Name,
 			Namespace:   pod.Namespace,
 			Cluster:     getLabelVal(pod.Labels, constant.AppInstanceLabelKey),
-			Component:   getLabelVal(pod.Labels, constant.KBAppComponentLabelKey),
+			Component:   componentName,
 			Status:      o.getPodPhase(&pod),
 			Role:        getLabelVal(pod.Labels, constant.RoleLabelKey),
 			AccessMode:  getLabelVal(pod.Labels, constant.ConsensusSetAccessModeLabelKey),
 			CreatedTime: util.TimeFormat(&pod.CreationTimestamp),
 		}
-
-		var component *appsv1alpha1.ClusterComponentSpec
-		for i, c := range o.Cluster.Spec.ComponentSpecs {
-			if c.Name == instance.Component {
-				component = &o.Cluster.Spec.ComponentSpecs[i]
+		var componentSpec *appsv1alpha1.ClusterComponentSpec
+		shardingCompName := pod.Labels[constant.KBAppShardingNameLabelKey]
+		if shardingCompName != "" {
+			instance.Component = BuildShardingComponentName(shardingCompName, instance.Component)
+			for i, c := range o.Cluster.Spec.ShardingSpecs {
+				if c.Name == shardingCompName {
+					componentSpec = &o.Cluster.Spec.ShardingSpecs[i].Template
+				}
+			}
+		} else {
+			for i, c := range o.Cluster.Spec.ComponentSpecs {
+				if c.Name == instance.Component {
+					componentSpec = &o.Cluster.Spec.ComponentSpecs[i]
+				}
 			}
 		}
-		instance.Storage = o.getStorageInfo(component)
+		templateName := appsv1alpha1.GetInstanceTemplateName(o.Cluster.Name, componentName, pod.Name)
+		template := appsv1alpha1.InstanceTemplate{}
+		if templateName != "" {
+			for _, v := range componentSpec.Instances {
+				if v.Name == templateName {
+					template = v
+					break
+				}
+			}
+		}
+		vcts := o.getCompTemplateVolumeClaimTemplates(componentSpec, template)
+		instance.Storage = o.getStorageInfo(vcts, pod.Labels[constant.KBAppComponentLabelKey])
+		instance.ServiceVersion = componentSpec.ServiceVersion
 		getInstanceNodeInfo(o.Nodes, &pod, instance)
 		instance.CPU, instance.Memory = getResourceInfo(resource.PodRequestsAndLimits(&pod))
 		instances = append(instances, instance)
@@ -475,8 +563,8 @@ func (o *ClusterObjects) getPodPhase(pod *corev1.Pod) string {
 	return reason
 }
 
-func (o *ClusterObjects) getStorageInfo(component *appsv1alpha1.ClusterComponentSpec) []StorageInfo {
-	if component == nil {
+func (o *ClusterObjects) getStorageInfo(vcts []appsv1alpha1.ClusterComponentVolumeClaimTemplate, componentName string) []StorageInfo {
+	if len(vcts) == 0 {
 		return nil
 	}
 
@@ -496,7 +584,7 @@ func (o *ClusterObjects) getStorageInfo(component *appsv1alpha1.ClusterComponent
 				continue
 			}
 
-			if labels[constant.KBAppComponentLabelKey] != component.Name {
+			if labels[constant.KBAppComponentLabelKey] != componentName {
 				continue
 			}
 
@@ -514,7 +602,7 @@ func (o *ClusterObjects) getStorageInfo(component *appsv1alpha1.ClusterComponent
 	}
 
 	var infos []StorageInfo
-	for _, vcTpl := range component.VolumeClaimTemplates {
+	for _, vcTpl := range vcts {
 		s := StorageInfo{
 			Name: vcTpl.Name,
 		}

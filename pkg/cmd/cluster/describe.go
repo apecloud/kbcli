@@ -158,7 +158,9 @@ func (o *describeOptions) describeCluster(name string) error {
 	showCluster(o.Cluster, o.Out)
 
 	// show endpoints
-	showEndpoints(o.Cluster, o.Services, o.Out)
+	if err = showEndpoints(o.dynamic, o.Nodes, o.Cluster, o.Services, o.Out); err != nil {
+		return err
+	}
 
 	// topology
 	showTopology(o.ClusterObjects.GetInstanceInfo(), o.Out)
@@ -210,31 +212,32 @@ func showCluster(c *appsv1alpha1.Cluster, out io.Writer) {
 		return
 	}
 	title := fmt.Sprintf("Name: %s\t Created Time: %s", c.Name, util.TimeFormat(&c.CreationTimestamp))
-	tbl := newTbl(out, title, "NAMESPACE", "CLUSTER-DEFINITION", "VERSION", "STATUS", "TERMINATION-POLICY")
-	tbl.AddRow(c.Namespace, c.Spec.ClusterDefRef, c.Spec.ClusterVersionRef, string(c.Status.Phase), string(c.Spec.TerminationPolicy))
+	tbl := newTbl(out, title, "NAMESPACE", "CLUSTER-DEFINITION", "TOPOLOGY", "STATUS", "TERMINATION-POLICY")
+	tbl.AddRow(c.Namespace, c.Spec.ClusterDefRef, c.Spec.Topology, string(c.Status.Phase), string(c.Spec.TerminationPolicy))
 	tbl.Print()
 }
 
 func showTopology(instances []*cluster.InstanceInfo, out io.Writer) {
-	tbl := newTbl(out, "\nTopology:", "COMPONENT", "INSTANCE", "ROLE", "STATUS", "AZ", "NODE", "CREATED-TIME")
+	tbl := newTbl(out, "\nTopology:", "COMPONENT", "SERVICE-VERSION", "INSTANCE", "ROLE", "STATUS", "AZ", "NODE", "CREATED-TIME")
 	for _, ins := range instances {
-		tbl.AddRow(ins.Component, ins.Name, ins.Role, ins.Status, ins.AZ, ins.Node, ins.CreatedTime)
+		tbl.AddRow(ins.Component, ins.ServiceVersion, ins.Name, ins.Role, ins.Status, ins.AZ, ins.Node, ins.CreatedTime)
 	}
 	tbl.Print()
 }
 
 func showResource(comps []*cluster.ComponentInfo, out io.Writer) {
-	tbl := newTbl(out, "\nResources Allocation:", "COMPONENT", "DEDICATED", "CPU(REQUEST/LIMIT)", "MEMORY(REQUEST/LIMIT)", "STORAGE-SIZE", "STORAGE-CLASS")
+	tbl := newTbl(out, "\nResources Allocation:", "COMPONENT", "INSTANCE-TEMPLATE", "CPU(REQUEST/LIMIT)", "MEMORY(REQUEST/LIMIT)", "STORAGE-SIZE", "STORAGE-CLASS")
 	for _, c := range comps {
-		tbl.AddRow(c.Name, "false", c.CPU, c.Memory, cluster.BuildStorageSize(c.Storage), cluster.BuildStorageClass(c.Storage))
+		tbl.AddRow(c.Name, c.InstanceTemplateName,
+			c.CPU, c.Memory, cluster.BuildStorageSize(c.Storage), cluster.BuildStorageClass(c.Storage))
 	}
 	tbl.Print()
 }
 
 func showImages(comps []*cluster.ComponentInfo, out io.Writer) {
-	tbl := newTbl(out, "\nImages:", "COMPONENT", "TYPE", "IMAGE")
+	tbl := newTbl(out, "\nImages:", "COMPONENT", "COMPONENT-DEFINITION", "IMAGE")
 	for _, c := range comps {
-		tbl.AddRow(c.Name, c.Type, c.Image)
+		tbl.AddRow(c.Name, c.ComponentDef, c.Image)
 	}
 	tbl.Print()
 }
@@ -244,21 +247,26 @@ func showEvents(name string, namespace string, out io.Writer) {
 	fmt.Fprintf(out, "\nShow cluster events: kbcli cluster list-events -n %s %s", namespace, name)
 }
 
-func showEndpoints(c *appsv1alpha1.Cluster, svcList *corev1.ServiceList, out io.Writer) {
+func showEndpoints(dynamic dynamic.Interface, nodes []*corev1.Node, c *appsv1alpha1.Cluster, svcList *corev1.ServiceList, out io.Writer) error {
 	if c == nil {
-		return
+		return nil
 	}
 
-	tbl := newTbl(out, "\nEndpoints:", "COMPONENT", "MODE", "INTERNAL", "EXTERNAL")
-	for _, comp := range c.Spec.ComponentSpecs {
-		internalEndpoints, externalEndpoints := cluster.GetComponentEndpoints(svcList, &comp)
+	tbl := newTbl(out, "\nEndpoints:", "COMPONENT", "INTERNAL", "EXTERNAL")
+	componentPairs, err := cluster.GetClusterComponentPairs(dynamic, c)
+	if err != nil {
+		return err
+	}
+	for _, componentPair := range componentPairs {
+		internalEndpoints, externalEndpoints := cluster.GetComponentEndpoints(nodes, svcList, componentPair.ComponentName)
 		if len(internalEndpoints) == 0 && len(externalEndpoints) == 0 {
 			continue
 		}
-		tbl.AddRow(comp.Name, "ReadWrite", util.CheckEmpty(strings.Join(internalEndpoints, "\n")),
-			util.CheckEmpty(strings.Join(externalEndpoints, "\n")))
+		tbl.AddRow(cluster.BuildShardingComponentName(componentPair.ShardingName, componentPair.ComponentName),
+			util.CheckEmpty(strings.Join(internalEndpoints, "\n")), util.CheckEmpty(strings.Join(externalEndpoints, "\n")))
 	}
 	tbl.Print()
+	return nil
 }
 
 func showDataProtection(backupPolicies []dpv1alpha1.BackupPolicy, backupSchedules []dpv1alpha1.BackupSchedule, defaultBackupRepo, continuousMethod, recoverableTimeRange string, out io.Writer) {

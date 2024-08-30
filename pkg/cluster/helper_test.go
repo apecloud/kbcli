@@ -51,7 +51,7 @@ var _ = Describe("helper", func() {
 	It("get cluster endpoints", func() {
 		cluster := testing.FakeCluster("test", "test")
 		svcs := testing.FakeServices()
-		internalEPs, externalEPs := GetComponentEndpoints(svcs, &cluster.Spec.ComponentSpecs[0])
+		internalEPs, externalEPs := GetComponentEndpoints(nil, svcs, cluster.Spec.ComponentSpecs[0].Name)
 		Expect(len(internalEPs)).Should(Equal(3))
 		Expect(len(externalEPs)).Should(Equal(1))
 	})
