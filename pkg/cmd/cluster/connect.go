@@ -111,14 +111,15 @@ func NewConnectCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 
 func (o *ConnectOptions) runShowExample() error {
 	// get connection info
-	if err := o.getConnectionInfo(); err != nil {
+	err := o.getConnectionInfo()
+	if err != nil {
 		return err
 	}
 	if len(o.services) == 0 {
 		return fmt.Errorf("cannot find any available services")
 	}
 	if o.needGetReadyNode {
-		if err := o.getReadyNodeForNodePort(); err != nil {
+		if o.node, err = cluster.GetReadyNodeForNodePort(o.Client); err != nil {
 			return err
 		}
 	}
@@ -367,30 +368,6 @@ func (o *ConnectOptions) getComponentAccounts(componentDefName, realCompName str
 	return nil
 }
 
-func (o *ConnectOptions) getReadyNodeForNodePort() error {
-	nodes, err := o.Client.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{
-		Limit: 10,
-	})
-	if err != nil {
-		return err
-	}
-	for _, node := range nodes.Items {
-		var nodeIsReady bool
-		for _, con := range node.Status.Conditions {
-			if con.Type == corev1.NodeReady {
-				nodeIsReady = con.Status == corev1.ConditionTrue
-				break
-			}
-		}
-		if nodeIsReady {
-			o.node = &node
-			break
-		}
-	}
-	o.node = &nodes.Items[0]
-	return nil
-}
-
 func (o *ConnectOptions) getEndpointsFromNode() (string, string) {
 	var (
 		internal string
@@ -424,11 +401,16 @@ func (o *ConnectOptions) showEndpoints() {
 			internal = fmt.Sprintf("%s.%s.%s.svc.cluster.local", podName, svc.Name, svc.Namespace)
 		}
 		external := cluster.GetExternalAddr(&svc)
-		if svc.Spec.Type == corev1.ServiceTypeNodePort {
-			internal, external = o.getEndpointsFromNode()
+		if svc.Spec.Type == corev1.ServiceTypeNodePort && o.node != nil {
+			nodeInternal, nodeExternal := o.getEndpointsFromNode()
 			for _, p := range svc.Spec.Ports {
 				ports = append(ports, fmt.Sprintf("%s(nodePort: %s)",
 					strconv.Itoa(int(p.Port)), strconv.Itoa(int(p.NodePort))))
+			}
+			if nodeExternal != "" {
+				external = nodeExternal
+			} else {
+				external = nodeInternal
 			}
 		} else {
 			for _, p := range svc.Spec.Ports {
