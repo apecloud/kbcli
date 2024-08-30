@@ -383,14 +383,6 @@ func GetPodComponentName(pod *corev1.Pod) string {
 	return pod.Labels[constant.KBAppComponentLabelKey]
 }
 
-func IsShardingComponent(labels map[string]string) bool {
-	return labels[constant.KBAppShardingNameLabelKey] != ""
-}
-
-func IsShardingWithComponentName(cluster *appsv1alpha1.Cluster, compName string) bool {
-	return cluster.Spec.GetShardingByName(compName) != nil
-}
-
 func GetConfigMapByName(dynamic dynamic.Interface, namespace, name string) (*corev1.ConfigMap, error) {
 	cmObj := &corev1.ConfigMap{}
 	if err := util.GetK8SClientObject(dynamic, cmObj, types.ConfigmapGVR(), namespace, name); err != nil {
