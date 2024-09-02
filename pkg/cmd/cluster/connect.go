@@ -240,17 +240,18 @@ func (o *ConnectOptions) getConnectionInfo() error {
 		}
 	default:
 		// 2. get first component services
-		if len(o.targetCluster.Spec.ComponentSpecs) > 0 {
+		switch {
+		case len(o.targetCluster.Spec.ComponentSpecs) > 0:
 			compSpec := o.targetCluster.Spec.ComponentSpecs[0]
 			realComponentNames = append(realComponentNames, compSpec.Name)
 			componentDefName = compSpec.ComponentDef
-		} else if len(o.targetCluster.Spec.ShardingSpecs) > 0 {
+		case len(o.targetCluster.Spec.ShardingSpecs) > 0:
 			shardingSpec := o.targetCluster.Spec.ShardingSpecs[0]
 			if err = o.appendRealCompNamesWithSharding(&realComponentNames, shardingSpec.Name); err != nil {
 				return err
 			}
 			componentDefName = shardingSpec.Template.ComponentDef
-		} else {
+		default:
 			return fmt.Errorf(`cannot found shardingSpecs or componentSpecs in cluster "%s"`, o.clusterName)
 		}
 	}
