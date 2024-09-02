@@ -49,6 +49,8 @@ import (
 var _ = Describe("create cluster by cluster type", func() {
 	const (
 		clusterType = "mysql"
+		redisCluster   = "redis"
+		redisComponent = "redis-cluster-7"
 	)
 
 	var (
@@ -115,6 +117,56 @@ var _ = Describe("create cluster by cluster type", func() {
 		Expect(o.Name).ShouldNot(BeEmpty())
 		Expect(o.Values).ShouldNot(BeNil())
 		Expect(o.ChartInfo.ClusterDef).Should(Equal(apeCloudMysql))
+
+		By("validate")
+		o.ChartInfo.ClusterDef = testing.ClusterDefName
+		cv := testing.FakeClusterVersion()
+		o.Values[cluster.VersionSchemaProp.String()] = cv.Name
+		o.Dynamic = testing.FakeDynamicClient(testing.FakeClusterDef(), cv)
+		Expect(o.validate()).Should(Succeed())
+		Expect(o.Values[cluster.VersionSchemaProp.String()]).Should(Equal(testing.ClusterVersionName))
+
+		By("run")
+		o.DryRun = "client"
+		o.Client = testing.FakeClientSet()
+		fakeDiscovery, _ := o.Client.Discovery().(*fakediscovery.FakeDiscovery)
+		fakeDiscovery.FakedServerVersion = &version.Info{Major: "1", Minor: "27", GitVersion: "v1.27.0"}
+		Expect(o.Run()).Should(Succeed())
+	})
+
+	It("create sharding cluster command", func() {
+		By("create commands")
+		cmds := buildCreateSubCmds(createOptions)
+		Expect(cmds).ShouldNot(BeNil())
+		Expect(cmds[0].HasFlags()).Should(BeTrue())
+
+		By("create command options")
+		o, err := NewSubCmdsOptions(createOptions, redisCluster)
+		Expect(err).Should(Succeed())
+		Expect(o).ShouldNot(BeNil())
+		Expect(o.ChartInfo).ShouldNot(BeNil())
+
+		By("complete")
+		var shardCmd *cobra.Command
+		for _, c := range cmds {
+			if c.Name() == redisCluster {
+				shardCmd = c
+				break
+			}
+		}
+
+		o.Format = printer.YAML
+		Expect(o.CreateOptions.Complete()).Should(Succeed())
+		o.DryRun = "client"
+		o.Client = testing.FakeClientSet()
+		fakeDiscovery1, _ := o.Client.Discovery().(*fakediscovery.FakeDiscovery)
+		fakeDiscovery1.FakedServerVersion = &version.Info{Major: "1", Minor: "27", GitVersion: "v1.27.0"}
+
+		Expect(shardCmd.Flags().Set("mode", "cluster")).Should(Succeed())
+		Expect(o.complete(shardCmd)).Should(Succeed())
+		Expect(o.Name).ShouldNot(BeEmpty())
+		Expect(o.Values).ShouldNot(BeNil())
+		Expect(o.ChartInfo.ComponentDef[0]).Should(Equal(redisComponent))
 
 		By("validate")
 		o.ChartInfo.ClusterDef = testing.ClusterDefName
