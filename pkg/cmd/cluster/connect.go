@@ -22,23 +22,21 @@ package cluster
 import (
 	"context"
 	"fmt"
-	"os"
+	"strconv"
 	"strings"
 
+	"github.com/apecloud/dbctl/engines"
+	"github.com/apecloud/dbctl/engines/models"
+	"github.com/apecloud/dbctl/engines/register"
+	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
+	"github.com/apecloud/kubeblocks/pkg/constant"
 	"github.com/spf13/cobra"
-	"golang.org/x/crypto/ssh/terminal"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
-	"k8s.io/klog/v2"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
-
-	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
-	"github.com/apecloud/kubeblocks/pkg/constant"
-	"github.com/apecloud/kubeblocks/pkg/lorry/engines"
-	"github.com/apecloud/kubeblocks/pkg/lorry/engines/models"
-	"github.com/apecloud/kubeblocks/pkg/lorry/engines/register"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/cluster"
@@ -47,16 +45,9 @@ import (
 	"github.com/apecloud/kbcli/pkg/util/flags"
 )
 
-const (
-	ComponentStatusDefaultPodName = "Unknown"
-)
-
 var connectExample = templates.Examples(`
-		# connect to a specified cluster, default connect to the leader/primary instance
+		# connect to a specified cluster
 		kbcli cluster connect mycluster
-
-		# connect to cluster as user
-		kbcli cluster connect mycluster --as-user myuser
 
 		# connect to a specified instance
 		kbcli cluster connect -i mycluster-instance-0
@@ -64,52 +55,28 @@ var connectExample = templates.Examples(`
 		# connect to a specified component
 		kbcli cluster connect mycluster --component mycomponent
 
-		# show cli connection example with password mask
-		kbcli cluster connect mycluster --show-example --client=cli
+		# show cli connection example, supported client: [cli, java, python, rust, php, node.js, go, .net, django] and more.
+		kbcli cluster connect mycluster --client=cli`)
 
-		# show java connection example with password mask
-		kbcli cluster connect mycluster --show-example --client=java
-
-		# show all connection examples with password mask
-		kbcli cluster connect mycluster --show-example
-
-		# show cli connection examples with real password
-		kbcli cluster connect mycluster --show-example --client=cli --show-password`)
-
-const passwordMask = "******"
-
-// nonConnectiveEngines refer to the clusterdefinition or componentdefinition label 'app.kubernetes.io/name'
-var nonConnectiveEngines = []string{
-	string(models.PolarDBX),
-	"starrocks",
+type componentAccount struct {
+	componentName string
+	secretName    string
+	username      string
 }
 
 type ConnectOptions struct {
-	clusterName   string
-	componentName string
-
-	clientType   string
-	showExample  bool
-	showPassword bool
-	engine       engines.ClusterCommands
-
-	privateEndPoint bool
-	svc             *corev1.Service
-
-	component        *appsv1alpha1.ClusterComponentSpec
-	componentDef     *appsv1alpha1.ClusterComponentDefinition
+	clusterName      string
+	componentName    string
 	targetCluster    *appsv1alpha1.Cluster
-	targetClusterDef *appsv1alpha1.ClusterDefinition
+	clientType       string
+	serviceKind      string
+	node             *corev1.Node
+	services         []corev1.Service
+	needGetReadyNode bool
+	accounts         []componentAccount
 
-	// componentDefV2 refer to the *appsv1alpha1.ComponentDefinition
-	componentDefV2 *appsv1alpha1.ComponentDefinition
-	// componentV2 refer to the *appsv1alpha1.Component
-	componentV2 *appsv1alpha1.Component
-
-	characterType string
-	userName      string
-	userPasswd    string
-
+	forwardSVC  string
+	forwardPort string
 	*action.ExecOptions
 }
 
@@ -124,22 +91,12 @@ func NewConnectCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 		Run: func(cmd *cobra.Command, args []string) {
 			util.CheckErr(o.Validate(args))
 			util.CheckErr(o.Complete())
-			if o.showExample {
-				util.CheckErr(o.runShowExample())
-			} else {
-				util.CheckErr(o.Connect())
-			}
+			util.CheckErr(o.runShowExample())
 		},
 	}
 	cmd.Flags().StringVarP(&o.PodName, "instance", "i", "", "The instance name to connect.")
-	flags.AddComponentFlag(f, cmd, &o.componentName, "The component to connect. If not specified, pick up the first one.")
-	cmd.Flags().BoolVar(&o.showExample, "show-example", false, "Show how to connect to cluster/instance from different clients.")
-	cmd.Flags().BoolVar(&o.showPassword, "show-password", false, "Show password in example.")
-
-	cmd.Flags().StringVar(&o.clientType, "client", "", "Which client connection example should be output, only valid if --show-example is true.")
-
-	cmd.Flags().StringVar(&o.userName, "as-user", "", "Connect to cluster as user")
-
+	flags.AddComponentFlag(f, cmd, &o.componentName, "The component to connect. If not specified and no any cluster scope services, pick up the first one.")
+	cmd.Flags().StringVar(&o.clientType, "client", "", "Which client connection example should be output.")
 	util.CheckErr(cmd.RegisterFlagCompletionFunc("client", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		var types []string
 		for _, t := range models.ClientTypes() {
@@ -154,24 +111,21 @@ func NewConnectCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 
 func (o *ConnectOptions) runShowExample() error {
 	// get connection info
-	info, err := o.getConnectionInfo()
+	err := o.getConnectionInfo()
 	if err != nil {
 		return err
 	}
-	// make sure engine is initialized
-	if o.engine == nil {
-		return fmt.Errorf("engine is not initialized yet")
+	if len(o.services) == 0 {
+		return fmt.Errorf("cannot find any available services")
 	}
-
-	// if cluster does not have public endpoints, prompts to use port-forward command and
-	// connect cluster from localhost
-	if o.privateEndPoint {
-		fmt.Fprintf(o.Out, "# cluster %s does not have public endpoints, you can run following command and connect cluster from localhost\n"+
-			"kubectl port-forward -n %s service/%s %s:%s\n\n", o.clusterName, o.Namespace, o.svc.Name, info.Port, info.Port)
-		info.Host = "127.0.0.1"
+	if o.needGetReadyNode {
+		if o.node, err = cluster.GetReadyNodeForNodePort(o.Client); err != nil {
+			return err
+		}
 	}
-
-	fmt.Fprint(o.Out, o.engine.ConnectExample(info, o.clientType))
+	o.showEndpoints()
+	o.showAccounts()
+	o.showClientExample()
 	return nil
 }
 
@@ -196,17 +150,6 @@ func (o *ConnectOptions) Validate(args []string) error {
 	if len(args) > 0 {
 		o.clusterName = args[0]
 	}
-
-	// validate user name and password
-	if len(o.userName) > 0 {
-		// read password from stdin
-		fmt.Print("Password: ")
-		if bytePassword, err := terminal.ReadPassword(int(os.Stdin.Fd())); err != nil {
-			return err
-		} else {
-			o.userPasswd = string(bytePassword)
-		}
-	}
 	return nil
 }
 
@@ -222,354 +165,296 @@ func (o *ConnectOptions) Complete() error {
 			return err
 		}
 		o.clusterName = cluster.GetPodClusterName(o.Pod)
-		o.componentName = cluster.GetPodComponentName(o.Pod)
 	}
 
-	// cannot infer characterType from pod directly (neither from pod annotation nor pod label)
-	// so we have to get cluster definition first to get characterType
-	// opt 2. specified cluster name
-	// 2.1 get cluster by name
 	if o.targetCluster, err = cluster.GetClusterByName(o.Dynamic, o.clusterName, o.Namespace); err != nil {
 		return err
 	}
-	// get cluster def
-	if tempClusterDef, err := cluster.GetClusterDefByName(o.Dynamic, o.targetCluster.Spec.ClusterDefRef); err == nil {
-		o.targetClusterDef = tempClusterDef
-	}
+	return nil
+}
 
-	// 2.2 fill component name, use the first component by default
-	if len(o.componentName) == 0 {
-		o.component = &o.targetCluster.Spec.ComponentSpecs[0]
-		o.componentName = o.component.Name
-	} else {
-		// verify component
-		if o.component = o.targetCluster.Spec.GetComponentByName(o.componentName); o.component == nil {
-			return fmt.Errorf("failed to get component %s. Check the list of components use: \n\tkbcli cluster list-components %s -n %s", o.componentName, o.clusterName, o.Namespace)
-		}
-	}
-
-	// 2.3 get character type
-	if err = o.getClusterCharacterType(); err != nil {
-		return fmt.Errorf("failed to get component def form cluster definition and component def: %s", err.Error())
-	}
-
-	// 2.4 precheck if the engine type is supported
-	if err = o.checkUnsupportedEngine(); err != nil {
+func (o *ConnectOptions) appendRealCompNamesWithSharding(realComponentNames *[]string, shardingCompName string) error {
+	shardingComps, err := cluster.ListShardingComponents(o.Dynamic, o.clusterName, o.Namespace, shardingCompName)
+	if err != nil {
 		return err
 	}
-
-	// 2.5. get pod to connect, make sure o.clusterName, o.componentName are set before this step
-	if len(o.PodName) == 0 {
-		if err = o.getTargetPod(); err != nil {
-			return err
-		}
-		if o.Pod, err = o.Client.CoreV1().Pods(o.Namespace).Get(context.TODO(), o.PodName, metav1.GetOptions{}); err != nil {
-			return err
-		}
+	if len(shardingComps) == 0 {
+		return fmt.Errorf(`cannot find any component objects for sharding component "%s"`, shardingCompName)
+	}
+	for i := range shardingComps {
+		*realComponentNames = append(*realComponentNames, shardingComps[i].Labels[constant.KBAppComponentLabelKey])
 	}
 	return nil
 }
 
-// Connect creates connection string and connects to cluster
-func (o *ConnectOptions) Connect() error {
-	var err error
-
-	if o.engine, err = register.NewClusterCommands(o.characterType); err != nil {
-		return err
-	}
-
-	var authInfo *engines.AuthInfo
-	if len(o.userName) > 0 {
-		authInfo = &engines.AuthInfo{}
-		authInfo.UserName = o.userName
-		authInfo.UserPasswd = o.userPasswd
-	} else if authInfo, err = o.getAuthInfo(); err != nil {
-		// use default authInfo defined in lorry.engine
-		klog.V(1).ErrorS(err, "kbcli connect failed to get getAuthInfo")
-		authInfo = nil
-	}
-
-	o.ExecOptions.ContainerName = o.engine.Container()
-	o.ExecOptions.Command = o.engine.ConnectCommand(authInfo)
-	if klog.V(1).Enabled() {
-		fmt.Fprintf(o.Out, "connect with cmd: %s", o.ExecOptions.Command)
-	}
-	return o.ExecOptions.Run()
-}
-
-func (o *ConnectOptions) getAuthInfo() (*engines.AuthInfo, error) {
-	getter := cluster.ObjectsGetter{
-		Client:    o.Client,
-		Dynamic:   o.Dynamic,
-		Name:      o.clusterName,
-		Namespace: o.Namespace,
-		GetOptions: cluster.GetOptions{
-			WithClusterDef: cluster.Maybe,
-			WithService:    cluster.Need,
-			WithSecret:     cluster.Need,
-			WithCompDef:    cluster.Maybe,
-			WithComp:       cluster.Maybe,
-		},
-	}
-
-	objs, err := getter.Get()
-	if err != nil {
-		return nil, err
-	}
-	if o.componentDefV2 != nil {
-		o.componentV2 = getClusterCompByCompDef(objs.Components, o.componentDefV2.Name)
-	}
-	if user, passwd, err := getUserAndPassword(objs.ClusterDef, o.componentDefV2, o.componentV2, objs.Secrets); err != nil {
-		return nil, err
-	} else {
-		return &engines.AuthInfo{
-			UserName:   user,
-			UserPasswd: passwd,
-		}, nil
-	}
-}
-
-func (o *ConnectOptions) getTargetPod() error {
-	// make sure cluster name and component name are set
-	if len(o.clusterName) == 0 {
-		return fmt.Errorf("cluster name is not set yet")
-	}
-	if len(o.componentName) == 0 {
-		return fmt.Errorf("component name is not set yet")
-	}
-
-	// get instances for given cluster name and component name
-	infos := cluster.GetSimpleInstanceInfosForComponent(o.Dynamic, o.clusterName, o.componentName, o.Namespace)
-	if len(infos) == 0 || infos[0].Name == ComponentStatusDefaultPodName {
-		return fmt.Errorf("failed to find the instance to connect, please check cluster status")
-	}
-
-	o.PodName = infos[0].Name
-
-	// print instance info that we connect
-	if len(infos) == 1 {
-		fmt.Fprintf(o.Out, "Connect to instance %s\n", o.PodName)
-		return nil
-	}
-
-	// output all instance infos
-	var nameRoles = make([]string, len(infos))
-	for i, info := range infos {
-		if len(info.Role) == 0 {
-			nameRoles[i] = info.Name
-		} else {
-			nameRoles[i] = fmt.Sprintf("%s(%s)", info.Name, info.Role)
-		}
-	}
-	fmt.Fprintf(o.Out, "Connect to instance %s: out of %s\n", o.PodName, strings.Join(nameRoles, ", "))
-	return nil
-}
-
-func (o *ConnectOptions) getConnectionInfo() (*engines.ConnectionInfo, error) {
-	// make sure component and componentDef are set before this step
-	if o.component == nil && o.componentDef == nil {
-		return nil, fmt.Errorf("failed to get component or component def")
-	}
-
-	info := &engines.ConnectionInfo{}
-	getter := cluster.ObjectsGetter{
-		Client:    o.Client,
-		Dynamic:   o.Dynamic,
-		Name:      o.clusterName,
-		Namespace: o.Namespace,
-		GetOptions: cluster.GetOptions{
-			WithClusterDef: cluster.Maybe,
-			WithService:    cluster.Need,
-			WithSecret:     cluster.Need,
-			WithCompDef:    cluster.Maybe,
-			WithComp:       cluster.Maybe,
-		},
-	}
-
-	objs, err := getter.Get()
-	if err != nil {
-		return nil, err
-	}
-
-	info.ClusterName = o.clusterName
-	info.ComponentName = o.componentName
-	info.HeadlessEndpoint = getOneHeadlessEndpoint(objs.ClusterDef, objs.Secrets)
-	// get username and password
-	if o.componentDefV2 != nil {
-		o.componentV2 = getClusterCompByCompDef(objs.Components, o.componentDefV2.Name)
-	}
-	if info.User, info.Password, err = getUserAndPassword(objs.ClusterDef, o.componentDefV2, o.componentV2, objs.Secrets); err != nil {
-		return nil, err
-	}
-	if !o.showPassword {
-		info.Password = passwordMask
-	}
-	// get host and port, use external endpoints first, if external endpoints are empty,
-	// use internal endpoints
-
-	// TODO: now the primary component is the first component, that may not be correct,
-	// maybe show all components connection info in the future.
-	internalSvcs, externalSvcs := cluster.GetComponentServices(objs.Services, o.component)
-	switch {
-	case len(externalSvcs) > 0:
-		// cluster has public endpoints
-		o.svc = externalSvcs[0]
-		info.Host = cluster.GetExternalAddr(o.svc)
-		info.Port = fmt.Sprintf("%d", o.svc.Spec.Ports[0].Port)
-	case len(internalSvcs) > 0:
-		// cluster does not have public endpoints
-		o.svc = internalSvcs[0]
-		info.Host = o.svc.Spec.ClusterIP
-		info.Port = fmt.Sprintf("%d", o.svc.Spec.Ports[0].Port)
-		o.privateEndPoint = true
-	default:
-		// find no endpoints
-		return nil, fmt.Errorf("failed to find any cluster endpoints")
-	}
-	if o.engine, err = register.NewClusterCommands(o.characterType); err != nil {
-		return nil, err
-	}
-
-	return info, nil
-}
-
-// getUserAndPassword gets cluster user and password from secrets
-// TODO:@shanshanying, should use admin user and password. Use root credential for now.
-func getUserAndPassword(clusterDef *appsv1alpha1.ClusterDefinition, compDef *appsv1alpha1.ComponentDefinition, comp *appsv1alpha1.Component, secrets *corev1.SecretList) (string, string, error) {
+func (o *ConnectOptions) getConnectionInfo() error {
 	var (
-		user, password = "", ""
-		err            error
+		realComponentNames []string
+		componentDefName   string
+		getter             = cluster.ObjectsGetter{
+			Client:    o.Client,
+			Dynamic:   o.Dynamic,
+			Name:      o.clusterName,
+			Namespace: o.Namespace,
+			GetOptions: cluster.GetOptions{
+				WithService: cluster.Need,
+			},
+		}
 	)
-
-	if len(secrets.Items) == 0 {
-		return user, password, fmt.Errorf("failed to find the cluster username and password")
+	objs, err := getter.Get()
+	if err != nil {
+		return err
+	}
+	if o.PodName == "" && o.componentName == "" && len(o.targetCluster.Spec.Services) > 0 {
+		// only get cluster connection info with cluster service
+		return o.getConnectInfoWithClusterService(objs.Services)
 	}
 
-	getPasswordKey := func(connectionCredential map[string]string) string {
-		for k := range connectionCredential {
-			if strings.Contains(k, "password") {
-				return k
+	matchSVCFunc := func(svc corev1.Service, compName string) bool {
+		return compName == svc.Labels[constant.KBAppComponentLabelKey] ||
+			compName == svc.Spec.Selector[constant.KBAppComponentLabelKey]
+	}
+
+	// get the component connection info.
+	switch {
+	case o.PodName != "":
+		matchSVCFunc = func(svc corev1.Service, compName string) bool {
+			return svc.Spec.Selector[constant.KBAppPodNameLabelKey] == o.PodName
+		}
+		realComponentNames = append(realComponentNames, o.Pod.Labels[constant.KBAppComponentLabelKey])
+		componentDefName = o.Pod.Labels[constant.ComponentDefinitionLabelKey]
+	case o.componentName != "":
+		shardingSpec := o.targetCluster.Spec.GetShardingByName(o.componentName)
+		if shardingSpec != nil {
+			if err = o.appendRealCompNamesWithSharding(&realComponentNames, o.componentName); err != nil {
+				return err
 			}
+			componentDefName = shardingSpec.Template.ComponentDef
+		} else {
+			compSpec := o.targetCluster.Spec.GetComponentByName(o.componentName)
+			if compSpec == nil {
+				return fmt.Errorf(`cannot found the component "%s" in the cluster "%s"`, o.componentName, o.clusterName)
+			}
+			componentDefName = compSpec.ComponentDef
+			realComponentNames = append(realComponentNames, o.componentName)
 		}
-		return "password"
-	}
-
-	getSecretVal := func(secret *corev1.Secret, key string) (string, error) {
-		val, ok := secret.Data[key]
-		if !ok {
-			return "", fmt.Errorf("failed to find the cluster %s", key)
+	default:
+		// 2. get first component services
+		switch {
+		case len(o.targetCluster.Spec.ComponentSpecs) > 0:
+			compSpec := o.targetCluster.Spec.ComponentSpecs[0]
+			realComponentNames = append(realComponentNames, compSpec.Name)
+			componentDefName = compSpec.ComponentDef
+		case len(o.targetCluster.Spec.ShardingSpecs) > 0:
+			shardingSpec := o.targetCluster.Spec.ShardingSpecs[0]
+			if err = o.appendRealCompNamesWithSharding(&realComponentNames, shardingSpec.Name); err != nil {
+				return err
+			}
+			componentDefName = shardingSpec.Template.ComponentDef
+		default:
+			return fmt.Errorf(`cannot found shardingSpecs or componentSpecs in cluster "%s"`, o.clusterName)
 		}
-		return string(val), nil
 	}
+	for _, realCompName := range realComponentNames {
+		if err = o.getConnectInfoWithPodOrCompService(objs.Services, realCompName, matchSVCFunc); err != nil {
+			return err
+		}
+	}
+	return o.getComponentAccounts(componentDefName, realComponentNames[0])
+}
 
-	// now, we only use the first secret
-	var secret *corev1.Secret
-	for i, s := range secrets.Items {
-		if strings.Contains(s.Name, "conn-credential") {
-			secret = &secrets.Items[i]
+func (o *ConnectOptions) getConnectInfoWithPodOrCompService(services *corev1.ServiceList, realCompName string, match func(svc corev1.Service, realCompName string) bool) error {
+	needGetHeadlessSVC := true
+	for i := range services.Items {
+		svc := services.Items[i]
+		if match(svc, realCompName) {
+			needGetHeadlessSVC = false
+			o.appendService(svc)
+		}
+	}
+	if needGetHeadlessSVC {
+		return o.getCompHeadlessSVC(realCompName)
+	}
+	return nil
+}
+
+func (o *ConnectOptions) appendService(svc corev1.Service) {
+	o.services = append(o.services, svc)
+	if svc.Spec.Type == corev1.ServiceTypeNodePort {
+		o.needGetReadyNode = true
+	}
+}
+
+func (o *ConnectOptions) getCompHeadlessSVC(realCompName string) error {
+	headlessSVC := &corev1.Service{}
+	headlessSVCName := constant.GenerateDefaultComponentHeadlessServiceName(o.clusterName, realCompName)
+	if err := util.GetResourceObjectFromGVR(types.ServiceGVR(), client.ObjectKey{Namespace: o.Namespace, Name: headlessSVCName}, o.Dynamic, headlessSVC); client.IgnoreNotFound(err) != nil {
+		return err
+	}
+	if headlessSVC.Name != "" {
+		o.services = append(o.services, *headlessSVC)
+	}
+	return nil
+}
+
+func (o *ConnectOptions) getConnectInfoWithClusterService(services *corev1.ServiceList) error {
+	// key: compName value: isSharding
+	componentMap := map[string]bool{}
+	for _, v := range o.targetCluster.Spec.Services {
+		svcName := constant.GenerateClusterServiceName(o.clusterName, v.ServiceName)
+		for i := range services.Items {
+			svc := services.Items[i]
+			if svc.Name != svcName {
+				continue
+			}
+			o.appendService(svc)
+			if v.ComponentSelector != "" {
+				componentMap[v.ComponentSelector] = false
+			} else if v.ShardingSelector != "" {
+				componentMap[v.ShardingSelector] = true
+			}
 			break
 		}
 	}
-	// 0.8 API connect
-	if secret == nil && compDef != nil && comp != nil {
-		for _, account := range compDef.Spec.SystemAccounts {
-			if !account.InitAccount {
+	for compName, isSharding := range componentMap {
+		var (
+			compDefName  string
+			realCompName string
+		)
+		if isSharding {
+			shardingSpec := o.targetCluster.Spec.GetShardingByName(compName)
+			if shardingSpec == nil {
 				continue
 			}
-			for i, s := range secrets.Items {
-				if s.Name == fmt.Sprintf("%s-account-%s", comp.Name, account.Name) {
-					secret = &secrets.Items[i]
-					break
-				}
+			shardingComps, err := cluster.ListShardingComponents(o.Dynamic, o.clusterName, o.Namespace, compName)
+			if err != nil {
+				return err
 			}
-			if secret != nil {
-				break
+			if len(shardingComps) == 0 {
+				return fmt.Errorf(`cannot find any component objects for sharding component "%s"`, compName)
 			}
+			realCompName = shardingComps[0].Labels[constant.KBAppComponentLabelKey]
+			compDefName = shardingSpec.Template.ComponentDef
+		} else {
+			compSpec := o.targetCluster.Spec.GetComponentByName(compName)
+			if compSpec == nil {
+				continue
+			}
+			realCompName = compName
+			compDefName = compSpec.ComponentDef
 		}
-		if secret == nil {
-			return "", "", fmt.Errorf("failed to get the username and password by cluster component definition")
-		}
-		user, err = getSecretVal(secret, "username")
-		if err != nil {
-			return user, password, err
-		}
-		password, err = getSecretVal(secret, "password")
-		return user, password, err
-	}
-	user, err = getSecretVal(secret, "username")
-	if err != nil {
-		return user, password, err
-	}
-
-	passwordKey := getPasswordKey(clusterDef.Spec.ConnectionCredential)
-	password, err = getSecretVal(secret, passwordKey)
-	return user, password, err
-}
-
-// getOneHeadlessEndpoint gets cluster headlessEndpoint from secrets
-func getOneHeadlessEndpoint(clusterDef *appsv1alpha1.ClusterDefinition, secrets *corev1.SecretList) string {
-	if len(secrets.Items) == 0 {
-		return ""
-	}
-	val, ok := secrets.Items[0].Data["headlessEndpoint"]
-	if !ok {
-		return ""
-	}
-	return string(val)
-}
-
-// getClusterCharacterType will get the cluster character type compatible with 0.7
-// If both componentDefRef and componentDef are provided, the componentDef will take precedence over componentDefRef.
-func (o *ConnectOptions) getClusterCharacterType() error {
-	if o.component.ComponentDef != "" {
-		o.componentDefV2 = &appsv1alpha1.ComponentDefinition{}
-		if err := util.GetK8SClientObject(o.Dynamic, o.componentDefV2, types.CompDefGVR(), "", o.component.ComponentDef); err != nil {
+		if err := o.getComponentAccounts(compDefName, realCompName); err != nil {
 			return err
 		}
-		o.characterType = o.componentDefV2.Spec.ServiceKind
-		return nil
-	}
-	o.componentDef = o.targetClusterDef.GetComponentDefByName(o.component.ComponentDefRef)
-	if o.componentDef == nil {
-		return fmt.Errorf("failed to get component def :%s", o.component.ComponentDefRef)
-	}
-	o.characterType = o.componentDef.CharacterType
-	return nil
-}
-
-func (o *ConnectOptions) checkUnsupportedEngine() error {
-	var engineType string
-	if o.componentDefV2 != nil {
-		engineType = o.componentDefV2.Labels[types.AddonNameLabelKey]
-	}
-	if o.targetClusterDef != nil && engineType == "" {
-		engineType = o.targetClusterDef.Name
-	}
-	if engineType == "" {
-		return fmt.Errorf("fail to get the target engine type")
-	}
-	for i := range nonConnectiveEngines {
-		if engineType == nonConnectiveEngines[i] {
-			return fmt.Errorf("unsupported engine type:%s", o.characterType)
-		}
 	}
 	return nil
 }
 
-func getClusterCompByCompDef(comps []*appsv1alpha1.Component, compDefName string) *appsv1alpha1.Component {
-	// get 0.8 API component
-	if len(comps) == 0 {
-		return nil
+func (o *ConnectOptions) getComponentAccounts(componentDefName, realCompName string) error {
+	compDef, err := cluster.GetComponentDefByName(o.Dynamic, componentDefName)
+	if err != nil {
+		return err
 	}
-	for i, comp := range comps {
-		labels := comp.Labels
-		if labels == nil {
+	o.serviceKind = compDef.Spec.ServiceKind
+	for _, v := range compDef.Spec.SystemAccounts {
+		if !v.InitAccount {
 			continue
 		}
-		if name := labels[constant.ComponentDefinitionLabelKey]; name == compDefName {
-			return comps[i]
+		o.accounts = append(o.accounts, componentAccount{
+			componentName: realCompName,
+			secretName:    constant.GenerateAccountSecretName(o.clusterName, realCompName, v.Name),
+			username:      v.Name,
+		})
+	}
+	return nil
+}
+
+func (o *ConnectOptions) getEndpointsFromNode() (string, string) {
+	var (
+		internal string
+		external string
+	)
+	for _, add := range o.node.Status.Addresses {
+		if add.Type == corev1.NodeInternalDNS || add.Type == corev1.NodeInternalIP {
+			internal = add.Address
+		}
+		if add.Type == corev1.NodeExternalDNS || add.Type == corev1.NodeExternalIP {
+			external = add.Address
 		}
 	}
+	return internal, external
+}
 
-	return nil
+func (o *ConnectOptions) showEndpoints() {
+	tbl := newTbl(o.Out, "", "COMPONENT", "SERVICE-NAME", "TYPE", "PORT", "INTERNAL", "EXTERNAL")
+	for _, svc := range o.services {
+		var ports []string
+		compName := svc.Annotations[constant.KBAppComponentLabelKey]
+		if compName == "" {
+			compName = svc.Spec.Selector[constant.KBAppComponentLabelKey]
+		}
+		internal := fmt.Sprintf("%s.%s.svc.cluster.local", svc.Name, svc.Namespace)
+		if svc.Spec.ClusterIP == corev1.ClusterIPNone {
+			podName := o.PodName
+			if o.PodName == "" {
+				podName = "<podName>"
+			}
+			internal = fmt.Sprintf("%s.%s.%s.svc.cluster.local", podName, svc.Name, svc.Namespace)
+		}
+		external := cluster.GetExternalAddr(&svc)
+		if svc.Spec.Type == corev1.ServiceTypeNodePort && o.node != nil {
+			nodeInternal, nodeExternal := o.getEndpointsFromNode()
+			for _, p := range svc.Spec.Ports {
+				ports = append(ports, fmt.Sprintf("%s(nodePort: %s)",
+					strconv.Itoa(int(p.Port)), strconv.Itoa(int(p.NodePort))))
+			}
+			if nodeExternal != "" {
+				external = nodeExternal
+			} else {
+				external = nodeInternal
+			}
+		} else {
+			for _, p := range svc.Spec.Ports {
+				ports = append(ports, strconv.Itoa(int(p.Port)))
+			}
+		}
+		if o.forwardPort == "" {
+			o.forwardPort = strconv.Itoa(int(svc.Spec.Ports[0].Port))
+		}
+		if o.forwardSVC == "" {
+			if svc.Spec.ClusterIP != corev1.ClusterIPNone {
+				o.forwardSVC = fmt.Sprintf("service/%s", svc.Name)
+			} else {
+				o.forwardSVC = o.PodName
+			}
+		}
+		tbl.AddRow(compName, svc.Name, svc.Spec.Type, strings.Join(ports, ","), internal, external)
+	}
+	fmt.Fprintf(o.Out, "# you can use the following command to forward the service port to your local machine for testing the connection, using 127.0.0.1 as the host IP.\n"+
+		"\tkubectl port-forward -n %s %s %s:%s\n\n", o.Namespace, o.forwardSVC, o.forwardPort, o.forwardPort)
+	fmt.Fprintln(o.Out, "Endpoints:")
+	tbl.Print()
+}
+
+func (o *ConnectOptions) showAccounts() {
+	tbl := newTbl(o.Out, "\nAccount Secrets:", "COMPONENT", "SECRET-NAME", "USERNAME", "PASSWORD-KEY")
+	for _, account := range o.accounts {
+		tbl.AddRow(account.componentName, account.secretName, account.username, "<password>")
+	}
+	tbl.Print()
+}
+
+func (o *ConnectOptions) showClientExample() {
+
+	engine, err := register.NewClusterCommands(o.serviceKind)
+	if err != nil {
+		return
+	}
+	fmt.Fprint(o.Out, "\n========= connection example =========\n")
+	fmt.Fprint(o.Out, engine.ConnectExample(&engines.ConnectionInfo{
+		Host:     "<HOST>",
+		Port:     "<PORT>",
+		User:     "<USERNAME>",
+		Password: "<PASSWORD>",
+	}, o.clientType))
 }

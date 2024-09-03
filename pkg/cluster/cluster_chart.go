@@ -22,11 +22,11 @@ package cluster
 import (
 	"compress/gzip"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/pkg/errors"
 	"golang.org/x/exp/maps"
-	"golang.org/x/exp/slices"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chart/loader"
@@ -219,8 +219,8 @@ func loadHelmChart(ci *ChartInfo, t ClusterType) error {
 
 func SupportedTypes() []ClusterType {
 	types := maps.Keys(ClusterTypeCharts)
-	slices.SortFunc(types, func(i, j ClusterType) bool {
-		return i.String() < j.String()
+	slices.SortFunc(types, func(i, j ClusterType) int {
+		return strings.Compare(i.String(), j.String())
 	})
 	return types
 }

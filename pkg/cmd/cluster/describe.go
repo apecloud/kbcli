@@ -56,7 +56,9 @@ var (
 		kbcli cluster describe mycluster`)
 
 	newTbl = func(out io.Writer, title string, header ...interface{}) *printer.TablePrinter {
-		fmt.Fprintln(out, title)
+		if title != "" {
+			fmt.Fprintln(out, title)
+		}
 		tbl := printer.NewTablePrinter(out)
 		tbl.SetHeader(header...)
 		return tbl

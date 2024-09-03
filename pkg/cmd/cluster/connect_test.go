@@ -26,7 +26,6 @@ import (
 	. "github.com/onsi/gomega"
 
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
@@ -35,46 +34,45 @@ import (
 	clientfake "k8s.io/client-go/rest/fake"
 	cmdtesting "k8s.io/kubectl/pkg/cmd/testing"
 
+	"github.com/apecloud/kubeblocks/pkg/constant"
+
 	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/testing"
 	"github.com/apecloud/kbcli/pkg/types"
 )
 
 var _ = Describe("connection", func() {
-	const (
-		namespace   = "test"
-		clusterName = "test"
-	)
-
 	var (
 		streams genericiooptions.IOStreams
 		tf      *cmdtesting.TestFactory
 	)
 
 	BeforeEach(func() {
-		tf = cmdtesting.NewTestFactory().WithNamespace("test")
+		tf = cmdtesting.NewTestFactory().WithNamespace(testing.Namespace)
 		codec := scheme.Codecs.LegacyCodec(scheme.Scheme.PrioritizedVersionsAllGroups()...)
-		cluster := testing.FakeCluster(clusterName, namespace)
-		pods := testing.FakePods(3, namespace, clusterName)
+		cluster := testing.FakeCluster(testing.ClusterName, testing.Namespace)
+		pods := testing.FakePods(3, testing.Namespace, testing.ClusterName)
 		httpResp := func(obj runtime.Object) *http.Response {
 			return &http.Response{StatusCode: http.StatusOK, Header: cmdtesting.DefaultHeader(), Body: cmdtesting.ObjBody(codec, obj)}
 		}
+		services := testing.FakeServices()
+		secrets := testing.FakeSecrets(testing.Namespace, testing.ClusterName)
 		tf.UnstructuredClient = &clientfake.RESTClient{
 			GroupVersion:         schema.GroupVersion{Group: types.AppsAPIGroup, Version: types.AppsAPIVersion},
 			NegotiatedSerializer: resource.UnstructuredPlusDefaultContentConfig().NegotiatedSerializer,
 			Client: clientfake.CreateHTTPClient(func(req *http.Request) (*http.Response, error) {
-				urlPrefix := "/api/v1/namespaces/" + namespace
+				urlPrefix := "/api/v1/namespaces/" + testing.Namespace
 				return map[string]*http.Response{
-					urlPrefix + "/services":        httpResp(testing.FakeServices()),
-					urlPrefix + "/secrets":         httpResp(testing.FakeSecrets(namespace, clusterName)),
-					urlPrefix + "/pods":            httpResp(pods),
-					urlPrefix + "/pods/test-pod-0": httpResp(findPod(pods, "test-pod-0")),
+					urlPrefix + "/services":                   httpResp(services),
+					urlPrefix + "/secrets":                    httpResp(secrets),
+					urlPrefix + "/pods":                       httpResp(pods),
+					urlPrefix + "/pods/" + pods.Items[0].Name: httpResp(findPod(pods, pods.Items[0].Name)),
 				}[req.URL.Path], nil
 			}),
 		}
 
 		tf.Client = tf.UnstructuredClient
-		tf.FakeDynamicClient = testing.FakeDynamicClient(cluster, testing.FakeClusterDef(), testing.FakeClusterVersion(), &pods.Items[0], &pods.Items[1], &pods.Items[2])
+		tf.FakeDynamicClient = testing.FakeDynamicClient(cluster, testing.FakeCompDef(), &services.Items[0], &pods.Items[0], &pods.Items[1], &pods.Items[2])
 		streams = genericiooptions.NewTestIOStreamsDiscard()
 	})
 
@@ -96,105 +94,76 @@ var _ = Describe("connection", func() {
 		By("without cluster name")
 		Expect(o.Validate(nil)).Should(HaveOccurred())
 
-		Expect(o.Validate([]string{clusterName})).Should(Succeed())
+		Expect(o.Validate([]string{testing.ClusterName})).Should(Succeed())
 
 		// set instance name and cluster name, should fail
 		o.PodName = "test-pod-0"
-		Expect(o.Validate([]string{clusterName})).Should(HaveOccurred())
+		Expect(o.Validate([]string{testing.ClusterName})).Should(HaveOccurred())
 		o.componentName = "test-component"
 		Expect(o.Validate([]string{})).Should(HaveOccurred())
 
 		// unset pod name
 		o.PodName = ""
-		Expect(o.Validate([]string{clusterName})).Should(Succeed())
+		Expect(o.Validate([]string{testing.ClusterName})).Should(Succeed())
 		// unset component name
 		o.componentName = ""
-		Expect(o.Validate([]string{clusterName})).Should(Succeed())
+		Expect(o.Validate([]string{testing.ClusterName})).Should(Succeed())
 	})
 
 	It("complete by cluster name", func() {
 		o := &ConnectOptions{ExecOptions: action.NewExecOptions(tf, streams)}
-		Expect(o.Validate([]string{clusterName})).Should(Succeed())
+		Expect(o.Validate([]string{testing.ClusterName})).Should(Succeed())
 		Expect(o.Complete()).Should(Succeed())
-		Expect(o.Pod).ShouldNot(BeNil())
 	})
 
 	It("complete by pod name", func() {
 		o := &ConnectOptions{ExecOptions: action.NewExecOptions(tf, streams)}
-		o.PodName = "test-pod-0"
+		o.PodName = constant.GenerateWorkloadNamePattern(testing.ClusterName, testing.ComponentName) + "-0"
 		Expect(o.Validate([]string{})).Should(Succeed())
 		Expect(o.Complete()).Should(Succeed())
 		Expect(o.Pod).ShouldNot(BeNil())
 	})
 
 	It("show example", func() {
-		o := &ConnectOptions{ExecOptions: action.NewExecOptions(tf, streams)}
-		Expect(o.Validate([]string{clusterName})).Should(Succeed())
-		Expect(o.Complete()).Should(Succeed())
+		initOption := func(setOption func(o *ConnectOptions)) *ConnectOptions {
+			o := &ConnectOptions{ExecOptions: action.NewExecOptions(tf, streams)}
+			if setOption != nil {
+				setOption(o)
+			}
+			args := []string{testing.ClusterName}
+			if o.PodName != "" {
+				args = nil
+			}
+			Expect(o.Validate(args)).Should(Succeed())
+			Expect(o.Complete()).Should(Succeed())
+			return o
+		}
 
 		By("specify one cluster")
+		o := initOption(nil)
 		Expect(o.runShowExample()).Should(Succeed())
-	})
+		Expect(o.services).Should(HaveLen(4))
+		Expect(o.accounts).Should(HaveLen(1))
 
-	Context("getConnectionInfo", func() {
-		const (
-			user     = "test-user"
-			password = "test-password"
-		)
-		secret := corev1.Secret{}
-		secret.Name = "test-conn-credential"
-		secret.Data = map[string][]byte{
-			"username": []byte(user),
-			"password": []byte(password),
-		}
-		secretList := &corev1.SecretList{}
-		secretList.Items = []corev1.Secret{secret}
-		It("getUserAndPassword", func() {
-			u, p, err := getUserAndPassword(testing.FakeClusterDef(), nil, nil, secretList)
-			Expect(err).Should(Succeed())
-			Expect(u).Should(Equal(user))
-			Expect(p).Should(Equal(password))
+		By("specify one component")
+		o = initOption(func(o *ConnectOptions) {
+			o.componentName = testing.ComponentName
 		})
+		Expect(o.runShowExample()).Should(Succeed())
+		Expect(o.services).Should(HaveLen(4))
+		Expect(o.accounts).Should(HaveLen(1))
 
-		It("--show-password", func() {
-			o := &ConnectOptions{ExecOptions: action.NewExecOptions(tf, streams)}
-			Expect(o.Validate([]string{clusterName})).Should(Succeed())
-			Expect(o.Complete()).Should(Succeed())
-			info, err := o.getConnectionInfo()
-			Expect(err).Should(Succeed())
-			Expect(info.Password).Should(Equal(passwordMask))
-			o.showPassword = true
-			info, err = o.getConnectionInfo()
-			Expect(err).Should(Succeed())
-			Expect(info.Password).Should(Equal(password))
+		By("specify one pod")
+		o = initOption(func(o *ConnectOptions) {
+			o.PodName = constant.GenerateWorkloadNamePattern(testing.ClusterName, testing.ComponentName) + "-0"
 		})
+		Expect(o.runShowExample()).Should(Succeed())
+		// get one headless service
+		Expect(o.services).Should(HaveLen(1))
+		Expect(o.services[0].Name).Should(Equal(constant.GenerateDefaultComponentHeadlessServiceName(testing.ClusterName, testing.ComponentName)))
+		Expect(o.accounts).Should(HaveLen(1))
 	})
 })
-
-func mockPod() *corev1.Pod {
-	return &corev1.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:            "foo",
-			Namespace:       "test",
-			ResourceVersion: "10",
-			Labels: map[string]string{
-				"app.kubernetes.io/name": "mysql-apecloud-mysql",
-			},
-		},
-		Spec: corev1.PodSpec{
-			RestartPolicy: corev1.RestartPolicyAlways,
-			DNSPolicy:     corev1.DNSClusterFirst,
-			Containers: []corev1.Container{
-				{
-					Name: "bar",
-				},
-			},
-		},
-		Status: corev1.PodStatus{
-			Phase: corev1.PodRunning,
-		},
-	}
-}
 
 func findPod(pods *corev1.PodList, name string) *corev1.Pod {
 	for i, pod := range pods.Items {

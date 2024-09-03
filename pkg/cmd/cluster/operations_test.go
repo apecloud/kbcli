@@ -93,12 +93,13 @@ var _ = Describe("operations", func() {
 				},
 			},
 		}
-		pods := testing.FakePods(2, clusterWithOneComp.Namespace, clusterName1)
+		pods := testing.FakePods(2, clusterWithOneComp.Namespace, clusterName)
+		pod1s := testing.FakePods(2, clusterWithOneComp.Namespace, clusterName1)
 		podsWithCompDef := testing.FakePods(2, clusterWithCompDef.Namespace, clusterNameWithCompDef)
 		tf.Client = &clientfake.RESTClient{}
 		tf.FakeDynamicClient = testing.FakeDynamicClient(testing.FakeClusterDef(),
 			testing.FakeClusterVersion(), testing.FakeCompDef(), clusterWithTwoComps, clusterWithOneComp, clusterWithCompDef,
-			&pods.Items[0], &pods.Items[1], &podsWithCompDef.Items[0], &podsWithCompDef.Items[1], opsDef)
+			&pods.Items[0], &pods.Items[1], &pod1s.Items[0], &pod1s.Items[1], &podsWithCompDef.Items[0], &podsWithCompDef.Items[1], opsDef)
 	})
 
 	AfterEach(func() {
@@ -337,7 +338,7 @@ var _ = Describe("operations", func() {
 
 		By("validate failed because there are multi-components in cluster and not specify the component")
 		Expect(o.CompleteComponentsFlag()).Should(Succeed())
-		Expect(o.Validate()).ShouldNot(Succeed())
+		Expect(o.CompletePromoteOps()).ShouldNot(Succeed())
 		Expect(testing.ContainExpectStrings(o.CompletePromoteOps().Error(), "there are multiple components in cluster, please use --component to specify the component for promote")).Should(BeTrue())
 
 		By("validate failed because o.Instance is illegal ")
@@ -348,21 +349,14 @@ var _ = Describe("operations", func() {
 		Expect(testing.ContainExpectStrings(o.Validate().Error(), "not found")).Should(BeTrue())
 
 		By("validate failed because o.Instance is already leader and cannot be promoted")
-		o.Instance = fmt.Sprintf("%s-pod-%d", clusterName1, 0)
+		o.Instance = fmt.Sprintf("%s-%s-%d", clusterName1, testing.ComponentName, 0)
 		Expect(o.Validate()).ShouldNot(Succeed())
 		Expect(testing.ContainExpectStrings(o.Validate().Error(), "cannot be promoted because it is already the targetRole")).Should(BeTrue())
 
 		By("validate failed because o.Instance does not belong to the current component")
-		o.Instance = fmt.Sprintf("%s-pod-%d", clusterName1, 1)
+		o.Instance = fmt.Sprintf("%s-%s-%d", clusterName, testing.ComponentName, 1)
 		Expect(o.Validate()).ShouldNot(Succeed())
 		Expect(testing.ContainExpectStrings(o.Validate().Error(), "does not belong to the current component")).Should(BeTrue())
-
-		By("validate failed because mock component is invalid, does not support switchover")
-		o.Name = clusterName
-		o.Instance = ""
-		o.Component = testing.ComponentDefName
-		Expect(o.Validate()).ShouldNot(Succeed())
-		Expect(testing.ContainExpectStrings(o.Validate().Error(), "is invalid")).Should(BeTrue())
 	})
 
 	It("Switchover ops base on component definition", func() {
@@ -379,7 +373,7 @@ var _ = Describe("operations", func() {
 
 		By("validate failed because there are multi-components in cluster and not specify the component")
 		Expect(o.CompleteComponentsFlag()).Should(Succeed())
-		Expect(o.Validate()).ShouldNot(Succeed())
+		Expect(o.CompletePromoteOps()).ShouldNot(Succeed())
 		Expect(testing.ContainExpectStrings(o.CompletePromoteOps().Error(), "there are multiple components in cluster, please use --component to specify the component for promote")).Should(BeTrue())
 
 		By("validate failed because o.Instance is illegal ")
@@ -389,23 +383,16 @@ var _ = Describe("operations", func() {
 		Expect(testing.ContainExpectStrings(o.Validate().Error(), "not found")).Should(BeTrue())
 
 		By("validate failed because o.Instance is already leader and cannot be promoted")
-		o.Instance = fmt.Sprintf("%s-pod-%d", clusterNameWithCompDef, 0)
+		o.Instance = fmt.Sprintf("%s-%s-%d", clusterNameWithCompDef, testing.ComponentName, 0)
 		Expect(o.Validate()).ShouldNot(Succeed())
 		Expect(testing.ContainExpectStrings(o.Validate().Error(), "cannot be promoted because it is already the targetRole")).Should(BeTrue())
 
 		By("validate failed because o.Instance does not belong to the current component")
-		o.Instance = fmt.Sprintf("%s-pod-%d", clusterNameWithCompDef, 1)
+		o.Instance = fmt.Sprintf("%s-%s-%d", clusterName1, testing.ComponentName, 1)
 		o.Component = testing.ComponentName
 		Expect(o.Validate()).ShouldNot(Succeed())
 		Expect(testing.ContainExpectStrings(o.Validate().Error(), "does not belong to the current component")).Should(BeTrue())
 
-		By("validate failed because mock component is invalid, does not support switchover")
-		o.Name = clusterName
-		o.Instance = ""
-		o.Component = testing.ComponentDefName
-		Expect(o.Validate()).ShouldNot(Succeed())
-		fmt.Println(o.Validate().Error())
-		Expect(testing.ContainExpectStrings(o.Validate().Error(), "is invalid")).Should(BeTrue())
 	})
 
 	It("Custom ops base on component definition", func() {

@@ -72,6 +72,8 @@ const (
 	ActionSetName       = "fake-action-set"
 	BackupName          = "fake-backup-name"
 
+	accountName = "root"
+
 	IsDefault    = true
 	IsNotDefault = false
 )
@@ -126,6 +128,7 @@ func FakeCluster(name, namespace string, conditions ...metav1.Condition) *appsv1
 				{
 					Name:            ComponentName,
 					ComponentDefRef: ComponentDefName,
+					ComponentDef:    CompDefName,
 					Replicas:        replicas,
 					Resources: corev1.ResourceRequirements{
 						Requests: corev1.ResourceList{
@@ -189,7 +192,7 @@ func FakePods(replicas int, namespace string, cluster string) *corev1.PodList {
 	for i := 0; i < replicas; i++ {
 		role := "follower"
 		pod := corev1.Pod{}
-		pod.Name = fmt.Sprintf("%s-pod-%d", cluster, i)
+		pod.Name = fmt.Sprintf("%s-%s-%d", cluster, ComponentName, i)
 		pod.Namespace = namespace
 
 		if i == 0 {
@@ -197,11 +200,11 @@ func FakePods(replicas int, namespace string, cluster string) *corev1.PodList {
 		}
 
 		pod.Labels = map[string]string{
-			constant.AppInstanceLabelKey:    cluster,
-			constant.RoleLabelKey:           role,
-			constant.KBAppComponentLabelKey: ComponentName,
-			constant.AppNameLabelKey:        "mysql-apecloud-mysql",
-			constant.AppManagedByLabelKey:   constant.AppName,
+			constant.AppInstanceLabelKey:         cluster,
+			constant.RoleLabelKey:                role,
+			constant.KBAppComponentLabelKey:      ComponentName,
+			constant.ComponentDefinitionLabelKey: CompDefName,
+			constant.AppManagedByLabelKey:        constant.AppName,
 		}
 		pod.Spec.NodeName = NodeName
 		pod.Spec.Containers = []corev1.Container{
@@ -418,6 +421,12 @@ func FakeCompDef() *appsv1alpha1.ComponentDefinition {
 				Serviceable: false,
 				Writable:    false,
 				Votable:     false,
+			},
+		},
+		SystemAccounts: []appsv1alpha1.SystemAccount{
+			{
+				Name:        accountName,
+				InitAccount: true,
 			},
 		},
 		LifecycleActions: &appsv1alpha1.ComponentLifecycleActions{
@@ -653,6 +662,7 @@ func FakeServices() *corev1.ServiceList {
 
 		if item.clusterIP == "" {
 			svc.Spec.ClusterIP = "None"
+			svc.Name = constant.GenerateDefaultComponentHeadlessServiceName(ClusterName, ComponentName)
 		} else {
 			svc.Spec.ClusterIP = item.clusterIP
 		}

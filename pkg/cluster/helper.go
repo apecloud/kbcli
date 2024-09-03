@@ -32,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 
 	"github.com/apecloud/kbcli/pkg/testing"
@@ -377,6 +378,9 @@ func GetPodComponentName(pod *corev1.Pod) string {
 	if pod.Labels == nil {
 		return ""
 	}
+	if compName, ok := pod.Labels[constant.KBAppShardingNameLabelKey]; ok {
+		return compName
+	}
 	return pod.Labels[constant.KBAppComponentLabelKey]
 }
 
@@ -394,6 +398,24 @@ func GetConfigConstraintByName(dynamic dynamic.Interface, name string) (*appsv1b
 		return nil, err
 	}
 	return ccObj, nil
+}
+
+func ListShardingComponents(dynamic dynamic.Interface, clusterName, clusterNamespace, componentName string) ([]*appsv1alpha1.Component, error) {
+	unstructuredObjList, err := dynamic.Resource(types.ComponentGVR()).Namespace(clusterNamespace).List(context.TODO(), metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("%s=%s,%s=%s", constant.AppInstanceLabelKey, clusterName, constant.KBAppShardingNameLabelKey, componentName),
+	})
+	if err != nil {
+		return nil, nil
+	}
+	var components []*appsv1alpha1.Component
+	for i := range unstructuredObjList.Items {
+		comp := &appsv1alpha1.Component{}
+		if err = runtime.DefaultUnstructuredConverter.FromUnstructured(unstructuredObjList.Items[i].UnstructuredContent(), comp); err != nil {
+			return nil, err
+		}
+		components = append(components, comp)
+	}
+	return components, nil
 }
 
 func GetServiceRefs(cd *appsv1alpha1.ClusterDefinition) []string {
@@ -440,4 +462,28 @@ func GetDefaultVersionByCompDefs(dynamic dynamic.Interface, compDefs []string) (
 		}
 	}
 	return cv, nil
+}
+
+func GetReadyNodeForNodePort(client *kubernetes.Clientset) (*corev1.Node, error) {
+	nodes, err := client.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{
+		Limit: 20,
+	})
+	if err != nil {
+		return nil, err
+	}
+	var readyNode *corev1.Node
+	for _, node := range nodes.Items {
+		var nodeIsReady bool
+		for _, con := range node.Status.Conditions {
+			if con.Type == corev1.NodeReady {
+				nodeIsReady = con.Status == corev1.ConditionTrue
+				break
+			}
+		}
+		if nodeIsReady {
+			readyNode = &node
+			break
+		}
+	}
+	return readyNode, nil
 }
