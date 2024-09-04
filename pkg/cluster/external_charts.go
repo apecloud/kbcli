@@ -37,15 +37,15 @@ import (
 	"github.com/apecloud/kbcli/pkg/util/flags"
 )
 
-// CliClusterChartConfig is $HOME/.kbcli/cluster_types by default
-var CliClusterChartConfig string
+// CliClusterTypesCacheDir is $HOME/.kbcli/cluster_types by default
+var CliClusterTypesCacheDir string
 
 // CliChartsCacheDir is $HOME/.kbcli/charts by default
 var CliChartsCacheDir string
 
 type clusterConfig []*TypeInstance
 
-// GlobalClusterChartConfig is kbcli global cluster chart config reference to CliClusterChartConfig
+// GlobalClusterChartConfig is kbcli global cluster chart config reference to CliClusterTypesCacheDir
 var GlobalClusterChartConfig clusterConfig
 var CacheFiles []fs.DirEntry
 
@@ -144,7 +144,7 @@ func GetChartCacheFiles() []fs.DirEntry {
 func ClearCharts(c ClusterType) {
 	// if the fail clusterType is from external config, remove the config and the related charts
 	if GlobalClusterChartConfig.RemoveConfig(c) {
-		if err := GlobalClusterChartConfig.WriteConfigs(CliClusterChartConfig); err != nil {
+		if err := GlobalClusterChartConfig.WriteConfigs(CliClusterTypesCacheDir); err != nil {
 			klog.V(2).Info(fmt.Sprintf("Warning: auto clear %s config fail due to: %s\n", c, err.Error()))
 
 		}
@@ -155,7 +155,7 @@ func ClearCharts(c ClusterType) {
 	}
 }
 
-// TypeInstance reference to a cluster type instance in config
+// TypeInstance reference to a cluster type instance in config and implement the cluster.chartLoader interface
 type TypeInstance struct {
 	Name  ClusterType `yaml:"name"`
 	URL   string      `yaml:"helmChartUrl"`
@@ -214,7 +214,8 @@ func (h *TypeInstance) getAlias() string {
 
 func (h *TypeInstance) register(subcmd ClusterType) error {
 	if _, ok := ClusterTypeCharts[subcmd]; ok {
-		return fmt.Errorf("cluster type %s already registered", subcmd)
+		// replace built-in cluster chart
+		klog.V(2).Info(fmt.Sprintf("cluster chart of %s is replaced manully\n", subcmd.String()))
 	}
 	ClusterTypeCharts[subcmd] = h
 
@@ -223,6 +224,7 @@ func (h *TypeInstance) register(subcmd ClusterType) error {
 			return nil
 		}
 	}
+	//TODO: replace with 'kbcli cluster register --engine= --repo= --version='
 	return fmt.Errorf("can't find the %s in cache, please use 'kbcli cluster pull %s --url %s' first", h.Name.String(), h.Name.String(), h.URL)
 }
 
@@ -230,15 +232,15 @@ var _ chartLoader = &TypeInstance{}
 
 func init() {
 	homeDir, _ := util.GetCliHomeDir()
-	CliClusterChartConfig = filepath.Join(homeDir, types.CliClusterTypeConfigs)
+	CliClusterTypesCacheDir = filepath.Join(homeDir, types.CliClusterTypeConfigs)
 	CliChartsCacheDir = filepath.Join(homeDir, types.CliChartsCache)
 
-	err := GlobalClusterChartConfig.ReadConfigs(CliClusterChartConfig)
+	err := GlobalClusterChartConfig.ReadConfigs(CliClusterTypesCacheDir)
 	if err != nil {
 		fmt.Println(err.Error())
 		return
 	}
 	// check charts cache dir
 	CacheFiles = GetChartCacheFiles()
-	RegisterCMD(GlobalClusterChartConfig, CliClusterChartConfig)
+	RegisterCMD(GlobalClusterChartConfig, CliClusterTypesCacheDir)
 }

@@ -101,10 +101,6 @@ func (o *registerOption) validate() error {
 	if !re.MatchString(o.clusterType.String()) {
 		return fmt.Errorf("cluster type %s is not appropriate as a subcommand", o.clusterType.String())
 	}
-	// stop registering if the register cluster type is the builtin cluster
-	if cluster.IsBuiltinCharts(o.clusterType) {
-		return fmt.Errorf("cluster type %s is the kbcli builtin type, not allow to be changed", o.clusterType.String())
-	}
 	// double check if  the register cluster type is already existed
 	if !o.autoApprove {
 		for key := range cluster.ClusterTypeCharts {
@@ -172,14 +168,21 @@ func (o *registerOption) run() error {
 		return fmt.Errorf("the chart of %s pre-check unsuccssful: %s", o.clusterType, err.Error())
 	}
 
-	if o.replace {
+	isChartExist := false
+	for _, item := range cluster.GlobalClusterChartConfig {
+		if instance.Name == item.Name {
+			isChartExist = true
+		}
+	}
+
+	if isChartExist {
 		// update config
 		cluster.GlobalClusterChartConfig.UpdateConfig(instance)
 	} else {
 		cluster.GlobalClusterChartConfig.AddConfig(instance)
 	}
 
-	return cluster.GlobalClusterChartConfig.WriteConfigs(cluster.CliClusterChartConfig)
+	return cluster.GlobalClusterChartConfig.WriteConfigs(cluster.CliClusterTypesCacheDir)
 }
 
 func validateSource(source string) error {
