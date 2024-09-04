@@ -541,6 +541,9 @@ func (o *ConnectOptions) checkUnsupportedEngine() error {
 	var engineType string
 	if o.componentDefV2 != nil {
 		engineType = o.componentDefV2.Labels[types.AddonNameLabelKey]
+		if engineType == "" {
+			engineType = o.componentDefV2.Spec.ServiceKind
+		}
 	}
 	if o.targetClusterDef != nil && engineType == "" {
 		engineType = o.targetClusterDef.Name
