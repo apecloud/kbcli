@@ -198,6 +198,23 @@ func (i *InstallOpts) Install(cfg *Config) (*release.Release, error) {
 	return rel, nil
 }
 
+func PullChart(repo string, chartName string, version string, destDir string) error {
+	actionCfg, err := NewActionConfig(NewConfig("", "", "", klog.V(1).Enabled()))
+	if err != nil {
+		return err
+	}
+	settings := cli.New()
+	client := action.NewPullWithOpts(action.WithConfig(actionCfg))
+	client.Settings = settings
+	client.RepoURL = ""
+	client.Version = version
+	client.DestDir = destDir
+	client.UntarDir = destDir
+	client.Untar = false
+	_, err = client.Run(repo + "/" + chartName)
+	return err
+}
+
 func (i *InstallOpts) tryInstall(cfg *action.Configuration) (*release.Release, error) {
 	if i.DryRun == nil || !*i.DryRun {
 		released, err := i.GetInstalled(cfg)
