@@ -100,7 +100,7 @@ func FindClusterComp(cluster *appsv1alpha1.Cluster, compDefName string) *appsv1a
 }
 
 // GetComponentEndpoints gets component internal and external endpoints
-func GetComponentEndpoints(svcList *corev1.ServiceList, c *appsv1alpha1.ClusterComponentSpec) ([]string, []string) {
+func GetComponentEndpoints(nodes []*corev1.Node, svcList *corev1.ServiceList, compName string) ([]string, []string) {
 	var (
 		internalEndpoints []string
 		externalEndpoints []string
@@ -114,38 +114,57 @@ func GetComponentEndpoints(svcList *corev1.ServiceList, c *appsv1alpha1.ClusterC
 		return result
 	}
 
-	internalSvcs, externalSvcs := GetComponentServices(svcList, c)
+	getEndpointsWithNodePort := func(ip string, ports []corev1.ServicePort) []string {
+		var result []string
+		for _, port := range ports {
+			result = append(result, fmt.Sprintf("%s:%d", ip, port.NodePort))
+		}
+		return result
+	}
+
+	internalSvcs, externalSvcs := GetComponentServices(svcList, compName)
 	for _, svc := range internalSvcs {
 		dns := fmt.Sprintf("%s.%s.svc.cluster.local", svc.Name, svc.Namespace)
 		internalEndpoints = append(internalEndpoints, getEndpoints(dns, svc.Spec.Ports)...)
 	}
 
 	for _, svc := range externalSvcs {
-		externalEndpoints = append(externalEndpoints, getEndpoints(GetExternalAddr(svc), svc.Spec.Ports)...)
+		endpoints := getEndpoints(GetExternalAddr(svc), svc.Spec.Ports)
+		if svc.Spec.Type == corev1.ServiceTypeNodePort {
+			if len(nodes) == 0 {
+				continue
+			}
+			nodeInternal, nodeExternal := GetEndpointsFromNode(nodes[0])
+			if nodeExternal != "" {
+				endpoints = getEndpointsWithNodePort(nodeExternal, svc.Spec.Ports)
+			} else {
+				endpoints = getEndpointsWithNodePort(nodeInternal, svc.Spec.Ports)
+			}
+		}
+		externalEndpoints = append(externalEndpoints, endpoints...)
 	}
 	return internalEndpoints, externalEndpoints
 }
 
 // GetComponentServices gets component services
-func GetComponentServices(svcList *corev1.ServiceList, c *appsv1alpha1.ClusterComponentSpec) ([]*corev1.Service, []*corev1.Service) {
+func GetComponentServices(svcList *corev1.ServiceList, compName string) ([]*corev1.Service, []*corev1.Service) {
 	if svcList == nil {
 		return nil, nil
 	}
 
 	var internalSvcs, externalSvcs []*corev1.Service
 	for i, svc := range svcList.Items {
-		if svc.GetLabels()[constant.KBAppComponentLabelKey] != c.Name {
+		if svc.GetLabels()[constant.KBAppComponentLabelKey] != compName {
 			continue
 		}
-
 		var (
 			internalIP   = svc.Spec.ClusterIP
 			externalAddr = GetExternalAddr(&svc)
 		)
-		if svc.Spec.Type == corev1.ServiceTypeClusterIP && internalIP != "" && internalIP != "None" {
+		if internalIP != "" && internalIP != "None" {
 			internalSvcs = append(internalSvcs, &svcList.Items[i])
 		}
-		if externalAddr != "" {
+		if externalAddr != "" || svc.Spec.Type == corev1.ServiceTypeNodePort {
 			externalSvcs = append(externalSvcs, &svcList.Items[i])
 		}
 	}
@@ -400,24 +419,6 @@ func GetConfigConstraintByName(dynamic dynamic.Interface, name string) (*appsv1b
 	return ccObj, nil
 }
 
-func ListShardingComponents(dynamic dynamic.Interface, clusterName, clusterNamespace, componentName string) ([]*appsv1alpha1.Component, error) {
-	unstructuredObjList, err := dynamic.Resource(types.ComponentGVR()).Namespace(clusterNamespace).List(context.TODO(), metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("%s=%s,%s=%s", constant.AppInstanceLabelKey, clusterName, constant.KBAppShardingNameLabelKey, componentName),
-	})
-	if err != nil {
-		return nil, nil
-	}
-	var components []*appsv1alpha1.Component
-	for i := range unstructuredObjList.Items {
-		comp := &appsv1alpha1.Component{}
-		if err = runtime.DefaultUnstructuredConverter.FromUnstructured(unstructuredObjList.Items[i].UnstructuredContent(), comp); err != nil {
-			return nil, err
-		}
-		components = append(components, comp)
-	}
-	return components, nil
-}
-
 func GetServiceRefs(cd *appsv1alpha1.ClusterDefinition) []string {
 	var serviceRefs []string
 	for _, compDef := range cd.Spec.ComponentDefs {
@@ -439,29 +440,6 @@ func GetDefaultServiceRef(cd *appsv1alpha1.ClusterDefinition) (string, error) {
 		return "", fmt.Errorf("failed to get the cluster default service reference name")
 	}
 	return serviceRefs[0], nil
-}
-
-func GetDefaultVersionByCompDefs(dynamic dynamic.Interface, compDefs []string) (string, error) {
-	cv := ""
-	if compDefs == nil {
-		return "", fmt.Errorf("failed to find default cluster version referencing the nil compDefs")
-	}
-	for _, compDef := range compDefs {
-		comp, err := dynamic.Resource(types.CompDefGVR()).Get(context.Background(), compDef, metav1.GetOptions{})
-		if err != nil {
-			return "", fmt.Errorf("fail to get cluster version due to: %s", err.Error())
-		}
-		labels := comp.GetLabels()
-		kind := labels[constant.AppNameLabelKey]
-		version := labels[constant.AppVersionLabelKey]
-		// todo: fix cv like:  mongodb-sharding-5.0, ac-mysql-8.0.30-auditlog
-		if cv == "" {
-			cv = fmt.Sprintf("%s-%s", kind, version)
-		} else if cv != fmt.Sprintf("%s-%s", kind, version) {
-			return "", fmt.Errorf("can't get the same cluster version by component definition:[%s]", strings.Join(compDefs, ","))
-		}
-	}
-	return cv, nil
 }
 
 func GetReadyNodeForNodePort(client *kubernetes.Clientset) (*corev1.Node, error) {
@@ -486,4 +464,23 @@ func GetReadyNodeForNodePort(client *kubernetes.Clientset) (*corev1.Node, error)
 		}
 	}
 	return readyNode, nil
+}
+
+func GetEndpointsFromNode(node *corev1.Node) (string, string) {
+	var (
+		internal string
+		external string
+	)
+	if node == nil {
+		return internal, external
+	}
+	for _, add := range node.Status.Addresses {
+		if add.Type == corev1.NodeInternalDNS || add.Type == corev1.NodeInternalIP {
+			internal = add.Address
+		}
+		if add.Type == corev1.NodeExternalDNS || add.Type == corev1.NodeExternalIP {
+			external = add.Address
+		}
+	}
+	return internal, external
 }

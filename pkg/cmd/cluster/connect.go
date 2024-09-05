@@ -59,21 +59,24 @@ var connectExample = templates.Examples(`
 		kbcli cluster connect mycluster --client=cli`)
 
 type componentAccount struct {
+	// unique name identifier for component object
 	componentName string
 	secretName    string
 	username      string
 }
 
 type ConnectOptions struct {
-	clusterName      string
-	componentName    string
-	targetCluster    *appsv1alpha1.Cluster
-	clientType       string
-	serviceKind      string
-	node             *corev1.Node
-	services         []corev1.Service
-	needGetReadyNode bool
-	accounts         []componentAccount
+	clusterName string
+	// componentName in cluster.spec
+	clusterComponentName string
+	targetCluster        *appsv1alpha1.Cluster
+	clientType           string
+	serviceKind          string
+	node                 *corev1.Node
+	services             []corev1.Service
+	needGetReadyNode     bool
+	accounts             []componentAccount
+	shardingCompMap      map[string]string
 
 	forwardSVC  string
 	forwardPort string
@@ -82,7 +85,7 @@ type ConnectOptions struct {
 
 // NewConnectCmd returns the cmd of connecting to a cluster
 func NewConnectCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := &ConnectOptions{ExecOptions: action.NewExecOptions(f, streams)}
+	o := &ConnectOptions{ExecOptions: action.NewExecOptions(f, streams), shardingCompMap: map[string]string{}}
 	cmd := &cobra.Command{
 		Use:               "connect (NAME | -i INSTANCE-NAME)",
 		Short:             "Connect to a cluster or instance.",
@@ -95,7 +98,7 @@ func NewConnectCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 		},
 	}
 	cmd.Flags().StringVarP(&o.PodName, "instance", "i", "", "The instance name to connect.")
-	flags.AddComponentFlag(f, cmd, &o.componentName, "The component to connect. If not specified and no any cluster scope services, pick up the first one.")
+	flags.AddComponentFlag(f, cmd, &o.clusterComponentName, "The component to connect. If not specified and no any cluster scope services, pick up the first one.")
 	cmd.Flags().StringVar(&o.clientType, "client", "", "Which client connection example should be output.")
 	util.CheckErr(cmd.RegisterFlagCompletionFunc("client", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		var types []string
@@ -139,7 +142,7 @@ func (o *ConnectOptions) Validate(args []string) error {
 		if len(args) > 0 {
 			return fmt.Errorf("specify either cluster name or instance name, they are exclusive")
 		}
-		if len(o.componentName) > 0 {
+		if len(o.clusterComponentName) > 0 {
 			return fmt.Errorf("component name is valid only when cluster name is specified")
 		}
 	} else if len(args) == 0 {
@@ -173,25 +176,10 @@ func (o *ConnectOptions) Complete() error {
 	return nil
 }
 
-func (o *ConnectOptions) appendRealCompNamesWithSharding(realComponentNames *[]string, shardingCompName string) error {
-	shardingComps, err := cluster.ListShardingComponents(o.Dynamic, o.clusterName, o.Namespace, shardingCompName)
-	if err != nil {
-		return err
-	}
-	if len(shardingComps) == 0 {
-		return fmt.Errorf(`cannot find any component objects for sharding component "%s"`, shardingCompName)
-	}
-	for i := range shardingComps {
-		*realComponentNames = append(*realComponentNames, shardingComps[i].Labels[constant.KBAppComponentLabelKey])
-	}
-	return nil
-}
-
 func (o *ConnectOptions) getConnectionInfo() error {
 	var (
-		realComponentNames []string
-		componentDefName   string
-		getter             = cluster.ObjectsGetter{
+		componentPairs []cluster.ComponentPair
+		getter         = cluster.ObjectsGetter{
 			Client:    o.Client,
 			Dynamic:   o.Dynamic,
 			Name:      o.clusterName,
@@ -205,7 +193,7 @@ func (o *ConnectOptions) getConnectionInfo() error {
 	if err != nil {
 		return err
 	}
-	if o.PodName == "" && o.componentName == "" && len(o.targetCluster.Spec.Services) > 0 {
+	if o.PodName == "" && o.clusterComponentName == "" && len(o.targetCluster.Spec.Services) > 0 {
 		// only get cluster connection info with cluster service
 		return o.getConnectInfoWithClusterService(objs.Services)
 	}
@@ -221,59 +209,67 @@ func (o *ConnectOptions) getConnectionInfo() error {
 		matchSVCFunc = func(svc corev1.Service, compName string) bool {
 			return svc.Spec.Selector[constant.KBAppPodNameLabelKey] == o.PodName
 		}
-		realComponentNames = append(realComponentNames, o.Pod.Labels[constant.KBAppComponentLabelKey])
-		componentDefName = o.Pod.Labels[constant.ComponentDefinitionLabelKey]
-	case o.componentName != "":
-		shardingSpec := o.targetCluster.Spec.GetShardingByName(o.componentName)
-		if shardingSpec != nil {
-			if err = o.appendRealCompNamesWithSharding(&realComponentNames, o.componentName); err != nil {
+		componentPairs = append(componentPairs, cluster.ComponentPair{
+			ComponentName:    o.Pod.Labels[constant.KBAppComponentLabelKey],
+			ComponentDefName: o.Pod.Labels[constant.ComponentDefinitionLabelKey],
+			ShardingName:     o.Pod.Labels[constant.KBAppShardingNameLabelKey],
+		})
+	case o.clusterComponentName != "":
+		compSpec, isSharding := cluster.GetCompSpecAndCheckSharding(o.targetCluster, o.clusterComponentName)
+		if compSpec == nil {
+			return fmt.Errorf(`cannot found the component "%s" in the cluster "%s"`, o.clusterComponentName, o.clusterName)
+		}
+		if isSharding {
+			if componentPairs, err = cluster.GetShardingComponentPairs(o.Dynamic, o.targetCluster, appsv1alpha1.ShardingSpec{
+				Name:     o.clusterComponentName,
+				Template: *compSpec,
+			}); err != nil {
 				return err
 			}
-			componentDefName = shardingSpec.Template.ComponentDef
 		} else {
-			compSpec := o.targetCluster.Spec.GetComponentByName(o.componentName)
-			if compSpec == nil {
-				return fmt.Errorf(`cannot found the component "%s" in the cluster "%s"`, o.componentName, o.clusterName)
-			}
-			componentDefName = compSpec.ComponentDef
-			realComponentNames = append(realComponentNames, o.componentName)
+			componentPairs = append(componentPairs, cluster.ComponentPair{
+				ComponentName:    compSpec.Name,
+				ComponentDefName: compSpec.ComponentDef,
+			})
 		}
 	default:
-		// 2. get first component services
-		switch {
-		case len(o.targetCluster.Spec.ComponentSpecs) > 0:
-			compSpec := o.targetCluster.Spec.ComponentSpecs[0]
-			realComponentNames = append(realComponentNames, compSpec.Name)
-			componentDefName = compSpec.ComponentDef
-		case len(o.targetCluster.Spec.ShardingSpecs) > 0:
-			shardingSpec := o.targetCluster.Spec.ShardingSpecs[0]
-			if err = o.appendRealCompNamesWithSharding(&realComponentNames, shardingSpec.Name); err != nil {
-				return err
-			}
-			componentDefName = shardingSpec.Template.ComponentDef
-		default:
-			return fmt.Errorf(`cannot found shardingSpecs or componentSpecs in cluster "%s"`, o.clusterName)
-		}
-	}
-	for _, realCompName := range realComponentNames {
-		if err = o.getConnectInfoWithPodOrCompService(objs.Services, realCompName, matchSVCFunc); err != nil {
+		// 2. get all component services
+		componentPairs, err = cluster.GetClusterComponentPairs(o.Dynamic, o.targetCluster)
+		if err != nil {
 			return err
 		}
 	}
-	return o.getComponentAccounts(componentDefName, realComponentNames[0])
+	for _, compPair := range componentPairs {
+		if err = o.getConnectInfoWithCompService(objs.Services, compPair.ComponentName, matchSVCFunc); err != nil {
+			return err
+		}
+		if err = o.getComponentAccounts(compPair.ComponentDefName, compPair.ComponentName); err != nil {
+			return err
+		}
+	}
+	o.setShardingCompMap(componentPairs)
+	return nil
 }
 
-func (o *ConnectOptions) getConnectInfoWithPodOrCompService(services *corev1.ServiceList, realCompName string, match func(svc corev1.Service, realCompName string) bool) error {
+func (o *ConnectOptions) setShardingCompMap(componentPairs []cluster.ComponentPair) {
+	for _, v := range componentPairs {
+		if v.ShardingName != "" {
+			o.shardingCompMap[v.ComponentName] = v.ShardingName
+		}
+	}
+}
+
+func (o *ConnectOptions) getConnectInfoWithCompService(services *corev1.ServiceList, componentName string, match func(svc corev1.Service, componentName string) bool) error {
 	needGetHeadlessSVC := true
 	for i := range services.Items {
 		svc := services.Items[i]
-		if match(svc, realCompName) {
+		if match(svc, componentName) {
 			needGetHeadlessSVC = false
 			o.appendService(svc)
 		}
 	}
 	if needGetHeadlessSVC {
-		return o.getCompHeadlessSVC(realCompName)
+		return o.getCompHeadlessSVC(componentName)
 	}
 	return nil
 }
@@ -285,10 +281,13 @@ func (o *ConnectOptions) appendService(svc corev1.Service) {
 	}
 }
 
-func (o *ConnectOptions) getCompHeadlessSVC(realCompName string) error {
+func (o *ConnectOptions) getCompHeadlessSVC(componentName string) error {
 	headlessSVC := &corev1.Service{}
-	headlessSVCName := constant.GenerateDefaultComponentHeadlessServiceName(o.clusterName, realCompName)
-	if err := util.GetResourceObjectFromGVR(types.ServiceGVR(), client.ObjectKey{Namespace: o.Namespace, Name: headlessSVCName}, o.Dynamic, headlessSVC); client.IgnoreNotFound(err) != nil {
+	headlessSVCName := constant.GenerateDefaultComponentHeadlessServiceName(o.clusterName, componentName)
+	if err := util.GetResourceObjectFromGVR(types.ServiceGVR(), client.ObjectKey{Namespace: o.Namespace, Name: headlessSVCName}, o.Dynamic, headlessSVC); err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			return nil
+		}
 		return err
 	}
 	if headlessSVC.Name != "" {
@@ -299,7 +298,7 @@ func (o *ConnectOptions) getCompHeadlessSVC(realCompName string) error {
 
 func (o *ConnectOptions) getConnectInfoWithClusterService(services *corev1.ServiceList) error {
 	// key: compName value: isSharding
-	componentMap := map[string]bool{}
+	clusterComponentMap := map[string]bool{}
 	for _, v := range o.targetCluster.Spec.Services {
 		svcName := constant.GenerateClusterServiceName(o.clusterName, v.ServiceName)
 		for i := range services.Items {
@@ -309,48 +308,48 @@ func (o *ConnectOptions) getConnectInfoWithClusterService(services *corev1.Servi
 			}
 			o.appendService(svc)
 			if v.ComponentSelector != "" {
-				componentMap[v.ComponentSelector] = false
+				clusterComponentMap[v.ComponentSelector] = false
 			} else if v.ShardingSelector != "" {
-				componentMap[v.ShardingSelector] = true
+				clusterComponentMap[v.ShardingSelector] = true
 			}
 			break
 		}
 	}
-	for compName, isSharding := range componentMap {
+	for clusterCompName, isSharding := range clusterComponentMap {
 		var (
-			compDefName  string
-			realCompName string
+			compDefName   string
+			componentName string
 		)
 		if isSharding {
-			shardingSpec := o.targetCluster.Spec.GetShardingByName(compName)
+			shardingSpec := o.targetCluster.Spec.GetShardingByName(clusterCompName)
 			if shardingSpec == nil {
 				continue
 			}
-			shardingComps, err := cluster.ListShardingComponents(o.Dynamic, o.clusterName, o.Namespace, compName)
+			shardingComps, err := cluster.ListShardingComponents(o.Dynamic, o.clusterName, o.Namespace, clusterCompName)
 			if err != nil {
 				return err
 			}
 			if len(shardingComps) == 0 {
-				return fmt.Errorf(`cannot find any component objects for sharding component "%s"`, compName)
+				return fmt.Errorf(`cannot find any component objects for sharding component "%s"`, clusterCompName)
 			}
-			realCompName = shardingComps[0].Labels[constant.KBAppComponentLabelKey]
+			componentName = shardingComps[0].Labels[constant.KBAppComponentLabelKey]
 			compDefName = shardingSpec.Template.ComponentDef
 		} else {
-			compSpec := o.targetCluster.Spec.GetComponentByName(compName)
+			compSpec := o.targetCluster.Spec.GetComponentByName(clusterCompName)
 			if compSpec == nil {
 				continue
 			}
-			realCompName = compName
+			componentName = clusterCompName
 			compDefName = compSpec.ComponentDef
 		}
-		if err := o.getComponentAccounts(compDefName, realCompName); err != nil {
+		if err := o.getComponentAccounts(compDefName, componentName); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (o *ConnectOptions) getComponentAccounts(componentDefName, realCompName string) error {
+func (o *ConnectOptions) getComponentAccounts(componentDefName, componentName string) error {
 	compDef, err := cluster.GetComponentDefByName(o.Dynamic, componentDefName)
 	if err != nil {
 		return err
@@ -361,28 +360,12 @@ func (o *ConnectOptions) getComponentAccounts(componentDefName, realCompName str
 			continue
 		}
 		o.accounts = append(o.accounts, componentAccount{
-			componentName: realCompName,
-			secretName:    constant.GenerateAccountSecretName(o.clusterName, realCompName, v.Name),
+			componentName: componentName,
+			secretName:    constant.GenerateAccountSecretName(o.clusterName, componentName, v.Name),
 			username:      v.Name,
 		})
 	}
 	return nil
-}
-
-func (o *ConnectOptions) getEndpointsFromNode() (string, string) {
-	var (
-		internal string
-		external string
-	)
-	for _, add := range o.node.Status.Addresses {
-		if add.Type == corev1.NodeInternalDNS || add.Type == corev1.NodeInternalIP {
-			internal = add.Address
-		}
-		if add.Type == corev1.NodeExternalDNS || add.Type == corev1.NodeExternalIP {
-			external = add.Address
-		}
-	}
-	return internal, external
 }
 
 func (o *ConnectOptions) showEndpoints() {
@@ -392,6 +375,9 @@ func (o *ConnectOptions) showEndpoints() {
 		compName := svc.Annotations[constant.KBAppComponentLabelKey]
 		if compName == "" {
 			compName = svc.Spec.Selector[constant.KBAppComponentLabelKey]
+		}
+		if shardingName, ok := o.shardingCompMap[compName]; ok {
+			compName = cluster.BuildShardingComponentName(shardingName, compName)
 		}
 		internal := fmt.Sprintf("%s.%s.svc.cluster.local", svc.Name, svc.Namespace)
 		if svc.Spec.ClusterIP == corev1.ClusterIPNone {
@@ -403,7 +389,7 @@ func (o *ConnectOptions) showEndpoints() {
 		}
 		external := cluster.GetExternalAddr(&svc)
 		if svc.Spec.Type == corev1.ServiceTypeNodePort && o.node != nil {
-			nodeInternal, nodeExternal := o.getEndpointsFromNode()
+			nodeInternal, nodeExternal := cluster.GetEndpointsFromNode(o.node)
 			for _, p := range svc.Spec.Ports {
 				ports = append(ports, fmt.Sprintf("%s(nodePort: %s)",
 					strconv.Itoa(int(p.Port)), strconv.Itoa(int(p.NodePort))))
@@ -439,7 +425,11 @@ func (o *ConnectOptions) showEndpoints() {
 func (o *ConnectOptions) showAccounts() {
 	tbl := newTbl(o.Out, "\nAccount Secrets:", "COMPONENT", "SECRET-NAME", "USERNAME", "PASSWORD-KEY")
 	for _, account := range o.accounts {
-		tbl.AddRow(account.componentName, account.secretName, account.username, "<password>")
+		compName := account.componentName
+		if shardingName, ok := o.shardingCompMap[compName]; ok {
+			compName = cluster.BuildShardingComponentName(shardingName, compName)
+		}
+		tbl.AddRow(compName, account.secretName, account.username, "<password>")
 	}
 	tbl.Print()
 }
