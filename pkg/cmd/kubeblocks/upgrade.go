@@ -269,6 +269,11 @@ func (o *InstallOptions) deleteDeployment(getter deploymentGetter) error {
 		return err
 	}
 
+	if deploy == nil {
+		klog.V(1).Info("deployment is not found, no need to stop")
+		return nil
+	}
+
 	// before delete deployment, output the deployment yaml, if deployment was deleted
 	// by mistake, we can recover it by apply the yaml.
 	deploy.ManagedFields = nil
