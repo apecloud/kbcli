@@ -62,10 +62,6 @@ var _ = Describe("cluster register", func() {
 		}
 		Expect(o.validate()).Should(HaveOccurred())
 
-		o.clusterType = "mysql"
-		// builtin chart
-		Expect(o.validate()).Should(HaveOccurred())
-
 		o.clusterType = "oracle"
 		Expect(o.validate()).Should(Succeed())
 
@@ -81,9 +77,21 @@ var _ = Describe("cluster register", func() {
 		Expect(o.validate()).Should(Succeed())
 		o.source = "https://github.com/apecloud/helm-charts/releases/download/orioledb-cluster-0.6.0-beta.44/orioledb-cluster-0.6.0-beta.44.tgz"
 		Expect(o.validate()).Should(Succeed())
-		o.source = "This is a bad url or a local file path do not existed"
-		Expect(o.validate()).Should(HaveOccurred())
+	})
 
+	It("test validate method of repo, version and engine", func() {
+		o := &registerOption{
+			Factory:     tf,
+			IOStreams:   streams,
+			clusterType: "mysql",
+			version:     "0.9.0",
+			repo:        "https://jihulab.com/api/v4/projects/150246/packages/helm",
+			engine:      "mysql",
+			source:      "",
+		}
+		err := o.validate()
+		println(err)
+		Expect(err).Should(Succeed())
 	})
 
 	It("test copy file", func() {

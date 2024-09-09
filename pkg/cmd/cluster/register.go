@@ -21,7 +21,6 @@ package cluster
 
 import (
 	"fmt"
-	"github.com/apecloud/kbcli/pkg/util/prompt"
 	"io"
 	"net/url"
 	"os"
@@ -114,20 +113,17 @@ func (o *registerOption) validate() error {
 			if key != o.clusterType {
 				continue
 			}
-			if err := prompt.Confirm(nil, o.In, fmt.Sprintf("Your register cluster type %s is already existed", o.clusterType), "Please type 'Yes/yes' to confirm your operation and replace the cluster chart:"); err != nil {
-				return err
-			}
 			o.replace = true
 		}
 	}
 
-	if !o.isSourceMethod() {
-		o.cachedName = fmt.Sprintf("%s-cluster-%s.tgz", o.engine, o.version)
-	} else {
+	if o.isSourceMethod() {
 		if validateSource(o.source) != nil {
 			return fmt.Errorf("your entered `--source` %s, which is neither a URL nor a file that can be found locally", o.source)
 		}
 		o.cachedName = filepath.Base(o.source)
+	} else {
+		o.cachedName = fmt.Sprintf("%s-cluster-%s.tgz", o.engine, o.version)
 	}
 	if !o.replace {
 		// if not replace. we should check the chart name whether conflict in local cache
@@ -231,7 +227,7 @@ func validateSource(source string) error {
 }
 
 func (o *registerOption) isSourceMethod() bool {
-	return o.source == ""
+	return o.source != ""
 }
 
 func copyFile(src, dest string) error {
