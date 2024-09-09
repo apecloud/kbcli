@@ -39,6 +39,7 @@ import (
 	"k8s.io/klog/v2"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
+	"sigs.k8s.io/yaml"
 
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/spinner"
@@ -59,7 +60,7 @@ var (
 	kbcli kubeblocks upgrade --set replicaCount=3`)
 )
 
-type getDeploymentFunc func(client kubernetes.Interface) (*appsv1.Deployment, error)
+type deploymentGetter func(client kubernetes.Interface) (*appsv1.Deployment, error)
 
 func newUpgradeCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
 	o := &InstallOptions{
@@ -81,7 +82,7 @@ func newUpgradeCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 
 	cmd.Flags().StringVar(&o.Version, "version", "", "Set KubeBlocks version")
 	cmd.Flags().BoolVar(&o.Check, "check", true, "Check kubernetes environment before upgrade")
-	cmd.Flags().DurationVar(&o.Timeout, "timeout", 600*time.Second, "Time to wait for upgrading KubeBlocks, such as --timeout=10m")
+	cmd.Flags().DurationVar(&o.Timeout, "timeout", 1800*time.Second, "Time to wait for upgrading KubeBlocks, such as --timeout=10m")
 	cmd.Flags().BoolVar(&o.Wait, "wait", true, "Wait for KubeBlocks to be ready. It will wait for a --timeout period")
 	cmd.Flags().BoolVar(&o.autoApprove, "auto-approve", false, "Skip interactive approval before upgrading KubeBlocks")
 	helm.AddValueOptionsFlags(cmd.Flags(), &o.ValueOpts)
@@ -181,7 +182,7 @@ func (o *InstallOptions) Upgrade() error {
 		// KubeBlocks after upgrade.
 		s = spinner.New(o.Out, spinnerMsg("Stop KubeBlocks "+kbVersion))
 		defer s.Fail()
-		if err = o.stopDeployment(util.GetKubeBlocksDeploy); err != nil {
+		if err = o.deleteDeployment(util.GetKubeBlocksDeploy); err != nil {
 			return err
 		}
 		s.Success()
@@ -189,7 +190,7 @@ func (o *InstallOptions) Upgrade() error {
 		// stop the data protection deployment
 		s = spinner.New(o.Out, spinnerMsg("Stop DataProtection"))
 		defer s.Fail()
-		if err = o.stopDeployment(util.GetDataProtectionDeploy); err != nil {
+		if err = o.deleteDeployment(util.GetDataProtectionDeploy); err != nil {
 			return err
 		}
 		s.Success()
@@ -258,9 +259,9 @@ func (o *InstallOptions) upgradeChart() error {
 	return o.buildChart().Upgrade(o.HelmCfg)
 }
 
-// stopDeployment stops the deployment by setting the replicas to 0
-func (o *InstallOptions) stopDeployment(getDeployFn getDeploymentFunc) error {
-	deploy, err := getDeployFn(o.Client)
+// deleteDeployment deletes deployment.
+func (o *InstallOptions) deleteDeployment(getter deploymentGetter) error {
+	deploy, err := getter(o.Client)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil
@@ -273,26 +274,43 @@ func (o *InstallOptions) stopDeployment(getDeployFn getDeploymentFunc) error {
 		return nil
 	}
 
-	if _, err = o.Client.AppsV1().Deployments(deploy.Namespace).Patch(
-		context.TODO(), deploy.Name, apitypes.JSONPatchType,
-		[]byte(`[{"op": "replace", "path": "/spec/replicas", "value": 0}]`),
-		metav1.PatchOptions{}); err != nil {
+	// before delete deployment, output the deployment yaml, if deployment was deleted
+	// by mistake, we can recover it by apply the yaml.
+	deploy.ManagedFields = nil
+	bytes, err := yaml.Marshal(deploy)
+	if err != nil {
+		return err
+	}
+	klog.Infof(`
+------------------- Deployment %s -------------------
+%s
+------------------ Deployment %s end ----------------`,
+		deploy.Name, string(bytes), deploy.Name)
+
+	if err = o.Client.AppsV1().Deployments(deploy.Namespace).Delete(context.TODO(),
+		deploy.Name,
+		metav1.DeleteOptions{
+			GracePeriodSeconds: func() *int64 {
+				seconds := int64(0)
+				return &seconds
+			}(),
+		}); err != nil {
 		return err
 	}
 
-	// wait for deployment to be stopped
-	return wait.PollUntilContextTimeout(context.Background(), 5*time.Second, o.Timeout, true,
+	// wait for deployment to be deleted
+	return wait.PollUntilContextTimeout(context.Background(), 5*time.Second, 1*time.Minute, true,
 		func(_ context.Context) (bool, error) {
-			deploy, err = util.GetKubeBlocksDeploy(o.Client)
+			deploy, err = getter(o.Client)
 			if err != nil {
+				if apierrors.IsNotFound(err) {
+					return true, nil
+				}
 				return false, err
-			}
-			if *deploy.Spec.Replicas == 0 &&
-				deploy.Status.Replicas == 0 &&
-				deploy.Status.AvailableReplicas == 0 {
+			} else if deploy == nil {
 				return true, nil
 			}
-			return false, nil
+			return false, err
 		})
 }
 
