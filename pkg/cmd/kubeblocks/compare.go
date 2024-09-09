@@ -107,8 +107,7 @@ func (o *InstallOptions) compare(args []string, detail bool) error {
 	}
 	// update repo
 	if err := helm.AddRepo(&repo.Entry{Name: types.KubeBlocksRepoName, URL: util.GetHelmChartRepoURL()}); err != nil {
-
-		return fmt.Errorf(err.Error())
+		return err
 	}
 	// check version is available
 	if exists, err := versionExists(versionA); !exists {

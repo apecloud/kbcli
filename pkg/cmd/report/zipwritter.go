@@ -177,7 +177,7 @@ func (w *reportZipWritter) WriteLogs(folderName string, ctx context.Context, cli
 	}
 
 	for _, pod := range pods.Items {
-		if pod.Spec.Containers == nil || len(pod.Spec.Containers) == 0 {
+		if len(pod.Spec.Containers) == 0 {
 			continue
 		}
 		// write pod log to file
