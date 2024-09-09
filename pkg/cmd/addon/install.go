@@ -22,6 +22,7 @@ package addon
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -91,6 +92,12 @@ type installOption struct {
 	version string
 	// the index name, if not specified use `kubeblocks` default
 	index string
+	// the version of cluster chart to register, if not specified use the same version as the addon by default
+	clusterChartVersion string
+	// the repo url of cluster charts, if not specified use 'kubeblocks-addons' by default
+	clusterChartRepo string
+	// the local path contains addon CRs and needs to be specified when operating offline
+	path string
 
 	addon *extensionsv1alpha1.Addon
 }
@@ -129,13 +136,20 @@ func newInstallCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 	cmd.Flags().BoolVar(&o.force, "force", false, "force install the addon and ignore the version check")
 	cmd.Flags().StringVar(&o.version, "version", "", "specify the addon version")
 	cmd.Flags().StringVar(&o.index, "index", types.DefaultIndexName, "specify the addon index index, use 'kubeblocks' by default")
+	cmd.Flags().StringVar(&o.clusterChartVersion, "cluster-chart-version", "", "specify the cluster chart version")
+	cmd.Flags().StringVar(&o.clusterChartRepo, "cluster-chart-repo", types.ClusterChartsRepoName, "specify the repo of cluster chart, if not specified use the url of 'kubeblocks-addons' by default")
+	cmd.Flags().StringVar(&o.path, "path", "", "specify the local path contains addon CRs and needs to be specified when operating offline")
 
 	return cmd
 }
 
 // Complete will finalize the basic K8s client configuration and find the corresponding addon from the index
 func (o *installOption) Complete() error {
-	var err error
+	var (
+		err    error
+		addons []searchResult
+	)
+
 	if err = o.baseOption.complete(); err != nil {
 		return err
 	}
@@ -145,11 +159,15 @@ func (o *installOption) Complete() error {
 		return fmt.Errorf("the version %s does not comply with the standards", o.version)
 	}
 
-	dir, err := util.GetCliAddonDir()
-	if err != nil {
-		return err
+	if o.path == "" {
+		dir, err := util.GetCliAddonDir()
+		if err != nil {
+			return err
+		}
+		addons, err = searchAddon(o.name, dir, "")
+	} else {
+		addons, err = searchAddon(o.name, filepath.Dir(o.path), filepath.Base(o.path))
 	}
-	addons, err := searchAddon(o.name, dir)
 	if err != nil {
 		return err
 	}
@@ -176,6 +194,15 @@ func (o *installOption) Complete() error {
 			}
 		}
 	}
+
+	// complete the version and repo of the cluster chart
+	if o.clusterChartVersion == "" {
+		o.clusterChartVersion = o.version
+	}
+	if o.clusterChartRepo == "" {
+		o.clusterChartVersion = types.ClusterChartsRepoURL
+	}
+
 	if o.addon == nil {
 		var addonInfo = o.name
 		if o.version != "" {

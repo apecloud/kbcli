@@ -96,7 +96,7 @@ func newRegisterCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobr
 	cmd.Flags().StringVar(&o.alias, "alias", "", "Set the cluster type alias")
 	cmd.Flags().BoolVar(&o.autoApprove, "auto-approve", false, "Skip interactive approval when registering an existed cluster type")
 	cmd.Flags().StringVar(&o.engine, "engine", "", "Specify the cluster chart name in helm repo")
-	cmd.Flags().StringVar(&o.repo, "repo", "", "Specify the url of  helm repo which contains cluster charts")
+	cmd.Flags().StringVar(&o.repo, "repo", "", "Specify the url of helm repo which contains cluster charts")
 	cmd.Flags().StringVar(&o.version, "version", "", "Specify the version of cluster chart to register")
 
 	return cmd
@@ -179,6 +179,7 @@ func (o *registerOption) run() error {
 			}
 		}
 	} else {
+		// specify the url of the repo containing cluster charts, and add it as the repo name kubeblocks-addons
 		if err := helm.AddRepo(&repo.Entry{
 			Name: types.ClusterChartsRepoName,
 			URL:  o.repo,

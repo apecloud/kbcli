@@ -23,10 +23,12 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 
 	"golang.org/x/exp/maps"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
 
@@ -53,6 +55,59 @@ func getAddonVersion(addon *extensionsv1alpha1.Addon) string {
 		return version
 	}
 	return ""
+}
+
+func uniqueByName(objects []searchResult) []searchResult {
+	seen := make(map[string]bool)
+	var unique []searchResult
+	for _, obj := range objects {
+		if _, ok := seen[obj.addon.Name]; !ok {
+			seen[obj.addon.Name] = true
+			unique = append(unique, obj)
+		}
+	}
+	return unique
+}
+
+func checkAddonInstalled(objects *[]searchResult, o *addonListOpts) {
+	var installedAddons []string
+
+	// get addon-list result
+	o.Print = false
+	o.Names = nil
+	r, _ := o.Run()
+	infos, _ := r.Infos()
+	for _, info := range infos {
+		listItem := &extensionsv1alpha1.Addon{}
+		obj := info.Object.(*unstructured.Unstructured)
+		err := runtime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, listItem)
+		if err != nil {
+			return
+		}
+		installedAddons = append(installedAddons, listItem.Name)
+	}
+
+	// mark installed on addons from addon-list result
+	sort.Strings(installedAddons)
+	sort.Slice(*objects, func(i, j int) bool {
+		return (*objects)[i].addon.Name < (*objects)[j].addon.Name
+	})
+	for i, j := 0, 0; i < len(installedAddons) && j < len(*objects); {
+		if installedAddons[i] == (*objects)[j].addon.Name {
+			(*objects)[j].isInstalled = true
+			i++
+			j++
+		} else if installedAddons[i] < (*objects)[j].addon.Name {
+			i++
+		} else if installedAddons[i] > (*objects)[j].addon.Name {
+			j++
+		}
+	}
+
+	// sort by 'uninstalled < installed'
+	sort.Slice(*objects, func(i, j int) bool {
+		return (*objects)[j].isInstalled
+	})
 }
 
 func CheckAddonUsedByCluster(dynamic dynamic.Interface, addons []string, in io.Reader) error {

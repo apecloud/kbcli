@@ -111,7 +111,7 @@ func NewAddonCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.C
 		newEnableCmd(f, streams),
 		newDisableCmd(f, streams),
 		newIndexCmd(streams),
-		newSearchCmd(streams),
+		newSearchCmd(f, streams),
 		newInstallCmd(f, streams),
 		newUninstallCmd(f, streams),
 		newUpgradeCmd(f, streams),
