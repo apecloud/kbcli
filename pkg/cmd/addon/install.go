@@ -140,11 +140,9 @@ func (o *installOption) Complete() error {
 		return err
 	}
 	// search specified addon and match its index
-
 	if _, err = semver.NewVersion(o.version); err != nil && o.version != "" {
 		return fmt.Errorf("the version %s does not comply with the standards", o.version)
 	}
-
 	dir, err := util.GetCliAddonDir()
 	if err != nil {
 		return err
@@ -153,7 +151,6 @@ func (o *installOption) Complete() error {
 	if err != nil {
 		return err
 	}
-
 	sort.Slice(addons, func(i, j int) bool {
 		vi, _ := semver.NewVersion(getAddonVersion(addons[i].addon))
 		vj, _ := semver.NewVersion(getAddonVersion(addons[j].addon))
@@ -162,7 +159,6 @@ func (o *installOption) Complete() error {
 		}
 		return vi.GreaterThan(vj)
 	})
-
 	// descending order of versions
 	for _, item := range addons {
 		if item.index.name == o.index {
@@ -183,7 +179,62 @@ func (o *installOption) Complete() error {
 		}
 		return fmt.Errorf("addon '%s' not found in the index '%s'", addonInfo, o.index)
 	}
+	for _, dependency := range o.addon.Spec.AddonDependencies {
+		dependentInstalled := false
+
+		// First, prioritize installing a dependency with the same version as the current addon if available
+		for _, version := range dependency.Version {
+			if version == o.version {
+				if err := installDependencyAddon(dependency.Name, version, o); err != nil {
+					return err
+				}
+				dependentInstalled = true
+				break
+			}
+		}
+		// If not installed yet, try installing any version listed in the dependency
+		if !dependentInstalled {
+			for _, version := range dependency.Version {
+				if err := installDependencyAddon(dependency.Name, version, o); err == nil {
+					dependentInstalled = true
+					break
+				}
+			}
+		}
+		// If still not installed, return an error
+		if !dependentInstalled {
+			return fmt.Errorf("failed to install dependency addon '%s'", dependency.Name)
+		}
+	}
 	return nil
+}
+
+// Helper function to install a dependency addon
+func installDependencyAddon(name, version string, o *installOption) error {
+	dir, err := util.GetCliAddonDir()
+	if err != nil {
+		return err
+	}
+	dependencyAddons, err := searchAddon(name, dir)
+	if err != nil {
+		return err
+	}
+	for _, item := range dependencyAddons {
+		if getAddonVersion(item.addon) == version {
+			// Assuming the logic to apply the addon is the same as in the Run method
+			itemMap, err := runtime.DefaultUnstructuredConverter.ToUnstructured(item.addon)
+			if err != nil {
+				return err
+			}
+			_, err = o.Dynamic.Resource(o.GVR).Create(context.Background(), &unstructured.Unstructured{Object: itemMap}, metav1.CreateOptions{})
+			if err != nil {
+				return err
+			}
+			fmt.Printf("Dependency addon %s (version %s) installed successfully\n", name, version)
+			return nil
+		}
+	}
+	return fmt.Errorf("version %s of addon %s not found", version, name)
 }
 
 // Validate will check if the KubeBlocks environment meets the requirements that the installing addon need
