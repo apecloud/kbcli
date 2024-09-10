@@ -24,12 +24,14 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 )
 
 var _ = Describe("search test", func() {
 	var streams genericiooptions.IOStreams
+	var f cmdutil.Factory
 	var out *bytes.Buffer
 	const (
 		testAddonName       = "apecloud-mysql"
@@ -40,11 +42,11 @@ var _ = Describe("search test", func() {
 		streams, _, out, _ = genericiooptions.NewTestIOStreams()
 	})
 	It("test search cmd", func() {
-		Expect(newSearchCmd(streams)).ShouldNot(BeNil())
+		Expect(newSearchCmd(f, streams)).ShouldNot(BeNil())
 	})
 
 	It("test search", func() {
-		cmd := newSearchCmd(streams)
+		cmd := newSearchCmd(f, streams)
 		cmd.Run(cmd, []string{testAddonNotExisted})
 		Expect(out.String()).Should(Equal("fake-addon addon not found. Please update your index or check the addon name\n"))
 	})
@@ -66,7 +68,7 @@ var _ = Describe("search test", func() {
 				"kubeblocks", "Addon", "apecloud-mysql", "0.8.0-alpha.6",
 			},
 		}
-		result, err := searchAddon(testAddonName, testIndexDir)
+		result, err := searchAddon(testAddonName, testIndexDir, "")
 		Expect(err).Should(Succeed())
 		Expect(result).Should(HaveLen(3))
 		for i := range result {

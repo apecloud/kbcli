@@ -88,12 +88,13 @@ func (o *searchOpts) search(out io.Writer, addonListOpts *addonListOpts) error {
 		if err != nil {
 			return err
 		}
-		results, err = searchAddon(o.name, dir, "")
+		if results, err = searchAddon(o.name, dir, ""); err != nil {
+			return err
+		}
 	} else {
-		results, err = searchAddon(o.name, filepath.Dir(o.path), filepath.Base(o.path))
-	}
-	if err != nil {
-		return err
+		if results, err = searchAddon(o.name, filepath.Dir(o.path), filepath.Base(o.path)); err != nil {
+			return err
+		}
 	}
 
 	tbl := printer.NewTablePrinter(out)

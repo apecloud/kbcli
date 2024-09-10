@@ -169,12 +169,13 @@ func (o *installOption) Complete() error {
 		if err != nil {
 			return err
 		}
-		addons, err = searchAddon(o.name, dir, "")
+		if addons, err = searchAddon(o.name, dir, ""); err != nil {
+			return err
+		}
 	} else {
-		addons, err = searchAddon(o.name, filepath.Dir(o.path), filepath.Base(o.path))
-	}
-	if err != nil {
-		return err
+		if addons, err = searchAddon(o.name, filepath.Dir(o.path), filepath.Base(o.path)); err != nil {
+			return err
+		}
 	}
 
 	sort.Slice(addons, func(i, j int) bool {

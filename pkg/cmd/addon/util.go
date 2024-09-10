@@ -93,14 +93,21 @@ func checkAddonInstalled(objects *[]searchResult, o *addonListOpts) {
 		return (*objects)[i].addon.Name < (*objects)[j].addon.Name
 	})
 	for i, j := 0, 0; i < len(installedAddons) && j < len(*objects); {
-		if installedAddons[i] == (*objects)[j].addon.Name {
-			(*objects)[j].isInstalled = true
-			i++
-			j++
-		} else if installedAddons[i] < (*objects)[j].addon.Name {
-			i++
-		} else if installedAddons[i] > (*objects)[j].addon.Name {
-			j++
+		switch {
+		case installedAddons[i] == (*objects)[j].addon.Name:
+			{
+				(*objects)[j].isInstalled = true
+				i++
+				j++
+			}
+		case installedAddons[i] < (*objects)[j].addon.Name:
+			{
+				i++
+			}
+		case installedAddons[i] > (*objects)[j].addon.Name:
+			{
+				j++
+			}
 		}
 	}
 
