@@ -86,16 +86,15 @@ func newRegisterCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobr
 		Run: func(cmd *cobra.Command, args []string) {
 			o.clusterType = cluster.ClusterType(args[0])
 			cmdutil.CheckErr(o.validate())
-			cmdutil.CheckErr(o.complete())
 			cmdutil.CheckErr(o.run())
-			fmt.Fprint(streams.Out, buildRegisterSuccessExamples(o.clusterType))
+			fmt.Fprint(streams.Out, BuildRegisterSuccessExamples(o.clusterType))
 		},
 	}
 	cmd.Flags().StringVarP(&o.source, "source", "S", "", "Specify the cluster type chart source, support a URL or a local file path")
 	cmd.Flags().StringVar(&o.alias, "alias", "", "Set the cluster type alias")
 	cmd.Flags().BoolVar(&o.autoApprove, "auto-approve", false, "Skip interactive approval when registering an existed cluster type")
 	cmd.Flags().StringVar(&o.engine, "engine", "", "Specify the cluster chart name in helm repo")
-	cmd.Flags().StringVar(&o.repo, "repo", "", "Specify the url of helm repo which contains cluster charts")
+	cmd.Flags().StringVar(&o.repo, "repo", types.ClusterChartsRepoURL, "Specify the url of helm repo which contains cluster charts")
 	cmd.Flags().StringVar(&o.version, "version", "", "Specify the version of cluster chart to register")
 
 	return cmd
@@ -141,15 +140,6 @@ func (o *registerOption) validate() error {
 	return nil
 }
 
-func (o *registerOption) complete() error {
-	if !o.isSourceMethod() {
-		if o.repo == "" {
-			o.repo = types.ClusterChartsRepoURL
-		}
-	}
-	return nil
-}
-
 func (o *registerOption) run() error {
 	localChartPath := filepath.Join(cluster.CliChartsCacheDir, o.cachedName)
 	if o.isSourceMethod() {
@@ -187,31 +177,14 @@ func (o *registerOption) run() error {
 			return err
 		}
 	}
+
 	instance := &cluster.TypeInstance{
 		Name:      o.clusterType,
 		URL:       o.source,
 		Alias:     o.alias,
 		ChartName: o.cachedName,
 	}
-	if err := instance.PreCheck(); err != nil {
-		return fmt.Errorf("the chart of %s pre-check unsuccssful: %s", o.clusterType, err.Error())
-	}
-
-	isChartExist := false
-	for _, item := range cluster.GlobalClusterChartConfig {
-		if instance.Name == item.Name {
-			isChartExist = true
-		}
-	}
-
-	if isChartExist {
-		// update config
-		cluster.GlobalClusterChartConfig.UpdateConfig(instance)
-	} else {
-		cluster.GlobalClusterChartConfig.AddConfig(instance)
-	}
-
-	return cluster.GlobalClusterChartConfig.WriteConfigs(cluster.CliClusterTypesCacheDir)
+	return instance.PatchNewClusterType()
 }
 
 func validateSource(source string) error {
@@ -250,8 +223,8 @@ func copyFile(src, dest string) error {
 	return err
 }
 
-// buildCreateSubCmdsExamples builds the creation examples for the specified ClusterType type.
-func buildRegisterSuccessExamples(t cluster.ClusterType) string {
+// BuildRegisterSuccessExamples builds the creation examples for the specified ClusterType type.
+func BuildRegisterSuccessExamples(t cluster.ClusterType) string {
 	exampleTpl := `
 
 cluster type "{{ .ClusterType }}" register successful.

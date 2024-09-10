@@ -109,7 +109,7 @@ func AddRepo(r *repo.Entry) error {
 
 	if f.Has(r.Name) {
 		existing := f.Get(r.Name)
-		if *r != *existing && r.Name != types.KubeBlocksChartName {
+		if *r != *existing && r.Name != types.KubeBlocksRepoName && r.Name != types.ClusterChartsRepoName {
 			// The input Name is different from the existing one, return an error
 			return errors.Errorf("repository name (%s) already exists, please specify a different name", r.Name)
 		}

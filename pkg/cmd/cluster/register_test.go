@@ -89,9 +89,7 @@ var _ = Describe("cluster register", func() {
 			engine:      "mysql",
 			source:      "",
 		}
-		err := o.validate()
-		println(err)
-		Expect(err).Should(Succeed())
+		Expect(o.validate()).Should(Succeed())
 	})
 
 	It("test copy file", func() {

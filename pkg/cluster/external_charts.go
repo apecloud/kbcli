@@ -224,8 +224,25 @@ func (h *TypeInstance) register(subcmd ClusterType) error {
 			return nil
 		}
 	}
-	//TODO: replace with 'kbcli cluster register --engine= --repo= --version='
-	return fmt.Errorf("can't find the %s in cache, please use 'kbcli cluster pull %s --url %s' first", h.Name.String(), h.Name.String(), h.URL)
+	return fmt.Errorf("can't find the %s in cache, please use 'kbcli cluster register %s --url %s' first", h.Name.String(), h.Name.String(), h.URL)
+}
+
+func (h *TypeInstance) PatchNewClusterType() error {
+	if err := h.PreCheck(); err != nil {
+		return fmt.Errorf("the chart of %s pre-check unsuccssful: %s", h.Name, err.Error())
+	}
+	isChartExist := false
+	for _, item := range GlobalClusterChartConfig {
+		if h.Name == item.Name {
+			isChartExist = true
+		}
+	}
+	if isChartExist {
+		GlobalClusterChartConfig.UpdateConfig(h)
+	} else {
+		GlobalClusterChartConfig.AddConfig(h)
+	}
+	return GlobalClusterChartConfig.WriteConfigs(CliClusterTypesCacheDir)
 }
 
 var _ chartLoader = &TypeInstance{}

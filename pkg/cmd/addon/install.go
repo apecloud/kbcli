@@ -28,6 +28,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/spf13/cobra"
+	"helm.sh/helm/v3/pkg/repo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -40,9 +41,12 @@ import (
 
 	extensionsv1alpha1 "github.com/apecloud/kubeblocks/apis/extensions/v1alpha1"
 
+	cluster "github.com/apecloud/kbcli/pkg/cluster"
+	clusterCmd "github.com/apecloud/kbcli/pkg/cmd/cluster"
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
+	"github.com/apecloud/kbcli/pkg/util/helm"
 )
 
 var addonInstallExample = templates.Examples(`
@@ -131,13 +135,14 @@ func newInstallCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 			util.CheckErr(o.Run())
 			// avoid unnecessary messages for upgrade
 			fmt.Fprintf(o.Out, "addon %s installed successfully\n", o.name)
+			fmt.Fprintf(o.Out, clusterCmd.BuildRegisterSuccessExamples(cluster.ClusterType(o.name)))
 		},
 	}
 	cmd.Flags().BoolVar(&o.force, "force", false, "force install the addon and ignore the version check")
 	cmd.Flags().StringVar(&o.version, "version", "", "specify the addon version")
 	cmd.Flags().StringVar(&o.index, "index", types.DefaultIndexName, "specify the addon index index, use 'kubeblocks' by default")
-	cmd.Flags().StringVar(&o.clusterChartVersion, "cluster-chart-version", "", "specify the cluster chart version")
-	cmd.Flags().StringVar(&o.clusterChartRepo, "cluster-chart-repo", types.ClusterChartsRepoName, "specify the repo of cluster chart, if not specified use the url of 'kubeblocks-addons' by default")
+	cmd.Flags().StringVar(&o.clusterChartVersion, "cluster-chart-version", "", "specify the cluster chart version, use the same version as the addon by default")
+	cmd.Flags().StringVar(&o.clusterChartRepo, "cluster-chart-repo", types.ClusterChartsRepoURL, "specify the repo of cluster chart, use the url of 'kubeblocks-addons' by default")
 	cmd.Flags().StringVar(&o.path, "path", "", "specify the local path contains addon CRs and needs to be specified when operating offline")
 
 	return cmd
@@ -154,11 +159,11 @@ func (o *installOption) Complete() error {
 		return err
 	}
 	// search specified addon and match its index
-
 	if _, err = semver.NewVersion(o.version); err != nil && o.version != "" {
 		return fmt.Errorf("the version %s does not comply with the standards", o.version)
 	}
 
+	// find addons in the default index dir or the specified path.
 	if o.path == "" {
 		dir, err := util.GetCliAddonDir()
 		if err != nil {
@@ -195,12 +200,9 @@ func (o *installOption) Complete() error {
 		}
 	}
 
-	// complete the version and repo of the cluster chart
+	// complete the version of the cluster chart
 	if o.clusterChartVersion == "" {
 		o.clusterChartVersion = o.version
-	}
-	if o.clusterChartRepo == "" {
-		o.clusterChartVersion = types.ClusterChartsRepoURL
 	}
 
 	if o.addon == nil {
@@ -249,7 +251,36 @@ func (o *installOption) Run() error {
 	if err != nil {
 		return err
 	}
+	if err = RegisterClusterChart(o.name, o.clusterChartVersion, o.clusterChartRepo); err != nil {
+		return err
+	}
 	_, err = o.Dynamic.Resource(o.GVR).Create(context.Background(), &unstructured.Unstructured{Object: item}, metav1.CreateOptions{})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func RegisterClusterChart(engine, clusterChartVersion, clusterChartRepo string) error {
+	cachedName := fmt.Sprintf("%s-cluster-%s.tgz", engine, clusterChartVersion)
+	// add repo, if it exists, update it.
+	if err := helm.AddRepo(&repo.Entry{
+		Name: types.ClusterChartsRepoName,
+		URL:  clusterChartRepo,
+	}); err != nil {
+		return err
+	}
+	// pull chart by engine name and version from repo.
+	err := helm.PullChart(types.ClusterChartsRepoName, engine+"-cluster", clusterChartVersion, cluster.CliChartsCacheDir)
+	if err != nil {
+		return err
+	}
+	instance := &cluster.TypeInstance{
+		Name:      cluster.ClusterType(engine),
+		ChartName: cachedName,
+	}
+	// register this chart into Cluster_types.
+	err = instance.PatchNewClusterType()
 	if err != nil {
 		return err
 	}
