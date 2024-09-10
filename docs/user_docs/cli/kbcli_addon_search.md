@@ -11,7 +11,8 @@ kbcli addon search [flags]
 ### Options
 
 ```
-  -h, --help   help for search
+  -h, --help          help for search
+      --path string   the local directory contains addon CRs
 ```
 
 ### Options inherited from parent commands

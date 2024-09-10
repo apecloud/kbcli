@@ -27,10 +27,13 @@ kbcli addon install [flags]
 ### Options
 
 ```
-      --force            force install the addon and ignore the version check
-  -h, --help             help for install
-      --index string     specify the addon index index, use 'kubeblocks' by default (default "kubeblocks")
-      --version string   specify the addon version
+      --cluster-chart-repo string      specify the repo of cluster chart, use the url of 'kubeblocks-addons' by default (default "https://jihulab.com/api/v4/projects/150246/packages/helm/stable")
+      --cluster-chart-version string   specify the cluster chart version, use the same version as the addon by default
+      --force                          force install the addon and ignore the version check
+  -h, --help                           help for install
+      --index string                   specify the addon index index, use 'kubeblocks' by default (default "kubeblocks")
+      --path string                    specify the local path contains addon CRs and needs to be specified when operating offline
+      --version string                 specify the addon version
 ```
 
 ### Options inherited from parent commands
