@@ -98,7 +98,6 @@ func (o *searchOpts) search(out io.Writer, addonListOpts *addonListOpts) error {
 	}
 
 	tbl := printer.NewTablePrinter(out)
-
 	if o.name == "" {
 		tbl.AddRow("ADDON", "STATUS")
 		statusMap := map[bool]string{
@@ -162,11 +161,13 @@ func searchAddon(name string, indexDir string, theIndex string) ([]searchResult,
 	var indexes []index
 	var err error
 	if theIndex == "" {
+		// search all the indexes from the dir
 		indexes, err = getAllIndexes(indexDir)
 		if err != nil {
 			return nil, err
 		}
 	} else {
+		// add the specified index
 		indexes = append(indexes, index{
 			name: theIndex,
 			url:  "",

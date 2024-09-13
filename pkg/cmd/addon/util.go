@@ -70,9 +70,8 @@ func uniqueByName(objects []searchResult) []searchResult {
 }
 
 func checkAddonInstalled(objects *[]searchResult, o *addonListOpts) {
+	// list installed addons
 	var installedAddons []string
-
-	// get addon-list result
 	o.Print = false
 	o.Names = nil
 	r, _ := o.Run()
@@ -87,7 +86,7 @@ func checkAddonInstalled(objects *[]searchResult, o *addonListOpts) {
 		installedAddons = append(installedAddons, listItem.Name)
 	}
 
-	// mark installed on addons from addon-list result
+	// mark installed on addons from the list result
 	sort.Strings(installedAddons)
 	sort.Slice(*objects, func(i, j int) bool {
 		return (*objects)[i].addon.Name < (*objects)[j].addon.Name
@@ -111,7 +110,7 @@ func checkAddonInstalled(objects *[]searchResult, o *addonListOpts) {
 		}
 	}
 
-	// sort by 'uninstalled < installed'
+	// sort by the priority of 'uninstalled < installed'
 	sort.Slice(*objects, func(i, j int) bool {
 		return (*objects)[j].isInstalled
 	})

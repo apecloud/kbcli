@@ -246,7 +246,7 @@ It will automatically skip version checks, which may result in the cluster not r
 	return err
 }
 
-// Run will apply the addon.yaml to K8s
+// Run will apply the addon.yaml to K8s and register the cluster chart with version and repo specified
 func (o *installOption) Run() error {
 	item, err := runtime.DefaultUnstructuredConverter.ToUnstructured(o.addon)
 	if err != nil {

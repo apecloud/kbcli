@@ -29,6 +29,7 @@ import (
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
 
+	"github.com/apecloud/kbcli/pkg/cluster"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
 )
@@ -83,6 +84,7 @@ func (o *uninstallOption) Run() error {
 			return err
 		}
 		fmt.Fprintf(o.Out, "addon %s uninstalled successfully\n", name)
+		cluster.GlobalClusterChartConfig.RemoveConfig(cluster.ClusterType(name))
 	}
 	return nil
 }
