@@ -95,7 +95,7 @@ func newUpgradeCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 			o.name = args[0]
 			util.CheckErr(o.Complete())
 			util.CheckErr(o.Validate())
-			util.CheckErr(o.Run())
+			util.CheckErr(o.Run(f, streams))
 		},
 	}
 	cmd.Flags().BoolVar(&o.force, "force", false, "force upgrade the addon and ignore the version check")
@@ -142,14 +142,14 @@ func (o *upgradeOption) Validate() error {
 	return o.installOption.Validate()
 }
 
-func (o *upgradeOption) Run() error {
+func (o *upgradeOption) Run(f cmdutil.Factory, streams genericiooptions.IOStreams) error {
 	if !o.inplace {
 		if o.addon.Spec.Helm.InstallValues.SetValues != nil {
 			o.addon.Spec.Helm.InstallValues.SetValues = append(o.addon.Spec.Helm.InstallValues.SetValues, fmt.Sprintf("%s=%s", types.AddonResourceNamePrefix, o.rename))
 		}
 		o.addon.Spec.Helm.InstallValues.SetValues = []string{fmt.Sprintf("%s=%s", types.AddonResourceNamePrefix, o.rename)}
 		o.addon.Name = o.rename
-		err := o.installOption.Run()
+		err := o.installOption.Run(f, streams)
 		if err == nil {
 			fmt.Printf("Addon %s-%s upgrade successed.\n", o.rename, o.version)
 		}

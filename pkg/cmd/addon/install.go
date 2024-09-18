@@ -28,7 +28,6 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/spf13/cobra"
-	"helm.sh/helm/v3/pkg/repo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -46,7 +45,6 @@ import (
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
-	"github.com/apecloud/kbcli/pkg/util/helm"
 )
 
 var addonInstallExample = templates.Examples(`
@@ -132,7 +130,7 @@ func newInstallCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 			o.name = args[0]
 			util.CheckErr(o.Complete())
 			util.CheckErr(o.Validate())
-			util.CheckErr(o.Run())
+			util.CheckErr(o.Run(f, streams))
 			// avoid unnecessary messages for upgrade
 			fmt.Fprintf(o.Out, "addon %s installed successfully\n", o.name)
 			fmt.Fprintf(o.Out, clusterCmd.BuildRegisterSuccessExamples(cluster.ClusterType(o.name)))
@@ -247,41 +245,15 @@ It will automatically skip version checks, which may result in the cluster not r
 }
 
 // Run will apply the addon.yaml to K8s and register the cluster chart with version and repo specified
-func (o *installOption) Run() error {
+func (o *installOption) Run(f cmdutil.Factory, streams genericiooptions.IOStreams) error {
 	item, err := runtime.DefaultUnstructuredConverter.ToUnstructured(o.addon)
 	if err != nil {
 		return err
 	}
-	if err = RegisterClusterChart(o.name, o.clusterChartVersion, o.clusterChartRepo); err != nil {
+	if err = clusterCmd.RegisterClusterChart(f, streams, "", o.name, o.clusterChartVersion, o.clusterChartRepo); err != nil {
 		return err
 	}
 	_, err = o.Dynamic.Resource(o.GVR).Create(context.Background(), &unstructured.Unstructured{Object: item}, metav1.CreateOptions{})
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func RegisterClusterChart(engine, clusterChartVersion, clusterChartRepo string) error {
-	cachedName := fmt.Sprintf("%s-cluster-%s.tgz", engine, clusterChartVersion)
-	// add repo, if it exists, update it.
-	if err := helm.AddRepo(&repo.Entry{
-		Name: types.ClusterChartsRepoName,
-		URL:  clusterChartRepo,
-	}); err != nil {
-		return err
-	}
-	// pull chart by engine name and version from repo.
-	err := helm.PullChart(types.ClusterChartsRepoName, engine+"-cluster", clusterChartVersion, cluster.CliChartsCacheDir)
-	if err != nil {
-		return err
-	}
-	instance := &cluster.TypeInstance{
-		Name:      cluster.ClusterType(engine),
-		ChartName: cachedName,
-	}
-	// register this chart into Cluster_types.
-	err = instance.PatchNewClusterType()
 	if err != nil {
 		return err
 	}

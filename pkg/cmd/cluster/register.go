@@ -100,6 +100,29 @@ func newRegisterCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobr
 	return cmd
 }
 
+// RegisterClusterChart a util function to register cluster chart.
+func RegisterClusterChart(f cmdutil.Factory, streams genericiooptions.IOStreams, source, engine, version, repo string) error {
+	o := &registerOption{
+		Factory:     f,
+		IOStreams:   streams,
+		source:      source,
+		engine:      engine,
+		clusterType: cluster.ClusterType(engine),
+		repo:        repo,
+		version:     version,
+	}
+	if err := o.validate(); err != nil {
+		return err
+	}
+	if err := o.run(); err != nil {
+		return err
+	}
+	if _, err := fmt.Fprint(streams.Out, BuildRegisterSuccessExamples(o.clusterType)); err != nil {
+		return err
+	}
+	return nil
+}
+
 // validate will check the flags of command
 func (o *registerOption) validate() error {
 	re := regexp.MustCompile(`^[a-zA-Z0-9]{1,16}$`)
@@ -178,12 +201,17 @@ func (o *registerOption) run() error {
 		}
 	}
 
+	// read the cluster chart and validate it
 	instance := &cluster.TypeInstance{
 		Name:      o.clusterType,
 		URL:       o.source,
 		Alias:     o.alias,
 		ChartName: o.cachedName,
 	}
+	if validated, err := instance.ValidateChartSchema(); !validated {
+		return err
+	}
+	// register this chart into Cluster_types
 	return instance.PatchNewClusterType()
 }
 

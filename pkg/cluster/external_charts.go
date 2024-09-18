@@ -21,6 +21,7 @@ package cluster
 
 import (
 	"compress/gzip"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/fs"
@@ -243,6 +244,63 @@ func (h *TypeInstance) PatchNewClusterType() error {
 		GlobalClusterChartConfig.AddConfig(h)
 	}
 	return GlobalClusterChartConfig.WriteConfigs(CliClusterTypesCacheDir)
+}
+
+var StandardSchema = map[string]interface{}{
+	"properties": map[string]interface{}{
+		"replicas": nil,
+		"cpu":      nil,
+		"memory":   nil,
+		"storage":  nil,
+	},
+}
+
+func (h *TypeInstance) ValidateChartSchema() (bool, error) {
+	file, err := h.loadChart()
+	if err != nil {
+		return false, err
+	}
+	defer file.Close()
+
+	c, err := loader.LoadArchive(file)
+	if err != nil {
+		return false, err
+	}
+
+	data := c.Schema
+	if len(data) == 0 {
+		return false, fmt.Errorf("schema of the chart doesn't exist")
+	}
+
+	var schema map[string]interface{}
+	if err := json.Unmarshal(data, &schema); err != nil {
+		return false, fmt.Errorf("error decoding JSON: %s", err)
+	}
+
+	if err := validateSchema(schema, StandardSchema); err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+func validateSchema(schema, standard map[string]interface{}) error {
+	for key, val := range standard {
+		if subStandard, ok := val.(map[string]interface{}); ok {
+			subSchema, ok := schema[key].(map[string]interface{})
+			if !ok {
+				return fmt.Errorf("schema missing required map key '%s'", key)
+			}
+			if err := validateSchema(subSchema, subStandard); err != nil {
+				return err
+			}
+		} else {
+			if _, exists := schema[key]; !exists {
+				return fmt.Errorf("schema missing required key '%s'", key)
+			}
+		}
+	}
+	return nil
 }
 
 var _ chartLoader = &TypeInstance{}
