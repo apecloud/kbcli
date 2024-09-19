@@ -191,6 +191,7 @@ func (o *installOption) Complete() error {
 			// if the version not specified, use the latest version
 			if o.version == "" {
 				o.addon = item.addon
+				o.version = getAddonVersion(item.addon)
 				break
 			} else if o.version == getAddonVersion(item.addon) {
 				o.addon = item.addon
@@ -244,13 +245,14 @@ It will automatically skip version checks, which may result in the cluster not r
 	return err
 }
 
-// Run will apply the addon.yaml to K8s and register the cluster chart with version and repo specified
+// Run will apply the addon.yaml to K8s and register the cluster chart
 func (o *installOption) Run(f cmdutil.Factory, streams genericiooptions.IOStreams) error {
 	item, err := runtime.DefaultUnstructuredConverter.ToUnstructured(o.addon)
 	if err != nil {
 		return err
 	}
 	if err = clusterCmd.RegisterClusterChart(f, streams, "", o.name, o.clusterChartVersion, o.clusterChartRepo); err != nil {
+		cluster.ClearCharts(cluster.ClusterType(o.name))
 		return err
 	}
 	_, err = o.Dynamic.Resource(o.GVR).Create(context.Background(), &unstructured.Unstructured{Object: item}, metav1.CreateOptions{})

@@ -84,7 +84,8 @@ func (o *uninstallOption) Run() error {
 			return err
 		}
 		fmt.Fprintf(o.Out, "addon %s uninstalled successfully\n", name)
-		cluster.GlobalClusterChartConfig.RemoveConfig(cluster.ClusterType(name))
+		cluster.ClearCharts(cluster.ClusterType(name))
+		fmt.Fprintf(o.Out, "cluster chart removed successfully\n")
 	}
 	return nil
 }

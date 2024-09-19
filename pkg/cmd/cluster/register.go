@@ -27,7 +27,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/asaskevich/govalidator"
 	"github.com/spf13/cobra"
@@ -62,10 +61,6 @@ type registerOption struct {
 	engine     string
 	repo       string
 	version    string
-
-	autoApprove bool
-	// replace determine whether to replace an existing chart, the default value is false
-	replace bool
 }
 
 func newRegisterOption(f cmdutil.Factory, streams genericiooptions.IOStreams) *registerOption {
@@ -92,7 +87,6 @@ func newRegisterCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobr
 	}
 	cmd.Flags().StringVarP(&o.source, "source", "S", "", "Specify the cluster type chart source, support a URL or a local file path")
 	cmd.Flags().StringVar(&o.alias, "alias", "", "Set the cluster type alias")
-	cmd.Flags().BoolVar(&o.autoApprove, "auto-approve", false, "Skip interactive approval when registering an existed cluster type")
 	cmd.Flags().StringVar(&o.engine, "engine", "", "Specify the cluster chart name in helm repo")
 	cmd.Flags().StringVar(&o.repo, "repo", types.ClusterChartsRepoURL, "Specify the url of helm repo which contains cluster charts")
 	cmd.Flags().StringVar(&o.version, "version", "", "Specify the version of cluster chart to register")
@@ -129,15 +123,6 @@ func (o *registerOption) validate() error {
 	if !re.MatchString(o.clusterType.String()) {
 		return fmt.Errorf("cluster type %s is not appropriate as a subcommand", o.clusterType.String())
 	}
-	// double check if  the register cluster type is already existed
-	if !o.autoApprove {
-		for key := range cluster.ClusterTypeCharts {
-			if key != o.clusterType {
-				continue
-			}
-			o.replace = true
-		}
-	}
 
 	if o.isSourceMethod() {
 		if validateSource(o.source) != nil {
@@ -147,18 +132,6 @@ func (o *registerOption) validate() error {
 	} else {
 		o.cachedName = fmt.Sprintf("%s-cluster-%s.tgz", o.engine, o.version)
 	}
-	if !o.replace {
-		// if not replace. we should check the chart name whether conflict in local cache
-		// if conflicted, we add a timestamp to the cached name
-		for _, file := range cluster.CacheFiles {
-			if file.Name() == o.cachedName {
-				ext := filepath.Ext(o.cachedName)
-				timestamp := time.Now().Format("20230102150405")
-				o.cachedName = fmt.Sprintf("%s-%s.%s", o.cachedName[:len(o.cachedName)-len(ext)], timestamp, ext)
-			}
-		}
-	}
-	// todo: helm chart pre-check
 
 	return nil
 }
@@ -209,6 +182,7 @@ func (o *registerOption) run() error {
 		ChartName: o.cachedName,
 	}
 	if validated, err := instance.ValidateChartSchema(); !validated {
+		_ = os.Remove(localChartPath)
 		return err
 	}
 	// register this chart into Cluster_types
