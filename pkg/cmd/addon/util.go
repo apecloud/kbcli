@@ -69,19 +69,30 @@ func uniqueByName(objects []searchResult) []searchResult {
 	return unique
 }
 
-func checkAddonInstalled(objects *[]searchResult, o *addonListOpts) {
+func checkAddonInstalled(objects *[]searchResult, o *addonListOpts) error {
 	// list installed addons
 	var installedAddons []string
 	o.Print = false
-	o.Names = nil
+	// get and output the result
+	o.Print = false
 	r, _ := o.Run()
-	infos, _ := r.Infos()
+	if r == nil {
+		return nil
+	}
+	infos, err := r.Infos()
+	if err != nil {
+		return err
+	}
+	if len(infos) == 0 {
+		fmt.Fprintln(o.IOStreams.Out, "No installed addon found")
+		return nil
+	}
 	for _, info := range infos {
 		listItem := &extensionsv1alpha1.Addon{}
 		obj := info.Object.(*unstructured.Unstructured)
 		err := runtime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, listItem)
 		if err != nil {
-			return
+			return err
 		}
 		installedAddons = append(installedAddons, listItem.Name)
 	}
@@ -114,6 +125,7 @@ func checkAddonInstalled(objects *[]searchResult, o *addonListOpts) {
 	sort.Slice(*objects, func(i, j int) bool {
 		return (*objects)[j].isInstalled
 	})
+	return nil
 }
 
 func CheckAddonUsedByCluster(dynamic dynamic.Interface, addons []string, in io.Reader) error {

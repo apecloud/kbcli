@@ -25,9 +25,11 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	cmdtesting "k8s.io/kubectl/pkg/cmd/testing"
+
+	"github.com/apecloud/kbcli/pkg/cluster"
+	"github.com/apecloud/kbcli/pkg/types"
 )
 
 var _ = Describe("cluster register", func() {
@@ -51,20 +53,6 @@ var _ = Describe("cluster register", func() {
 
 		cmd := newRegisterCmd(tf, streams)
 		Expect(cmd).ShouldNot(BeNil())
-	})
-
-	It("register command validate", func() {
-		o := &registerOption{
-			Factory:     tf,
-			IOStreams:   streams,
-			clusterType: "not-allow-name",
-			source:      tempLocalPath,
-		}
-		Expect(o.validate()).Should(HaveOccurred())
-
-		o.clusterType = "oracle"
-		Expect(o.validate()).Should(Succeed())
-
 	})
 
 	It("test validateSource", func() {
@@ -100,4 +88,42 @@ var _ = Describe("cluster register", func() {
 		Expect(string(file)).Should(Equal("fake-data"))
 		os.Remove(filepath.Join(os.TempDir(), "fake-other.tgz"))
 	})
+
+	Context("test register cluster chart", func() {
+		var (
+			source              = "https://github.com/apecloud/helm-charts/releases/download/mysql-cluster-1.0.0-alpha.0/mysql-cluster-1.0.0-alpha.0.tgz"
+			engine              = "mysql"
+			apecloudMysqlEngine = "apecloud-mysql"
+			version             = "1.0.0-alpha.0"
+			repo                = types.ClusterChartsRepoURL
+		)
+
+		AfterEach(func() {
+			cluster.ClearCharts(cluster.ClusterType(engine))
+			cluster.ClearCharts(cluster.ClusterType(apecloudMysqlEngine))
+		})
+
+		It("test register chart by source", func() {
+			Expect(RegisterClusterChart(tf, streams, source, engine, "", "")).Should(Succeed())
+		})
+
+		It("test register chart by engine, version and default repo", func() {
+			Expect(RegisterClusterChart(tf, streams, "", engine, version, repo)).Should(Succeed())
+		})
+
+		It("test register built-in chart and test validate", func() {
+			Expect(RegisterClusterChart(tf, streams, "", apecloudMysqlEngine, version, repo)).Should(Succeed())
+			validatedChart := &cluster.TypeInstance{
+				Name:      cluster.ClusterType(apecloudMysqlEngine),
+				URL:       "",
+				Alias:     "",
+				ChartName: filepath.Base(source),
+			}
+			_, err := validatedChart.ValidateChartSchema()
+			Expect(err).Should(Succeed())
+			Expect(validatedChart.PatchNewClusterType()).Should(Succeed())
+		})
+
+	})
+
 })

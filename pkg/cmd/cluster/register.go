@@ -94,7 +94,7 @@ func newRegisterCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobr
 	return cmd
 }
 
-// RegisterClusterChart a util function to register cluster chart.
+// RegisterClusterChart a util function to register cluster chart used by addon install, upgrade and enable.
 func RegisterClusterChart(f cmdutil.Factory, streams genericiooptions.IOStreams, source, engine, version, repo string) error {
 	o := &registerOption{
 		Factory:     f,
@@ -119,7 +119,7 @@ func RegisterClusterChart(f cmdutil.Factory, streams genericiooptions.IOStreams,
 
 // validate will check the flags of command
 func (o *registerOption) validate() error {
-	re := regexp.MustCompile(`^[a-zA-Z0-9]{1,16}$`)
+	re := regexp.MustCompile(`^[a-zA-Z0-9-]{1,16}$`)
 	if !re.MatchString(o.clusterType.String()) {
 		return fmt.Errorf("cluster type %s is not appropriate as a subcommand", o.clusterType.String())
 	}

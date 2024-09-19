@@ -105,7 +105,10 @@ func (o *searchOpts) search(out io.Writer, addonListOpts *addonListOpts) error {
 			false: "uninstalled",
 		}
 		results = uniqueByName(results)
-		checkAddonInstalled(&results, addonListOpts)
+		err := checkAddonInstalled(&results, addonListOpts)
+		if err != nil {
+			return err
+		}
 		for _, res := range results {
 			tbl.AddRow(res.addon.Name, statusMap[res.isInstalled])
 		}

@@ -103,6 +103,9 @@ func newUpgradeCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 	cmd.Flags().StringVar(&o.index, "index", types.DefaultIndexName, "specify the addon index index, use 'kubeblocks' by default")
 	cmd.Flags().BoolVar(&o.inplace, "inplace", true, "when inplace is false, it will retain the existing addon and reinstall the new version of the addon, otherwise the upgrade will be in-place. The default is true.")
 	cmd.Flags().StringVar(&o.rename, "name", "", "name is the new version addon name need to set by user when inplace is false, it also will be used as resourceNamePrefix of an addon with multiple version.")
+	cmd.Flags().StringVar(&o.clusterChartVersion, "cluster-chart-version", "", "specify the cluster chart version, use the same version as the addon by default")
+	cmd.Flags().StringVar(&o.clusterChartRepo, "cluster-chart-repo", types.ClusterChartsRepoURL, "specify the repo of cluster chart, use the url of 'kubeblocks-addons' by default")
+	cmd.Flags().StringVar(&o.path, "path", "", "specify the local path contains addon CRs and needs to be specified when operating offline")
 	return cmd
 }
 

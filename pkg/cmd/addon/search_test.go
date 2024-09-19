@@ -23,16 +23,20 @@ import (
 	"bytes"
 	"path/filepath"
 
+	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	cmdutil "k8s.io/kubectl/pkg/cmd/util"
-
 	"k8s.io/cli-runtime/pkg/genericiooptions"
+	"k8s.io/client-go/dynamic/fake"
+	"k8s.io/client-go/kubernetes/scheme"
+	cmdtesting "k8s.io/kubectl/pkg/cmd/testing"
+
+	"github.com/apecloud/kbcli/pkg/testing"
 )
 
 var _ = Describe("search test", func() {
 	var streams genericiooptions.IOStreams
-	var f cmdutil.Factory
+	var tf *cmdtesting.TestFactory
 	var out *bytes.Buffer
 	const (
 		testAddonName       = "apecloud-mysql"
@@ -42,13 +46,23 @@ var _ = Describe("search test", func() {
 	)
 	BeforeEach(func() {
 		streams, _, out, _ = genericiooptions.NewTestIOStreams()
-	})
-	It("test search cmd", func() {
-		Expect(newSearchCmd(f, streams)).ShouldNot(BeNil())
+		tf = cmdtesting.NewTestFactory().WithNamespace("default")
+		_ = appsv1alpha1.AddToScheme(scheme.Scheme)
+		addonObj := testing.FakeAddon(testAddonName)
+		tf.FakeDynamicClient = fake.NewSimpleDynamicClient(
+			scheme.Scheme, addonObj)
 	})
 
-	It("test search", func() {
-		cmd := newSearchCmd(f, streams)
+	It("test search cmd Run", func() {
+		cmd := newSearchCmd(tf, streams)
+		Expect(cmd.Flags().Set("path", testLocalPath)).Should(Succeed())
+		cmd.Run(cmd, []string{})
+		Expect(out.String()).Should(ContainSubstring(testAddonName))
+		Expect(out.String()).Should(ContainSubstring("uninstalled"))
+	})
+
+	It("test search cmd Run with addon specified", func() {
+		cmd := newSearchCmd(tf, streams)
 		cmd.Run(cmd, []string{testAddonNotExisted})
 		Expect(out.String()).Should(Equal("fake-addon addon not found. Please update your index or check the addon name\n"))
 	})

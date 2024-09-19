@@ -187,7 +187,7 @@ func (o *installOption) Complete() error {
 
 	// descending order of versions
 	for _, item := range addons {
-		if item.index.name == o.index {
+		if o.path != "" || item.index.name == o.index {
 			// if the version not specified, use the latest version
 			if o.version == "" {
 				o.addon = item.addon
