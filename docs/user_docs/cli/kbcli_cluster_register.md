@@ -22,7 +22,6 @@ kbcli cluster register [NAME] [flags]
 
 ```
       --alias string     Set the cluster type alias
-      --auto-approve     Skip interactive approval when registering an existed cluster type
       --engine string    Specify the cluster chart name in helm repo
   -h, --help             help for register
       --repo string      Specify the url of helm repo which contains cluster charts (default "https://jihulab.com/api/v4/projects/150246/packages/helm/stable")
