@@ -38,15 +38,15 @@ import (
 	"github.com/apecloud/kbcli/pkg/util/flags"
 )
 
-// CliClusterTypesCacheDir is $HOME/.kbcli/cluster_types by default
-var CliClusterTypesCacheDir string
+// CliClusterChartConfig is $HOME/.kbcli/cluster_types by default
+var CliClusterChartConfig string
 
 // CliChartsCacheDir is $HOME/.kbcli/charts by default
 var CliChartsCacheDir string
 
 type clusterConfig []*TypeInstance
 
-// GlobalClusterChartConfig is kbcli global cluster chart config reference to CliClusterTypesCacheDir
+// GlobalClusterChartConfig is kbcli global cluster chart config reference to CliClusterChartConfig
 var GlobalClusterChartConfig clusterConfig
 var CacheFiles []fs.DirEntry
 
@@ -145,7 +145,7 @@ func GetChartCacheFiles() []fs.DirEntry {
 func ClearCharts(c ClusterType) {
 	// if the fail clusterType is from external config, remove the config and the related charts
 	if GlobalClusterChartConfig.RemoveConfig(c) {
-		if err := GlobalClusterChartConfig.WriteConfigs(CliClusterTypesCacheDir); err != nil {
+		if err := GlobalClusterChartConfig.WriteConfigs(CliClusterChartConfig); err != nil {
 			klog.V(2).Info(fmt.Sprintf("Warning: auto clear %s config fail due to: %s\n", c, err.Error()))
 
 		}
@@ -243,7 +243,7 @@ func (h *TypeInstance) PatchNewClusterType() error {
 	} else {
 		GlobalClusterChartConfig.AddConfig(h)
 	}
-	return GlobalClusterChartConfig.WriteConfigs(CliClusterTypesCacheDir)
+	return GlobalClusterChartConfig.WriteConfigs(CliClusterChartConfig)
 }
 
 var StandardSchema = map[string]interface{}{
@@ -307,15 +307,15 @@ var _ chartLoader = &TypeInstance{}
 
 func init() {
 	homeDir, _ := util.GetCliHomeDir()
-	CliClusterTypesCacheDir = filepath.Join(homeDir, types.CliClusterTypeConfigs)
+	CliClusterChartConfig = filepath.Join(homeDir, types.CliClusterTypeConfigs)
 	CliChartsCacheDir = filepath.Join(homeDir, types.CliChartsCache)
 
-	err := GlobalClusterChartConfig.ReadConfigs(CliClusterTypesCacheDir)
+	err := GlobalClusterChartConfig.ReadConfigs(CliClusterChartConfig)
 	if err != nil {
 		fmt.Println(err.Error())
 		return
 	}
 	// check charts cache dir
 	CacheFiles = GetChartCacheFiles()
-	RegisterCMD(GlobalClusterChartConfig, CliClusterTypesCacheDir)
+	RegisterCMD(GlobalClusterChartConfig, CliClusterChartConfig)
 }
