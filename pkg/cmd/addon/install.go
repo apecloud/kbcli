@@ -59,6 +59,12 @@ var addonInstallExample = templates.Examples(`
 
 	# install an addon with a specified version default index
 	kbcli addon install apecloud-mysql --version 0.7.0
+
+	# install an addon with a specified version and cluster chart of different version.
+	kbcli addon install apecloud-mysql --version 0.7.0 --cluster-chart-version 0.7.1
+
+	# install an addon with a specified version and local path.
+	kbcli addon install apecloud-mysql --version 0.7.0 --path /path/to/local/chart
 `)
 
 type baseOption struct {
@@ -161,7 +167,8 @@ func (o *installOption) Complete() error {
 		return fmt.Errorf("the version %s does not comply with the standards", o.version)
 	}
 
-	// find addons in the default index dir or the specified path.
+	// If no local path is specified, we search all indexes in the default index directory.
+	// When a local path is specified, we assume the last part of the path is the index and search only that.
 	if o.path == "" {
 		dir, err := util.GetCliAddonDir()
 		if err != nil {

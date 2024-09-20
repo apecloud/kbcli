@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"k8s.io/kubectl/pkg/util/templates"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -41,6 +42,17 @@ import (
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 )
 
+var addonSearchExample = templates.Examples(`
+	# search the addons of all index
+	kbcli addon search
+
+	# search the addons from a specified local path 
+	kbcli addon search --path /path/to/local/chart
+
+	# search different versions and indexes of an addon
+	kbcli addon search apecloud-mysql
+`)
+
 type searchResult struct {
 	index       index
 	addon       *extensionsv1alpha1.Addon
@@ -57,8 +69,9 @@ type searchOpts struct {
 func newSearchCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
 	o := &searchOpts{}
 	cmd := &cobra.Command{
-		Use:   "search",
-		Short: "Search the addon from index",
+		Use:     "search",
+		Short:   "Search the addon from index",
+		Example: addonInstallExample,
 		PersistentPreRun: func(cmd *cobra.Command, _ []string) {
 			util.CheckErr(util.EnableLogToFile(cmd.Flags()))
 			util.CheckErr(addDefaultIndex())
