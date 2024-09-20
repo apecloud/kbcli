@@ -15,7 +15,10 @@ kbcli cluster register [NAME] [flags]
   kbcli cluster register orioledb --source https://github.com/apecloud/helm-charts/releases/download/orioledb-cluster-0.6.0-beta.44/orioledb-cluster-0.6.0-beta.44.tgz
   
   # Register a cluster type from a local path file
-  kbcli cluster register neon -source pkg/cli/cluster/charts/neon-cluster.tgz
+  kbcli cluster register neon --source pkg/cli/cluster/charts/neon-cluster.tgz
+  
+  # Register a cluster type from a Helm repository, specifying the version and engine.
+  kbcli cluster register mysql --engine mysql --version 0.9.0 --repo https://jihulab.com/api/v4/projects/150246/packages/helm/stable
 ```
 
 ### Options

@@ -23,6 +23,9 @@ kbcli addon upgrade [flags]
   # upgrade an addon with a specified version default index
   kbcli addon upgrade apecloud-mysql --version 0.7.0
   
+  # upgrade an addon with a specified version, default index and a different version of cluster chart
+  kbcli addon upgrade apecloud-mysql --version 0.7.0 --cluster-chart-version 0.7.1
+  
   # non-inplace upgrade an addon with a specified version
   kbcli addon upgrade apecloud-mysql  --inplace=false --version 0.7.0
   

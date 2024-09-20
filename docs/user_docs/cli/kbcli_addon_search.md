@@ -8,6 +8,28 @@ Search the addon from index
 kbcli addon search [flags]
 ```
 
+### Examples
+
+```
+  # install an addon from default index
+  kbcli addon install apecloud-mysql
+  
+  # install an addon from default index and skip KubeBlocks version compatibility check
+  kbcli addon install apecloud-mysql --force
+  
+  # install an addon from a specified index
+  kbcli addon install apecloud-mysql --index my-index
+  
+  # install an addon with a specified version default index
+  kbcli addon install apecloud-mysql --version 0.7.0
+  
+  # install an addon with a specified version and cluster chart of different version.
+  kbcli addon install apecloud-mysql --version 0.7.0 --cluster-chart-version 0.7.1
+  
+  # install an addon with a specified version and local path.
+  kbcli addon install apecloud-mysql --version 0.7.0 --path /path/to/local/chart
+```
+
 ### Options
 
 ```
