@@ -112,6 +112,7 @@ func RegisterClusterChart(f cmdutil.Factory, streams genericiooptions.IOStreams,
 		return err
 	}
 	if err := o.run(); err != nil {
+		cluster.ClearCharts(cluster.ClusterType(engine))
 		return err
 	}
 	if _, err := fmt.Fprint(streams.Out, BuildRegisterSuccessExamples(o.clusterType)); err != nil {

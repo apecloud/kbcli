@@ -40,7 +40,7 @@ import (
 
 	extensionsv1alpha1 "github.com/apecloud/kubeblocks/apis/extensions/v1alpha1"
 
-	cluster "github.com/apecloud/kbcli/pkg/cluster"
+	"github.com/apecloud/kbcli/pkg/cluster"
 	clusterCmd "github.com/apecloud/kbcli/pkg/cmd/cluster"
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
@@ -139,7 +139,11 @@ func newInstallCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 			util.CheckErr(o.Run(f, streams))
 			// avoid unnecessary messages for upgrade
 			fmt.Fprintf(o.Out, "addon %s installed successfully\n", o.name)
-			fmt.Fprintf(o.Out, clusterCmd.BuildRegisterSuccessExamples(cluster.ClusterType(o.name)))
+			if err := clusterCmd.RegisterClusterChart(f, streams, "", o.name, o.clusterChartVersion, o.clusterChartRepo); err == nil {
+				fmt.Fprintf(o.Out, clusterCmd.BuildRegisterSuccessExamples(cluster.ClusterType(o.name)))
+			} else {
+				util.CheckErr(err)
+			}
 		},
 	}
 	cmd.Flags().BoolVar(&o.force, "force", false, "force install the addon and ignore the version check")
@@ -256,10 +260,6 @@ It will automatically skip version checks, which may result in the cluster not r
 func (o *installOption) Run(f cmdutil.Factory, streams genericiooptions.IOStreams) error {
 	item, err := runtime.DefaultUnstructuredConverter.ToUnstructured(o.addon)
 	if err != nil {
-		return err
-	}
-	if err = clusterCmd.RegisterClusterChart(f, streams, "", o.name, o.clusterChartVersion, o.clusterChartRepo); err != nil {
-		cluster.ClearCharts(cluster.ClusterType(o.name))
 		return err
 	}
 	_, err = o.Dynamic.Resource(o.GVR).Create(context.Background(), &unstructured.Unstructured{Object: item}, metav1.CreateOptions{})

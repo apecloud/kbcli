@@ -269,12 +269,12 @@ func (h *TypeInstance) ValidateChartSchema() (bool, error) {
 
 	data := c.Schema
 	if len(data) == 0 {
-		return false, fmt.Errorf("schema of the chart doesn't exist")
+		return false, fmt.Errorf("register cluster chart of %s failed, schema of the chart doesn't exist", h.Name)
 	}
 
 	var schema map[string]interface{}
 	if err := json.Unmarshal(data, &schema); err != nil {
-		return false, fmt.Errorf("error decoding JSON: %s", err)
+		return false, fmt.Errorf("register cluster chart of %s failed, error decoding JSON: %s", h.Name, err)
 	}
 
 	if err := validateSchema(schema, StandardSchema); err != nil {
@@ -289,14 +289,14 @@ func validateSchema(schema, standard map[string]interface{}) error {
 		if subStandard, ok := val.(map[string]interface{}); ok {
 			subSchema, ok := schema[key].(map[string]interface{})
 			if !ok {
-				return fmt.Errorf("schema missing required map key '%s'", key)
+				return fmt.Errorf("register cluster chart failed, schema missing required map key '%s'", key)
 			}
 			if err := validateSchema(subSchema, subStandard); err != nil {
 				return err
 			}
 		} else {
 			if _, exists := schema[key]; !exists {
-				return fmt.Errorf("schema missing required key '%s'", key)
+				return fmt.Errorf("register cluster chart failed, schema missing required key '%s'", key)
 			}
 		}
 	}

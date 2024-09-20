@@ -49,7 +49,6 @@ import (
 	viper "github.com/apecloud/kubeblocks/pkg/viperx"
 
 	"github.com/apecloud/kbcli/pkg/action"
-	"github.com/apecloud/kbcli/pkg/cluster"
 	clusterCmd "github.com/apecloud/kbcli/pkg/cmd/cluster"
 	"github.com/apecloud/kbcli/pkg/cmd/plugin"
 	"github.com/apecloud/kbcli/pkg/printer"
@@ -226,7 +225,7 @@ func newEnableCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.
 				util.CheckErr(o.complete(o, cmd, []string{name}))
 				util.CheckErr(o.CmdComplete(cmd))
 				util.CheckErr(o.Run())
-				util.CheckErr(o.registerClusterChart(f, streams, name))
+				util.CheckErr(clusterCmd.RegisterClusterChart(f, streams, "", name, o.addon.Spec.Version, types.ClusterChartsRepoURL))
 			}
 		},
 	}
@@ -322,14 +321,6 @@ func (o *addonCmdOpts) init(args []string) error {
 		viper.SetDefault(constant.CfgKeyServerInfo, *ver)
 	}
 
-	return nil
-}
-
-func (o *addonCmdOpts) registerClusterChart(f cmdutil.Factory, streams genericiooptions.IOStreams, engine string) error {
-	if err := clusterCmd.RegisterClusterChart(f, streams, "", engine, o.addon.Spec.Version, types.ClusterChartsRepoURL); err != nil {
-		cluster.ClearCharts(cluster.ClusterType(engine))
-		return err
-	}
 	return nil
 }
 
