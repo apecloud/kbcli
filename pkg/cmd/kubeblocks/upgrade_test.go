@@ -22,6 +22,9 @@ package kubeblocks
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"helm.sh/helm/v3/pkg/action"
+	"helm.sh/helm/v3/pkg/chart"
+	"helm.sh/helm/v3/pkg/release"
 
 	"github.com/spf13/cobra"
 	appsv1 "k8s.io/api/apps/v1"
@@ -39,6 +42,8 @@ var _ = Describe("kubeblocks upgrade", func() {
 	var cmd *cobra.Command
 	var streams genericiooptions.IOStreams
 	var tf *cmdtesting.TestFactory
+	var actionCfg *action.Configuration
+	var cfg *helm.Config
 
 	BeforeEach(func() {
 		streams, _, _, _ = genericiooptions.NewTestIOStreams()
@@ -118,10 +123,23 @@ var _ = Describe("kubeblocks upgrade", func() {
 	})
 
 	It("run upgrade", func() {
+		cfg = helm.NewFakeConfig(namespace)
+		actionCfg, _ = helm.NewActionConfig(cfg)
+		err := actionCfg.Releases.Create(&release.Release{
+			Name:      testing.KubeBlocksChartName,
+			Namespace: namespace,
+			Version:   1,
+			Info: &release.Info{
+				Status: release.StatusDeployed,
+			},
+			Chart: &chart.Chart{},
+		})
+		Expect(err).Should(BeNil())
+
 		o := &InstallOptions{
 			Options: Options{
 				IOStreams: streams,
-				HelmCfg:   helm.NewFakeConfig(namespace),
+				HelmCfg:   cfg,
 				Namespace: "default",
 				Client:    testing.FakeClientSet(mockKubeBlocksDeploy()),
 				Dynamic:   testing.FakeDynamicClient(),

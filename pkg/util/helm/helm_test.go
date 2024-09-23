@@ -153,6 +153,22 @@ var _ = Describe("helm util", func() {
 			Expect(errors.Is(err, ErrReleaseNotDeployed)).Should(BeTrue())
 			Expect(o.tryUninstall(actionCfg)).Should(BeNil()) // release exists
 		})
+
+		It("get helm release status", func() {
+			err := actionCfg.Releases.Create(&release.Release{
+				Name:    o.Name,
+				Version: 1,
+				Info: &release.Info{
+					Status: release.StatusFailed,
+				},
+				Chart: &chart.Chart{},
+			})
+			Expect(err).Should(BeNil())
+			_, _ = GetValues("", cfg)
+			status, err := GetHelmReleaseStatus(cfg, actionCfg, o.Name)
+			Expect(status).Should(Equal(release.StatusFailed))
+			Expect(err).Should(BeNil())
+		})
 	})
 
 	It("get chart versions", func() {

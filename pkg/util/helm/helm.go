@@ -690,3 +690,20 @@ func GetTemplateInstallOps(name, chart, version, namespace string) *InstallOpts 
 		DryRun:     &dryrun,
 	}
 }
+
+// GetHelmReleaseStatus retrieves the status of a Helm release within a specified namespace.
+func GetHelmReleaseStatus(cfg *Config, actionCfg *action.Configuration, releaseName string) (release.Status, error) {
+	var err error
+	if actionCfg == nil {
+		actionCfg, err = NewActionConfig(cfg)
+		if err != nil {
+			return "", err
+		}
+	}
+	client := action.NewGet(actionCfg)
+	rel, err := client.Run(releaseName)
+	if err != nil {
+		return "", err
+	}
+	return rel.Info.Status, nil
+}
