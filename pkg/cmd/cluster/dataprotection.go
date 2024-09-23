@@ -123,7 +123,12 @@ var (
 	`)
 )
 
-const TrueValue = "true"
+const (
+	TrueValue = "true"
+
+	DPEnvRestoreKeyPatterns     = "DP_RESTORE_KEY_PATTERNS"
+	DPEnvRestoreKeyIgnoreErrors = "DP_RESTORE_KEY_IGNORE_ERRORS"
+)
 
 type CreateBackupOptions struct {
 	BackupSpec     appsv1alpha1.Backup `json:"backupSpec"`
@@ -581,6 +586,9 @@ func (o *CreateRestoreOptions) Validate() error {
 }
 
 func NewCreateRestoreCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
+	restoreKey := ""
+	restoreKeyIgnoreErrors := false
+
 	customOutPut := func(opt *action.CreateOptions) {
 		output := fmt.Sprintf("Cluster %s created", opt.Name)
 		printer.PrintLine(output)
@@ -602,6 +610,18 @@ func NewCreateRestoreCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) 
 		Example: createRestoreExample,
 		Run: func(cmd *cobra.Command, args []string) {
 			o.Args = args
+			if restoreKey != "" {
+				o.RestoreSpec.Env = append(o.RestoreSpec.Env, corev1.EnvVar{
+					Name:  DPEnvRestoreKeyPatterns,
+					Value: restoreKey,
+				})
+			}
+			if restoreKeyIgnoreErrors {
+				o.RestoreSpec.Env = append(o.RestoreSpec.Env, corev1.EnvVar{
+					Name:  DPEnvRestoreKeyIgnoreErrors,
+					Value: strconv.FormatBool(restoreKeyIgnoreErrors),
+				})
+			}
 			cmdutil.BehaviorOnFatal(printer.FatalWithRedColor)
 			util.CheckErr(o.Complete())
 			util.CheckErr(o.Validate())
@@ -611,6 +631,8 @@ func NewCreateRestoreCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) 
 
 	cmd.Flags().StringVar(&o.RestoreSpec.BackupName, "backup", "", "Backup name")
 	cmd.Flags().StringVar(&o.RestoreSpec.RestorePointInTime, "restore-to-time", "", "point in time recovery(PITR)")
+	cmd.Flags().StringVar(&restoreKey, "restore-key", "", "specify the key to restore in kv database, support multiple keys split by comma with wildcard pattern matching")
+	cmd.Flags().BoolVar(&restoreKeyIgnoreErrors, "restore-key-ignore-errors", false, "whether or not to ignore errors when restore kv database by keys")
 	cmd.Flags().StringVar(&o.RestoreSpec.VolumeRestorePolicy, "volume-restore-policy", "Parallel", "the volume claim restore policy, supported values: [Serial, Parallel]")
 	return cmd
 }
