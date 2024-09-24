@@ -37,7 +37,7 @@ kbcli addon install [flags]
       --cluster-chart-version string   specify the cluster chart version, use the same version as the addon by default
       --force                          force install the addon and ignore the version check
   -h, --help                           help for install
-      --index string                   specify the addon index index, use 'kubeblocks' by default (default "kubeblocks")
+      --index string                   specify the addon index, use 'kubeblocks' by default (default "kubeblocks")
       --path string                    specify the local path contains addon CRs and needs to be specified when operating offline
       --version string                 specify the addon version
 ```
