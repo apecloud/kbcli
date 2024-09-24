@@ -28,6 +28,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -440,23 +441,44 @@ func NewActionConfig(cfg *Config) (*action.Configuration, error) {
 	return actionCfg, nil
 }
 
+var (
+	singletonFakeCfg *action.Configuration
+	singletonFakeMu  sync.Mutex
+)
+
+// fakeActionConfig returns a singleton instance of action.Configuration
 func fakeActionConfig() *action.Configuration {
-	registryClient, err := registry.NewClient()
-	if err != nil {
-		return nil
+	if singletonFakeCfg != nil {
+		return singletonFakeCfg
 	}
 
-	res := &action.Configuration{
-		Releases:       storage.Init(driver.NewMemory()),
-		KubeClient:     &kubefake.FailingKubeClient{PrintingKubeClient: kubefake.PrintingKubeClient{Out: io.Discard}},
-		Capabilities:   chartutil.DefaultCapabilities,
-		RegistryClient: registryClient,
-		Log:            func(format string, v ...interface{}) {},
+	singletonFakeMu.Lock()
+	defer singletonFakeMu.Unlock()
+
+	if singletonFakeCfg == nil {
+		registryClient, err := registry.NewClient()
+		if err != nil {
+			return nil
+		}
+
+		singletonFakeCfg = &action.Configuration{
+			Releases:       storage.Init(driver.NewMemory()),
+			KubeClient:     &kubefake.FailingKubeClient{PrintingKubeClient: kubefake.PrintingKubeClient{Out: io.Discard}},
+			Capabilities:   chartutil.DefaultCapabilities,
+			RegistryClient: registryClient,
+			Log:            func(format string, v ...interface{}) {},
+		}
+		singletonFakeCfg.Capabilities.KubeVersion.Version = "v99.99.0"
 	}
-	// to template the kubeblocks manifest, dry-run install will check and valida the KubeVersion in Capabilities is bigger than
-	// the KubeVersion in Chart.yaml. Set a max KubeVersion to avoid the check fail.
-	res.Capabilities.KubeVersion.Version = "v99.99.0"
-	return res
+
+	return singletonFakeCfg
+}
+
+// ResetFakeActionConfig resets the singleton action.Configuration instance
+func ResetFakeActionConfig() {
+	singletonFakeMu.Lock()
+	defer singletonFakeMu.Unlock()
+	singletonFakeCfg = nil
 }
 
 // Upgrade will upgrade a Chart
@@ -692,13 +714,10 @@ func GetTemplateInstallOps(name, chart, version, namespace string) *InstallOpts 
 }
 
 // GetHelmReleaseStatus retrieves the status of a Helm release within a specified namespace.
-func GetHelmReleaseStatus(cfg *Config, actionCfg *action.Configuration, releaseName string) (release.Status, error) {
-	var err error
-	if actionCfg == nil {
-		actionCfg, err = NewActionConfig(cfg)
-		if err != nil {
-			return "", err
-		}
+func GetHelmReleaseStatus(cfg *Config, releaseName string) (release.Status, error) {
+	actionCfg, err := NewActionConfig(cfg)
+	if err != nil {
+		return "", err
 	}
 	client := action.NewGet(actionCfg)
 	rel, err := client.Run(releaseName)

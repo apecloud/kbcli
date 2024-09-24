@@ -23,12 +23,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"helm.sh/helm/v3/pkg/release"
 	"time"
 
 	"github.com/hashicorp/go-version"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"helm.sh/helm/v3/pkg/release"
 	appsv1 "k8s.io/api/apps/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -94,12 +94,13 @@ func newUpgradeCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 func (o *InstallOptions) Upgrade() error {
 	klog.V(1).Info("##### Start to upgrade KubeBlocks #####")
 	// check helm release status
-	status, err := helm.GetHelmReleaseStatus(o.HelmCfg, nil, types.KubeBlocksChartName)
+	status, err := helm.GetHelmReleaseStatus(o.HelmCfg, types.KubeBlocksChartName)
 	if err != nil {
 		return fmt.Errorf("failed to get Helm release status: %v", err)
 	}
-	if status == release.StatusFailed {
-		return fmt.Errorf("helm release status is 'failed'. Please fix the release before upgrading KubeBlocks")
+	// intercept status except from 'deployed'
+	if status != release.StatusDeployed {
+		return fmt.Errorf("helm release status is %s instead of 'deployed'. Please fix the release before upgrading KubeBlocks", status)
 	}
 
 	if o.HelmCfg.Namespace() == "" {
