@@ -100,7 +100,7 @@ func (o *InstallOptions) Upgrade() error {
 	}
 	// intercept status except from 'deployed'
 	if status != release.StatusDeployed {
-		return fmt.Errorf("helm release status is %s instead of 'deployed'. Please fix the release before upgrading KubeBlocks", status)
+		return fmt.Errorf("helm release status is %s instead of 'deployed'. Please fix the release before upgrading KubeBlocks", status.String())
 	}
 
 	if o.HelmCfg.Namespace() == "" {
