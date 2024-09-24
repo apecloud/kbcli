@@ -184,10 +184,10 @@ var _ = Describe("kubeblocks upgrade", func() {
 				checkResult bool
 			}{
 				{release.StatusDeployed, true},
-				{release.StatusSuperseded, false},
+				{release.StatusSuperseded, true},
+				{release.StatusFailed, true},
 				{release.StatusUnknown, false},
 				{release.StatusUninstalled, false},
-				{release.StatusFailed, false},
 				{release.StatusUninstalling, false},
 				{release.StatusPendingInstall, false},
 				{release.StatusPendingUpgrade, false},

@@ -98,9 +98,11 @@ func (o *InstallOptions) Upgrade() error {
 	if err != nil {
 		return fmt.Errorf("failed to get Helm release status: %v", err)
 	}
-	// intercept status except from 'deployed'
-	if status != release.StatusDeployed {
-		return fmt.Errorf("helm release status is %s instead of 'deployed'. Please fix the release before upgrading KubeBlocks", status.String())
+	// intercept status of pending, unknown, uninstall and uninstalled.
+	if status.IsPending() {
+		return fmt.Errorf("helm release status is %s. Please wait until the release status changes to ‘deployed’ before upgrading KubeBlocks", status.String())
+	} else if status != release.StatusDeployed && status != release.StatusFailed && status != release.StatusSuperseded {
+		return fmt.Errorf("helm release status is %s. Please fix the release before upgrading KubeBlocks", status.String())
 	}
 
 	if o.HelmCfg.Namespace() == "" {
