@@ -251,8 +251,8 @@ github.com/antlr/antlr4/runtime/Go/antlr/v4 v4.0.0-20230305170008-8188dc5388df h
 github.com/antlr/antlr4/runtime/Go/antlr/v4 v4.0.0-20230305170008-8188dc5388df/go.mod h1:pSwJ0fSY5KhvocuWSx4fz3BA8OrA1bQn+K1Eli3BRwM=
 github.com/apecloud/dbctl v0.0.0-20240827084000-68a1980b1a46 h1:+Jcc7IjDGxPgIfIkGX2Q5Yxj35U65zgcfjh0B9rDhjo=
 github.com/apecloud/dbctl v0.0.0-20240827084000-68a1980b1a46/go.mod h1:eksJtZ7z1nVcVLqDzAdcN5EfpHwXllIAvHZEks2zWys=
-github.com/apecloud/kubeblocks v0.9.1-beta.6 h1:/7k80XnLzJxhW+CaUgiIThm6JlCto+giNqscl6fKU6s=
-github.com/apecloud/kubeblocks v0.9.1-beta.6/go.mod h1:kp9nenBgXsO03SbxN7a5S2HdNTsIQlpTcSgY8Mf2KS0=
+github.com/apecloud/kubeblocks v0.9.1-beta.27 h1:5Uo2EXLPp5r5SuYHK4usQf1wV4sMZIYdg+0XRi+m79k=
+github.com/apecloud/kubeblocks v0.9.1-beta.27/go.mod h1:rUZPPU8lnslgZCjSAH8kH/XUxt7h/toskux2XTh38eQ=
 github.com/apparentlymart/go-textseg v1.0.0/go.mod h1:z96Txxhf3xSFMPmb5X/1W05FF/Nj9VFpLOpjS5yuumk=
 github.com/apparentlymart/go-textseg/v13 v13.0.0/go.mod h1:ZK2fH7c4NqDTLtiYLvIkEghdlcqw7yxLeM89kiTRPUo=
 github.com/armon/circbuf v0.0.0-20150827004946-bbbad097214e/go.mod h1:3U/XgcO3hCbHZ8TKRvWD2dDTCfh9M9ya+I9JpbB7O8o=
@@ -318,6 +318,8 @@ github.com/chai2010/gettext-go v1.0.2 h1:1Lwwip6Q2QGsAdl/ZKPCwTe9fe0CjlUbqj5bFNS
 github.com/chai2010/gettext-go v1.0.2/go.mod h1:y+wnP2cHYaVj19NZhYKAwEMH2CI1gNHeQQ+5AjwawxA=
 github.com/chaos-mesh/chaos-mesh/api v0.0.0-20230912020346-a5d89c1c90ad h1:DVxCvjXlmkm4idu4bAbI9P+D99BsVHTKOKbzRYTlFwU=
 github.com/chaos-mesh/chaos-mesh/api v0.0.0-20230912020346-a5d89c1c90ad/go.mod h1:Yi/tSmvDrnFgyZN4bsXm3gfXrp3zo1uytHmnPEYfquM=
+github.com/charmbracelet/keygen v0.5.1 h1:zBkkYPtmKDVTw+cwUyY6ZwGDhRxXkEp0Oxs9sqMLqxI=
+github.com/charmbracelet/keygen v0.5.1/go.mod h1:zznJVmK/GWB6dAtjluqn2qsttiCBhA5MZSiwb80fcHw=
 github.com/cheggaaa/pb v1.0.27/go.mod h1:pQciLPpbU0oxA0h+VJYYLxO+XeDQb5pZijXscXHm81s=
 github.com/chzyer/logex v1.1.10/go.mod h1:+Ywpsq7O8HXn0nuIou7OrIPyXbp3wmkHB+jjWRnGsAI=
 github.com/chzyer/logex v1.2.1 h1:XHDu3E6q+gdHgsdTPH6ImJMIp436vR6MPtH8gP05QzM=
@@ -1989,8 +1991,8 @@ google.golang.org/genproto v0.0.0-20221010155953-15ba04fc1c0e/go.mod h1:3526vdqw
 google.golang.org/genproto v0.0.0-20221014173430-6e2ab493f96b/go.mod h1:1vXfmgAz9N9Jx0QA82PqRVauvCz1SGSz739p0f183jM=
 google.golang.org/genproto v0.0.0-20221014213838-99cd37c6964a/go.mod h1:1vXfmgAz9N9Jx0QA82PqRVauvCz1SGSz739p0f183jM=
 google.golang.org/genproto v0.0.0-20221025140454-527a21cfbd71/go.mod h1:9qHF0xnpdSfF6knlcsnpzUu5y+rpwgbvsyGAZPBMg4s=
-google.golang.org/genproto v0.0.0-20240213162025-012b6fc9bca9 h1:9+tzLLstTlPTRyJTh+ah5wIMsBW5c4tQwGTN3thOW9Y=
-google.golang.org/genproto v0.0.0-20240213162025-012b6fc9bca9/go.mod h1:mqHbVIp48Muh7Ywss/AD6I5kNVKZMmAa/QEW58Gxp2s=
+google.golang.org/genproto v0.0.0-20240227224415-6ceb2ff114de h1:F6qOa9AZTYJXOUEr4jDysRDLrm4PHePlge4v4TGAlxY=
+google.golang.org/genproto v0.0.0-20240227224415-6ceb2ff114de/go.mod h1:VUhTRKeHn9wwcdrk73nvdC9gF178Tzhmt/qyaFcPLSo=
 google.golang.org/genproto/googleapis/api v0.0.0-20240318140521-94a12d6c2237 h1:RFiFrvy37/mpSpdySBDrUdipW/dHwsRwh3J3+A9VgT4=
 google.golang.org/genproto/googleapis/api v0.0.0-20240318140521-94a12d6c2237/go.mod h1:Z5Iiy3jtmioajWHDGFk7CeugTyHtPvMHA4UTmUkyalE=
 google.golang.org/genproto/googleapis/rpc v0.0.0-20240318140521-94a12d6c2237 h1:NnYq6UN9ReLM9/Y01KWNOWyI5xQ9kbIms5GGJVwS/Yc=

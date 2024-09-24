@@ -21,8 +21,10 @@ package dataprotection
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/spf13/cobra"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
@@ -41,6 +43,9 @@ var (
 )
 
 func newRestoreCommand(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
+	restoreKey := ""
+	restoreKeyIgnoreErrors := false
+
 	customOutPut := func(opt *action.CreateOptions) {
 		output := fmt.Sprintf("Cluster %s created", opt.Name)
 		printer.PrintLine(output)
@@ -70,6 +75,18 @@ func newRestoreCommand(f cmdutil.Factory, streams genericiooptions.IOStreams) *c
 			if clusterName != "" {
 				o.Args = []string{clusterName}
 			}
+			if restoreKey != "" {
+				o.RestoreSpec.Env = append(o.RestoreSpec.Env, corev1.EnvVar{
+					Name:  cluster.DPEnvRestoreKeyPatterns,
+					Value: restoreKey,
+				})
+			}
+			if restoreKeyIgnoreErrors {
+				o.RestoreSpec.Env = append(o.RestoreSpec.Env, corev1.EnvVar{
+					Name:  cluster.DPEnvRestoreKeyIgnoreErrors,
+					Value: strconv.FormatBool(restoreKeyIgnoreErrors),
+				})
+			}
 			cmdutil.BehaviorOnFatal(printer.FatalWithRedColor)
 			util.CheckErr(o.Complete())
 			util.CheckErr(o.Validate())
@@ -79,6 +96,8 @@ func newRestoreCommand(f cmdutil.Factory, streams genericiooptions.IOStreams) *c
 
 	cmd.Flags().StringVar(&clusterName, "cluster", "", "The cluster to restore")
 	cmd.Flags().StringVar(&o.RestoreSpec.RestorePointInTime, "restore-to-time", "", "point in time recovery(PITR)")
+	cmd.Flags().StringVar(&restoreKey, "restore-key", "", "specify the key to restore in kv database, support multiple keys split by comma with wildcard pattern matching")
+	cmd.Flags().BoolVar(&restoreKeyIgnoreErrors, "restore-key-ignore-errors", false, "whether or not to ignore errors when restore kv database by keys")
 	cmd.Flags().StringVar(&o.RestoreSpec.VolumeRestorePolicy, "volume-restore-policy", "Parallel", "the volume claim restore policy, supported values: [Serial, Parallel]")
 	return cmd
 }
