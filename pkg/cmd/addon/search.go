@@ -129,7 +129,9 @@ func (o *searchOpts) search(out io.Writer, addonListOpts *addonListOpts) error {
 	} else {
 		tbl.AddRow("ADDON", "VERSION", "INDEX")
 		if len(results) == 0 {
-			fmt.Fprintf(out, "%s addon not found. Please update your index or check the addon name\n", o.name)
+			fmt.Fprintf(out, "%s addon not found. Please update your index or check the addon name.\n"+
+				"You can use the command 'kbcli addon index update --all=true' to update all indexes,\n"+
+				"or specify a local path containing addons with the command 'kbcli addon search --path=/path/to/local/chart'", o.name)
 			return nil
 		}
 		for _, res := range results {

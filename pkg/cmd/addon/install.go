@@ -148,7 +148,7 @@ func newInstallCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 	}
 	cmd.Flags().BoolVar(&o.force, "force", false, "force install the addon and ignore the version check")
 	cmd.Flags().StringVar(&o.version, "version", "", "specify the addon version")
-	cmd.Flags().StringVar(&o.index, "index", types.DefaultIndexName, "specify the addon index index, use 'kubeblocks' by default")
+	cmd.Flags().StringVar(&o.index, "index", types.DefaultIndexName, "specify the addon index, use 'kubeblocks' by default")
 	cmd.Flags().StringVar(&o.clusterChartVersion, "cluster-chart-version", "", "specify the cluster chart version, use the same version as the addon by default")
 	cmd.Flags().StringVar(&o.clusterChartRepo, "cluster-chart-repo", types.ClusterChartsRepoURL, "specify the repo of cluster chart, use the url of 'kubeblocks-addons' by default")
 	cmd.Flags().StringVar(&o.path, "path", "", "specify the local path contains addon CRs and needs to be specified when operating offline")
@@ -256,7 +256,7 @@ It will automatically skip version checks, which may result in the cluster not r
 	return err
 }
 
-// Run will apply the addon.yaml to K8s and register the cluster chart
+// Run will apply the addon.yaml to K8s
 func (o *installOption) Run(f cmdutil.Factory, streams genericiooptions.IOStreams) error {
 	item, err := runtime.DefaultUnstructuredConverter.ToUnstructured(o.addon)
 	if err != nil {
