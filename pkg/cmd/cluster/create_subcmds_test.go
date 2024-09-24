@@ -48,7 +48,7 @@ import (
 
 var _ = Describe("create cluster by cluster type", func() {
 	const (
-		clusterType = "mysql"
+		clusterType    = "mysql"
 		redisCluster   = "redis"
 		redisComponent = "redis-cluster-7"
 	)
