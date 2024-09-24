@@ -40,7 +40,6 @@ import (
 
 	extensionsv1alpha1 "github.com/apecloud/kubeblocks/apis/extensions/v1alpha1"
 
-	"github.com/apecloud/kbcli/pkg/cluster"
 	clusterCmd "github.com/apecloud/kbcli/pkg/cmd/cluster"
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
@@ -139,9 +138,7 @@ func newInstallCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 			util.CheckErr(o.Run(f, streams))
 			// avoid unnecessary messages for upgrade
 			fmt.Fprintf(o.Out, "addon %s installed successfully\n", o.name)
-			if err := clusterCmd.RegisterClusterChart(f, streams, "", o.name, o.clusterChartVersion, o.clusterChartRepo); err == nil {
-				fmt.Fprintf(o.Out, clusterCmd.BuildRegisterSuccessExamples(cluster.ClusterType(o.name)))
-			} else {
+			if err := clusterCmd.RegisterClusterChart(f, streams, "", o.name, o.clusterChartVersion, o.clusterChartRepo); err != nil {
 				util.CheckErr(err)
 			}
 		},
