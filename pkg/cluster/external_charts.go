@@ -21,6 +21,7 @@ package cluster
 
 import (
 	"compress/gzip"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/fs"
@@ -155,7 +156,7 @@ func ClearCharts(c ClusterType) {
 	}
 }
 
-// TypeInstance reference to a cluster type instance in config
+// TypeInstance reference to a cluster type instance in config and implement the cluster.chartLoader interface
 type TypeInstance struct {
 	Name  ClusterType `yaml:"name"`
 	URL   string      `yaml:"helmChartUrl"`
@@ -214,7 +215,8 @@ func (h *TypeInstance) getAlias() string {
 
 func (h *TypeInstance) register(subcmd ClusterType) error {
 	if _, ok := ClusterTypeCharts[subcmd]; ok {
-		return fmt.Errorf("cluster type %s already registered", subcmd)
+		// replace built-in cluster chart
+		klog.V(2).Info(fmt.Sprintf("cluster chart of %s is replaced manully\n", subcmd.String()))
 	}
 	ClusterTypeCharts[subcmd] = h
 
@@ -223,7 +225,82 @@ func (h *TypeInstance) register(subcmd ClusterType) error {
 			return nil
 		}
 	}
-	return fmt.Errorf("can't find the %s in cache, please use 'kbcli cluster pull %s --url %s' first", h.Name.String(), h.Name.String(), h.URL)
+	return fmt.Errorf("can't find the %s in cache, please use 'kbcli cluster register %s --url %s' first", h.Name.String(), h.Name.String(), h.URL)
+}
+
+func (h *TypeInstance) PatchNewClusterType() error {
+	if err := h.PreCheck(); err != nil {
+		return fmt.Errorf("the chart of %s pre-check unsuccssful: %s", h.Name, err.Error())
+	}
+	isChartExist := false
+	for _, item := range GlobalClusterChartConfig {
+		if h.Name == item.Name {
+			isChartExist = true
+		}
+	}
+	if isChartExist {
+		GlobalClusterChartConfig.UpdateConfig(h)
+	} else {
+		GlobalClusterChartConfig.AddConfig(h)
+	}
+	return GlobalClusterChartConfig.WriteConfigs(CliClusterChartConfig)
+}
+
+var StandardSchema = map[string]interface{}{
+	"properties": map[string]interface{}{
+		"replicas": nil,
+		"cpu":      nil,
+		"memory":   nil,
+		"storage":  nil,
+	},
+}
+
+func (h *TypeInstance) ValidateChartSchema() (bool, error) {
+	file, err := h.loadChart()
+	if err != nil {
+		return false, err
+	}
+	defer file.Close()
+
+	c, err := loader.LoadArchive(file)
+	if err != nil {
+		return false, err
+	}
+
+	data := c.Schema
+	if len(data) == 0 {
+		return false, fmt.Errorf("register cluster chart of %s failed, schema of the chart doesn't exist", h.Name)
+	}
+
+	var schema map[string]interface{}
+	if err := json.Unmarshal(data, &schema); err != nil {
+		return false, fmt.Errorf("register cluster chart of %s failed, error decoding JSON: %s", h.Name, err)
+	}
+
+	if err := validateSchema(schema, StandardSchema); err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+func validateSchema(schema, standard map[string]interface{}) error {
+	for key, val := range standard {
+		if subStandard, ok := val.(map[string]interface{}); ok {
+			subSchema, ok := schema[key].(map[string]interface{})
+			if !ok {
+				return fmt.Errorf("register cluster chart failed, schema missing required map key '%s'", key)
+			}
+			if err := validateSchema(subSchema, subStandard); err != nil {
+				return err
+			}
+		} else {
+			if _, exists := schema[key]; !exists {
+				return fmt.Errorf("register cluster chart failed, schema missing required key '%s'", key)
+			}
+		}
+	}
+	return nil
 }
 
 var _ chartLoader = &TypeInstance{}

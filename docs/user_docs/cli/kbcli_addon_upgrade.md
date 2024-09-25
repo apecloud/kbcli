@@ -23,6 +23,9 @@ kbcli addon upgrade [flags]
   # upgrade an addon with a specified version default index
   kbcli addon upgrade apecloud-mysql --version 0.7.0
   
+  # upgrade an addon with a specified version, default index and a different version of cluster chart
+  kbcli addon upgrade apecloud-mysql --version 0.7.0 --cluster-chart-version 0.7.1
+  
   # non-inplace upgrade an addon with a specified version
   kbcli addon upgrade apecloud-mysql  --inplace=false --version 0.7.0
   
@@ -33,12 +36,15 @@ kbcli addon upgrade [flags]
 ### Options
 
 ```
-      --force            force upgrade the addon and ignore the version check
-  -h, --help             help for upgrade
-      --index string     specify the addon index index, use 'kubeblocks' by default (default "kubeblocks")
-      --inplace          when inplace is false, it will retain the existing addon and reinstall the new version of the addon, otherwise the upgrade will be in-place. The default is true. (default true)
-      --name string      name is the new version addon name need to set by user when inplace is false, it also will be used as resourceNamePrefix of an addon with multiple version.
-      --version string   specify the addon version
+      --cluster-chart-repo string      specify the repo of cluster chart, use the url of 'kubeblocks-addons' by default (default "https://jihulab.com/api/v4/projects/150246/packages/helm/stable")
+      --cluster-chart-version string   specify the cluster chart version, use the same version as the addon by default
+      --force                          force upgrade the addon and ignore the version check
+  -h, --help                           help for upgrade
+      --index string                   specify the addon index index, use 'kubeblocks' by default (default "kubeblocks")
+      --inplace                        when inplace is false, it will retain the existing addon and reinstall the new version of the addon, otherwise the upgrade will be in-place. The default is true. (default true)
+      --name string                    name is the new version addon name need to set by user when inplace is false, it also will be used as resourceNamePrefix of an addon with multiple version.
+      --path string                    specify the local path contains addon CRs and needs to be specified when operating offline
+      --version string                 specify the addon version
 ```
 
 ### Options inherited from parent commands

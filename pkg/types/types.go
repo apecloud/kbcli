@@ -263,6 +263,12 @@ var (
 
 	// AddonIndexDir is the default addon index dir
 	AddonIndexDir = filepath.Join("addon", "index")
+
+	// ClusterChartsRepoName helm chart repo for installing cluster chart
+	ClusterChartsRepoName = "kubeblocks-addons"
+
+	// ClusterChartsRepoURL the default helm chart repo for installing cluster chart
+	ClusterChartsRepoURL = "https://jihulab.com/api/v4/projects/150246/packages/helm/stable"
 )
 
 // Playground

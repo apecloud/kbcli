@@ -46,7 +46,7 @@ var _ = Describe("cluster register", func() {
 		Expect(err).Should(Succeed())
 	})
 
-	It("test external chart", func() {
+	It("test fake chart", func() {
 		fakeChart := &TypeInstance{
 			Name:      "fake",
 			URL:       "www.fake-chart-hub/fake.tgz",
@@ -58,6 +58,9 @@ var _ = Describe("cluster register", func() {
 		_, err := fakeChart.loadChart()
 		Expect(err).Should(HaveOccurred())
 		Expect(fakeChart.register("fake")).Should(HaveOccurred())
+		Expect(fakeChart.PatchNewClusterType()).Should(HaveOccurred())
+		_, err = fakeChart.ValidateChartSchema()
+		Expect(err).Should(HaveOccurred())
 	})
 
 	Context("test Config reader", func() {

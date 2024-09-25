@@ -22,15 +22,24 @@ kbcli addon install [flags]
   
   # install an addon with a specified version default index
   kbcli addon install apecloud-mysql --version 0.7.0
+  
+  # install an addon with a specified version and cluster chart of different version.
+  kbcli addon install apecloud-mysql --version 0.7.0 --cluster-chart-version 0.7.1
+  
+  # install an addon with a specified version and local path.
+  kbcli addon install apecloud-mysql --version 0.7.0 --path /path/to/local/chart
 ```
 
 ### Options
 
 ```
-      --force            force install the addon and ignore the version check
-  -h, --help             help for install
-      --index string     specify the addon index index, use 'kubeblocks' by default (default "kubeblocks")
-      --version string   specify the addon version
+      --cluster-chart-repo string      specify the repo of cluster chart, use the url of 'kubeblocks-addons' by default (default "https://jihulab.com/api/v4/projects/150246/packages/helm/stable")
+      --cluster-chart-version string   specify the cluster chart version, use the same version as the addon by default
+      --force                          force install the addon and ignore the version check
+  -h, --help                           help for install
+      --index string                   specify the addon index, use 'kubeblocks' by default (default "kubeblocks")
+      --path string                    specify the local path contains addon CRs and needs to be specified when operating offline
+      --version string                 specify the addon version
 ```
 
 ### Options inherited from parent commands
