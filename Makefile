@@ -202,13 +202,30 @@ build-single-kbcli-embed-chart.%: chart=$(word 2,$(subst ., ,$@))
 build-single-kbcli-embed-chart.%:
 	$(HELM) dependency update addons/addons-cluster/$(chart) --skip-refresh
 	$(HELM) package addons/addons-cluster/$(chart)
-	- bash -c "diff <($(HELM) template $(chart)-*.tgz) <($(HELM) template pkg/cluster/charts/$(chart).tgz)" > chart.diff
-	@if [ -s chart.diff ]; then \
- 	  mv $(chart)-*.tgz pkg/cluster/charts/$(chart).tgz; \
- 	else \
- 	  rm $(chart)-*.tgz; \
-	fi
-	rm chart.diff
+	@if [ ! -f "pkg/cluster/charts/$(chart).tgz" ]; then \
+		echo "Moving new chart to the charts directory..."; \
+		mv $(chart)-*.tgz pkg/cluster/charts/$(chart).tgz; \
+		exit 0; \
+	fi; \
+	rm -rf $(chart)-new $(chart)-old; \
+	echo "Existing chart found, comparing..."; \
+	echo "Extracting new chart..."; \
+	mkdir $(chart)-new && tar -xzf $(chart)-*.tgz -C $(chart)-new; \
+	echo "Extracting old chart..."; \
+	mkdir $(chart)-old && tar -xzf pkg/cluster/charts/$(chart).tgz -C $(chart)-old; \
+	echo "Comparing charts..."; \
+	diff -r $(chart)-new $(chart)-old > chart.diff; \
+	if [ -s chart.diff ]; then \
+		echo "Differences found, updating chart..."; \
+		mv $(chart)-*.tgz pkg/cluster/charts/$(chart).tgz; \
+	else \
+		echo "No differences found, cleaning up..."; \
+		rm $(chart)-*.tgz; \
+	fi; \
+	echo "Cleaning up..."; \
+	rm -rf chart.diff; \
+	rm -rf $(chart)-new $(chart)-old; \
+
 
 .PHONY: build-kbcli-embed-chart
 build-kbcli-embed-chart: helmtool fetch-addons create-kbcli-embed-charts-dir \
