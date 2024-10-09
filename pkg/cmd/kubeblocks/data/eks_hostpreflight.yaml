@@ -12,8 +12,6 @@ spec:
     - hostUtility :
         collectorName: eks-ctl
         utilityName: eksctl
-    - clusterRegion :
-        providerName: eks
   extendAnalyzers:
     - hostUtility:
         checkName: AWSCli-Check
@@ -31,17 +29,3 @@ spec:
               message: eksctl has been installed
           - warn:
               message: eksctl isn't installed
-    - clusterRegion:
-        checkName: Check-K8S-Region
-        regionNames:
-          - cn-northwest-1
-          - cn-north-1
-          - us-east-1
-          - us-east-2
-          - us-west-1
-          - us-west-2
-        outcomes:
-          - warn:
-              message: k8s cluster region doesn't belong to amazon china, be aware of the network reachability for cluster regions that located at East-Asia
-          - pass:
-              message: k8s cluster region belongs to amazon china/us
