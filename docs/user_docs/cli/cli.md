@@ -181,3 +181,10 @@ Print the version information, include kubernetes, KubeBlocks and kbcli version.
 
 
 
+## [view](kbcli_view.md)
+
+view management command
+
+* [kbcli view list](kbcli_view_list.md)	 - list all views.
+
+

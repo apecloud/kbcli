@@ -67,6 +67,7 @@ kbcli [flags]
 * [kbcli plugin](kbcli_plugin.md)	 - Provides utilities for interacting with plugins.
 * [kbcli report](kbcli_report.md)	 - Report kubeblocks or cluster info.
 * [kbcli version](kbcli_version.md)	 - Print the version information, include kubernetes, KubeBlocks and kbcli version.
+* [kbcli view](kbcli_view.md)	 - view management command
 
 #### Go Back to [CLI Overview](cli.md) Homepage.
 
