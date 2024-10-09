@@ -219,7 +219,7 @@ const (
 const (
 	ViewAPIGroup   = "view.kubeblocks.io"
 	ViewAPIVersion = "v1"
-	ResourceView   = "view"
+	ResourceView   = "reconciliationviews"
 )
 
 const (
