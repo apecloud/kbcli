@@ -103,6 +103,33 @@ var clusterUpdateExample = templates.Examples(`
 	kbcli cluster update mycluster --pitr-enabled=true
 `)
 
+// UpdatableFlags is the flags that can be updated by update command
+type UpdatableFlags struct {
+	// Options for cluster termination policy
+	TerminationPolicy string `json:"terminationPolicy"`
+
+	// Add-on switches for cluster observability
+	DisableExporter bool `json:"monitor"`
+	EnableAllLogs   bool `json:"enableAllLogs"`
+
+	// Configuration and options for cluster affinity and tolerations
+	PodAntiAffinity string `json:"podAntiAffinity"`
+	// TopologyKeys if TopologyKeys is nil, add omitempty json tag, because CueLang can not covert null to list.
+	TopologyKeys   []string          `json:"topologyKeys,omitempty"`
+	NodeLabels     map[string]string `json:"nodeLabels,omitempty"`
+	Tenancy        string            `json:"tenancy"`
+	TolerationsRaw []string          `json:"-"`
+
+	// backup config
+	BackupEnabled                 bool   `json:"-"`
+	BackupRetentionPeriod         string `json:"-"`
+	BackupMethod                  string `json:"-"`
+	BackupCronExpression          string `json:"-"`
+	BackupStartingDeadlineMinutes int64  `json:"-"`
+	BackupRepoName                string `json:"-"`
+	BackupPITREnabled             bool   `json:"-"`
+}
+
 type UpdateOptions struct {
 	namespace string
 	dynamic   dynamic.Interface
@@ -677,4 +704,65 @@ func (o *UpdateOptions) updateBackupPitrEnabled(val string) error {
 	}
 	o.cluster.Spec.Backup.PITREnabled = &boolVal
 	return nil
+}
+
+func (f *UpdatableFlags) addFlags(cmd *cobra.Command) {
+	cmd.Flags().StringVar(&f.PodAntiAffinity, "pod-anti-affinity", "Preferred", "Pod anti-affinity type, one of: (Preferred, Required)")
+	cmd.Flags().BoolVar(&f.DisableExporter, "disable-exporter", true, "Enable or disable monitoring")
+	cmd.Flags().BoolVar(&f.EnableAllLogs, "enable-all-logs", false, "Enable advanced application all log extraction, set to true will ignore enabledLogs of component level, default is false")
+	cmd.Flags().StringVar(&f.TerminationPolicy, "termination-policy", "Delete", "Termination policy, one of: (DoNotTerminate, Halt, Delete, WipeOut)")
+	cmd.Flags().StringArrayVar(&f.TopologyKeys, "topology-keys", nil, "Topology keys for affinity")
+	cmd.Flags().StringToStringVar(&f.NodeLabels, "node-labels", nil, "Node label selector")
+	cmd.Flags().StringSliceVar(&f.TolerationsRaw, "tolerations", nil, `Tolerations for cluster, such as "key=value:effect, key:effect", for example '"engineType=mongo:NoSchedule", "diskType:NoSchedule"'`)
+	cmd.Flags().StringVar(&f.Tenancy, "tenancy", "SharedNode", "Tenancy options, one of: (SharedNode, DedicatedNode)")
+	cmd.Flags().BoolVar(&f.BackupEnabled, "backup-enabled", false, "Specify whether enabled automated backup")
+	cmd.Flags().StringVar(&f.BackupRetentionPeriod, "backup-retention-period", "1d", "a time string ending with the 'd'|'D'|'h'|'H' character to describe how long the Backup should be retained")
+	cmd.Flags().StringVar(&f.BackupMethod, "backup-method", "", "the backup method, view it by \"kbcli cd describe <cluster-definition>\", if not specified, the default backup method will be to take snapshots of the volume")
+	cmd.Flags().StringVar(&f.BackupCronExpression, "backup-cron-expression", "", "the cron expression for schedule, the timezone is in UTC. see https://en.wikipedia.org/wiki/Cron.")
+	cmd.Flags().Int64Var(&f.BackupStartingDeadlineMinutes, "backup-starting-deadline-minutes", 0, "the deadline in minutes for starting the backup job if it misses its scheduled time for any reason")
+	cmd.Flags().StringVar(&f.BackupRepoName, "backup-repo-name", "", "the backup repository name")
+	cmd.Flags().BoolVar(&f.BackupPITREnabled, "pitr-enabled", false, "Specify whether enabled point in time recovery")
+
+	util.CheckErr(cmd.RegisterFlagCompletionFunc(
+		"termination-policy",
+		func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			return []string{
+				"DoNotTerminate\tblock delete operation",
+				"Halt\tdelete workload resources such as statefulset, deployment workloads but keep PVCs",
+				"Delete\tbased on Halt and deletes PVCs",
+				"WipeOut\tbased on Delete and wipe out all volume snapshots and snapshot data from backup storage location",
+			}, cobra.ShellCompDirectiveNoFileComp
+		}))
+	util.CheckErr(cmd.RegisterFlagCompletionFunc(
+		"pod-anti-affinity",
+		func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			return []string{
+				"Preferred\ttry to spread pods of the cluster by the specified topology-keys",
+				"Required\tmust spread pods of the cluster by the specified topology-keys",
+			}, cobra.ShellCompDirectiveNoFileComp
+		}))
+	util.CheckErr(cmd.RegisterFlagCompletionFunc(
+		"tenancy",
+		func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			return []string{
+				"SharedNode\tpods of the cluster may share the same node",
+				"DedicatedNode\teach pod of the cluster will run on their own dedicated node",
+			}, cobra.ShellCompDirectiveNoFileComp
+		}))
+}
+
+// setEnableAllLog sets enable all logs, and ignore enabledLogs of component level.
+func setEnableAllLogs(c *appsv1alpha1.Cluster, cd *appsv1alpha1.ClusterDefinition) {
+	for idx, comCluster := range c.Spec.ComponentSpecs {
+		for _, com := range cd.Spec.ComponentDefs {
+			if !strings.EqualFold(comCluster.ComponentDefRef, com.Name) {
+				continue
+			}
+			typeList := make([]string, 0, len(com.LogConfigs))
+			for _, logConf := range com.LogConfigs {
+				typeList = append(typeList, logConf.Name)
+			}
+			c.Spec.ComponentSpecs[idx].EnabledLogs = typeList
+		}
+	}
 }

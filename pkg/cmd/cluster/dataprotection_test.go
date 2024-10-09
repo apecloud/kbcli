@@ -419,7 +419,7 @@ var _ = Describe("DataProtection", func() {
 	//	cmdRestore.Run(nil, []string{"new-cluster"})
 	//
 	//	By("restore should be failed when backups belong to different source clusters")
-	//	o := &CreateRestoreOptions{CreateOptions: create.CreateOptions{
+	//	o := &CreateRestoreOptions{CreateSubCmdsOptions: create.CreateSubCmdsOptions{
 	//		IOStreams: streams,
 	//		Factory:   tf,
 	//	}}

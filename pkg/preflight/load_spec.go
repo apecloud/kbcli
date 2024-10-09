@@ -20,14 +20,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package preflight
 
 import (
+	"io"
+	"net/http"
 	"os"
+	"strings"
 
 	"github.com/pkg/errors"
 	"k8s.io/client-go/kubernetes/scheme"
 
 	preflightv1beta2 "github.com/apecloud/kubeblocks/externalapis/preflight/v1beta2"
 
-	"github.com/apecloud/kbcli/pkg/cmd/cluster"
 	"github.com/apecloud/kbcli/pkg/preflight/util"
 )
 
@@ -42,7 +44,7 @@ func LoadPreflightSpec(checkFileList []string, checkYamlData [][]byte) (*preflig
 	)
 	for _, fileName := range checkFileList {
 		// support to load yaml from stdin, local file and URI
-		if preflightContent, err = cluster.MultipleSourceComponents(fileName, os.Stdin); err != nil {
+		if preflightContent, err = MultipleSourceComponents(fileName, os.Stdin); err != nil {
 			return preflightSpec, hostPreflightSpec, preflightName, err
 		}
 		checkYamlData = append(checkYamlData, preflightContent)
@@ -68,4 +70,28 @@ func init() {
 	if err := util.AddToScheme(scheme.Scheme); err != nil {
 		return
 	}
+}
+
+// MultipleSourceComponents gets component data from multiple source, such as stdin, URI and local file
+func MultipleSourceComponents(fileName string, in io.Reader) ([]byte, error) {
+	var data io.Reader
+	switch {
+	case fileName == "-":
+		data = in
+	case strings.Index(fileName, "http://") == 0 || strings.Index(fileName, "https://") == 0:
+		resp, err := http.Get(fileName)
+		if err != nil {
+			return nil, err
+		}
+		defer resp.Body.Close()
+		data = resp.Body
+	default:
+		f, err := os.Open(fileName)
+		if err != nil {
+			return nil, err
+		}
+		defer f.Close()
+		data = f
+	}
+	return io.ReadAll(data)
 }

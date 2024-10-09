@@ -21,6 +21,7 @@ package playground
 
 import (
 	"fmt"
+	"github.com/apecloud/kbcli/pkg/cluster"
 	"os"
 	"path/filepath"
 	"strings"
@@ -97,14 +98,13 @@ on the created kubernetes cluster, and an apecloud-mysql cluster named mycluster
 
 type initOptions struct {
 	genericiooptions.IOStreams
-	helmCfg        *helm.Config
-	clusterDef     string
-	kbVersion      string
-	clusterVersion string
-	cloudProvider  string
-	region         string
-	autoApprove    bool
-	dockerVersion  *gv.Version
+	helmCfg       *helm.Config
+	clusterType   string
+	kbVersion     string
+	cloudProvider string
+	region        string
+	autoApprove   bool
+	dockerVersion *gv.Version
 
 	baseOptions
 }
@@ -126,8 +126,7 @@ func newInitCmd(streams genericiooptions.IOStreams) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&o.clusterDef, "cluster-definition", defaultClusterDef, "Specify the cluster definition, run \"kbcli cd list\" to get the available cluster definitions")
-	cmd.Flags().StringVar(&o.clusterVersion, "cluster-version", "", "Specify the cluster version, run \"kbcli cv list\" to get the available cluster versions")
+	cmd.Flags().StringVar(&o.clusterType, "cluster-type", defaultClusterType, "Specify the cluster type to create.")
 	cmd.Flags().StringVar(&o.kbVersion, "version", version.DefaultKubeBlocksVersion, "KubeBlocks version")
 	cmd.Flags().StringVar(&o.cloudProvider, "cloud-provider", defaultCloudProvider, fmt.Sprintf("Cloud provider type, one of %v", supportedCloudProviders))
 	cmd.Flags().StringVar(&o.region, "region", "", "The region to create kubernetes cluster")
@@ -169,8 +168,8 @@ func (o *initOptions) validate() error {
 		return fmt.Errorf("region should be specified when cloud provider %s is specified", o.cloudProvider)
 	}
 
-	if o.clusterDef == "" {
-		return fmt.Errorf("a valid cluster definition is needed, use --cluster-definition to specify one")
+	if o.clusterType == "" {
+		return fmt.Errorf("a valid cluster type is needed, use --cluster-type to specify one")
 	}
 
 	if o.cloudProvider == cp.Local && o.dockerVersion.LessThan(version.MinimumDockerVersion) {
@@ -413,10 +412,7 @@ func (o *initOptions) installKBAndCluster(info *cp.K8sClusterInfo) error {
 	}
 	klog.V(1).Info("KubeBlocks installed successfully")
 	// install database cluster
-	clusterInfo := "ClusterDefinition: " + o.clusterDef
-	if o.clusterVersion != "" {
-		clusterInfo += ", ClusterVersion: " + o.clusterVersion
-	}
+	clusterInfo := "ClusterType: " + o.clusterType
 	s := spinner.New(o.Out, spinnerMsg("Create cluster %s (%s)", kbClusterName, clusterInfo))
 	defer s.Fail()
 	if err = o.createCluster(); err != nil && !apierrors.IsAlreadyExists(err) {
@@ -500,33 +496,21 @@ func (o *initOptions) installKubeBlocks(k8sClusterName string) error {
 
 // createCluster constructs a cluster create options and run
 func (o *initOptions) createCluster() error {
-	c := cmdcluster.NewCreateOptions(util.NewFactory(), genericiooptions.NewTestIOStreamsDiscard())
-	c.ClusterDefRef = o.clusterDef
-	c.ClusterVersionRef = o.clusterVersion
-	c.Namespace = defaultNamespace
-	c.Name = kbClusterName
-	c.UpdatableFlags = cmdcluster.UpdatableFlags{
-		TerminationPolicy: "WipeOut",
-		DisableExporter:   false,
-		PodAntiAffinity:   "Preferred",
-		Tenancy:           "SharedNode",
-	}
-
-	// if we are running on local, create cluster with one replica
-	if o.cloudProvider == cp.Local {
-		c.Values = append(c.Values, "replicas=1")
-	} else {
-		// if we are running on cloud, create cluster with three replicas
-		c.Values = append(c.Values, "replicas=3")
-	}
-
-	if err := c.CreateOptions.Complete(); err != nil {
+	c, err := cmdcluster.NewSubCmdsOptions(cmdcluster.NewCreateOptions(util.NewFactory(), genericiooptions.NewTestIOStreamsDiscard()), cluster.ClusterType(o.clusterType))
+	if err != nil {
 		return err
 	}
-	if err := c.Validate(); err != nil {
+	c.Args = []string{"mycluster"}
+	err = c.CreateOptions.Complete()
+	if err != nil {
 		return err
 	}
-	if err := c.Complete(); err != nil {
+	err = c.Complete(nil)
+	if err != nil {
+		return err
+	}
+	err = c.Validate()
+	if err != nil {
 		return err
 	}
 	return c.Run()

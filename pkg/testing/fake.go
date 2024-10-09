@@ -56,6 +56,7 @@ const (
 	Namespace          = "fake-namespace"
 	ClusterVersionName = "fake-cluster-version"
 	ClusterDefName     = "fake-cluster-definition"
+	ClusterType        = "fake-cluster-Type"
 	CompDefName        = "fake-component-definition"
 	ComponentName      = "fake-component-name"
 	ComponentDefName   = "fake-component-type"
