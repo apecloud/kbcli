@@ -215,6 +215,13 @@ const (
 	ResourceRSM = "replicatedstatemachines"
 )
 
+// view API group
+const (
+	ViewAPIGroup   = "view.kubeblocks.io"
+	ViewAPIVersion = "v1"
+	ResourceView   = "view"
+)
+
 const (
 	None = "<none>"
 
@@ -511,4 +518,8 @@ func TpcdsGVR() schema.GroupVersionResource {
 
 func RedisBenchGVR() schema.GroupVersionResource {
 	return schema.GroupVersionResource{Group: KubebenchAPIGroup, Version: KubebenchAPIVersion, Resource: ResourceRedisBench}
+}
+
+func ViewGVR() schema.GroupVersionResource {
+	return schema.GroupVersionResource{Group: ViewAPIGroup, Version: ViewAPIVersion, Resource: ResourceView}
 }
