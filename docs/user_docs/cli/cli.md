@@ -186,5 +186,6 @@ Print the version information, include kubernetes, KubeBlocks and kbcli version.
 view management command
 
 * [kbcli view list](kbcli_view_list.md)	 - list all views.
+* [kbcli view watch](kbcli_view_watch.md)	 - watch a view.
 
 
