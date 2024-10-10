@@ -22,6 +22,9 @@ package kubeblocks
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"helm.sh/helm/v3/pkg/action"
+	"helm.sh/helm/v3/pkg/chart"
+	"helm.sh/helm/v3/pkg/release"
 
 	"github.com/spf13/cobra"
 	appsv1 "k8s.io/api/apps/v1"
@@ -39,98 +42,190 @@ var _ = Describe("kubeblocks upgrade", func() {
 	var cmd *cobra.Command
 	var streams genericiooptions.IOStreams
 	var tf *cmdtesting.TestFactory
+	var actionCfg *action.Configuration
+	var cfg *helm.Config
 
-	BeforeEach(func() {
-		streams, _, _, _ = genericiooptions.NewTestIOStreams()
-		tf = cmdtesting.NewTestFactory().WithNamespace(namespace)
-		tf.Client = &clientfake.RESTClient{}
-	})
+	Context("Upgrade", func() {
+		BeforeEach(func() {
+			streams, _, _, _ = genericiooptions.NewTestIOStreams()
+			tf = cmdtesting.NewTestFactory().WithNamespace(namespace)
+			tf.Client = &clientfake.RESTClient{}
+			cfg = helm.NewFakeConfig(namespace)
+			actionCfg, _ = helm.NewActionConfig(cfg)
+			err := actionCfg.Releases.Create(&release.Release{
+				Name:      testing.KubeBlocksChartName,
+				Namespace: namespace,
+				Version:   1,
+				Info: &release.Info{
+					Status: release.StatusDeployed,
+				},
+				Chart: &chart.Chart{},
+			})
+			Expect(err).Should(BeNil())
 
-	AfterEach(func() {
-		tf.Cleanup()
-	})
-
-	mockKubeBlocksDeploy := func() *appsv1.Deployment {
-		deploy := &appsv1.Deployment{}
-		deploy.SetLabels(map[string]string{
-			"app.kubernetes.io/component": "apps",
-			"app.kubernetes.io/name":      types.KubeBlocksChartName,
-			"app.kubernetes.io/version":   "0.3.0",
 		})
-		return deploy
-	}
 
-	It("check upgrade", func() {
-		var cfg string
-		cmd = newUpgradeCmd(tf, streams)
-		Expect(cmd).ShouldNot(BeNil())
-		Expect(cmd.HasSubCommands()).Should(BeFalse())
+		AfterEach(func() {
+			helm.ResetFakeActionConfig()
+			tf.Cleanup()
+		})
 
-		o := &InstallOptions{
-			Options: Options{
-				IOStreams: streams,
-			},
+		mockKubeBlocksDeploy := func() *appsv1.Deployment {
+			deploy := &appsv1.Deployment{}
+			deploy.SetLabels(map[string]string{
+				"app.kubernetes.io/component": "apps",
+				"app.kubernetes.io/name":      types.KubeBlocksChartName,
+				"app.kubernetes.io/version":   "0.3.0",
+			})
+			return deploy
 		}
 
-		By("command without kubeconfig flag")
-		Expect(o.Complete(tf, cmd)).Should(HaveOccurred())
+		It("check upgrade", func() {
+			var cfg string
+			cmd = newUpgradeCmd(tf, streams)
+			Expect(cmd).ShouldNot(BeNil())
+			Expect(cmd.HasSubCommands()).Should(BeFalse())
 
-		cmd.Flags().StringVar(&cfg, "kubeconfig", "", "Path to the kubeconfig file to use for CLI requests.")
-		cmd.Flags().StringVar(&cfg, "context", "", "The name of the kubeconfig context to use.")
-		Expect(o.Complete(tf, cmd)).To(Succeed())
-		Expect(o.HelmCfg).ShouldNot(BeNil())
-		Expect(o.Namespace).To(Equal("test"))
+			o := &InstallOptions{
+				Options: Options{
+					IOStreams: streams,
+				},
+			}
+
+			By("command without kubeconfig flag")
+			Expect(o.Complete(tf, cmd)).Should(HaveOccurred())
+
+			cmd.Flags().StringVar(&cfg, "kubeconfig", "", "Path to the kubeconfig file to use for CLI requests.")
+			cmd.Flags().StringVar(&cfg, "context", "", "The name of the kubeconfig context to use.")
+			Expect(o.Complete(tf, cmd)).To(Succeed())
+			Expect(o.HelmCfg).ShouldNot(BeNil())
+			Expect(o.Namespace).To(Equal("test"))
+		})
+
+		It("double-check when version change", func() {
+			o := &InstallOptions{
+				Options: Options{
+					IOStreams: streams,
+					HelmCfg:   helm.NewFakeConfig(namespace),
+					Namespace: "default",
+					Client:    testing.FakeClientSet(mockKubeBlocksDeploy()),
+					Dynamic:   testing.FakeDynamicClient(),
+				},
+				Version: "0.5.0-fake",
+				Check:   false,
+			}
+			Expect(o.Upgrade()).Should(HaveOccurred())
+			// o.In = bytes.NewBufferString("fake-version") mock input error
+			// Expect(o.Upgrade()).Should(Succeed())
+			o.autoApprove = true
+			Expect(o.Upgrade()).Should(Succeed())
+
+		})
+
+		It("helm ValueOpts upgrade", func() {
+			o := &InstallOptions{
+				Options: Options{
+					IOStreams: streams,
+					HelmCfg:   helm.NewFakeConfig(namespace),
+					Namespace: "default",
+					Client:    testing.FakeClientSet(mockKubeBlocksDeploy()),
+					Dynamic:   testing.FakeDynamicClient(),
+				},
+				Version: "",
+			}
+			o.ValueOpts.Values = []string{"replicaCount=2"}
+			Expect(o.Upgrade()).Should(Succeed())
+		})
+
+		It("run upgrade", func() {
+			o := &InstallOptions{
+				Options: Options{
+					IOStreams: streams,
+					HelmCfg:   cfg,
+					Namespace: "default",
+					Client:    testing.FakeClientSet(mockKubeBlocksDeploy()),
+					Dynamic:   testing.FakeDynamicClient(),
+				},
+				Version: version.DefaultKubeBlocksVersion,
+				Check:   false,
+			}
+			Expect(o.Upgrade()).Should(Succeed())
+			Expect(len(o.ValueOpts.Values)).To(Equal(0))
+			Expect(o.upgradeChart()).Should(Succeed())
+		})
 	})
 
-	It("double-check when version change", func() {
-		o := &InstallOptions{
-			Options: Options{
-				IOStreams: streams,
-				HelmCfg:   helm.NewFakeConfig(namespace),
-				Namespace: "default",
-				Client:    testing.FakeClientSet(mockKubeBlocksDeploy()),
-				Dynamic:   testing.FakeDynamicClient(),
-			},
-			Version: "0.5.0-fake",
-			Check:   false,
+	Context("upgrade from different status", func() {
+		BeforeEach(func() {
+			streams, _, _, _ = genericiooptions.NewTestIOStreams()
+			tf = cmdtesting.NewTestFactory().WithNamespace(namespace)
+			tf.Client = &clientfake.RESTClient{}
+			cfg = helm.NewFakeConfig(namespace)
+			actionCfg, _ = helm.NewActionConfig(cfg)
+		})
+
+		AfterEach(func() {
+			helm.ResetFakeActionConfig()
+			tf.Cleanup()
+		})
+
+		mockKubeBlocksDeploy := func() *appsv1.Deployment {
+			deploy := &appsv1.Deployment{}
+			deploy.SetLabels(map[string]string{
+				"app.kubernetes.io/component": "apps",
+				"app.kubernetes.io/name":      types.KubeBlocksChartName,
+				"app.kubernetes.io/version":   "0.3.0",
+			})
+			return deploy
 		}
-		Expect(o.Upgrade()).Should(HaveOccurred())
-		// o.In = bytes.NewBufferString("fake-version") mock input error
-		// Expect(o.Upgrade()).Should(Succeed())
-		o.autoApprove = true
-		Expect(o.Upgrade()).Should(Succeed())
+		It("run upgrade", func() {
+			testCase := []struct {
+				status      release.Status
+				checkResult bool
+			}{
+				{release.StatusDeployed, true},
+				{release.StatusSuperseded, true},
+				{release.StatusFailed, true},
+				{release.StatusUnknown, false},
+				{release.StatusUninstalled, false},
+				{release.StatusUninstalling, false},
+				{release.StatusPendingInstall, false},
+				{release.StatusPendingUpgrade, false},
+				{release.StatusPendingRollback, false},
+			}
 
+			for i := range testCase {
+				actionCfg, _ = helm.NewActionConfig(cfg)
+				err := actionCfg.Releases.Create(&release.Release{
+					Name:      testing.KubeBlocksChartName,
+					Namespace: namespace,
+					Version:   1,
+					Info: &release.Info{
+						Status: testCase[i].status,
+					},
+					Chart: &chart.Chart{},
+				})
+				Expect(err).Should(BeNil())
+				o := &InstallOptions{
+					Options: Options{
+						IOStreams: streams,
+						HelmCfg:   cfg,
+						Namespace: "default",
+						Client:    testing.FakeClientSet(mockKubeBlocksDeploy()),
+						Dynamic:   testing.FakeDynamicClient(),
+					},
+					Version: version.DefaultKubeBlocksVersion,
+					Check:   false,
+				}
+				if testCase[i].checkResult {
+					Expect(o.Upgrade()).Should(Succeed())
+				} else {
+					Expect(o.Upgrade()).Should(HaveOccurred())
+				}
+				helm.ResetFakeActionConfig()
+			}
+
+		})
 	})
 
-	It("helm ValueOpts upgrade", func() {
-		o := &InstallOptions{
-			Options: Options{
-				IOStreams: streams,
-				HelmCfg:   helm.NewFakeConfig(namespace),
-				Namespace: "default",
-				Client:    testing.FakeClientSet(mockKubeBlocksDeploy()),
-				Dynamic:   testing.FakeDynamicClient(),
-			},
-			Version: "",
-		}
-		o.ValueOpts.Values = []string{"replicaCount=2"}
-		Expect(o.Upgrade()).Should(Succeed())
-	})
-
-	It("run upgrade", func() {
-		o := &InstallOptions{
-			Options: Options{
-				IOStreams: streams,
-				HelmCfg:   helm.NewFakeConfig(namespace),
-				Namespace: "default",
-				Client:    testing.FakeClientSet(mockKubeBlocksDeploy()),
-				Dynamic:   testing.FakeDynamicClient(),
-			},
-			Version: version.DefaultKubeBlocksVersion,
-			Check:   false,
-		}
-		Expect(o.Upgrade()).Should(Succeed())
-		Expect(len(o.ValueOpts.Values)).To(Equal(0))
-		Expect(o.upgradeChart()).Should(Succeed())
-	})
 })
