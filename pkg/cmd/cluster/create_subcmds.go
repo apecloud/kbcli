@@ -117,7 +117,7 @@ func buildCreateSubCmds(createOptions *action.CreateOptions) []*cobra.Command {
 		// TODO: support set backup config?
 
 		// add flags from chart values.schema.json
-		util.CheckErr(addCreateFlags(cmd, o.Factory, o.ChartInfo))
+		util.CheckErr(addCreateFlags(cmd, o.Factory, o.ChartInfo, t.String()))
 
 		// Schedule policy
 		// TODO: implement them, and check whether the flag has been defined
