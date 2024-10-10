@@ -1350,7 +1350,7 @@ func NewRebuildInstanceCmd(f cmdutil.Factory, streams genericiooptions.IOStreams
 	o.addCommonFlags(cmd, f)
 	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "Skip interactive approval before rebuilding the instances.gi")
 	cmd.Flags().StringVar(&o.BackupName, "backup", "", "instances will be rebuild by the specified backup.")
-	cmd.Flags().StringSliceVar(&o.InstanceNames, "instance", nil, "instance which need to rebuild.")
+	cmd.Flags().StringSliceVar(&o.InstanceNames, "instances", nil, "instance which need to rebuild.")
 	cmd.Flags().StringSliceVar(&o.Nodes, "node", nil, "specified the target node which rebuilds the instance on the node otherwise will rebuild on a randon node. format: insName1=nodeName,insName2=nodeName")
 	cmd.Flags().StringArrayVar(&o.Env, "env", []string{}, "provide the necessary env for the 'Restore' operation from the backup. format: key1=value, key2=value")
 	return cmd
