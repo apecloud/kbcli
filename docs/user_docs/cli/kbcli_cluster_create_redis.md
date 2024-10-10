@@ -27,7 +27,7 @@ kbcli cluster create redis NAME [flags]
   -h, --help                              help for redis
       --host-network-accessible           Specify whether the cluster can be accessed from within the VPC.
       --memory float                      Memory, the unit is Gi. Value range [0.5, 1000]. (default 0.5)
-      --mode string                       Cluster topology mode. Legal values [standalone, replication, cluster, sentinel, replication-twemproxy]. (default "replication")
+      --mode string                       Cluster topology mode. Legal values [standalone, replication, cluster, replication-twemproxy]. (default "replication")
       --node-port-enabled                 Whether NodePort service is enabled, default is true
       --publicly-accessible               Specify whether the cluster can be accessed from the public internet.
       --rbac-enabled                      Specify whether rbac resources will be created by client, otherwise KubeBlocks server will try to create rbac resources.

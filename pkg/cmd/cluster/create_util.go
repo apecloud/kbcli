@@ -46,10 +46,15 @@ var (
 	resetValFlagNames = []string{
 		cluster.VersionSchemaProp.String(),
 	}
+	resetEngineFlagValues = map[string]map[string]string{
+		"elasticsearch": {
+			"rbac-enabled": "true",
+		},
+	}
 )
 
 // addCreateFlags adds the flags for creating a cluster, these flags are built by the cluster schema.
-func addCreateFlags(cmd *cobra.Command, f cmdutil.Factory, c *cluster.ChartInfo) error {
+func addCreateFlags(cmd *cobra.Command, f cmdutil.Factory, c *cluster.ChartInfo, engine string) error {
 	if c == nil {
 		return nil
 	}
@@ -67,6 +72,9 @@ func addCreateFlags(cmd *cobra.Command, f cmdutil.Factory, c *cluster.ChartInfo)
 	// reset some flags default value, such as version, a suitable version will be chosen
 	// by cli if user doesn't specify the version
 	resetFlagsValue(cmd.Flags())
+
+	// reset engine related flags default value, such as rbac-enabled for elasticsearch should be true by default
+	resetEngineDefaultFlagsValue(cmd.Flags(), engine)
 
 	// register completion function for some generic flag
 	registerFlagCompFunc(cmd, f, c)
@@ -112,6 +120,19 @@ func resetFlagsValue(fs *flag.FlagSet) {
 				f.DefValue = ""
 				_ = f.Value.Set("")
 			}
+		}
+	})
+}
+
+func resetEngineDefaultFlagsValue(fs *flag.FlagSet, engine string) {
+	kvs, ok := resetEngineFlagValues[engine]
+	if !ok {
+		return
+	}
+	fs.VisitAll(func(f *flag.Flag) {
+		if v, ok := kvs[f.Name]; ok {
+			f.DefValue = v
+			_ = f.Value.Set(v)
 		}
 	})
 }
