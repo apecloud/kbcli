@@ -144,11 +144,13 @@ func newInstallCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 		},
 	}
 	cmd.Flags().BoolVar(&o.force, "force", false, "force install the addon and ignore the version check")
-	cmd.Flags().StringVar(&o.version, "version", "", "specify the addon version")
+	cmd.Flags().StringVar(&o.version, "version", "", "specify the addon version to install, run 'kbcli addon search <addon-name>' to get the available versions")
 	cmd.Flags().StringVar(&o.index, "index", types.DefaultIndexName, "specify the addon index, use 'kubeblocks' by default")
 	cmd.Flags().StringVar(&o.clusterChartVersion, "cluster-chart-version", "", "specify the cluster chart version, use the same version as the addon by default")
 	cmd.Flags().StringVar(&o.clusterChartRepo, "cluster-chart-repo", types.ClusterChartsRepoURL, "specify the repo of cluster chart, use the url of 'kubeblocks-addons' by default")
 	cmd.Flags().StringVar(&o.path, "path", "", "specify the local path contains addon CRs and needs to be specified when operating offline")
+
+	_ = cmd.MarkFlagRequired("version")
 
 	return cmd
 }
@@ -163,6 +165,11 @@ func (o *installOption) Complete() error {
 	if err = o.baseOption.complete(); err != nil {
 		return err
 	}
+
+	if o.version == "" {
+		return fmt.Errorf("please specify the version, run 'kbcli addon search %s' to get the available versions", o.name)
+	}
+
 	// search specified addon and match its index
 	if _, err = semver.NewVersion(o.version); err != nil && o.version != "" {
 		return fmt.Errorf("the version %s does not comply with the standards", o.version)
@@ -196,12 +203,7 @@ func (o *installOption) Complete() error {
 	// descending order of versions
 	for _, item := range addons {
 		if o.path != "" || item.index.name == o.index {
-			// if the version not specified, use the latest version
-			if o.version == "" {
-				o.addon = item.addon
-				o.version = getAddonVersion(item.addon)
-				break
-			} else if o.version == getAddonVersion(item.addon) {
+			if o.version == getAddonVersion(item.addon) {
 				o.addon = item.addon
 				break
 			}
@@ -215,9 +217,7 @@ func (o *installOption) Complete() error {
 
 	if o.addon == nil {
 		var addonInfo = o.name
-		if o.version != "" {
-			addonInfo += "-" + o.version
-		}
+		addonInfo += "-" + o.version
 		return fmt.Errorf("addon '%s' not found in the index '%s'", addonInfo, o.index)
 	}
 	return nil
@@ -271,7 +271,7 @@ func (o *installOption) Run(f cmdutil.Factory, streams genericiooptions.IOStream
 // 1.0.0-alpha < 1.0.0-alpha.1 < 1.0.0-alpha.beta < 1.0.0-beta < 1.0.0-beta.2 < 1.0.0-beta.11 < 1.0.0-rc.1 < 1.0.0.
 // https://semver.org/
 func validateVersion(annotations, kbVersion string) (bool, error) {
-	// if kb version is a prerelease version, we will break the rules for developing
+	// if kb version is a pre-release version, we will break the rules for developing
 	if strings.Contains(kbVersion, "-") {
 		addPreReleaseInfo := func(constrain string) string {
 			constrain = strings.Trim(constrain, " ")
