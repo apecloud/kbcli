@@ -52,12 +52,11 @@ var _ = Describe("playground", func() {
 		Expect(cmd != nil).Should(BeTrue())
 
 		o := &initOptions{
-			clusterDef:     clitesting.ClusterDefName,
-			clusterVersion: clitesting.ClusterVersionName,
-			IOStreams:      streams,
-			cloudProvider:  defaultCloudProvider,
-			helmCfg:        helm.NewConfig("", testKubeConfigPath, "", false),
-			dockerVersion:  version.MinimumDockerVersion,
+			clusterType:   clitesting.ClusterType,
+			IOStreams:     streams,
+			cloudProvider: defaultCloudProvider,
+			helmCfg:       helm.NewConfig("", testKubeConfigPath, "", false),
+			dockerVersion: version.MinimumDockerVersion,
 		}
 		Expect(o.validate()).Should(Succeed())
 		Expect(o.run()).Should(HaveOccurred())
@@ -68,11 +67,10 @@ var _ = Describe("playground", func() {
 	It("init at local host without outdate docker", func() {
 		var err error
 		o := &initOptions{
-			clusterDef:     clitesting.ClusterDefName,
-			clusterVersion: clitesting.ClusterVersionName,
-			IOStreams:      streams,
-			cloudProvider:  defaultCloudProvider,
-			helmCfg:        helm.NewConfig("", testKubeConfigPath, "", false),
+			clusterType:   clitesting.ClusterType,
+			IOStreams:     streams,
+			cloudProvider: defaultCloudProvider,
+			helmCfg:       helm.NewConfig("", testKubeConfigPath, "", false),
 		}
 		o.dockerVersion, err = gv.NewVersion("20.10.0")
 		Expect(err).Should(BeNil())
@@ -81,10 +79,9 @@ var _ = Describe("playground", func() {
 
 	It("init at remote cloud", func() {
 		o := &initOptions{
-			IOStreams:      streams,
-			clusterDef:     clitesting.ClusterDefName,
-			clusterVersion: clitesting.ClusterVersionName,
-			cloudProvider:  cp.AWS,
+			IOStreams:     streams,
+			clusterType:   clitesting.ClusterType,
+			cloudProvider: cp.AWS,
 		}
 		Expect(o.validate()).Should(HaveOccurred())
 	})

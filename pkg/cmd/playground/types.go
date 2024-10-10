@@ -33,6 +33,7 @@ const (
 const (
 	defaultCloudProvider = cloudprovider.Local
 	defaultClusterDef    = "apecloud-mysql"
+	defaultClusterType   = "apecloud-mysql"
 
 	// defaultNamespace is the namespace of playground cluster
 	defaultNamespace = "default"

@@ -53,6 +53,14 @@ var (
 	rbacEnabled = false
 )
 
+const (
+	saNamePrefix             = "kb-"
+	roleNamePrefix           = "kb-"
+	roleBindingNamePrefix    = "kb-"
+	clusterRolePrefix        = "kb-"
+	clusterRoleBindingPrefix = "kb-"
+)
+
 func NewDeleteCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
 	o := action.NewDeleteOptions(f, streams, types.ClusterGVR())
 	o.PreDeleteHook = clusterPreDeleteHook
