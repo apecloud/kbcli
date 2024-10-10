@@ -22,12 +22,11 @@ package view
 import (
 	"context"
 	"fmt"
-	"github.com/pterm/pterm"
+	"github.com/76creates/stickers/flexbox"
+	zone "github.com/lrstanley/bubblezone"
 
-	viewv1 "github.com/apecloud/kbcli/apis/view/v1"
-	"github.com/apecloud/kbcli/pkg/types"
-	"github.com/apecloud/kbcli/pkg/util"
-	"github.com/rivo/tview"
+	"github.com/NimbleMarkets/ntcharts/barchart"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -37,6 +36,10 @@ import (
 	clientset "k8s.io/client-go/kubernetes"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
+
+	viewv1 "github.com/apecloud/kbcli/apis/view/v1"
+	"github.com/apecloud/kbcli/pkg/types"
+	"github.com/apecloud/kbcli/pkg/util"
 )
 
 var (
@@ -77,49 +80,61 @@ func watch(f cmdutil.Factory, streams genericiooptions.IOStreams, args []string)
 }
 
 func renderView(view *viewv1.ReconciliationView) error {
-	main := tview.NewFlex().SetDirection(tview.FlexRow)
-
-	bars := []pterm.Bar{
-		{Label: "A", Value: 10},
-		{Label: "B", Value: 20},
-		{Label: "C", Value: 30},
-		{Label: "D", Value: 40},
-		{Label: "E", Value: 50},
-		{Label: "F", Value: 40},
-		{Label: "G", Value: 30},
-		{Label: "H", Value: 20},
-		{Label: "I", Value: 10},
+	v1 := barchart.BarData{
+		Label: "Pod",
+		Values: []barchart.BarValue{
+			{Name: "Initial", Value: 21.2, Style: blockStyle},
+			{Name: "Added", Value: 10.1, Style: blockStyle2},
+			{Name: "Updated", Value: 6.5, Style: blockStyle3},
+			{Name: "Deleted", Value: 7.7, Style: blockStyle4},
+		},
 	}
-	barText, err := pterm.DefaultBarChart.WithBars(bars).WithHeight(5).Srender()
-	if err != nil {
-		return err
+	v2 := barchart.BarData{
+		Label: "PVC",
+		Values: []barchart.BarValue{
+			{Name: "Initial", Value: 15.1, Style: blockStyle},
+			{Name: "Added", Value: 15.1, Style: blockStyle2},
+			{Name: "Updated", Value: 3.3, Style: blockStyle3},
+			{Name: "Deleted", Value: 7.7, Style: blockStyle4},
+		},
 	}
-	statBox := tview.NewTextView().
-		SetTextAlign(tview.AlignCenter).
-		SetText(barText)
-	//SetTitleAlign(tview.AlignLeft).
-	//SetBorder(true)
-
-	change := "NaN"
-	if l := len(view.Status.CurrentState.Changes); l > 0 {
-		change = view.Status.CurrentState.Changes[l-1].Description
+	v3 := barchart.BarData{
+		Label: "ITS",
+		Values: []barchart.BarValue{
+			{Name: "Initial", Value: 13.6, Style: blockStyle},
+			{Name: "Added", Value: 14.1, Style: blockStyle2},
+			{Name: "Updated", Value: 4.4, Style: blockStyle3},
+			{Name: "Deleted", Value: 4.4, Style: blockStyle4},
+		},
 	}
-	latestEventBox := tview.NewBox().SetBorder(true).SetTitle(fmt.Sprintf("Latest Change: %s", change))
-	statusBar := tview.NewFlex().SetDirection(tview.FlexColumn)
-	statusBar.AddItem(statBox, 0, 1, false)
-	statusBar.AddItem(latestEventBox, 0, 1, false)
+	v4 := barchart.BarData{
+		Label: "SVC",
+		Values: []barchart.BarValue{
+			{Name: "Initial", Value: 13.1, Style: blockStyle},
+			{Name: "Added", Value: 11.1, Style: blockStyle2},
+			{Name: "Updated", Value: 10.9, Style: blockStyle3},
+			{Name: "Deleted", Value: 9.8, Style: blockStyle4},
+		},
+	}
+	values := []barchart.BarData{v1, v2, v3, v4}
 
-	objectTreeBox := tview.NewBox().SetBorder(false).SetTitle("Object Tree")
-	changesBox := tview.NewBox().SetBorder(false).SetTitle("Changes")
-	mainContent := tview.NewFlex().SetDirection(tview.FlexColumn)
-	mainContent.AddItem(objectTreeBox, 0, 1, true)
-	mainContent.AddItem(changesBox, 0, 1, false)
-	mainContent.SetBorder(true)
+	// create new bubblezone Manager to enable mouse support to zoom in and out of chart
+	zoneManager := zone.New()
 
-	main.AddItem(statusBar, 0, 1, false)
-	main.AddItem(mainContent, 0, 1, false)
+	// all barcharts contain the same values
+	// different options are displayed on the screen and below
+	// and first barchart has axis and label styles
+	m := &teaModel{
+		view:        view,
+		lv:          values,
+		zM:          zoneManager,
+		base:        flexbox.NewHorizontal(0, 0),
+		statusBar:   flexbox.New(0, 0),
+		mainContent: flexbox.New(0, 0),
+	}
 
-	return tview.NewApplication().SetRoot(main, true).Run()
+	_, err := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion()).Run()
+	return err
 }
 
 type watchOptions struct {
