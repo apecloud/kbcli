@@ -30,7 +30,7 @@ kbcli addon install [flags]
       --force            force install the addon and ignore the version check
   -h, --help             help for install
       --index string     specify the addon index index, use 'kubeblocks' by default (default "kubeblocks")
-      --version string   specify the addon version
+      --version string                 specify the addon version to install, run 'kbcli addon search <addon-name>' to get the available versions
 ```
 
 ### Options inherited from parent commands
