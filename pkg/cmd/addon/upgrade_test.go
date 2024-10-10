@@ -67,6 +67,7 @@ var _ = Describe("test addon upgrade", func() {
 		tf.FakeDynamicClient = testing.FakeDynamicClient(testing.FakeAddon("apecloud-mysql"))
 		option = newUpgradeOption(tf, streams)
 		option.name = "apecloud-mysql"
+		option.version = "0.7.0"
 		Expect(option.Complete()).Should(Succeed())
 	})
 
