@@ -37,8 +37,16 @@ import (
 	"github.com/apecloud/kbcli/pkg/util/flags"
 )
 
+var (
+	resetEngineFlagValues = map[string]map[string]string{
+		"elasticsearch": {
+			"rbac-enabled": "true",
+		},
+	}
+)
+
 // addCreateFlags adds the flags for creating a cluster, these flags are built by the cluster schema.
-func addCreateFlags(cmd *cobra.Command, f cmdutil.Factory, c *cluster.ChartInfo) error {
+func addCreateFlags(cmd *cobra.Command, f cmdutil.Factory, c *cluster.ChartInfo, engine string) error {
 	if c == nil {
 		return nil
 	}
@@ -53,6 +61,8 @@ func addCreateFlags(cmd *cobra.Command, f cmdutil.Factory, c *cluster.ChartInfo)
 		return err
 	}
 
+	// reset engine related flags default value, such as rbac-enabled for elasticsearch should be true by default
+	resetEngineDefaultFlagsValue(cmd.Flags(), engine)
 	return nil
 }
 
@@ -85,6 +95,19 @@ func getValuesFromFlags(fs *flag.FlagSet) map[string]interface{} {
 		values[strcase.LowerCamelCase(f.Name)] = val
 	})
 	return values
+}
+
+func resetEngineDefaultFlagsValue(fs *flag.FlagSet, engine string) {
+	kvs, ok := resetEngineFlagValues[engine]
+	if !ok {
+		return
+	}
+	fs.VisitAll(func(f *flag.Flag) {
+		if v, ok := kvs[f.Name]; ok {
+			f.DefValue = v
+			_ = f.Value.Set(v)
+		}
+	})
 }
 
 // buildCreateSubCmdsExamples builds the creation examples for the specified ClusterType type.
