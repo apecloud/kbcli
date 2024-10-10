@@ -21,6 +21,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/apecloud/kbcli/pkg/cmd/view"
 	"os"
 	"strings"
 
@@ -177,6 +178,7 @@ A Command Line Interface for KubeBlocks`,
 		report.NewReportCmd(f, ioStreams),
 		backuprepo.NewBackupRepoCmd(f, ioStreams),
 		dataprotection.NewDataProtectionCmd(f, ioStreams),
+		view.NewViewCmd(f, ioStreams),
 	)
 
 	filters := []string{"options"}
