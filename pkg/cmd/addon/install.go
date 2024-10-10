@@ -173,8 +173,8 @@ func (o *installOption) Complete() error {
 	// descending order of versions
 	for _, item := range addons {
 		if item.index.name == o.index && o.version == getAddonVersion(item.addon) {
-				o.addon = item.addon
-				break
+			o.addon = item.addon
+			break
 		}
 	}
 	if o.addon == nil {
