@@ -56,12 +56,9 @@ var _ = Describe("cluster util", func() {
 		cluster,
 		testing.FakeClusterDef(),
 		testing.FakeBackupPolicy("backupPolicy-test", testing.ClusterName),
-		testing.FakeBackupWithCluster(cluster, "backup-test"),
-		testing.FakeClusterVersion())
+		testing.FakeBackupWithCluster(cluster, "backup-test"))
 
 	getOptions := GetOptions{
-		WithClusterDef:     Need,
-		WithClusterVersion: Need,
 		WithConfigMap:      Need,
 		WithService:        Need,
 		WithSecret:         Need,
@@ -90,8 +87,6 @@ var _ = Describe("cluster util", func() {
 			Expect(err).Should(Succeed())
 			Expect(objs).ShouldNot(BeNil())
 			Expect(objs.Cluster.Name).Should(Equal(clusterName))
-			Expect(objs.ClusterDef.Name).Should(Equal(testing.ClusterDefName))
-			Expect(objs.ClusterVersion.Name).Should(Equal(testing.ClusterVersionName))
 			Expect(len(objs.Pods.Items)).Should(Equal(3))
 			Expect(len(objs.Secrets.Items)).Should(Equal(1))
 			Expect(len(objs.Services.Items)).Should(Equal(4))

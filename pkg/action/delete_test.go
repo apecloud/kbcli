@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"net/http"
 
+	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/spf13/cobra"
@@ -58,7 +59,7 @@ var _ = Describe("Delete", func() {
 		streams, in, _, _ = genericiooptions.NewTestIOStreams()
 		tf = testing.NewTestFactory(namespace)
 
-		_ = appsv1alpha1.AddToScheme(scheme.Scheme)
+		_ = kbappsv1.AddToScheme(scheme.Scheme)
 		codec := scheme.Codecs.LegacyCodec(scheme.Scheme.PrioritizedVersionsAllGroups()...)
 		cluster := testing.FakeCluster(clusterName, namespace)
 		httpResp := func(obj runtime.Object) *http.Response {
@@ -74,7 +75,7 @@ var _ = Describe("Delete", func() {
 		}
 
 		tf.Client = tf.UnstructuredClient
-		tf.FakeDynamicClient = testing.FakeDynamicClient(cluster, testing.FakeClusterDef(), testing.FakeClusterVersion())
+		tf.FakeDynamicClient = testing.FakeDynamicClient(cluster, testing.FakeClusterDef())
 		o = NewDeleteOptions(tf, streams, types.ClusterGVR())
 	})
 

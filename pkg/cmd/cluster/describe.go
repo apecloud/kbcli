@@ -27,6 +27,7 @@ import (
 	"strings"
 	"time"
 
+	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
 	"github.com/apecloud/kubeblocks/pkg/constant"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
@@ -39,7 +40,6 @@ import (
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
 
-	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	dpv1alpha1 "github.com/apecloud/kubeblocks/apis/dataprotection/v1alpha1"
 	dptypes "github.com/apecloud/kubeblocks/pkg/dataprotection/types"
 	"github.com/apecloud/kubeblocks/pkg/dataprotection/utils/boolptr"
@@ -207,13 +207,13 @@ func (o *describeOptions) getDefaultBackupRepo() (string, error) {
 	return printer.NoneString, nil
 }
 
-func showCluster(c *appsv1alpha1.Cluster, out io.Writer) {
+func showCluster(c *kbappsv1.Cluster, out io.Writer) {
 	if c == nil {
 		return
 	}
 	title := fmt.Sprintf("Name: %s\t Created Time: %s", c.Name, util.TimeFormat(&c.CreationTimestamp))
 	tbl := newTbl(out, title, "NAMESPACE", "CLUSTER-DEFINITION", "TOPOLOGY", "STATUS", "TERMINATION-POLICY")
-	tbl.AddRow(c.Namespace, c.Spec.ClusterDefRef, c.Spec.Topology, string(c.Status.Phase), string(c.Spec.TerminationPolicy))
+	tbl.AddRow(c.Namespace, c.Spec.ClusterDef, c.Spec.Topology, string(c.Status.Phase), string(c.Spec.TerminationPolicy))
 	tbl.Print()
 }
 
@@ -247,7 +247,7 @@ func showEvents(name string, namespace string, out io.Writer) {
 	fmt.Fprintf(out, "\nShow cluster events: kbcli cluster list-events -n %s %s", namespace, name)
 }
 
-func showEndpoints(dynamic dynamic.Interface, nodes []*corev1.Node, c *appsv1alpha1.Cluster, svcList *corev1.ServiceList, out io.Writer) error {
+func showEndpoints(dynamic dynamic.Interface, nodes []*corev1.Node, c *kbappsv1.Cluster, svcList *corev1.ServiceList, out io.Writer) error {
 	if c == nil {
 		return nil
 	}

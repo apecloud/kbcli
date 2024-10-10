@@ -25,6 +25,7 @@ import (
 	"slices"
 	"strings"
 
+	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -58,7 +59,6 @@ const (
 
 type GetOptions struct {
 	WithClusterDef     TypeNeed
-	WithClusterVersion TypeNeed
 	WithConfigMap      TypeNeed
 	WithPVC            TypeNeed
 	WithService        TypeNeed
@@ -80,7 +80,7 @@ type ObjectsGetter struct {
 
 func NewClusterObjects() *ClusterObjects {
 	return &ClusterObjects{
-		Cluster:  &appsv1alpha1.Cluster{},
+		Cluster:  &kbappsv1.Cluster{},
 		Nodes:    []*corev1.Node{},
 		CompDefs: []*appsv1alpha1.ComponentDefinition{},
 	}
@@ -143,20 +143,11 @@ func (o *ObjectsGetter) Get() (*ClusterObjects, error) {
 	}
 	// get cluster definition
 	if o.WithClusterDef == Need || o.WithClusterDef == Maybe {
-		cd := &appsv1alpha1.ClusterDefinition{}
-		if err = getResource(types.ClusterDefGVR(), objs.Cluster.Spec.ClusterDefRef, "", cd); err != nil && o.WithClusterDef == Need {
+		cd := &kbappsv1.ClusterDefinition{}
+		if err = getResource(types.ClusterDefGVR(), objs.Cluster.Spec.ClusterDef, "", cd); err != nil && o.WithClusterDef == Need {
 			return nil, err
 		}
 		objs.ClusterDef = cd
-	}
-
-	// get cluster version
-	if o.WithClusterVersion == Need {
-		v := &appsv1alpha1.ClusterVersion{}
-		if err = getResource(types.ClusterVersionGVR(), objs.Cluster.Spec.ClusterVersionRef, "", v); err != nil {
-			return nil, err
-		}
-		objs.ClusterVersion = v
 	}
 
 	// get services
@@ -297,10 +288,10 @@ func (o *ObjectsGetter) Get() (*ClusterObjects, error) {
 func (o *ClusterObjects) GetClusterInfo() *ClusterInfo {
 	c := o.Cluster
 	cluster := &ClusterInfo{
-		Name:              c.Name,
-		Namespace:         c.Namespace,
-		ClusterVersion:    c.Spec.ClusterVersionRef,
-		ClusterDefinition: c.Spec.ClusterDefRef,
+		Name:      c.Name,
+		Namespace: c.Namespace,
+		// ClusterVersion:    c.Spec.ClusterVersionRef,
+		ClusterDefinition: c.Spec.ClusterDef,
 		TerminationPolicy: string(c.Spec.TerminationPolicy),
 		Status:            string(c.Status.Phase),
 		CreatedTime:       util.TimeFormat(&c.CreationTimestamp),
@@ -313,22 +304,22 @@ func (o *ClusterObjects) GetClusterInfo() *ClusterInfo {
 		return cluster
 	}
 
-	primaryComponent := FindClusterComp(o.Cluster, o.ClusterDef.Spec.ComponentDefs[0].Name)
+	/*primaryComponent := FindClusterComp(o.Cluster, o.ClusterDef.Spec.ComponentDefs[0].Name)
 	internalEndpoints, externalEndpoints := GetComponentEndpoints(o.Nodes, o.Services, primaryComponent.Name)
 	if len(internalEndpoints) > 0 {
 		cluster.InternalEP = strings.Join(internalEndpoints, ",")
 	}
 	if len(externalEndpoints) > 0 {
 		cluster.ExternalEP = strings.Join(externalEndpoints, ",")
-	}
+	}*/
 	return cluster
 }
 
 func (o *ClusterObjects) GetComponentInfo() []*ComponentInfo {
 	var comps []*ComponentInfo
-	setComponentInfos := func(compSpec appsv1alpha1.ClusterComponentSpec,
+	setComponentInfos := func(compSpec kbappsv1.ClusterComponentSpec,
 		resources corev1.ResourceRequirements,
-		storages []appsv1alpha1.ClusterComponentVolumeClaimTemplate,
+		storages []kbappsv1.ClusterComponentVolumeClaimTemplate,
 		replicas int32,
 		clusterCompName string,
 		templateName string,
@@ -384,7 +375,7 @@ func (o *ClusterObjects) GetComponentInfo() []*ComponentInfo {
 		comp.Storage = o.getStorageInfo(storages, componentName)
 		comps = append(comps, comp)
 	}
-	buildComponentInfos := func(compSpec appsv1alpha1.ClusterComponentSpec, clusterCompName string, isSharding bool) {
+	buildComponentInfos := func(compSpec kbappsv1.ClusterComponentSpec, clusterCompName string, isSharding bool) {
 		var tplReplicas int32
 		for _, ins := range compSpec.Instances {
 			resources := compSpec.Resources
@@ -407,9 +398,9 @@ func (o *ClusterObjects) GetComponentInfo() []*ComponentInfo {
 }
 
 // getCompTemplateVolumeClaimTemplates merges volume claim for instance template
-func (o *ClusterObjects) getCompTemplateVolumeClaimTemplates(compSpec *appsv1alpha1.ClusterComponentSpec,
-	template appsv1alpha1.InstanceTemplate) []appsv1alpha1.ClusterComponentVolumeClaimTemplate {
-	var vcts []appsv1alpha1.ClusterComponentVolumeClaimTemplate
+func (o *ClusterObjects) getCompTemplateVolumeClaimTemplates(compSpec *kbappsv1.ClusterComponentSpec,
+	template kbappsv1.InstanceTemplate) []kbappsv1.ClusterComponentVolumeClaimTemplate {
+	var vcts []kbappsv1.ClusterComponentVolumeClaimTemplate
 	for i := range compSpec.VolumeClaimTemplates {
 		insVctIndex := -1
 		for j := range template.VolumeClaimTemplates {
@@ -432,16 +423,16 @@ func (o *ClusterObjects) GetInstanceInfo() []*InstanceInfo {
 	for _, pod := range o.Pods.Items {
 		componentName := getLabelVal(pod.Labels, constant.KBAppComponentLabelKey)
 		instance := &InstanceInfo{
-			Name:        pod.Name,
-			Namespace:   pod.Namespace,
-			Cluster:     getLabelVal(pod.Labels, constant.AppInstanceLabelKey),
-			Component:   componentName,
-			Status:      o.getPodPhase(&pod),
-			Role:        getLabelVal(pod.Labels, constant.RoleLabelKey),
-			AccessMode:  getLabelVal(pod.Labels, constant.ConsensusSetAccessModeLabelKey),
+			Name:      pod.Name,
+			Namespace: pod.Namespace,
+			Cluster:   getLabelVal(pod.Labels, constant.AppInstanceLabelKey),
+			Component: componentName,
+			Status:    o.getPodPhase(&pod),
+			Role:      getLabelVal(pod.Labels, constant.RoleLabelKey),
+			// AccessMode:  getLabelVal(pod.Labels, constant.ConsensusSetAccessModeLabelKey),
 			CreatedTime: util.TimeFormat(&pod.CreationTimestamp),
 		}
-		var componentSpec *appsv1alpha1.ClusterComponentSpec
+		var componentSpec *kbappsv1.ClusterComponentSpec
 		shardingCompName := pod.Labels[constant.KBAppShardingNameLabelKey]
 		if shardingCompName != "" {
 			instance.Component = BuildShardingComponentName(shardingCompName, instance.Component)
@@ -457,8 +448,8 @@ func (o *ClusterObjects) GetInstanceInfo() []*InstanceInfo {
 				}
 			}
 		}
-		templateName := appsv1alpha1.GetInstanceTemplateName(o.Cluster.Name, componentName, pod.Name)
-		template := appsv1alpha1.InstanceTemplate{}
+		templateName := kbappsv1.GetInstanceTemplateName(o.Cluster.Name, componentName, pod.Name)
+		template := kbappsv1.InstanceTemplate{}
 		if templateName != "" {
 			for _, v := range componentSpec.Instances {
 				if v.Name == templateName {
@@ -563,12 +554,12 @@ func (o *ClusterObjects) getPodPhase(pod *corev1.Pod) string {
 	return reason
 }
 
-func (o *ClusterObjects) getStorageInfo(vcts []appsv1alpha1.ClusterComponentVolumeClaimTemplate, componentName string) []StorageInfo {
+func (o *ClusterObjects) getStorageInfo(vcts []kbappsv1.ClusterComponentVolumeClaimTemplate, componentName string) []StorageInfo {
 	if len(vcts) == 0 {
 		return nil
 	}
 
-	getClassName := func(vcTpl *appsv1alpha1.ClusterComponentVolumeClaimTemplate) string {
+	/*getClassName := func(vcTpl *kbappsv1.ClusterComponentVolumeClaimTemplate) string {
 		if vcTpl.Spec.StorageClassName != nil {
 			return *vcTpl.Spec.StorageClassName
 		}
@@ -599,10 +590,10 @@ func (o *ClusterObjects) getStorageInfo(vcts []appsv1alpha1.ClusterComponentVolu
 		}
 
 		return types.None
-	}
+	}*/
 
 	var infos []StorageInfo
-	for _, vcTpl := range vcts {
+	/*	for _, vcTpl := range vcts {
 		s := StorageInfo{
 			Name: vcTpl.Name,
 		}
@@ -611,7 +602,7 @@ func (o *ClusterObjects) getStorageInfo(vcts []appsv1alpha1.ClusterComponentVolu
 		s.Size = val.String()
 		s.AccessMode = getAccessModes(vcTpl.Spec.AccessModes)
 		infos = append(infos, s)
-	}
+	}*/
 	return infos
 }
 
@@ -627,8 +618,8 @@ func getInstanceNodeInfo(nodes []*corev1.Node, pod *corev1.Pod, i *InstanceInfo)
 		return
 	}
 
-	i.Region = getLabelVal(node.Labels, constant.RegionLabelKey)
-	i.AZ = getLabelVal(node.Labels, constant.ZoneLabelKey)
+	i.Region = getLabelVal(node.Labels, corev1.LabelTopologyRegion)
+	i.AZ = getLabelVal(node.Labels, corev1.LabelTopologyZone)
 }
 
 func getResourceInfo(reqs, limits corev1.ResourceList) (string, string) {
@@ -666,7 +657,7 @@ func getLabelVal(labels map[string]string, key string) string {
 	return val
 }
 
-func getAccessModes(modes []corev1.PersistentVolumeAccessMode) string {
+/*func getAccessModes(modes []corev1.PersistentVolumeAccessMode) string {
 	modes = removeDuplicateAccessModes(modes)
 	var modesStr []string
 	if containsAccessMode(modes, corev1.ReadWriteOnce) {
@@ -698,4 +689,4 @@ func containsAccessMode(modes []corev1.PersistentVolumeAccessMode, mode corev1.P
 		}
 	}
 	return false
-}
+}*/

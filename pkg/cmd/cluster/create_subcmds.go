@@ -25,13 +25,16 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 
 	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/cluster"
+	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
 )
@@ -51,6 +54,14 @@ type CreateSubCmdsOptions struct {
 	// ChartInfo is the cluster chart information, used to render the command flag
 	// and validate the values.
 	ChartInfo *cluster.ChartInfo
+
+	// Configuration and options for cluster affinity and tolerations
+	PodAntiAffinity string `json:"podAntiAffinity"`
+	// TopologyKeys if TopologyKeys is nil, add omitempty json tag, because CueLang can not covert null to list.
+	TopologyKeys   []string          `json:"topologyKeys,omitempty"`
+	NodeLabels     map[string]string `json:"nodeLabels,omitempty"`
+	Tenancy        string            `json:"tenancy"`
+	TolerationsRaw []string          `json:"-"`
 
 	*action.CreateOptions
 }
@@ -96,10 +107,47 @@ func buildCreateSubCmds(createOptions *action.CreateOptions) []*cobra.Command {
 			cmd.Aliases = []string{o.ChartInfo.Alias}
 		}
 
+		// common flags
+		cmd.Flags().BoolVar(&o.EditBeforeCreate, "edit", o.EditBeforeCreate, "Edit the API resource before creating")
+		cmd.Flags().StringVar(&o.DryRun, "dry-run", "none", `Must be "client", or "server". If with client strategy, only print the object that would be sent, and no data is actually sent. If with server strategy, submit the server-side request, but no data is persistent.`)
+		cmd.Flags().Lookup("dry-run").NoOptDefVal = "unchanged"
+		printer.AddOutputFlagForCreate(cmd, &o.Format, false)
+
+		// TODO: support enable logs when the api is ready.
+		// TODO: support set backup config?
+
+		// add flags from chart values.schema.json
 		util.CheckErr(addCreateFlags(cmd, o.Factory, o.ChartInfo))
+
+		// Schedule policy
+		// TODO: implement them, and check whether the flag has been defined
+		cmd.Flags().StringVar(&o.PodAntiAffinity, "pod-anti-affinity", "Preferred", "Pod anti-affinity type, one of: (Preferred, Required)")
+		cmd.Flags().StringArrayVar(&o.TopologyKeys, "topology-keys", nil, "Topology keys for affinity")
+		cmd.Flags().StringToStringVar(&o.NodeLabels, "node-labels", nil, "Node label selector")
+		cmd.Flags().StringSliceVar(&o.TolerationsRaw, "tolerations", nil, `Tolerations for cluster, such as "key=value:effect, key:effect", for example '"engineType=mongo:NoSchedule", "diskType:NoSchedule"'`)
+		if cmd.Flag("tenancy") == nil {
+			cmd.Flags().StringVar(&o.Tenancy, "tenancy", "SharedNode", "Tenancy options, one of: (SharedNode, DedicatedNode)")
+		}
 		cmds = append(cmds, cmd)
 	}
 	return cmds
+}
+
+func generateClusterName(dynamic dynamic.Interface, namespace string) (string, error) {
+	var name string
+	// retry 10 times
+	for i := 0; i < 10; i++ {
+		name = cluster.GenerateName()
+		// check whether the cluster exists, if not found, return it
+		_, err := dynamic.Resource(types.ClusterGVR()).Namespace(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+		if errors.IsNotFound(err) {
+			return name, nil
+		}
+		if err != nil {
+			return "", err
+		}
+	}
+	return "", fmt.Errorf("failed to generate cluster name")
 }
 
 func (o *CreateSubCmdsOptions) complete(cmd *cobra.Command) error {
@@ -154,13 +202,12 @@ func (o *CreateSubCmdsOptions) complete(cmd *cobra.Command) error {
 			}
 		}
 	}
-	if clusterDef, ok := spec["clusterDefinitionRef"].(string); ok {
+	if clusterDef, ok := spec["clusterDef"].(string); ok {
 		o.ChartInfo.ClusterDef = clusterDef
 	}
 	if o.ChartInfo.ClusterDef == "" && len(o.ChartInfo.ComponentDef) == 0 {
-		return fmt.Errorf("cannot find clusterDefinitionRef in cluster spec or componentDef in componentSpecs or shardingSpecs")
+		return fmt.Errorf("cannot find clusterDef in cluster spec or componentDef in componentSpecs or shardingSpecs")
 	}
-
 	return nil
 }
 
@@ -270,6 +317,7 @@ func (o *CreateSubCmdsOptions) getObjectsInfo() ([]*objectInfo, error) {
 
 func (o *CreateSubCmdsOptions) getClusterObj(objs []*objectInfo) (*unstructured.Unstructured, error) {
 	for _, obj := range objs {
+		fmt.Println(obj.gvr.String())
 		if obj.gvr == types.ClusterGVR() {
 			return obj.obj, nil
 		}

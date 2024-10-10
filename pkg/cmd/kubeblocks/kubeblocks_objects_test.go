@@ -22,6 +22,7 @@ package kubeblocks
 import (
 	"context"
 
+	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -32,7 +33,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	dpv1alpha1 "github.com/apecloud/kubeblocks/apis/dataprotection/v1alpha1"
 	"github.com/apecloud/kubeblocks/pkg/constant"
 
@@ -74,37 +74,31 @@ var _ = Describe("kubeblocks objects", func() {
 	It("remove finalizer", func() {
 		clusterDef := testing.FakeClusterDef()
 		clusterDef.Finalizers = []string{"test"}
-		clusterVersion := testing.FakeClusterVersion()
-		clusterVersion.Finalizers = []string{"test"}
 		actionSet := testing.FakeActionSet()
 		actionSet.Finalizers = []string{"test"}
 
 		testCases := []struct {
-			clusterDef     *appsv1alpha1.ClusterDefinition
-			clusterVersion *appsv1alpha1.ClusterVersion
-			actionSet      *dpv1alpha1.ActionSet
+			clusterDef *kbappsv1.ClusterDefinition
+			actionSet  *dpv1alpha1.ActionSet
 		}{
 			{
-				clusterDef:     testing.FakeClusterDef(),
-				clusterVersion: testing.FakeClusterVersion(),
-				actionSet:      testing.FakeActionSet(),
+				clusterDef: testing.FakeClusterDef(),
+				actionSet:  testing.FakeActionSet(),
 			},
 			{
-				clusterDef:     clusterDef,
-				clusterVersion: testing.FakeClusterVersion(),
-				actionSet:      testing.FakeActionSet(),
+				clusterDef: clusterDef,
+				actionSet:  testing.FakeActionSet(),
 			},
 			{
-				clusterDef:     clusterDef,
-				clusterVersion: clusterVersion,
-				actionSet:      actionSet,
+				clusterDef: clusterDef,
+				actionSet:  actionSet,
 			},
 		}
 
 		for _, c := range testCases {
 			objects := mockCRD()
 			objects = append(objects, testing.FakeVolumeSnapshotClass())
-			objects = append(objects, c.clusterDef, c.clusterVersion, c.actionSet)
+			objects = append(objects, c.clusterDef, c.actionSet)
 			client := testing.FakeDynamicClient(objects...)
 			objs, _ := getKBObjects(client, "", nil)
 			Expect(removeCustomResources(client, objs)).Should(Succeed())
@@ -133,9 +127,9 @@ var _ = Describe("kubeblocks objects", func() {
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(tmp.Items).Should(HaveLen(1))
 		// verify crds
-		Expect(objs[types.CRDGVR()].Items).Should(HaveLen(4))
+		Expect(objs[types.CRDGVR()].Items).Should(HaveLen(3))
 		// verify crs
-		for _, gvr := range []schema.GroupVersionResource{types.ClusterDefGVR(), types.ClusterVersionGVR()} {
+		for _, gvr := range []schema.GroupVersionResource{types.ClusterDefGVR()} {
 			objList, ok := objs[gvr]
 			Expect(ok).Should(BeTrue())
 			Expect(objList.Items).Should(HaveLen(1))
@@ -187,19 +181,6 @@ func mockCRD() []runtime.Object {
 		},
 		Status: v1.CustomResourceDefinitionStatus{},
 	}
-	clusterVersionCRD := v1.CustomResourceDefinition{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "CustomResourceDefinition",
-			APIVersion: "apiextensions.k8s.io/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "clusterversions.apps.kubeblocks.io",
-		},
-		Spec: v1.CustomResourceDefinitionSpec{
-			Group: types.AppsAPIGroup,
-		},
-		Status: v1.CustomResourceDefinitionStatus{},
-	}
 
 	actionSetCRD := v1.CustomResourceDefinition{
 		TypeMeta: metav1.TypeMeta{
@@ -211,16 +192,21 @@ func mockCRD() []runtime.Object {
 		},
 		Spec: v1.CustomResourceDefinitionSpec{
 			Group: types.DPAPIGroup,
+			Versions: []v1.CustomResourceDefinitionVersion{
+				{
+					Name:    types.DPAPIVersion,
+					Storage: true,
+				},
+			},
 		},
 		Status: v1.CustomResourceDefinitionStatus{},
 	}
-	return []runtime.Object{&clusterCRD, &clusterDefCRD, &clusterVersionCRD, &actionSetCRD}
+	return []runtime.Object{&clusterCRD, &clusterDefCRD, &actionSetCRD}
 }
 
 func mockCRs() []runtime.Object {
 	allObjects := make([]runtime.Object, 0)
 	allObjects = append(allObjects, testing.FakeClusterDef())
-	allObjects = append(allObjects, testing.FakeClusterVersion())
 	return allObjects
 }
 

@@ -100,18 +100,6 @@ func NewClusterCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 				NewListLogsCmd(f, streams),
 			},
 		},
-
-		{
-			Message: "User Accounts Commands:",
-			Commands: []*cobra.Command{
-				NewCreateAccountCmd(f, streams),
-				NewDeleteAccountCmd(f, streams),
-				NewDescAccountCmd(f, streams),
-				NewListAccountsCmd(f, streams),
-				NewGrantOptions(f, streams),
-				NewRevokeOptions(f, streams),
-			},
-		},
 	}
 
 	// add subcommands

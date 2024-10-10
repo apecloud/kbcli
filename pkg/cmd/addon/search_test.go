@@ -23,7 +23,7 @@ import (
 	"bytes"
 	"path/filepath"
 
-	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
+	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
@@ -47,7 +47,7 @@ var _ = Describe("search test", func() {
 	BeforeEach(func() {
 		streams, _, out, _ = genericiooptions.NewTestIOStreams()
 		tf = cmdtesting.NewTestFactory().WithNamespace("default")
-		_ = appsv1alpha1.AddToScheme(scheme.Scheme)
+		_ = kbappsv1.AddToScheme(scheme.Scheme)
 		addonObj := testing.FakeAddon(testAddonName)
 		tf.FakeDynamicClient = fake.NewSimpleDynamicClient(
 			scheme.Scheme, addonObj)

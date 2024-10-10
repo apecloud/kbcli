@@ -86,7 +86,7 @@ metadata:
   namespace: default`},
 				{
 					gvr: types.ClusterGVR(),
-					manifest: `apiVersion: apps.kubeblocks.io/v1alpha1
+					manifest: `apiVersion: apps.kubeblocks.io/v1
 kind: Cluster
 metadata:
   name: test-cluster

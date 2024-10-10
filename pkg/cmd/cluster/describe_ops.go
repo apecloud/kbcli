@@ -37,7 +37,7 @@ import (
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
 
-	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
+	opsv1alpha1 "github.com/apecloud/kubeblocks/apis/operations/v1alpha1"
 
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
@@ -64,7 +64,7 @@ type describeOpsOptions struct {
 }
 
 type opsObject interface {
-	appsv1alpha1.VerticalScaling | appsv1alpha1.HorizontalScaling | appsv1alpha1.OpsRequestVolumeClaimTemplate | appsv1alpha1.VolumeExpansion
+	opsv1alpha1.VerticalScaling | opsv1alpha1.HorizontalScaling | opsv1alpha1.OpsRequestVolumeClaimTemplate | opsv1alpha1.VolumeExpansion
 }
 
 func newDescribeOpsOptions(f cmdutil.Factory, streams genericiooptions.IOStreams) *describeOpsOptions {
@@ -152,7 +152,7 @@ func (o *describeOpsOptions) run() error {
 
 // describeOps gets the OpsRequest by name and describes it.
 func (o *describeOpsOptions) describeOps(name string) error {
-	opsRequest := &appsv1alpha1.OpsRequest{}
+	opsRequest := &opsv1alpha1.OpsRequest{}
 	if err := util.GetK8SClientObject(o.dynamic, opsRequest, o.gvr, o.namespace, name); err != nil {
 		return err
 	}
@@ -160,7 +160,7 @@ func (o *describeOpsOptions) describeOps(name string) error {
 }
 
 // printOpsRequest prints the information of OpsRequest for describing command.
-func (o *describeOpsOptions) printOpsRequest(ops *appsv1alpha1.OpsRequest) error {
+func (o *describeOpsOptions) printOpsRequest(ops *opsv1alpha1.OpsRequest) error {
 	printer.PrintLine("Spec:")
 	printer.PrintLineWithTabSeparator(
 		// first pair string
@@ -194,23 +194,23 @@ func (o *describeOpsOptions) printOpsRequest(ops *appsv1alpha1.OpsRequest) error
 }
 
 // printOpsCommand prints the kbcli command by OpsRequest.spec.
-func (o *describeOpsOptions) printOpsCommand(opsRequest *appsv1alpha1.OpsRequest) {
+func (o *describeOpsOptions) printOpsCommand(opsRequest *opsv1alpha1.OpsRequest) {
 	if opsRequest == nil {
 		return
 	}
 	var commands []string
 	switch opsRequest.Spec.Type {
-	case appsv1alpha1.RestartType:
+	case opsv1alpha1.RestartType:
 		commands = o.getRestartCommand(opsRequest.Spec)
-	case appsv1alpha1.UpgradeType:
+	case opsv1alpha1.UpgradeType:
 		commands = o.getUpgradeCommand(opsRequest.Spec)
-	case appsv1alpha1.HorizontalScalingType:
+	case opsv1alpha1.HorizontalScalingType:
 		commands = o.getHorizontalScalingCommand(opsRequest.Spec)
-	case appsv1alpha1.VerticalScalingType:
+	case opsv1alpha1.VerticalScalingType:
 		commands = o.getVerticalScalingCommand(opsRequest.Spec)
-	case appsv1alpha1.VolumeExpansionType:
+	case opsv1alpha1.VolumeExpansionType:
 		commands = o.getVolumeExpansionCommand(opsRequest.Spec)
-	case appsv1alpha1.ReconfiguringType:
+	case opsv1alpha1.ReconfiguringType:
 		commands = o.getReconfiguringCommand(opsRequest.Spec)
 	}
 	if len(commands) == 0 {
@@ -225,7 +225,7 @@ func (o *describeOpsOptions) printOpsCommand(opsRequest *appsv1alpha1.OpsRequest
 }
 
 // getRestartCommand gets the command of the Restart OpsRequest.
-func (o *describeOpsOptions) getRestartCommand(spec appsv1alpha1.OpsRequestSpec) []string {
+func (o *describeOpsOptions) getRestartCommand(spec opsv1alpha1.OpsRequestSpec) []string {
 	if len(spec.RestartList) == 0 {
 		return nil
 	}
@@ -240,10 +240,10 @@ func (o *describeOpsOptions) getRestartCommand(spec appsv1alpha1.OpsRequestSpec)
 }
 
 // getUpgradeCommand gets the command of the Upgrade OpsRequest.
-func (o *describeOpsOptions) getUpgradeCommand(spec appsv1alpha1.OpsRequestSpec) []string {
+func (o *describeOpsOptions) getUpgradeCommand(spec opsv1alpha1.OpsRequestSpec) []string {
 	return []string{
 		fmt.Sprintf("kbcli cluster upgrade %s --cluster-version=%v", spec.GetClusterName(),
-			spec.Upgrade.ClusterVersionRef),
+			""),
 	}
 }
 
@@ -256,17 +256,17 @@ func (o *describeOpsOptions) addResourceFlag(key string, value *resource.Quantit
 }
 
 // getVerticalScalingCommand gets the command of the VerticalScaling OpsRequest
-func (o *describeOpsOptions) getVerticalScalingCommand(spec appsv1alpha1.OpsRequestSpec) []string {
+func (o *describeOpsOptions) getVerticalScalingCommand(spec opsv1alpha1.OpsRequestSpec) []string {
 	if len(spec.VerticalScalingList) == 0 {
 		return nil
 	}
-	convertObject := func(h appsv1alpha1.VerticalScaling) any {
+	convertObject := func(h opsv1alpha1.VerticalScaling) any {
 		return h.ResourceRequirements
 	}
-	getCompName := func(h appsv1alpha1.VerticalScaling) string {
+	getCompName := func(h opsv1alpha1.VerticalScaling) string {
 		return h.ComponentName
 	}
-	componentNameSlice, resourceSlice := getCommandFlagsSlice[appsv1alpha1.VerticalScaling](
+	componentNameSlice, resourceSlice := getCommandFlagsSlice[opsv1alpha1.VerticalScaling](
 		spec.VerticalScalingList, convertObject, getCompName)
 	commands := make([]string, len(componentNameSlice))
 	for i := range componentNameSlice {
@@ -280,37 +280,37 @@ func (o *describeOpsOptions) getVerticalScalingCommand(spec appsv1alpha1.OpsRequ
 }
 
 // getHorizontalScalingCommand gets the command of the HorizontalScaling OpsRequest.
-func (o *describeOpsOptions) getHorizontalScalingCommand(spec appsv1alpha1.OpsRequestSpec) []string {
+func (o *describeOpsOptions) getHorizontalScalingCommand(spec opsv1alpha1.OpsRequestSpec) []string {
 	if len(spec.HorizontalScalingList) == 0 {
 		return nil
 	}
-	convertObject := func(h appsv1alpha1.HorizontalScaling) any {
-		return h.Replicas
+	convertObject := func(h opsv1alpha1.HorizontalScaling) any {
+		return 0
 	}
-	getCompName := func(h appsv1alpha1.HorizontalScaling) string {
+	getCompName := func(h opsv1alpha1.HorizontalScaling) string {
 		return h.ComponentName
 	}
-	componentNameSlice, replicasSlice := getCommandFlagsSlice[appsv1alpha1.HorizontalScaling](
+	componentNameSlice, replicasSlice := getCommandFlagsSlice[opsv1alpha1.HorizontalScaling](
 		spec.HorizontalScalingList, convertObject, getCompName)
 	commands := make([]string, len(componentNameSlice))
 	for i := range componentNameSlice {
 		commands[i] = fmt.Sprintf("kbcli cluster hscale %s --components=%s --replicas=%d",
-			spec.GetClusterName(), strings.Join(componentNameSlice[i], ","), *replicasSlice[i].(*int32))
+			spec.GetClusterName(), strings.Join(componentNameSlice[i], ","), replicasSlice[i].(int))
 	}
 	return commands
 }
 
 // getVolumeExpansionCommand gets the command of the VolumeExpansion command.
-func (o *describeOpsOptions) getVolumeExpansionCommand(spec appsv1alpha1.OpsRequestSpec) []string {
-	convertObject := func(v appsv1alpha1.OpsRequestVolumeClaimTemplate) any {
+func (o *describeOpsOptions) getVolumeExpansionCommand(spec opsv1alpha1.OpsRequestSpec) []string {
+	convertObject := func(v opsv1alpha1.OpsRequestVolumeClaimTemplate) any {
 		return v.Storage
 	}
-	getVCTName := func(v appsv1alpha1.OpsRequestVolumeClaimTemplate) string {
+	getVCTName := func(v opsv1alpha1.OpsRequestVolumeClaimTemplate) string {
 		return v.Name
 	}
 	commands := make([]string, 0)
 	for _, v := range spec.VolumeExpansionList {
-		vctNameSlice, storageSlice := getCommandFlagsSlice[appsv1alpha1.OpsRequestVolumeClaimTemplate](
+		vctNameSlice, storageSlice := getCommandFlagsSlice[opsv1alpha1.OpsRequestVolumeClaimTemplate](
 			v.VolumeClaimTemplates, convertObject, getVCTName)
 		for i := range vctNameSlice {
 			storage := storageSlice[i].(resource.Quantity)
@@ -322,9 +322,9 @@ func (o *describeOpsOptions) getVolumeExpansionCommand(spec appsv1alpha1.OpsRequ
 }
 
 // getReconfiguringCommand gets the command of the VolumeExpansion command.
-func (o *describeOpsOptions) getReconfiguringCommand(spec appsv1alpha1.OpsRequestSpec) []string {
-	if spec.Reconfigure != nil {
-		return generateReconfiguringCommand(spec.GetClusterName(), spec.Reconfigure, []string{spec.Reconfigure.ComponentName})
+func (o *describeOpsOptions) getReconfiguringCommand(spec opsv1alpha1.OpsRequestSpec) []string {
+	if spec.Reconfigures != nil {
+		return generateReconfiguringCommand(spec.GetClusterName(), &spec.Reconfigures[0], []string{spec.Reconfigures[0].ComponentName})
 	}
 
 	if len(spec.Reconfigures) == 0 {
@@ -337,7 +337,7 @@ func (o *describeOpsOptions) getReconfiguringCommand(spec appsv1alpha1.OpsReques
 	return generateReconfiguringCommand(spec.GetClusterName(), &spec.Reconfigures[0], components)
 }
 
-func generateReconfiguringCommand(clusterName string, updatedParams *appsv1alpha1.Reconfigure, components []string) []string {
+func generateReconfiguringCommand(clusterName string, updatedParams *opsv1alpha1.Reconfigure, components []string) []string {
 	if len(updatedParams.Configurations) == 0 {
 		return nil
 	}
@@ -367,7 +367,7 @@ func generateReconfiguringCommand(clusterName string, updatedParams *appsv1alpha
 }
 
 // printOpsRequestStatus prints the OpsRequest status infos.
-func (o *describeOpsOptions) printOpsRequestStatus(opsStatus *appsv1alpha1.OpsRequestStatus) {
+func (o *describeOpsOptions) printOpsRequestStatus(opsStatus *opsv1alpha1.OpsRequestStatus) {
 	printer.PrintTitle("Status")
 	startTime := opsStatus.StartTimestamp
 	if !startTime.IsZero() {
@@ -385,28 +385,28 @@ func (o *describeOpsOptions) printOpsRequestStatus(opsStatus *appsv1alpha1.OpsRe
 }
 
 // printLastConfiguration prints the last configuration of the cluster before doing the OpsRequest.
-func (o *describeOpsOptions) printLastConfiguration(configuration appsv1alpha1.LastConfiguration, opsType appsv1alpha1.OpsType) {
-	if reflect.DeepEqual(configuration, appsv1alpha1.LastConfiguration{}) {
+func (o *describeOpsOptions) printLastConfiguration(configuration opsv1alpha1.LastConfiguration, opsType opsv1alpha1.OpsType) {
+	if reflect.DeepEqual(configuration, opsv1alpha1.LastConfiguration{}) {
 		return
 	}
 	printer.PrintTitle("Last Configuration")
 	switch opsType {
-	case appsv1alpha1.UpgradeType:
-		printer.PrintPairStringToLine("Cluster Version", configuration.ClusterVersionRef)
-	case appsv1alpha1.VerticalScalingType:
-		handleVScale := func(tbl *printer.TablePrinter, cName string, compConf appsv1alpha1.LastComponentConfiguration) {
+	case opsv1alpha1.UpgradeType:
+		// printer.PrintPairStringToLine("Cluster Version", configuration.ClusterVersionRef)
+	case opsv1alpha1.VerticalScalingType:
+		handleVScale := func(tbl *printer.TablePrinter, cName string, compConf opsv1alpha1.LastComponentConfiguration) {
 			tbl.AddRow(cName, compConf.Requests.Cpu().String(), compConf.Requests.Memory().String(), compConf.Limits.Cpu().String(), compConf.Limits.Memory().String())
 		}
 		headers := []interface{}{"COMPONENT", "REQUEST-CPU", "REQUEST-MEMORY", "LIMIT-CPU", "LIMIT-MEMORY"}
 		o.printLastConfigurationByOpsType(configuration, headers, handleVScale)
-	case appsv1alpha1.HorizontalScalingType:
-		handleHScale := func(tbl *printer.TablePrinter, cName string, compConf appsv1alpha1.LastComponentConfiguration) {
+	case opsv1alpha1.HorizontalScalingType:
+		handleHScale := func(tbl *printer.TablePrinter, cName string, compConf opsv1alpha1.LastComponentConfiguration) {
 			tbl.AddRow(cName, *compConf.Replicas)
 		}
 		headers := []interface{}{"COMPONENT", "REPLICAS"}
 		o.printLastConfigurationByOpsType(configuration, headers, handleHScale)
-	case appsv1alpha1.VolumeExpansionType:
-		handleVolumeExpansion := func(tbl *printer.TablePrinter, cName string, compConf appsv1alpha1.LastComponentConfiguration) {
+	case opsv1alpha1.VolumeExpansionType:
+		handleVolumeExpansion := func(tbl *printer.TablePrinter, cName string, compConf opsv1alpha1.LastComponentConfiguration) {
 			vcts := compConf.VolumeClaimTemplates
 			for _, v := range vcts {
 				tbl.AddRow(cName, v.Name, v.Storage.String())
@@ -418,9 +418,9 @@ func (o *describeOpsOptions) printLastConfiguration(configuration appsv1alpha1.L
 }
 
 // printLastConfigurationByOpsType prints the last configuration by ops type.
-func (o *describeOpsOptions) printLastConfigurationByOpsType(configuration appsv1alpha1.LastConfiguration,
+func (o *describeOpsOptions) printLastConfigurationByOpsType(configuration opsv1alpha1.LastConfiguration,
 	headers []interface{},
-	handleOpsObject func(tbl *printer.TablePrinter, cName string, compConf appsv1alpha1.LastComponentConfiguration),
+	handleOpsObject func(tbl *printer.TablePrinter, cName string, compConf opsv1alpha1.LastComponentConfiguration),
 ) {
 	tbl := printer.NewTablePrinter(o.Out)
 	tbl.SetHeader(headers...)
@@ -433,7 +433,7 @@ func (o *describeOpsOptions) printLastConfigurationByOpsType(configuration appsv
 }
 
 // printProgressDetails prints the progressDetails of all components in this OpsRequest.
-func (o *describeOpsOptions) printProgressDetails(opsStatus *appsv1alpha1.OpsRequestStatus) {
+func (o *describeOpsOptions) printProgressDetails(opsStatus *opsv1alpha1.OpsRequestStatus) {
 	printer.PrintPairStringToLine("Progress", opsStatus.Progress)
 	keys := maps.Keys(opsStatus.Components)
 	sort.Strings(keys)

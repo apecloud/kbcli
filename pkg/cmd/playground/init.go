@@ -38,7 +38,6 @@ import (
 	"k8s.io/kubectl/pkg/util/templates"
 
 	cp "github.com/apecloud/kbcli/pkg/cloudprovider"
-	cmdcluster "github.com/apecloud/kbcli/pkg/cmd/cluster"
 	"github.com/apecloud/kbcli/pkg/cmd/kubeblocks"
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/spinner"
@@ -97,14 +96,13 @@ on the created kubernetes cluster, and an apecloud-mysql cluster named mycluster
 
 type initOptions struct {
 	genericiooptions.IOStreams
-	helmCfg        *helm.Config
-	clusterDef     string
-	kbVersion      string
-	clusterVersion string
-	cloudProvider  string
-	region         string
-	autoApprove    bool
-	dockerVersion  *gv.Version
+	helmCfg       *helm.Config
+	clusterDef    string
+	kbVersion     string
+	cloudProvider string
+	region        string
+	autoApprove   bool
+	dockerVersion *gv.Version
 
 	baseOptions
 }
@@ -127,7 +125,6 @@ func newInitCmd(streams genericiooptions.IOStreams) *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&o.clusterDef, "cluster-definition", defaultClusterDef, "Specify the cluster definition, run \"kbcli cd list\" to get the available cluster definitions")
-	cmd.Flags().StringVar(&o.clusterVersion, "cluster-version", "", "Specify the cluster version, run \"kbcli cv list\" to get the available cluster versions")
 	cmd.Flags().StringVar(&o.kbVersion, "version", version.DefaultKubeBlocksVersion, "KubeBlocks version")
 	cmd.Flags().StringVar(&o.cloudProvider, "cloud-provider", defaultCloudProvider, fmt.Sprintf("Cloud provider type, one of %v", supportedCloudProviders))
 	cmd.Flags().StringVar(&o.region, "region", "", "The region to create kubernetes cluster")
@@ -414,9 +411,6 @@ func (o *initOptions) installKBAndCluster(info *cp.K8sClusterInfo) error {
 	klog.V(1).Info("KubeBlocks installed successfully")
 	// install database cluster
 	clusterInfo := "ClusterDefinition: " + o.clusterDef
-	if o.clusterVersion != "" {
-		clusterInfo += ", ClusterVersion: " + o.clusterVersion
-	}
 	s := spinner.New(o.Out, spinnerMsg("Create cluster %s (%s)", kbClusterName, clusterInfo))
 	defer s.Fail()
 	if err = o.createCluster(); err != nil && !apierrors.IsAlreadyExists(err) {
@@ -500,9 +494,10 @@ func (o *initOptions) installKubeBlocks(k8sClusterName string) error {
 
 // createCluster constructs a cluster create options and run
 func (o *initOptions) createCluster() error {
-	c := cmdcluster.NewCreateOptions(util.NewFactory(), genericiooptions.NewTestIOStreamsDiscard())
+	// TODO: Update with new creation cmd
+	/*c := cmdcluster.NewCreateOptions(util.NewFactory(), genericiooptions.NewTestIOStreamsDiscard())
 	c.ClusterDefRef = o.clusterDef
-	c.ClusterVersionRef = o.clusterVersion
+	// c.ClusterVersionRef = o.clusterVersion
 	c.Namespace = defaultNamespace
 	c.Name = kbClusterName
 	c.UpdatableFlags = cmdcluster.UpdatableFlags{
@@ -529,7 +524,8 @@ func (o *initOptions) createCluster() error {
 	if err := c.Complete(); err != nil {
 		return err
 	}
-	return c.Run()
+	return c.Run()*/
+	return nil
 }
 
 // checkExistedCluster checks playground kubernetes cluster exists or not, a kbcli client only

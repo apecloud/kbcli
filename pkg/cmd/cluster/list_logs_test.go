@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"os"
 
+	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -35,7 +36,6 @@ import (
 	"k8s.io/client-go/rest/fake"
 	cmdtesting "k8s.io/kubectl/pkg/cmd/testing"
 
-	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	"github.com/apecloud/kubeblocks/pkg/constant"
 
 	"github.com/apecloud/kbcli/pkg/action"
@@ -74,19 +74,21 @@ var _ = Describe("listLogs test", func() {
 	})
 	It("printContext test", func() {
 		dataObj := &cluster.ClusterObjects{
-			Cluster: &appsv1alpha1.Cluster{
-				Spec: appsv1alpha1.ClusterSpec{
-					ComponentSpecs: []appsv1alpha1.ClusterComponentSpec{
+			Cluster: &kbappsv1.Cluster{
+				Spec: kbappsv1.ClusterSpec{
+					ComponentSpecs: []kbappsv1.ClusterComponentSpec{
 						{
-							Name:            "component-name",
-							ComponentDefRef: "component-type",
-							EnabledLogs:     []string{"slow"},
+							Name:         "component-name",
+							ComponentDef: "component-type",
+							// TODO: update with new API for enabledLogs
+							// EnabledLogs:     []string{"slow"},
 						},
 					},
 				},
 			},
-			ClusterDef: &appsv1alpha1.ClusterDefinition{
-				Spec: appsv1alpha1.ClusterDefinitionSpec{
+			// TODO: update with new API for enabledLogs
+			/*ClusterDef: &kbappsv1.ClusterDefinition{
+				Spec: kbappsv1.ClusterDefinitionSpec{
 					ComponentDefs: []appsv1alpha1.ClusterComponentDefinition{
 						{
 							Name: "component-type",
@@ -99,7 +101,7 @@ var _ = Describe("listLogs test", func() {
 						},
 					},
 				},
-			},
+			},*/
 			Pods: &corev1.PodList{},
 		}
 		pod := corev1.Pod{

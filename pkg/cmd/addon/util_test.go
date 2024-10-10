@@ -22,6 +22,7 @@ package addon
 import (
 	"net/http"
 
+	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -31,8 +32,6 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	clientfake "k8s.io/client-go/rest/fake"
 	cmdtesting "k8s.io/kubectl/pkg/cmd/testing"
-
-	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 
 	"github.com/apecloud/kbcli/pkg/testing"
 	"github.com/apecloud/kbcli/pkg/types"
@@ -64,7 +63,7 @@ var _ = Describe("addon util test", func() {
 
 	BeforeEach(func() {
 		streams, _, _, _ = genericiooptions.NewTestIOStreams()
-		_ = appsv1alpha1.AddToScheme(scheme.Scheme)
+		_ = kbappsv1.AddToScheme(scheme.Scheme)
 		cluster := testing.FakeCluster(testing.ClusterName, testing.Namespace)
 		tf = mockClient(cluster)
 	})
