@@ -26,6 +26,7 @@ import (
 	"sort"
 	"strings"
 
+	opsv1alpha1 "github.com/apecloud/kubeblocks/apis/operations/v1alpha1"
 	"github.com/spf13/cobra"
 	apiext "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -252,11 +253,11 @@ func (r *configObserverOptions) printConfigureHistory(component string) error {
 	tbl := printer.NewTablePrinter(r.Out)
 	tbl.SetHeader("OPS-NAME", "CLUSTER", "COMPONENT", "CONFIG-SPEC-NAME", "FILE", "STATUS", "POLICY", "PROGRESS", "CREATED-TIME", "VALID-UPDATED")
 	for _, obj := range opsList.Items {
-		ops := &appsv1alpha1.OpsRequest{}
+		ops := &opsv1alpha1.OpsRequest{}
 		if err = runtime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, ops); err != nil {
 			return err
 		}
-		if ops.Spec.Type != appsv1alpha1.ReconfiguringType {
+		if ops.Spec.Type != opsv1alpha1.ReconfiguringType {
 			continue
 		}
 		components := getComponentNameFromOps(ops)
@@ -329,7 +330,7 @@ func (r *configObserverOptions) printConfigConstraint(schema *apiext.JSONSchemaP
 	return nil
 }
 
-func getReconfigurePolicy(status appsv1alpha1.OpsRequestStatus, component string) string {
+func getReconfigurePolicy(status opsv1alpha1.OpsRequestStatus, component string) string {
 	reconfigureStatus := getReconfigureStatus(status, component)
 	if reconfigureStatus == nil || len(reconfigureStatus.ConfigurationStatus) == 0 {
 		return ""
@@ -352,15 +353,16 @@ func getReconfigurePolicy(status appsv1alpha1.OpsRequestStatus, component string
 	return printer.BoldYellow(policy)
 }
 
-func getReconfigureStatus(status appsv1alpha1.OpsRequestStatus, component string) *appsv1alpha1.ReconfiguringStatus {
-	rStatus := status.ReconfiguringStatus
+func getReconfigureStatus(status opsv1alpha1.OpsRequestStatus, component string) *opsv1alpha1.ReconfiguringStatus {
+	rStatus := status.ReconfiguringStatusAsComponent
+	var compRSStatus *opsv1alpha1.ReconfiguringStatus
 	if rStatus == nil && len(status.ReconfiguringStatusAsComponent) != 0 {
-		rStatus = status.ReconfiguringStatusAsComponent[component]
+		compRSStatus = status.ReconfiguringStatusAsComponent[component]
 	}
-	return rStatus
+	return compRSStatus
 }
 
-func getValidUpdatedParams(status appsv1alpha1.OpsRequestStatus, component string) string {
+func getValidUpdatedParams(status opsv1alpha1.OpsRequestStatus, component string) string {
 	reconfigureStatus := getReconfigureStatus(status, component)
 	if reconfigureStatus == nil || len(reconfigureStatus.ConfigurationStatus) == 0 {
 		return ""

@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"time"
 
+	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	chaosmeshv1alpha1 "github.com/chaos-mesh/chaos-mesh/api/v1alpha1"
 	snapshotv1 "github.com/kubernetes-csi/external-snapshotter/client/v6/apis/volumesnapshot/v1"
 	"github.com/sethvargo/go-password/password"
@@ -38,32 +39,27 @@ import (
 	"k8s.io/kubectl/pkg/util/storage"
 	"k8s.io/utils/pointer"
 
-	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
+	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
 	appsv1beta1 "github.com/apecloud/kubeblocks/apis/apps/v1beta1"
 	dpv1alpha1 "github.com/apecloud/kubeblocks/apis/dataprotection/v1alpha1"
 	extensionsv1alpha1 "github.com/apecloud/kubeblocks/apis/extensions/v1alpha1"
-	workloadsv1alpha1 "github.com/apecloud/kubeblocks/apis/workloads/v1alpha1"
 	"github.com/apecloud/kubeblocks/pkg/constant"
 	dptypes "github.com/apecloud/kubeblocks/pkg/dataprotection/types"
 	"github.com/apecloud/kubeblocks/pkg/dataprotection/utils/boolptr"
-	testapps "github.com/apecloud/kubeblocks/pkg/testutil/apps"
 
 	"github.com/apecloud/kbcli/pkg/types"
 )
 
 const (
-	ClusterName        = "fake-cluster-name"
-	Namespace          = "fake-namespace"
-	ClusterVersionName = "fake-cluster-version"
-	ClusterDefName     = "fake-cluster-definition"
-	CompDefName        = "fake-component-definition"
-	ComponentName      = "fake-component-name"
-	ComponentDefName   = "fake-component-type"
-	NodeName           = "fake-node-name"
-	SecretName         = "fake-secret-conn-credential"
-	StorageClassName   = "fake-storage-class"
-	PVCName            = "fake-pvc"
-	ServiceRefName     = "fake-serviceRef"
+	ClusterName      = "fake-cluster-name"
+	Namespace        = "fake-namespace"
+	ClusterDefName   = "fake-cluster-definition"
+	CompDefName      = "fake-component-definition"
+	ComponentName    = "fake-component-name"
+	NodeName         = "fake-node-name"
+	SecretName       = "fake-secret-conn-credential"
+	StorageClassName = "fake-storage-class"
+	PVCName          = "fake-pvc"
 
 	KubeBlocksRepoName  = "fake-kubeblocks-repo"
 	KubeBlocksChartName = "fake-kubeblocks"
@@ -74,12 +70,7 @@ const (
 
 	accountName = "root"
 
-	IsDefault    = true
-	IsNotDefault = false
-)
-
-var (
-	ExtraComponentDefName = fmt.Sprintf("%s-%d", ComponentDefName, 1)
+	IsDefault = true
 )
 
 func GetRandomStr() string {
@@ -87,13 +78,13 @@ func GetRandomStr() string {
 	return seq
 }
 
-func FakeCluster(name, namespace string, conditions ...metav1.Condition) *appsv1alpha1.Cluster {
+func FakeCluster(name, namespace string, conditions ...metav1.Condition) *kbappsv1.Cluster {
 	var replicas int32 = 1
 
-	return &appsv1alpha1.Cluster{
+	return &kbappsv1.Cluster{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       types.KindCluster,
-			APIVersion: fmt.Sprintf("%s/%s", types.AppsAPIGroup, types.AppsAPIVersion),
+			APIVersion: fmt.Sprintf("%s/%s", types.AppsAPIGroup, types.AppsV1APIVersion),
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -103,33 +94,18 @@ func FakeCluster(name, namespace string, conditions ...metav1.Condition) *appsv1
 				constant.ClusterDefLabelKey: ClusterDefName,
 			},
 		},
-		Status: appsv1alpha1.ClusterStatus{
-			Phase: appsv1alpha1.RunningClusterPhase,
-			Components: map[string]appsv1alpha1.ClusterComponentStatus{
-				ComponentName: {
-					MembersStatus: []workloadsv1alpha1.MemberStatus{
-						{
-							ReplicaRole: &workloadsv1alpha1.ReplicaRole{
-								Name:       "leader",
-								AccessMode: workloadsv1alpha1.ReadWriteMode,
-							},
-							PodName: fmt.Sprintf("%s-pod-0", name),
-						},
-					},
-				},
-			},
+		Status: kbappsv1.ClusterStatus{
+			Phase:      kbappsv1.RunningClusterPhase,
+			Components: map[string]kbappsv1.ClusterComponentStatus{},
 			Conditions: conditions,
 		},
-		Spec: appsv1alpha1.ClusterSpec{
-			ClusterDefRef:     ClusterDefName,
-			ClusterVersionRef: ClusterVersionName,
-			TerminationPolicy: appsv1alpha1.WipeOut,
-			ComponentSpecs: []appsv1alpha1.ClusterComponentSpec{
+		Spec: kbappsv1.ClusterSpec{
+			TerminationPolicy: kbappsv1.WipeOut,
+			ComponentSpecs: []kbappsv1.ClusterComponentSpec{
 				{
-					Name:            ComponentName,
-					ComponentDefRef: ComponentDefName,
-					ComponentDef:    CompDefName,
-					Replicas:        replicas,
+					Name:         ComponentName,
+					ComponentDef: CompDefName,
+					Replicas:     replicas,
 					Resources: corev1.ResourceRequirements{
 						Requests: corev1.ResourceList{
 							corev1.ResourceCPU:    resource.MustParse("100m"),
@@ -140,14 +116,14 @@ func FakeCluster(name, namespace string, conditions ...metav1.Condition) *appsv1
 							corev1.ResourceMemory: resource.MustParse("2Gi"),
 						},
 					},
-					VolumeClaimTemplates: []appsv1alpha1.ClusterComponentVolumeClaimTemplate{
+					VolumeClaimTemplates: []kbappsv1.ClusterComponentVolumeClaimTemplate{
 						{
 							Name: "data",
-							Spec: appsv1alpha1.PersistentVolumeClaimSpec{
+							Spec: kbappsv1.PersistentVolumeClaimSpec{
 								AccessModes: []corev1.PersistentVolumeAccessMode{
 									corev1.ReadWriteOnce,
 								},
-								Resources: corev1.ResourceRequirements{
+								Resources: corev1.VolumeResourceRequirements{
 									Requests: corev1.ResourceList{
 										corev1.ResourceStorage: resource.MustParse("1Gi"),
 									},
@@ -157,24 +133,23 @@ func FakeCluster(name, namespace string, conditions ...metav1.Condition) *appsv1
 					},
 				},
 				{
-					Name:            ComponentName + "-1",
-					ComponentDefRef: ComponentDefName,
-					ComponentDef:    CompDefName,
-					Replicas:        replicas,
+					Name:         ComponentName + "-1",
+					ComponentDef: CompDefName,
+					Replicas:     replicas,
 					Resources: corev1.ResourceRequirements{
 						Requests: corev1.ResourceList{
 							corev1.ResourceCPU:    resource.MustParse("100m"),
 							corev1.ResourceMemory: resource.MustParse("100Mi"),
 						},
 					},
-					VolumeClaimTemplates: []appsv1alpha1.ClusterComponentVolumeClaimTemplate{
+					VolumeClaimTemplates: []kbappsv1.ClusterComponentVolumeClaimTemplate{
 						{
 							Name: "data",
-							Spec: appsv1alpha1.PersistentVolumeClaimSpec{
+							Spec: kbappsv1.PersistentVolumeClaimSpec{
 								AccessModes: []corev1.PersistentVolumeAccessMode{
 									corev1.ReadWriteOnce,
 								},
-								Resources: corev1.ResourceRequirements{
+								Resources: corev1.VolumeResourceRequirements{
 									Requests: corev1.ResourceList{
 										corev1.ResourceStorage: resource.MustParse("1Gi"),
 									},
@@ -276,105 +251,33 @@ func FakeNode() *corev1.Node {
 	node := &corev1.Node{}
 	node.Name = NodeName
 	node.Labels = map[string]string{
-		constant.RegionLabelKey: "fake-node-region",
-		constant.ZoneLabelKey:   "fake-node-zone",
+		corev1.LabelTopologyRegion: "fake-node-region",
+		corev1.LabelTopologyZone:   "fake-node-zone",
 	}
 	return node
 }
 
-func FakeClusterDef() *appsv1alpha1.ClusterDefinition {
-	clusterDef := &appsv1alpha1.ClusterDefinition{}
+func FakeClusterDef() *kbappsv1.ClusterDefinition {
+	clusterDef := &kbappsv1.ClusterDefinition{}
 	clusterDef.Labels = make(map[string]string)
 	clusterDef.Labels[types.AddonNameLabelKey] = ClusterDefName
 	clusterDef.Name = ClusterDefName
-	clusterDef.Spec.ComponentDefs = []appsv1alpha1.ClusterComponentDefinition{
-		{
-			Name:          ComponentDefName,
-			CharacterType: "mysql",
-			SystemAccounts: &appsv1alpha1.SystemAccountSpec{
-				CmdExecutorConfig: &appsv1alpha1.CmdExecutorConfig{
-					CommandExecutorEnvItem: appsv1alpha1.CommandExecutorEnvItem{
-						Image: "",
-					},
-					CommandExecutorItem: appsv1alpha1.CommandExecutorItem{
-						Command: []string{"mysql"},
-						Args:    []string{"-h$(KB_ACCOUNT_ENDPOINT)", "-e $(KB_ACCOUNT_STATEMENT)"},
-					},
-				},
-				PasswordConfig: appsv1alpha1.PasswordConfig{},
-				Accounts:       []appsv1alpha1.SystemAccountConfig{},
-			},
-			ConfigSpecs: []appsv1alpha1.ComponentConfigSpec{
-				{
-					ComponentTemplateSpec: appsv1alpha1.ComponentTemplateSpec{
-						Name:        "mysql-consensusset-config",
-						TemplateRef: "mysql8.0-config-template",
-						Namespace:   Namespace,
-						VolumeName:  "mysql-config",
-					},
-					ConfigConstraintRef: "mysql8.0-config-constraints",
-				},
-			},
-			ServiceRefDeclarations: []appsv1alpha1.ServiceRefDeclaration{
-				FakeServiceRef(ServiceRefName),
-			},
-			SwitchoverSpec: &appsv1alpha1.SwitchoverSpec{
-				WithCandidate: &appsv1alpha1.SwitchoverAction{
-					CmdExecutorConfig: &appsv1alpha1.CmdExecutorConfig{
-						CommandExecutorEnvItem: appsv1alpha1.CommandExecutorEnvItem{
-							Image: "",
-						},
-						CommandExecutorItem: appsv1alpha1.CommandExecutorItem{
-							Command: []string{"mysql"},
-							Args:    []string{"-h$(KB_CONSENSUS_LEADER_POD_FQDN)", "-e $(KB_SWITCHOVER_ACTION)"},
-						},
-					},
-				},
-			},
-		},
-		{
-			Name:          ExtraComponentDefName,
-			CharacterType: "mysql",
-			ConfigSpecs: []appsv1alpha1.ComponentConfigSpec{
-				{
-					ComponentTemplateSpec: appsv1alpha1.ComponentTemplateSpec{
-						Name:        "mysql-consensusset-config",
-						TemplateRef: "mysql8.0-config-template",
-						Namespace:   Namespace,
-						VolumeName:  "mysql-config",
-					},
-					ConfigConstraintRef: "mysql8.0-config-constraints",
-				},
-			},
-		},
-	}
 	return clusterDef
 }
 
-func FakeCompDef() *appsv1alpha1.ComponentDefinition {
-	commandExecutorEnvItem := &appsv1alpha1.CommandExecutorEnvItem{
-		Image: "test-image",
-		Env:   []corev1.EnvVar{},
-	}
-	commandExecutorItem := &appsv1alpha1.CommandExecutorItem{
-		Command: []string{"echo", "hello"},
-		Args:    []string{},
-	}
-	scriptSpecSelectors := []appsv1alpha1.ScriptSpecSelector{
-		{
-			Name: "test-mock-cm",
-		},
-		{
-			Name: "test-mock-cm-2",
+func FakeCompDef() *kbappsv1.ComponentDefinition {
+	defaultAction := kbappsv1.Action{
+		TimeoutSeconds: 5,
+		Exec: &kbappsv1.ExecAction{
+			Container: "mysql",
+			Command: []string{
+				"mock command",
+			},
 		},
 	}
-	defaultBuiltinHandler := appsv1alpha1.MySQLBuiltinActionHandler
-	defaultLifecycleActionHandler := &appsv1alpha1.LifecycleActionHandler{
-		BuiltinHandler: &defaultBuiltinHandler,
-	}
-	compDef := &appsv1alpha1.ComponentDefinition{}
+	compDef := &kbappsv1.ComponentDefinition{}
 	compDef.Name = CompDefName
-	compDef.Spec = appsv1alpha1.ComponentDefinitionSpec{
+	compDef.Spec = kbappsv1.ComponentDefinitionSpec{
 		Provider:       "kubeblocks.io",
 		Description:    "fake-component-definition-description",
 		ServiceKind:    "fake-service-kind",
@@ -397,14 +300,14 @@ func FakeCompDef() *appsv1alpha1.ComponentDefinition {
 				},
 			},
 		},
-		Volumes: []appsv1alpha1.ComponentVolume{
+		Volumes: []kbappsv1.ComponentVolume{
 			{
 				Name:          "for_test",
 				NeedSnapshot:  true,
 				HighWatermark: 80,
 			},
 		},
-		Roles: []appsv1alpha1.ReplicaRole{
+		Roles: []kbappsv1.ReplicaRole{
 			{
 				Name:        "leader",
 				Serviceable: true,
@@ -424,77 +327,31 @@ func FakeCompDef() *appsv1alpha1.ComponentDefinition {
 				Votable:     false,
 			},
 		},
-		SystemAccounts: []appsv1alpha1.SystemAccount{
+		SystemAccounts: []kbappsv1.SystemAccount{
 			{
 				Name:        accountName,
 				InitAccount: true,
 			},
 		},
-		LifecycleActions: &appsv1alpha1.ComponentLifecycleActions{
+		LifecycleActions: &kbappsv1.ComponentLifecycleActions{
 			PostProvision: nil,
 			PreTerminate:  nil,
-			RoleProbe: &appsv1alpha1.RoleProbe{
-				LifecycleActionHandler: *defaultLifecycleActionHandler,
-				PeriodSeconds:          1,
-				TimeoutSeconds:         5,
+			RoleProbe: &kbappsv1.Probe{
+				Action:        defaultAction,
+				PeriodSeconds: 1,
 			},
-			Switchover: &appsv1alpha1.ComponentSwitchover{
-				WithCandidate: &appsv1alpha1.Action{
-					Image: commandExecutorEnvItem.Image,
-					Env:   commandExecutorEnvItem.Env,
-					Exec: &appsv1alpha1.ExecAction{
-						Command: commandExecutorItem.Command,
-						Args:    commandExecutorItem.Args,
-					},
-				},
-				WithoutCandidate: &appsv1alpha1.Action{
-					Image: commandExecutorEnvItem.Image,
-					Env:   commandExecutorEnvItem.Env,
-					Exec: &appsv1alpha1.ExecAction{
-						Command: commandExecutorItem.Command,
-						Args:    commandExecutorItem.Args,
-					},
-				},
-				ScriptSpecSelectors: scriptSpecSelectors,
-			},
-			MemberJoin:       defaultLifecycleActionHandler,
-			MemberLeave:      defaultLifecycleActionHandler,
-			Readonly:         defaultLifecycleActionHandler,
-			Readwrite:        defaultLifecycleActionHandler,
-			DataDump:         defaultLifecycleActionHandler,
-			DataLoad:         defaultLifecycleActionHandler,
-			Reconfigure:      defaultLifecycleActionHandler,
-			AccountProvision: defaultLifecycleActionHandler,
+			Switchover:       &defaultAction,
+			MemberJoin:       &defaultAction,
+			MemberLeave:      &defaultAction,
+			Readonly:         &defaultAction,
+			Readwrite:        &defaultAction,
+			DataDump:         &defaultAction,
+			DataLoad:         &defaultAction,
+			Reconfigure:      &defaultAction,
+			AccountProvision: &defaultAction,
 		},
 	}
 	return compDef
-}
-
-func FakeComponentClassDef(name string, clusterDefRef string, componentDefRef string) *appsv1alpha1.ComponentClassDefinition {
-	testapps.NewComponentResourceConstraintFactory(testapps.DefaultResourceConstraintName).
-		AddConstraints(testapps.GeneralResourceConstraint).
-		GetObject()
-
-	componentClassDefinition := testapps.NewComponentClassDefinitionFactory(name, clusterDefRef, componentDefRef).
-		AddClasses([]appsv1alpha1.ComponentClass{testapps.Class1c1g, testapps.Class2c4g}).
-		GetObject()
-
-	return componentClassDefinition
-}
-
-func FakeClusterVersion() *appsv1alpha1.ClusterVersion {
-	cv := &appsv1alpha1.ClusterVersion{}
-	gvr := types.ClusterVersionGVR()
-	cv.TypeMeta.APIVersion = gvr.GroupVersion().String()
-	cv.TypeMeta.Kind = types.KindClusterVersion
-	cv.Name = ClusterVersionName
-	cv.SetLabels(map[string]string{
-		constant.ClusterDefLabelKey:   ClusterDefName,
-		constant.AppManagedByLabelKey: constant.AppName,
-	})
-	cv.Spec.ClusterDefinitionRef = ClusterDefName
-	cv.SetCreationTimestamp(metav1.Now())
-	return cv
 }
 
 func FakeActionSet() *dpv1alpha1.ActionSet {
@@ -605,14 +462,13 @@ func FakeBackupPolicyTemplate(backupPolicyTemplateName string, clusterDef string
 			},
 		},
 		Spec: appsv1alpha1.BackupPolicyTemplateSpec{
-			ClusterDefRef: clusterDef,
-			Identifier:    "fake-identifier",
+			Identifier: "fake-identifier",
 		},
 	}
 	return backupPolicyTemplate
 }
 
-func FakeBackupWithCluster(cluster *appsv1alpha1.Cluster, backupName string) *dpv1alpha1.Backup {
+func FakeBackupWithCluster(cluster *kbappsv1.Cluster, backupName string) *dpv1alpha1.Backup {
 	backup := &dpv1alpha1.Backup{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: fmt.Sprintf("%s/%s", types.DPAPIGroup, types.DPAPIVersion),
@@ -697,7 +553,7 @@ func FakePVCs() *corev1.PersistentVolumeClaimList {
 		Spec: corev1.PersistentVolumeClaimSpec{
 			StorageClassName: pointer.String(StorageClassName),
 			AccessModes:      []corev1.PersistentVolumeAccessMode{"ReadWriteOnce"},
-			Resources: corev1.ResourceRequirements{
+			Resources: corev1.VolumeResourceRequirements{
 				Requests: corev1.ResourceList{
 					corev1.ResourceStorage: resource.MustParse("1Gi"),
 				},
@@ -754,7 +610,7 @@ func FakeVolumeSnapshotClass() *snapshotv1.VolumeSnapshotClass {
 func FakeKBDeploy(version string) *appsv1.Deployment {
 	deploy := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
-			Kind:       "Deployment",
+			Kind:       types.KindDeployment,
 			APIVersion: "apps/v1",
 		},
 	}
@@ -1208,12 +1064,12 @@ func FakeBackupRepo(name string, isDefault bool) *dpv1alpha1.BackupRepo {
 	return backupRepo
 }
 
-func FakeClusterList() *appsv1alpha1.ClusterList {
-	clusters := &appsv1alpha1.ClusterList{
+func FakeClusterList() *kbappsv1.ClusterList {
+	clusters := &kbappsv1.ClusterList{
 		ListMeta: metav1.ListMeta{
 			ResourceVersion: "15",
 		},
-		Items: []appsv1alpha1.Cluster{
+		Items: []kbappsv1.Cluster{
 			*FakeCluster(ClusterName, Namespace),
 			*FakeCluster(ClusterName+"-other", Namespace),
 		},

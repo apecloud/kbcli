@@ -24,6 +24,8 @@ import (
 	"os"
 	"time"
 
+	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
+	testapps "github.com/apecloud/kubeblocks/pkg/testutil/apps"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -38,11 +40,11 @@ import (
 	cmdlogs "k8s.io/kubectl/pkg/cmd/logs"
 	cmdtesting "k8s.io/kubectl/pkg/cmd/testing"
 
-	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	"github.com/apecloud/kubeblocks/pkg/constant"
 
 	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/cluster"
+	clitesting "github.com/apecloud/kbcli/pkg/testing"
 )
 
 var _ = Describe("logs", func() {
@@ -96,7 +98,7 @@ var _ = Describe("logs", func() {
 		Expect(ok).Should(BeTrue())
 	})
 
-	It("new logs command Test", func() {
+	createTF := func() *cmdtesting.TestFactory {
 		tf := cmdtesting.NewTestFactory().WithNamespace("test")
 		defer tf.Cleanup()
 		codec := scheme.Codecs.LegacyCodec(scheme.Scheme.PrioritizedVersionsAllGroups()...)
@@ -110,7 +112,11 @@ var _ = Describe("logs", func() {
 			}),
 		}
 		tf.ClientConfigVal = &restclient.Config{APIPath: "/api", ContentConfig: restclient.ContentConfig{NegotiatedSerializer: scheme.Codecs, GroupVersion: &schema.GroupVersion{Version: "v1"}}}
+		return tf
+	}
 
+	It("new logs command Test", func() {
+		tf := createTF()
 		stream := genericiooptions.NewTestIOStreamsDiscard()
 		l := &LogsOptions{
 			ExecOptions: action.NewExecOptions(tf, stream),
@@ -144,6 +150,13 @@ var _ = Describe("logs", func() {
 	})
 
 	It("createFileTypeCommand Test", func() {
+		tf := createTF()
+		compDefName := "component-type"
+		compName := "component-name"
+		compDef := testapps.NewComponentDefinitionFactory(compDefName).
+			AddLogConfig("slow", "/log/mysql/*slow.log").
+			AddLogConfig("error", "/log/mysql/*.err").
+			Get()
 		pod := &corev1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            "foo",
@@ -151,46 +164,37 @@ var _ = Describe("logs", func() {
 				ResourceVersion: "10",
 				Labels: map[string]string{
 					"app.kubernetes.io/name":        "mysql-apecloud-mysql",
-					constant.KBAppComponentLabelKey: "component-name",
+					constant.KBAppComponentLabelKey: compName,
 				},
 			},
 		}
+		clusterObj := &kbappsv1.Cluster{
+			Spec: kbappsv1.ClusterSpec{
+				ComponentSpecs: []kbappsv1.ClusterComponentSpec{
+					{
+						Name:         compName,
+						ComponentDef: compDefName,
+					},
+				},
+			},
+		}
+		tf.FakeDynamicClient = clitesting.FakeDynamicClient(compDef, pod, clusterObj)
+		stream := genericiooptions.NewTestIOStreamsDiscard()
+		l := &LogsOptions{
+			ExecOptions: action.NewExecOptions(tf, stream),
+			logOptions: cmdlogs.LogsOptions{
+				IOStreams: stream,
+			},
+		}
+		l.PodName = pod.Name
+		Expect(l.Complete()).Should(Succeed())
 		obj := cluster.NewClusterObjects()
-		l := &LogsOptions{}
 		// corner case
 		cmd, err := l.createFileTypeCommand(pod, obj)
 		Expect(cmd).Should(Equal(""))
 		Expect(err).Should(HaveOccurred())
 		// normal case
-		obj.Cluster = &appsv1alpha1.Cluster{
-			Spec: appsv1alpha1.ClusterSpec{
-				ComponentSpecs: []appsv1alpha1.ClusterComponentSpec{
-					{
-						Name:            "component-name",
-						ComponentDefRef: "component-type",
-					},
-				},
-			},
-		}
-		obj.ClusterDef = &appsv1alpha1.ClusterDefinition{
-			Spec: appsv1alpha1.ClusterDefinitionSpec{
-				ComponentDefs: []appsv1alpha1.ClusterComponentDefinition{
-					{
-						Name: "component-type",
-						LogConfigs: []appsv1alpha1.LogConfig{
-							{
-								Name:            "slow",
-								FilePathPattern: "/log/mysql/*slow.log",
-							},
-							{
-								Name:            "error",
-								FilePathPattern: "/log/mysql/*.err",
-							},
-						},
-					},
-				},
-			},
-		}
+		obj.Cluster = clusterObj
 		l.fileType = "slow"
 		cmd, err = l.createFileTypeCommand(pod, obj)
 		Expect(err).Should(BeNil())

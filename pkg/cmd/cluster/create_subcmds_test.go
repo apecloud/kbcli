@@ -22,6 +22,7 @@ package cluster
 import (
 	"net/http"
 
+	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -36,8 +37,6 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	clientfake "k8s.io/client-go/rest/fake"
 	cmdtesting "k8s.io/kubectl/pkg/cmd/testing"
-
-	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 
 	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/printer"
@@ -72,10 +71,10 @@ var _ = Describe("create cluster by cluster type", func() {
 	)
 
 	BeforeEach(func() {
-		_ = appsv1alpha1.AddToScheme(scheme.Scheme)
+		_ = kbappsv1.AddToScheme(scheme.Scheme)
 		_ = metav1.AddMetaToScheme(scheme.Scheme)
 		streams, _, _, _ = genericiooptions.NewTestIOStreams()
-		tf = mockClient(testing.FakeClusterVersion())
+		tf = mockClient(testing.FakeCompDef())
 		createOptions = &action.CreateOptions{
 			IOStreams: streams,
 			Factory:   tf,

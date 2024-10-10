@@ -28,6 +28,7 @@ import (
 	"strings"
 	"time"
 
+	opsv1alpha1 "github.com/apecloud/kubeblocks/apis/operations/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -42,7 +43,6 @@ import (
 	clientfake "k8s.io/client-go/rest/fake"
 	cmdtesting "k8s.io/kubectl/pkg/cmd/testing"
 
-	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	dpv1alpha1 "github.com/apecloud/kubeblocks/apis/dataprotection/v1alpha1"
 	"github.com/apecloud/kubeblocks/pkg/constant"
 	dptypes "github.com/apecloud/kubeblocks/pkg/dataprotection/types"
@@ -258,7 +258,7 @@ var _ = Describe("DataProtection", func() {
 					CueTemplateName: "backup_template.cue",
 					Name:            testing.ClusterName,
 				},
-				BackupSpec: appsv1alpha1.Backup{
+				BackupSpec: opsv1alpha1.Backup{
 					BackupPolicyName: otherBackupPolicy.Name,
 					BackupMethod:     testing.BackupMethodName,
 				},
@@ -353,7 +353,7 @@ var _ = Describe("DataProtection", func() {
 		Expect(cmdRestore != nil).To(BeTrue())
 		_ = cmdRestore.Flags().Set("backup", backupName)
 		cmdRestore.Run(nil, []string{newClusterName})
-		newRestoreOps := &appsv1alpha1.OpsRequest{}
+		newRestoreOps := &opsv1alpha1.OpsRequest{}
 		Expect(util.GetK8SClientObject(tf.FakeDynamicClient, newRestoreOps, types.OpsGVR(), testing.Namespace, newClusterName)).Should(Succeed())
 		Expect(clusterObj.Spec.ComponentSpecs[0].Replicas).Should(Equal(int32(1)))
 	})

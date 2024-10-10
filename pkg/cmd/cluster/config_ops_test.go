@@ -32,7 +32,7 @@ import (
 	clientfake "k8s.io/client-go/rest/fake"
 	cmdtesting "k8s.io/kubectl/pkg/cmd/testing"
 
-	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
+	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
 	appsv1beta1 "github.com/apecloud/kubeblocks/apis/apps/v1beta1"
 	cfgcore "github.com/apecloud/kubeblocks/pkg/configuration/core"
 	"github.com/apecloud/kubeblocks/pkg/controller/builder"
@@ -58,11 +58,11 @@ var _ = Describe("reconfigure test", func() {
 		clusterWithTwoComps := testing.FakeCluster(clusterName, testing.Namespace)
 		clusterWithOneComp := clusterWithTwoComps.DeepCopy()
 		clusterWithOneComp.Name = clusterName1
-		clusterWithOneComp.Spec.ComponentSpecs = []appsv1alpha1.ClusterComponentSpec{
+		clusterWithOneComp.Spec.ComponentSpecs = []kbappsv1.ClusterComponentSpec{
 			clusterWithOneComp.Spec.ComponentSpecs[0],
 		}
 		tf.FakeDynamicClient = testing.FakeDynamicClient(testing.FakeClusterDef(),
-			testing.FakeClusterVersion(), clusterWithTwoComps, clusterWithOneComp)
+			clusterWithTwoComps, clusterWithOneComp)
 		tf.Client = &clientfake.RESTClient{}
 	})
 
@@ -73,8 +73,6 @@ var _ = Describe("reconfigure test", func() {
 	It("check params for reconfiguring operations", func() {
 		const (
 			ns                  = "default"
-			clusterDefName      = "test-clusterdef"
-			clusterVersionName  = "test-clusterversion"
 			clusterName         = "test-cluster"
 			statefulCompDefName = "replicasets"
 			statefulCompName    = "mysql"
@@ -87,21 +85,12 @@ var _ = Describe("reconfigure test", func() {
 		constraint := testapps.NewCustomizedObj("resources/mysql-config-constraint.yaml",
 			&appsv1beta1.ConfigConstraint{})
 		componentConfig := testapps.NewConfigMap(ns, cfgcore.GetComponentCfgName(clusterName, statefulCompName, configSpecName), testapps.SetConfigMapData("my.cnf", ""))
-		By("Create a clusterDefinition obj")
-		clusterDefObj := testapps.NewClusterDefFactory(clusterDefName).
-			AddComponentDef(testapps.StatefulMySQLComponent, statefulCompDefName).
-			AddConfigTemplate(configSpecName, configmap.Name, constraint.Name, ns, configVolumeName).
-			GetObject()
-		By("Create a clusterVersion obj")
-		clusterVersionObj := testapps.NewClusterVersionFactory(clusterVersionName, clusterDefObj.GetName()).
-			AddComponentVersion(statefulCompDefName).
-			GetObject()
 		By("Create a configuration obj")
 		configObj := builder.NewConfigurationBuilder(ns, cfgcore.GenerateComponentConfigurationName(clusterName, statefulCompName)).
 			ClusterRef(clusterName).
 			Component(statefulCompName).
-			AddConfigurationItem(appsv1alpha1.ComponentConfigSpec{
-				ComponentTemplateSpec: appsv1alpha1.ComponentTemplateSpec{
+			AddConfigurationItem(kbappsv1.ComponentConfigSpec{
+				ComponentTemplateSpec: kbappsv1.ComponentTemplateSpec{
 					Name:        configSpecName,
 					TemplateRef: configmap.Name,
 					Namespace:   ns,
@@ -111,11 +100,10 @@ var _ = Describe("reconfigure test", func() {
 			}).
 			GetObject()
 		By("creating a cluster")
-		clusterObj := testapps.NewClusterFactory(ns, clusterName,
-			clusterDefObj.Name, "").
+		clusterObj := testapps.NewClusterFactory(ns, clusterName, "").
 			AddComponent(statefulCompName, statefulCompDefName).GetObject()
 
-		objs := []runtime.Object{configmap, constraint, clusterDefObj, clusterVersionObj, clusterObj, componentConfig, configObj}
+		objs := []runtime.Object{configmap, constraint, clusterObj, componentConfig, configObj}
 		ttf, ops := NewFakeOperationsOptions(ns, clusterObj.Name, objs...)
 		o := &configOpsOptions{
 			// nil cannot be set to a map struct in CueLang, so init the map of KeyValues.

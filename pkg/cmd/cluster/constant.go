@@ -17,16 +17,14 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package accounts
+package cluster
 
-import (
-	"testing"
-
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+const (
+	saNamePrefix             = "kb-"
+	roleNamePrefix           = "kb-"
+	roleBindingNamePrefix    = "kb-"
+	clusterRolePrefix        = "kb-"
+	clusterRoleBindingPrefix = "kb-"
 )
 
-func TestAccounts(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Accounts Suite")
-}
+const apeCloudMysql = "apecloud-mysql"

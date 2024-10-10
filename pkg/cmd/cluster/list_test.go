@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"strings"
 
+	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -62,7 +63,7 @@ var _ = Describe("list", func() {
 		streams, _, out, _ = genericiooptions.NewTestIOStreams()
 		tf = testing.NewTestFactory(namespace)
 
-		_ = appsv1alpha1.AddToScheme(scheme.Scheme)
+		_ = kbappsv1.AddToScheme(scheme.Scheme)
 		codec := scheme.Codecs.LegacyCodec(scheme.Scheme.PrioritizedVersionsAllGroups()...)
 		cluster := testing.FakeCluster(clusterName, namespace, metav1.Condition{
 			Type:   appsv1alpha1.ConditionTypeApplyResources,
@@ -74,9 +75,9 @@ var _ = Describe("list", func() {
 			Status: metav1.ConditionFalse,
 			Reason: verticalScalingReason,
 		})
-		clusterWithVerticalScaling.Status.Phase = appsv1alpha1.UpdatingClusterPhase
+		clusterWithVerticalScaling.Status.Phase = kbappsv1.UpdatingClusterPhase
 		clusterWithAbnormalPhase := testing.FakeCluster(clusterName2, namespace)
-		clusterWithAbnormalPhase.Status.Phase = appsv1alpha1.AbnormalClusterPhase
+		clusterWithAbnormalPhase.Status.Phase = kbappsv1.AbnormalClusterPhase
 		pods := testing.FakePods(3, namespace, clusterName)
 		httpResp := func(obj runtime.Object) *http.Response {
 			return &http.Response{StatusCode: http.StatusOK, Header: cmdtesting.DefaultHeader(), Body: cmdtesting.ObjBody(codec, obj)}
@@ -88,7 +89,7 @@ var _ = Describe("list", func() {
 			Client: clientfake.CreateHTTPClient(func(req *http.Request) (*http.Response, error) {
 				urlPrefix := "/api/v1/namespaces/" + namespace
 				return map[string]*http.Response{
-					"/namespaces/" + namespace + "/clusters":                 httpResp(&appsv1alpha1.ClusterList{Items: []appsv1alpha1.Cluster{*cluster}}),
+					"/namespaces/" + namespace + "/clusters":                 httpResp(&kbappsv1.ClusterList{Items: []kbappsv1.Cluster{*cluster}}),
 					"/namespaces/" + namespace + "/clusters/" + clusterName:  httpResp(cluster),
 					"/namespaces/" + namespace + "/clusters/" + clusterName1: httpResp(clusterWithVerticalScaling),
 					"/namespaces/" + namespace + "/clusters/" + clusterName2: httpResp(clusterWithAbnormalPhase),
@@ -103,7 +104,7 @@ var _ = Describe("list", func() {
 		}
 
 		tf.Client = tf.UnstructuredClient
-		tf.FakeDynamicClient = testing.FakeDynamicClient(cluster, clusterWithVerticalScaling, clusterWithAbnormalPhase, testing.FakeClusterDef(), testing.FakeClusterVersion())
+		tf.FakeDynamicClient = testing.FakeDynamicClient(cluster, clusterWithVerticalScaling, clusterWithAbnormalPhase, testing.FakeClusterDef())
 	})
 
 	AfterEach(func() {
@@ -115,7 +116,7 @@ var _ = Describe("list", func() {
 		Expect(cmd).ShouldNot(BeNil())
 
 		cmd.Run(cmd, []string{clusterName, clusterName1, clusterName2})
-		Expect(out.String()).Should(ContainSubstring(testing.ClusterDefName))
+		Expect(out.String()).Should(ContainSubstring(clusterName))
 		Expect(out.String()).Should(ContainSubstring(string(appsv1alpha1.UpdatingClusterPhase)))
 		Expect(out.String()).Should(ContainSubstring(cluster.ConditionsError))
 		Expect(out.String()).Should(ContainSubstring(string(appsv1alpha1.AbnormalClusterPhase)))
@@ -125,7 +126,7 @@ var _ = Describe("list", func() {
 		cmd := NewListInstancesCmd(tf, streams)
 		Expect(cmd).ShouldNot(BeNil())
 
-		cmd.Run(cmd, []string{"test"})
+		cmd.Run(cmd, []string{clusterName})
 		Expect(out.String()).Should(ContainSubstring(testing.NodeName))
 	})
 
@@ -133,7 +134,7 @@ var _ = Describe("list", func() {
 		cmd := NewListComponentsCmd(tf, streams)
 		Expect(cmd).ShouldNot(BeNil())
 
-		cmd.Run(cmd, []string{"test"})
+		cmd.Run(cmd, []string{clusterName})
 		Expect(out.String()).Should(ContainSubstring(testing.ComponentName))
 	})
 
@@ -141,7 +142,7 @@ var _ = Describe("list", func() {
 		cmd := NewListEventsCmd(tf, streams)
 		Expect(cmd).ShouldNot(BeNil())
 
-		cmd.Run(cmd, []string{"test"})
+		cmd.Run(cmd, []string{clusterName})
 		Expect(len(strings.Split(out.String(), "\n")) > 1).Should(BeTrue())
 	})
 
@@ -150,8 +151,8 @@ var _ = Describe("list", func() {
 		Expect(cmd).ShouldNot(BeNil())
 
 		Expect(cmd.Flags().Set("output", "wide")).Should(Succeed())
-		cmd.Run(cmd, []string{"test"})
-		Expect(out.String()).Should(ContainSubstring(testing.ClusterVersionName))
+		cmd.Run(cmd, []string{clusterName})
+		Expect(out.String()).Should(ContainSubstring(clusterName))
 	})
 
 	It("output wide without args", func() {
@@ -160,6 +161,6 @@ var _ = Describe("list", func() {
 
 		Expect(cmd.Flags().Set("output", "wide")).Should(Succeed())
 		cmd.Run(cmd, []string{})
-		Expect(out.String()).Should(ContainSubstring(testing.ClusterVersionName))
+		Expect(out.String()).Should(ContainSubstring(clusterName))
 	})
 })

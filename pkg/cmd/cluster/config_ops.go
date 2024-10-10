@@ -24,6 +24,7 @@ import (
 	"os"
 	"strings"
 
+	opsv1alpha1 "github.com/apecloud/kubeblocks/apis/operations/v1alpha1"
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
@@ -257,7 +258,7 @@ func (o *configOpsOptions) buildReconfigureCommonFlags(cmd *cobra.Command, f cmd
 func NewReconfigureCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
 	o := &configOpsOptions{
 		editMode:          false,
-		OperationsOptions: newBaseOperationsOptions(f, streams, appsv1alpha1.ReconfiguringType, true),
+		OperationsOptions: newBaseOperationsOptions(f, streams, opsv1alpha1.ReconfiguringType, true),
 	}
 	cmd := &cobra.Command{
 		Use:               "configure NAME --set key=value[,key=value] [--components=component1-name,component2-name] [--config-spec=config-spec-name] [--config-file=config-file]",

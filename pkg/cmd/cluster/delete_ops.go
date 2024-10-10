@@ -23,6 +23,7 @@ import (
 	"context"
 	"fmt"
 
+	opsv1alpha1 "github.com/apecloud/kubeblocks/apis/operations/v1alpha1"
 	jsonpatch "github.com/evanphx/json-patch"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,8 +34,6 @@ import (
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
-
-	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 
 	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/types"
@@ -72,11 +71,11 @@ func NewDeleteOpsCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cob
 
 func preDeleteOps(o *action.DeleteOptions, obj runtime.Object) error {
 	unstructured := obj.(*unstructured.Unstructured)
-	opsRequest := &appsv1alpha1.OpsRequest{}
+	opsRequest := &opsv1alpha1.OpsRequest{}
 	if err := runtime.DefaultUnstructuredConverter.FromUnstructured(unstructured.Object, opsRequest); err != nil {
 		return err
 	}
-	if opsRequest.Status.Phase != appsv1alpha1.OpsRunningPhase {
+	if opsRequest.Status.Phase != opsv1alpha1.OpsRunningPhase {
 		return nil
 	}
 	if !o.Force {

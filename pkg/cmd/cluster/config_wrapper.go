@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package cluster
 
 import (
+	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -36,7 +37,7 @@ import (
 
 type configWrapper struct {
 	action.CreateOptions
-	*appsv1alpha1.Cluster
+	*kbappsv1.Cluster
 
 	clusterName   string
 	updatedParams map[string]*string
@@ -47,13 +48,6 @@ type configWrapper struct {
 	configFileKey  string
 
 	configTemplateSpec appsv1alpha1.ComponentConfigSpec
-
-	// clusterDefObj *appsv1alpha1.ClusterDefinition
-	// clusterVerObj *appsv1alpha1.ClusterVersion
-
-	// 0.8 KubeBlocks API
-	// comps    []*appsv1alpha1.Component
-	// compDefs []*appsv1alpha1.ComponentDefinition
 }
 
 func (w *configWrapper) ConfigTemplateSpec() *appsv1alpha1.ComponentConfigSpec {
@@ -105,7 +99,7 @@ func (w *configWrapper) ValidateRequiredParam(forceReplace bool) error {
 		return makeNotFoundConfigFileErr(w.configFileKey, w.configSpecName, cfgutil.ToSet(cmObj.Data).AsSlice())
 	}
 
-	if !forceReplace && !core.IsSupportConfigFileReconfigure(w.configTemplateSpec, w.configFileKey) {
+	if !forceReplace && !util.IsSupportConfigFileReconfigure(w.configTemplateSpec, w.configFileKey) {
 		return makeNotSupportConfigFileUpdateErr(w.configFileKey, w.configTemplateSpec)
 	}
 	return nil
@@ -137,7 +131,7 @@ func (w *configWrapper) fillConfigSpec() error {
 		return nil
 	}
 
-	configSpecs, err := util.GetConfigSpecsFromComponentName(w.GetNamespace(), w.clusterName, w.componentName, w.configSpecName == "", w.Dynamic)
+	configSpecs, err := util.GetConfigSpecsFromComponentName(w.Dynamic, w.GetNamespace(), w.clusterName, w.componentName, w.configSpecName == "")
 	if err != nil {
 		return err
 	}
@@ -207,7 +201,7 @@ func (w *configWrapper) fillConfigFile() error {
 func (w *configWrapper) filterForReconfiguring(data map[string]string) []string {
 	keys := make([]string, 0, len(data))
 	for configFileKey := range data {
-		if core.IsSupportConfigFileReconfigure(w.configTemplateSpec, configFileKey) {
+		if util.IsSupportConfigFileReconfigure(w.configTemplateSpec, configFileKey) {
 			keys = append(keys, configFileKey)
 		}
 	}
@@ -216,7 +210,7 @@ func (w *configWrapper) filterForReconfiguring(data map[string]string) []string 
 
 func newConfigWrapper(baseOptions action.CreateOptions, componentName, configSpec, configKey string, params map[string]*string) (*configWrapper, error) {
 	var err error
-	var clusterObj *appsv1alpha1.Cluster
+	var clusterObj *kbappsv1.Cluster
 
 	if clusterObj, err = cluster.GetClusterByName(baseOptions.Dynamic, baseOptions.Name, baseOptions.Namespace); err != nil {
 		return nil, err

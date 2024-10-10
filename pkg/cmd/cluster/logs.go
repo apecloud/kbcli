@@ -189,9 +189,6 @@ func (o *LogsOptions) complete(args []string) error {
 				Dynamic:   o.Dynamic,
 				Name:      o.clusterName,
 				Namespace: o.Namespace,
-				GetOptions: cluster.GetOptions{
-					WithClusterDef: cluster.Maybe,
-				},
 			}
 			obj, err := clusterGetter.Get()
 			if err != nil {
@@ -247,25 +244,14 @@ func (o *LogsOptions) createFileTypeCommand(pod *corev1.Pod, obj *cluster.Cluste
 	if !ok {
 		return command, fmt.Errorf("get component name from pod labels fail")
 	}
-	var compDefName string
-	for _, comCluster := range obj.Cluster.Spec.ComponentSpecs {
-		if strings.EqualFold(comCluster.Name, componentName) {
-			compDefName = comCluster.ComponentDefRef
-			break
-		}
-	}
-	if len(compDefName) == 0 {
-		return command, fmt.Errorf("get pod component definition name in cluster.yaml fail")
-	}
 	var filePathPattern string
-	for _, com := range obj.ClusterDef.Spec.ComponentDefs {
-		if strings.EqualFold(com.Name, compDefName) {
-			for _, logConfig := range com.LogConfigs {
-				if strings.EqualFold(logConfig.Name, o.fileType) {
-					filePathPattern = logConfig.FilePathPattern
-					break
-				}
-			}
+	compDef, err := util.GetComponentDefByCompName(o.Dynamic, obj.Cluster, componentName)
+	if err != nil {
+		return command, err
+	}
+	for _, logConfig := range compDef.Spec.LogConfigs {
+		if strings.EqualFold(logConfig.Name, o.fileType) {
+			filePathPattern = logConfig.FilePathPattern
 			break
 		}
 	}

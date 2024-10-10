@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"strings"
 
+	appsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
 	"github.com/apecloud/kubeblocks/pkg/common"
 	jsonpatch "github.com/evanphx/json-patch"
 	"github.com/spf13/cobra"
@@ -44,7 +45,7 @@ import (
 	"k8s.io/kubectl/pkg/util/templates"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
+	opsv1alpha1 "github.com/apecloud/kubeblocks/apis/operations/v1alpha1"
 	"github.com/apecloud/kubeblocks/pkg/constant"
 
 	"github.com/apecloud/kbcli/pkg/action"
@@ -69,7 +70,7 @@ type OperationsOptions struct {
 	Force                  bool     `json:"force"`
 
 	// OpsType operation type
-	OpsType appsv1alpha1.OpsType `json:"type"`
+	OpsType opsv1alpha1.OpsType `json:"type"`
 
 	// OpsTypeLower lower OpsType
 	OpsTypeLower string `json:"typeLower"`
@@ -100,27 +101,27 @@ type OperationsOptions struct {
 	Storage  string   `json:"storage"`
 
 	// Expose options
-	ExposeType    string                    `json:"-"`
-	ExposeSubType string                    `json:"-"`
-	ExposeEnabled string                    `json:"exposeEnabled,omitempty"`
-	Services      []appsv1alpha1.OpsService `json:"services,omitempty"`
+	ExposeType    string                   `json:"-"`
+	ExposeSubType string                   `json:"-"`
+	ExposeEnabled string                   `json:"exposeEnabled,omitempty"`
+	Services      []opsv1alpha1.OpsService `json:"services,omitempty"`
 
 	// Switchover options
-	Component           string                         `json:"component"`
-	Instance            string                         `json:"instance"`
-	Primary             string                         `json:"-"`
-	CharacterType       string                         `json:"-"`
-	LorryHAEnabled      bool                           `json:"-"`
-	ExecPod             *corev1.Pod                    `json:"-"`
-	BackupName          string                         `json:"-"`
-	InstanceNames       []string                       `json:"-"`
-	Nodes               []string                       `json:"-"`
-	RebuildInstanceFrom []appsv1alpha1.RebuildInstance `json:"rebuildInstanceFrom,omitempty"`
-	Env                 []string                       `json:"-"`
+	Component           string                        `json:"component"`
+	Instance            string                        `json:"instance"`
+	Primary             string                        `json:"-"`
+	CharacterType       string                        `json:"-"`
+	LorryHAEnabled      bool                          `json:"-"`
+	ExecPod             *corev1.Pod                   `json:"-"`
+	BackupName          string                        `json:"-"`
+	InstanceNames       []string                      `json:"-"`
+	Nodes               []string                      `json:"-"`
+	RebuildInstanceFrom []opsv1alpha1.RebuildInstance `json:"rebuildInstanceFrom,omitempty"`
+	Env                 []string                      `json:"-"`
 }
 
 func newBaseOperationsOptions(f cmdutil.Factory, streams genericiooptions.IOStreams,
-	opsType appsv1alpha1.OpsType, hasComponentNamesFlag bool) *OperationsOptions {
+	opsType opsv1alpha1.OpsType, hasComponentNamesFlag bool) *OperationsOptions {
 	customOutPut := func(opt *action.CreateOptions) {
 		output := fmt.Sprintf("OpsRequest %s created successfully, you can view the progress:", opt.Name)
 		printer.PrintLine(output)
@@ -223,9 +224,9 @@ func (o *OperationsOptions) CompletePromoteOps() error {
 
 // CompleteCharacterType will get the cluster character type compatible with 0.7
 // If both componentDefRef and componentDef are provided, the componentDef will take precedence over componentDefRef.
-func (o *OperationsOptions) CompleteCharacterType(clusterObj *appsv1alpha1.Cluster) error {
+func (o *OperationsOptions) CompleteCharacterType(clusterObj *appsv1.Cluster) error {
 	var primaryRoles []string
-	var componentSpec appsv1alpha1.ClusterComponentSpec
+	var componentSpec appsv1.ClusterComponentSpec
 	for _, compSpec := range clusterObj.Spec.ComponentSpecs {
 		if compSpec.Name == o.Component {
 			componentSpec = compSpec
@@ -234,13 +235,13 @@ func (o *OperationsOptions) CompleteCharacterType(clusterObj *appsv1alpha1.Clust
 	}
 
 	if componentSpec.ComponentDef != "" {
-		componentDefV2 := &appsv1alpha1.ComponentDefinition{}
+		componentDefV2 := &appsv1.ComponentDefinition{}
 		if err := util.GetK8SClientObject(o.Dynamic, componentDefV2, types.CompDefGVR(), "", componentSpec.ComponentDef); err != nil {
 			return err
 		}
 		o.CharacterType = componentDefV2.Spec.ServiceKind
 
-		primaryRole, _ := func(roles []appsv1alpha1.ReplicaRole) (string, error) {
+		primaryRole, _ := func(roles []appsv1.ReplicaRole) (string, error) {
 			targetRole := ""
 			if len(roles) == 0 {
 				return targetRole, fmt.Errorf("component has no roles definition, does not support switchover")
@@ -257,20 +258,20 @@ func (o *OperationsOptions) CompleteCharacterType(clusterObj *appsv1alpha1.Clust
 		}(componentDefV2.Spec.Roles)
 		primaryRoles = append(primaryRoles, primaryRole)
 	} else {
-		clusterDefObj := appsv1alpha1.ClusterDefinition{}
+		clusterDefObj := appsv1.ClusterDefinition{}
 		clusterDefKey := client.ObjectKey{
 			Namespace: "",
-			Name:      clusterObj.Spec.ClusterDefRef,
+			Name:      clusterObj.Spec.ClusterDef,
 		}
 		if err := util.GetResourceObjectFromGVR(types.ClusterDefGVR(), clusterDefKey, o.Dynamic, &clusterDefObj); err != nil {
 			return err
 		}
 
-		componentDef := clusterDefObj.GetComponentDefByName(componentSpec.ComponentDefRef)
-		if componentDef == nil {
-			return fmt.Errorf("failed to get component def :%s", componentSpec.ComponentDefRef)
-		}
-		o.CharacterType = componentDef.CharacterType
+		/*	componentDef := clusterDefObj.GetComponentDefByName(componentSpec.ComponentDefRef)
+			if componentDef == nil {
+				return fmt.Errorf("failed to get component def :%s", componentSpec.ComponentDefRef)
+			}
+			o.CharacterType = componentDef.CharacterType*/
 		primaryRoles = []string{constant.Primary, constant.Leader}
 	}
 
@@ -379,12 +380,12 @@ func (o *OperationsOptions) validateVolumeExpansion() error {
 	return nil
 }
 
-func (o *OperationsOptions) validateVScale(cluster *appsv1alpha1.Cluster) error {
+func (o *OperationsOptions) validateVScale(cluster *appsv1.Cluster) error {
 	if o.CPU == "" && o.Memory == "" {
 		return fmt.Errorf("cpu or memory must be specified")
 	}
 
-	fillResource := func(comp *appsv1alpha1.ClusterComponentSpec) error {
+	fillResource := func(comp *appsv1.ClusterComponentSpec) error {
 		requests := make(corev1.ResourceList)
 		if o.CPU != "" {
 			cpu, err := resource.ParseQuantity(o.CPU)
@@ -436,23 +437,23 @@ func (o *OperationsOptions) Validate() error {
 	}
 
 	switch o.OpsType {
-	case appsv1alpha1.VolumeExpansionType:
+	case opsv1alpha1.VolumeExpansionType:
 		if err = o.validateVolumeExpansion(); err != nil {
 			return err
 		}
-	case appsv1alpha1.UpgradeType:
+	case opsv1alpha1.UpgradeType:
 		if err = o.validateUpgrade(); err != nil {
 			return err
 		}
-	case appsv1alpha1.VerticalScalingType:
+	case opsv1alpha1.VerticalScalingType:
 		if err = o.validateVScale(cluster); err != nil {
 			return err
 		}
-	case appsv1alpha1.ExposeType:
+	case opsv1alpha1.ExposeType:
 		if err = o.validateExpose(); err != nil {
 			return err
 		}
-	case appsv1alpha1.SwitchoverType:
+	case opsv1alpha1.SwitchoverType:
 		if err = o.validatePromote(cluster); err != nil {
 			return err
 		}
@@ -463,58 +464,59 @@ func (o *OperationsOptions) Validate() error {
 	return nil
 }
 
-func (o *OperationsOptions) validatePromote(cluster *appsv1alpha1.Cluster) error {
-	var (
-		clusterDefObj = appsv1alpha1.ClusterDefinition{}
-		compDefObj    = appsv1alpha1.ComponentDefinition{}
-		podObj        = &corev1.Pod{}
-		componentName = o.Component
-	)
+// TODO: replace with new api
+func (o *OperationsOptions) validatePromote(cluster *appsv1.Cluster) error {
+	/*	var (
+			clusterDefObj = appsv1.ClusterDefinition{}
+			compDefObj    = appsv1.ComponentDefinition{}
+			podObj        = &corev1.Pod{}
+			componentName = o.Component
+		)
 
-	if len(cluster.Spec.ComponentSpecs) == 0 {
-		return fmt.Errorf("cluster.Spec.ComponentSpecs cannot be empty")
-	}
+		if len(cluster.Spec.ComponentSpecs) == 0 {
+			return fmt.Errorf("cluster.Spec.ComponentSpecs cannot be empty")
+		}
 
-	getAndValidatePod := func(targetRoles ...string) error {
-		// if the instance is not specified, do not need to check the validity of the instance
-		if o.Instance == "" || o.CharacterType == oceanbase {
-			return nil
-		}
-		// checks the validity of the instance whether it belongs to the current component and ensure it is not the primary or leader instance currently.
-		podKey := client.ObjectKey{
-			Namespace: cluster.Namespace,
-			Name:      o.Instance,
-		}
-		if err := util.GetResourceObjectFromGVR(types.PodGVR(), podKey, o.Dynamic, podObj); err != nil || podObj == nil {
-			return fmt.Errorf("instance %s not found, please check the validity of the instance using \"kbcli cluster list-instances\"", o.Instance)
-		}
-		v, ok := podObj.Labels[constant.RoleLabelKey]
-		if !ok || v == "" {
-			return fmt.Errorf("instance %s cannot be promoted because it had a invalid role label", o.Instance)
-		}
-		for _, targetRole := range targetRoles {
-			if v == targetRole {
-				return fmt.Errorf("instanceName %s cannot be promoted because it is already the targetRole %s instance", o.Instance, targetRole)
+		getAndValidatePod := func(targetRoles ...string) error {
+			// if the instance is not specified, do not need to check the validity of the instance
+			if o.Instance == "" || o.CharacterType == oceanbase {
+				return nil
 			}
-		}
-		if !strings.HasPrefix(podObj.Name, fmt.Sprintf("%s-%s", cluster.Name, componentName)) {
-			return fmt.Errorf("instanceName %s does not belong to the current component, please check the validity of the instance using \"kbcli cluster list-instances\"", o.Instance)
-		}
-		return nil
-	}
+			// checks the validity of the instance whether it belongs to the current component and ensure it is not the primary or leader instance currently.
+			podKey := client.ObjectKey{
+				Namespace: cluster.Namespace,
+				Name:      o.Instance,
+			}
+			if err := util.GetResourceObjectFromGVR(types.PodGVR(), podKey, o.Dynamic, podObj); err != nil || podObj == nil {
+				return fmt.Errorf("instance %s not found, please check the validity of the instance using \"kbcli cluster list-instances\"", o.Instance)
+			}
+			v, ok := podObj.Labels[constant.RoleLabelKey]
+			if !ok || v == "" {
+				return fmt.Errorf("instance %s cannot be promoted because it had a invalid role label", o.Instance)
+			}
+			for _, targetRole := range targetRoles {
+				if v == targetRole {
+					return fmt.Errorf("instanceName %s cannot be promoted because it is already the targetRole %s instance", o.Instance, targetRole)
+				}
+			}
+			if !strings.HasPrefix(podObj.Name, fmt.Sprintf("%s-%s", cluster.Name, componentName)) {
+				return fmt.Errorf("instanceName %s does not belong to the current component, please check the validity of the instance using \"kbcli cluster list-instances\"", o.Instance)
+			}
+			return nil
+		}*/
 
 	// TODO(xingran): this will be removed in the future.
-	validateBaseOnClusterCompDef := func() error {
+	/*validateBaseOnClusterCompDef := func() error {
 		// check clusterDefinition exist
 		clusterDefKey := client.ObjectKey{
 			Namespace: "",
-			Name:      cluster.Spec.ClusterDefRef,
+			Name:      cluster.Spec.ClusterDef,
 		}
 		if err := util.GetResourceObjectFromGVR(types.ClusterDefGVR(), clusterDefKey, o.Dynamic, &clusterDefObj); err != nil {
 			return err
 		}
 
-		var clusterCompDefObj *appsv1alpha1.ClusterComponentDefinition
+		var clusterCompDefObj *opsv1alpha1.ClusterComponentDefinition
 		for _, clusterCompDef := range clusterDefObj.Spec.ComponentDefs {
 			if clusterCompDef.Name == cluster.Spec.GetComponentDefRefName(componentName) {
 				clusterCompDefObj = &clusterCompDef
@@ -547,7 +549,7 @@ func (o *OperationsOptions) validatePromote(cluster *appsv1alpha1.Cluster) error
 	}
 
 	validateBaseOnCompDef := func(compDef string) error {
-		getTargetRole := func(roles []appsv1alpha1.ReplicaRole) (string, error) {
+		getTargetRole := func(roles []opsv1alpha1.ReplicaRole) (string, error) {
 			targetRole := ""
 			if len(roles) == 0 {
 				return targetRole, fmt.Errorf("component has no roles definition, does not support switchover")
@@ -597,13 +599,14 @@ func (o *OperationsOptions) validatePromote(cluster *appsv1alpha1.Cluster) error
 			return err
 		}
 		return nil
-	}
+	}*/
 
-	if cluster.Spec.ComponentSpecs[0].ComponentDef != "" {
+	/*if cluster.Spec.ComponentSpecs[0].ComponentDef != "" {
 		return validateBaseOnCompDef(cluster.Spec.ComponentSpecs[0].ComponentDef)
 	} else {
 		return validateBaseOnClusterCompDef()
-	}
+	}*/
+	return nil
 }
 
 func (o *OperationsOptions) validateExpose() error {
@@ -657,7 +660,7 @@ func (o *OperationsOptions) fillExpose() error {
 		return err
 	}
 
-	var componentSpec *appsv1alpha1.ClusterComponentSpec
+	var componentSpec *appsv1.ClusterComponentSpec
 	for _, compSpec := range clusterObj.Spec.ComponentSpecs {
 		if compSpec.Name == componentName {
 			componentSpec = &compSpec
@@ -673,7 +676,7 @@ func (o *OperationsOptions) fillExpose() error {
 		return err
 	}
 
-	svc := appsv1alpha1.OpsService{
+	svc := opsv1alpha1.OpsService{
 		// currently, we use the expose type as service name
 		Name:        string(exposeType),
 		Annotations: annotations,
@@ -688,7 +691,7 @@ func (o *OperationsOptions) fillExpose() error {
 		svc.ServiceType = corev1.ServiceTypeLoadBalancer
 	}
 
-	roleSelector, err := util.GetDefaultRoleSelector(o.Dynamic, clusterObj, componentSpec.ComponentDef, componentSpec.ComponentDefRef)
+	roleSelector, err := util.GetDefaultRoleSelector(o.Dynamic, clusterObj, componentSpec.ComponentDef, componentSpec.ComponentDef)
 	if err != nil {
 		return err
 	}
@@ -709,7 +712,7 @@ var restartExample = templates.Examples(`
 
 // NewRestartCmd creates a restart command
 func NewRestartCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := newBaseOperationsOptions(f, streams, appsv1alpha1.RestartType, true)
+	o := newBaseOperationsOptions(f, streams, opsv1alpha1.RestartType, true)
 	cmd := &cobra.Command{
 		Use:               "restart NAME",
 		Short:             "Restart the specified components in the cluster.",
@@ -736,7 +739,7 @@ var upgradeExample = templates.Examples(`
 
 // NewUpgradeCmd creates an upgrade command
 func NewUpgradeCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := newBaseOperationsOptions(f, streams, appsv1alpha1.UpgradeType, false)
+	o := newBaseOperationsOptions(f, streams, opsv1alpha1.UpgradeType, false)
 	compDefFlag := "component-definition"
 	serviceVersionFlag := "service-version"
 	cmd := &cobra.Command{
@@ -768,7 +771,7 @@ var verticalScalingExample = templates.Examples(`
 
 // NewVerticalScalingCmd creates a vertical scaling command
 func NewVerticalScalingCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := newBaseOperationsOptions(f, streams, appsv1alpha1.VerticalScalingType, true)
+	o := newBaseOperationsOptions(f, streams, opsv1alpha1.VerticalScalingType, true)
 	cmd := &cobra.Command{
 		Use:               "vscale NAME",
 		Short:             "Vertically scale the specified components in the cluster.",
@@ -798,7 +801,7 @@ var horizontalScalingExample = templates.Examples(`
 
 // NewHorizontalScalingCmd creates a horizontal scaling command
 func NewHorizontalScalingCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := newBaseOperationsOptions(f, streams, appsv1alpha1.HorizontalScalingType, true)
+	o := newBaseOperationsOptions(f, streams, opsv1alpha1.HorizontalScalingType, true)
 	cmd := &cobra.Command{
 		Use:               "hscale NAME",
 		Short:             "Horizontally scale the specified components in the cluster.",
@@ -829,7 +832,7 @@ var volumeExpansionExample = templates.Examples(`
 
 // NewVolumeExpansionCmd creates a volume expanding command
 func NewVolumeExpansionCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := newBaseOperationsOptions(f, streams, appsv1alpha1.VolumeExpansionType, true)
+	o := newBaseOperationsOptions(f, streams, opsv1alpha1.VolumeExpansionType, true)
 	cmd := &cobra.Command{
 		Use:               "volume-expand NAME",
 		Short:             "Expand volume with the specified components and volumeClaimTemplates in the cluster.",
@@ -869,7 +872,7 @@ var (
 
 // NewExposeCmd creates an expose command
 func NewExposeCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := newBaseOperationsOptions(f, streams, appsv1alpha1.ExposeType, true)
+	o := newBaseOperationsOptions(f, streams, opsv1alpha1.ExposeType, true)
 	cmd := &cobra.Command{
 		Use:               "expose NAME --enable=[true|false] --type=[vpc|internet]",
 		Short:             "Expose a cluster with a new endpoint, the new endpoint can be found by executing 'kbcli cluster describe NAME'.",
@@ -912,7 +915,7 @@ var stopExample = templates.Examples(`
 
 // NewStopCmd creates a stop command
 func NewStopCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := newBaseOperationsOptions(f, streams, appsv1alpha1.StopType, false)
+	o := newBaseOperationsOptions(f, streams, opsv1alpha1.StopType, false)
 	cmd := &cobra.Command{
 		Use:               "stop NAME",
 		Short:             "Stop the cluster and release all the pods of the cluster.",
@@ -938,7 +941,7 @@ var startExample = templates.Examples(`
 
 // NewStartCmd creates a start command
 func NewStartCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := newBaseOperationsOptions(f, streams, appsv1alpha1.StartType, false)
+	o := newBaseOperationsOptions(f, streams, opsv1alpha1.StartType, false)
 	o.AutoApprove = true
 	cmd := &cobra.Command{
 		Use:               "start NAME",
@@ -963,18 +966,18 @@ var cancelExample = templates.Examples(`
 `)
 
 func cancelOps(o *OperationsOptions) error {
-	opsRequest := &appsv1alpha1.OpsRequest{}
+	opsRequest := &opsv1alpha1.OpsRequest{}
 	if err := util.GetK8SClientObject(o.Dynamic, opsRequest, o.GVR, o.Namespace, o.Name); err != nil {
 		return err
 	}
-	notSupportedPhases := []appsv1alpha1.OpsPhase{appsv1alpha1.OpsFailedPhase, appsv1alpha1.OpsSucceedPhase, appsv1alpha1.OpsCancelledPhase}
+	notSupportedPhases := []opsv1alpha1.OpsPhase{opsv1alpha1.OpsFailedPhase, opsv1alpha1.OpsSucceedPhase, opsv1alpha1.OpsCancelledPhase}
 	if slices.Contains(notSupportedPhases, opsRequest.Status.Phase) {
 		return fmt.Errorf("can not cancel the opsRequest when phase is %s", opsRequest.Status.Phase)
 	}
-	if opsRequest.Status.Phase == appsv1alpha1.OpsCancellingPhase {
+	if opsRequest.Status.Phase == opsv1alpha1.OpsCancellingPhase {
 		return fmt.Errorf(`opsRequest "%s" is cancelling`, opsRequest.Name)
 	}
-	supportedType := []appsv1alpha1.OpsType{appsv1alpha1.HorizontalScalingType, appsv1alpha1.VerticalScalingType}
+	supportedType := []opsv1alpha1.OpsType{opsv1alpha1.HorizontalScalingType, opsv1alpha1.VerticalScalingType}
 	if !slices.Contains(supportedType, opsRequest.Spec.Type) {
 		return fmt.Errorf("opsRequest type: %s not support cancel action", opsRequest.Spec.Type)
 	}
@@ -1036,7 +1039,7 @@ var promoteExample = templates.Examples(`
 
 // NewPromoteCmd creates a promote command
 func NewPromoteCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := newBaseOperationsOptions(f, streams, appsv1alpha1.SwitchoverType, false)
+	o := newBaseOperationsOptions(f, streams, opsv1alpha1.SwitchoverType, false)
 	cmd := &cobra.Command{
 		Use:               "promote NAME [--component=<comp-name>] [--instance <instance-name>]",
 		Short:             "Promote a non-primary or non-leader instance as the new primary or leader of the cluster",
@@ -1057,7 +1060,7 @@ func NewPromoteCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 				customOpr.OpsType = "Custom"
 				customOpr.OpsTypeLower = strings.ToLower(string(o.OpsType))
 				customOpr.OpsDefinitionName = "switchover"
-				customOpr.Params = []appsv1alpha1.Parameter{
+				customOpr.Params = []opsv1alpha1.Parameter{
 					{
 						Name:  "primary",
 						Value: o.Primary,
@@ -1097,8 +1100,8 @@ var customOpsExample = templates.Examples(`
 
 type CustomOperations struct {
 	*OperationsOptions
-	OpsDefinitionName string                   `json:"opsDefinitionName"`
-	Params            []appsv1alpha1.Parameter `json:"params"`
+	OpsDefinitionName string                  `json:"opsDefinitionName"`
+	Params            []opsv1alpha1.Parameter `json:"params"`
 	SchemaProperties  *apiextensionsv1.JSONSchemaProps
 }
 
@@ -1161,7 +1164,7 @@ func (o *CustomOperations) validateAndCompleteComponentName() error {
 	if err != nil {
 		return err
 	}
-	opsDef := &appsv1alpha1.OpsDefinition{}
+	opsDef := &opsv1alpha1.OpsDefinition{}
 	if err = util.GetK8SClientObject(o.Dynamic, opsDef, types.OpsDefinitionGVR(), "", o.OpsDefinitionName); err != nil {
 		return err
 	}
@@ -1206,7 +1209,7 @@ func (o *CustomOperations) parseOpsDefinitionAndParams(cmd *cobra.Command, args 
 	return flags.BuildFlagsWithOpenAPISchema(cmd, args, func() (*apiextensionsv1.JSONSchemaProps, error) {
 		o.OpsDefinitionName = args[0]
 		// Get ops Definition from API server
-		opsDef := &appsv1alpha1.OpsDefinition{}
+		opsDef := &opsv1alpha1.OpsDefinition{}
 		if err := util.GetK8SClientObject(o.Dynamic, opsDef, types.OpsDefinitionGVR(), "", o.OpsDefinitionName); err != nil {
 			if apierrors.IsNotFound(err) {
 				return nil, fmt.Errorf("OpsDefintion \"%s\" is not found", o.OpsDefinitionName)
@@ -1224,7 +1227,7 @@ func (o *CustomOperations) parseOpsDefinitionAndParams(cmd *cobra.Command, args 
 
 func (o *CustomOperations) completeCustomSpec(cmd *cobra.Command) error {
 	var (
-		params   []appsv1alpha1.Parameter
+		params   []opsv1alpha1.Parameter
 		paramMap = map[string]string{}
 	)
 	// Construct config and credential map from flags
@@ -1233,7 +1236,7 @@ func (o *CustomOperations) completeCustomSpec(cmd *cobra.Command) error {
 		for name := range o.SchemaProperties.Properties {
 			flagName := strcase.KebabCase(name)
 			if val, ok := fromFlags[flagName]; ok {
-				params = append(params, appsv1alpha1.Parameter{
+				params = append(params, opsv1alpha1.Parameter{
 					Name:  name,
 					Value: val.String(),
 				})
@@ -1263,7 +1266,7 @@ var rebuildExample = templates.Examples(`
 
 // NewRebuildInstanceCmd creates a rebuildInstance command
 func NewRebuildInstanceCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := newBaseOperationsOptions(f, streams, appsv1alpha1.RebuildInstanceType, false)
+	o := newBaseOperationsOptions(f, streams, opsv1alpha1.RebuildInstanceType, false)
 	completedRebuildOps := func() error {
 		if o.Name == "" {
 			return makeMissingClusterNameErr()
@@ -1314,16 +1317,16 @@ func NewRebuildInstanceCmd(f cmdutil.Factory, streams genericiooptions.IOStreams
 			}
 			nodeMap[kv[0]] = kv[1]
 		}
-		var instances []appsv1alpha1.Instance
+		var instances []opsv1alpha1.Instance
 		for _, insName := range o.InstanceNames {
-			instances = append(instances, appsv1alpha1.Instance{
+			instances = append(instances, opsv1alpha1.Instance{
 				Name:           insName,
 				TargetNodeName: nodeMap[insName],
 			})
 		}
-		o.RebuildInstanceFrom = []appsv1alpha1.RebuildInstance{
+		o.RebuildInstanceFrom = []opsv1alpha1.RebuildInstance{
 			{
-				ComponentOps: appsv1alpha1.ComponentOps{
+				ComponentOps: opsv1alpha1.ComponentOps{
 					ComponentName: compName,
 				},
 				Instances:  instances,
@@ -1350,7 +1353,7 @@ func NewRebuildInstanceCmd(f cmdutil.Factory, streams genericiooptions.IOStreams
 	o.addCommonFlags(cmd, f)
 	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "Skip interactive approval before rebuilding the instances.gi")
 	cmd.Flags().StringVar(&o.BackupName, "backup", "", "instances will be rebuild by the specified backup.")
-	cmd.Flags().StringSliceVar(&o.InstanceNames, "instance", nil, "instance which need to rebuild.")
+	cmd.Flags().StringSliceVar(&o.InstanceNames, "instances", nil, "instances which need to rebuild.")
 	cmd.Flags().StringSliceVar(&o.Nodes, "node", nil, "specified the target node which rebuilds the instance on the node otherwise will rebuild on a randon node. format: insName1=nodeName,insName2=nodeName")
 	cmd.Flags().StringArrayVar(&o.Env, "env", []string{}, "provide the necessary env for the 'Restore' operation from the backup. format: key1=value, key2=value")
 	return cmd

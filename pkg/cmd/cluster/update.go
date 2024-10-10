@@ -29,6 +29,8 @@ import (
 	"strings"
 	"text/template"
 
+	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
+	opsv1alpha1 "github.com/apecloud/kubeblocks/apis/operations/v1alpha1"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"github.com/robfig/cron/v3"
@@ -106,7 +108,7 @@ var clusterUpdateExample = templates.Examples(`
 type UpdateOptions struct {
 	namespace string
 	dynamic   dynamic.Interface
-	cluster   *appsv1alpha1.Cluster
+	cluster   *kbappsv1.Cluster
 	ValMap    map[string]interface{}
 
 	UpdatableFlags
@@ -333,7 +335,7 @@ func (o *UpdateOptions) buildPatch() error {
 				o.cluster.Spec.Backup.Method = defaultBackupMethod
 			}
 			if _, ok := backupMethodMap[o.cluster.Spec.Backup.Method]; !ok {
-				return fmt.Errorf("backup method %s is not supported, please view the supported backup methods by `kbcli cd describe %s`", o.cluster.Spec.Backup.Method, o.cluster.Spec.ClusterDefRef)
+				return fmt.Errorf("backup method %s is not supported, please view the supported backup methods by `kbcli cd describe %s`", o.cluster.Spec.Backup.Method, o.cluster.Spec.ClusterDef)
 			}
 		}
 
@@ -392,7 +394,7 @@ func (o *UpdateOptions) buildBackup(field string, val string) error {
 		o.cluster = c
 	}
 	if o.cluster.Spec.Backup == nil {
-		o.cluster.Spec.Backup = &appsv1alpha1.ClusterBackup{}
+		o.cluster.Spec.Backup = &kbappsv1.ClusterBackup{}
 	}
 
 	switch field {
@@ -423,19 +425,21 @@ func (o *UpdateOptions) updateEnabledLog(val string) error {
 
 	// update --enabled-all-logs=false for all components
 	if !boolVal {
-		for index := range o.cluster.Spec.ComponentSpecs {
+		// TODO: replace with new api
+		/*	for index := range o.cluster.Spec.ComponentSpecs {
 			o.cluster.Spec.ComponentSpecs[index].EnabledLogs = nil
-		}
+		}*/
 		return nil
 	}
 
 	// update --enabled-all-logs=true for all components
-	cd, err := cluster.GetClusterDefByName(o.dynamic, o.cluster.Spec.ClusterDefRef)
+	cd, err := cluster.GetClusterDefByName(o.dynamic, o.cluster.Spec.ClusterDef)
 	if err != nil {
 		return err
 	}
+	// TODO: replace with new api
 	// set --enabled-all-logs at cluster components
-	setEnableAllLogs(o.cluster, cd)
+	// setEnableAllLogs(o.cluster, cd)
 	if err = o.reconfigureLogVariables(o.cluster, cd); err != nil {
 		return errors.Wrap(err, "failed to reconfigure log variables of target cluster")
 	}
@@ -448,14 +452,14 @@ const topTPLLogsObject = "component"
 const defaultSectionName = "default"
 
 // reconfigureLogVariables reconfigures the log variables of cluster
-func (o *UpdateOptions) reconfigureLogVariables(c *appsv1alpha1.Cluster, cd *appsv1alpha1.ClusterDefinition) error {
+func (o *UpdateOptions) reconfigureLogVariables(c *kbappsv1.Cluster, cd *kbappsv1.ClusterDefinition) error {
 	var (
 		err        error
 		configSpec *appsv1alpha1.ComponentConfigSpec
 		logValue   *gotemplate.TplValues
 	)
 
-	createReconfigureOps := func(compSpec appsv1alpha1.ClusterComponentSpec, configSpec *appsv1alpha1.ComponentConfigSpec, logValue *gotemplate.TplValues) error {
+	createReconfigureOps := func(compSpec kbappsv1.ClusterComponentSpec, configSpec *appsv1alpha1.ComponentConfigSpec, logValue *gotemplate.TplValues) error {
 		var (
 			buf             bytes.Buffer
 			keyName         string
@@ -492,7 +496,7 @@ func (o *UpdateOptions) reconfigureLogVariables(c *appsv1alpha1.Cluster, cd *app
 	}
 
 	for _, compSpec := range c.Spec.ComponentSpecs {
-		if configSpec, err = findFirstConfigSpec(c.Spec.ComponentSpecs, cd.Spec.ComponentDefs, compSpec.Name); err != nil {
+		if configSpec, err = findFirstConfigSpec(o.dynamic, compSpec.Name, compSpec.ComponentDef); err != nil {
 			return err
 		}
 		if logValue, err = buildLogsTPLValues(&compSpec); err != nil {
@@ -506,10 +510,14 @@ func (o *UpdateOptions) reconfigureLogVariables(c *appsv1alpha1.Cluster, cd *app
 }
 
 func findFirstConfigSpec(
-	compSpecs []appsv1alpha1.ClusterComponentSpec,
-	cdCompSpecs []appsv1alpha1.ClusterComponentDefinition,
-	compName string) (*appsv1alpha1.ComponentConfigSpec, error) {
-	configSpecs, err := util.GetConfigTemplateListWithResource(compSpecs, cdCompSpecs, nil, compName, true)
+	cli dynamic.Interface,
+	compName string,
+	compDefName string) (*appsv1alpha1.ComponentConfigSpec, error) {
+	compDef, err := util.GetComponentDefByName(cli, compDefName)
+	if err != nil {
+		return nil, err
+	}
+	configSpecs, err := util.GetValidConfigSpecs(true, util.ToV1ComponentConfigSpecs(compDef.Spec.Configs))
 	if err != nil {
 		return nil, err
 	}
@@ -560,7 +568,7 @@ func findLogsBlockTPL(confData map[string]string) (string, *template.Template, e
 	return "", nil, nil
 }
 
-func buildLogsTPLValues(compSpec *appsv1alpha1.ClusterComponentSpec) (*gotemplate.TplValues, error) {
+func buildLogsTPLValues(compSpec *kbappsv1.ClusterComponentSpec) (*gotemplate.TplValues, error) {
 	compMap := map[string]interface{}{}
 	bytesData, err := json.Marshal(compSpec)
 	if err != nil {
@@ -576,28 +584,28 @@ func buildLogsTPLValues(compSpec *appsv1alpha1.ClusterComponentSpec) (*gotemplat
 	return &value, nil
 }
 
-func buildLogsReconfiguringOps(clusterName, namespace, compName, configName, keyName string, variables map[string]string) *appsv1alpha1.OpsRequest {
+func buildLogsReconfiguringOps(clusterName, namespace, compName, configName, keyName string, variables map[string]string) *opsv1alpha1.OpsRequest {
 	opsName := fmt.Sprintf("%s-%s", "logs-reconfigure", uuid.NewString())
 	opsRequest := util.NewOpsRequestForReconfiguring(opsName, namespace, clusterName)
-	parameterPairs := make([]appsv1alpha1.ParameterPair, 0, len(variables))
+	parameterPairs := make([]opsv1alpha1.ParameterPair, 0, len(variables))
 	for key, value := range variables {
 		v := value
-		parameterPairs = append(parameterPairs, appsv1alpha1.ParameterPair{
+		parameterPairs = append(parameterPairs, opsv1alpha1.ParameterPair{
 			Key:   key,
 			Value: &v,
 		})
 	}
-	var keys []appsv1alpha1.ParameterConfig
-	keys = append(keys, appsv1alpha1.ParameterConfig{
+	var keys []opsv1alpha1.ParameterConfig
+	keys = append(keys, opsv1alpha1.ParameterConfig{
 		Key:        keyName,
 		Parameters: parameterPairs,
 	})
-	var configurations []appsv1alpha1.ConfigurationItem
-	configurations = append(configurations, appsv1alpha1.ConfigurationItem{
+	var configurations []opsv1alpha1.ConfigurationItem
+	configurations = append(configurations, opsv1alpha1.ConfigurationItem{
 		Keys: keys,
 		Name: configName,
 	})
-	reconfigure := opsRequest.Spec.Reconfigure
+	reconfigure := opsRequest.Spec.Reconfigures[0]
 	reconfigure.ComponentName = compName
 	reconfigure.Configurations = append(reconfigure.Configurations, configurations...)
 	return opsRequest

@@ -72,7 +72,7 @@ func newSearchCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.
 	cmd := &cobra.Command{
 		Use:     "search",
 		Short:   "Search the addon from index",
-		Example: addonInstallExample,
+		Example: addonSearchExample,
 		PersistentPreRun: func(cmd *cobra.Command, _ []string) {
 			util.CheckErr(util.EnableLogToFile(cmd.Flags()))
 			util.CheckErr(addDefaultIndex())

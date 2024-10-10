@@ -32,12 +32,12 @@ var _ = Describe("cluster register", func() {
 	It("test builtin chart", func() {
 		mysql := &embedConfig{
 			chartFS: apecloudmysqlChart,
-			name:    "apecloud-mysql-cluster.tgz",
+			name:    "apecloud-mysql.tgz",
 			alias:   "",
 		}
 		Expect(mysql.register("mysql")).Should(HaveOccurred())
 		Expect(mysql.register("mysql-other")).Should(Succeed())
-		Expect(mysql.getChartFileName()).Should(Equal("apecloud-mysql-cluster.tgz"))
+		Expect(mysql.getChartFileName()).Should(Equal("apecloud-mysql.tgz"))
 		Expect(mysql.getAlias()).Should(Equal(""))
 		chart, err := mysql.loadChart()
 		Expect(err).Should(Succeed())

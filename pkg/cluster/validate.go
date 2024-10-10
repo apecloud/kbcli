@@ -33,7 +33,7 @@ import (
 )
 
 // ValidateClusterVersion validates the cluster version.
-func ValidateClusterVersion(dynamic dynamic.Interface, cd string, cv string) error {
+/*func ValidateClusterVersion(dynamic dynamic.Interface, cd string, cv string) error {
 	versions, err := GetVersionByClusterDef(dynamic, cd)
 	if err != nil {
 		return err
@@ -46,7 +46,7 @@ func ValidateClusterVersion(dynamic dynamic.Interface, cd string, cv string) err
 		}
 	}
 	return fmt.Errorf("failed to find cluster version \"%s\"", cv)
-}
+}*/
 
 func ValidateClusterVersionByComponentDef(dynamic dynamic.Interface, compDefs []string, cv string) error {
 	for _, compDef := range compDefs {

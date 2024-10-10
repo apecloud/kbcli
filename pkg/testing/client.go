@@ -20,6 +20,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package testing
 
 import (
+	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
+	opsv1alpha1 "github.com/apecloud/kubeblocks/apis/operations/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 	dynamicfakeclient "k8s.io/client-go/dynamic/fake"
 	kubefakeclient "k8s.io/client-go/kubernetes/fake"
@@ -40,6 +42,8 @@ func FakeClientSet(objects ...runtime.Object) *kubefakeclient.Clientset {
 
 func FakeDynamicClient(objects ...runtime.Object) *dynamicfakeclient.FakeDynamicClient {
 	_ = appsv1alpha1.AddToScheme(scheme.Scheme)
+	_ = opsv1alpha1.AddToScheme(scheme.Scheme)
+	_ = kbappsv1.AddToScheme(scheme.Scheme)
 	_ = appsv1beta1.AddToScheme(scheme.Scheme)
 	_ = extensionsv1alpha1.AddToScheme(scheme.Scheme)
 	_ = dpv1alpha1.AddToScheme(scheme.Scheme)
