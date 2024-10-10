@@ -97,7 +97,7 @@ func buildCreateSubCmds(createOptions *action.CreateOptions) []*cobra.Command {
 			cmd.Aliases = []string{o.ChartInfo.Alias}
 		}
 
-		util.CheckErr(addCreateFlags(cmd, o.Factory, o.ChartInfo))
+		util.CheckErr(addCreateFlags(cmd, o.Factory, o.ChartInfo, t.String()))
 		cmds = append(cmds, cmd)
 	}
 	return cmds
