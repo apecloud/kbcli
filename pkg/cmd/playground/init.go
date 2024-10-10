@@ -21,7 +21,6 @@ package playground
 
 import (
 	"fmt"
-	"github.com/apecloud/kbcli/pkg/cluster"
 	"os"
 	"path/filepath"
 	"strings"
@@ -39,6 +38,7 @@ import (
 	"k8s.io/kubectl/pkg/util/templates"
 
 	cp "github.com/apecloud/kbcli/pkg/cloudprovider"
+	"github.com/apecloud/kbcli/pkg/cluster"
 	cmdcluster "github.com/apecloud/kbcli/pkg/cmd/cluster"
 	"github.com/apecloud/kbcli/pkg/cmd/kubeblocks"
 	"github.com/apecloud/kbcli/pkg/printer"
