@@ -59,7 +59,11 @@ var _ = Describe("kubeblocks upgrade", func() {
 				Info: &release.Info{
 					Status: release.StatusDeployed,
 				},
-				Chart: &chart.Chart{},
+				Chart: &chart.Chart{
+					Metadata: &chart.Metadata{
+						Version: "0.3.0",
+					},
+				},
 			})
 			Expect(err).Should(BeNil())
 
@@ -144,6 +148,23 @@ var _ = Describe("kubeblocks upgrade", func() {
 					HelmCfg:   cfg,
 					Namespace: "default",
 					Client:    testing.FakeClientSet(mockKubeBlocksDeploy()),
+					Dynamic:   testing.FakeDynamicClient(),
+				},
+				Version: version.DefaultKubeBlocksVersion,
+				Check:   false,
+			}
+			Expect(o.Upgrade()).Should(Succeed())
+			Expect(len(o.ValueOpts.Values)).To(Equal(0))
+			Expect(o.upgradeChart()).Should(Succeed())
+		})
+
+		It("run upgrade when KB deploy is deleted", func() {
+			o := &InstallOptions{
+				Options: Options{
+					IOStreams: streams,
+					HelmCfg:   cfg,
+					Namespace: "default",
+					Client:    testing.FakeClientSet(),
 					Dynamic:   testing.FakeDynamicClient(),
 				},
 				Version: version.DefaultKubeBlocksVersion,

@@ -730,16 +730,16 @@ func GetTemplateInstallOps(name, chart, version, namespace string) *InstallOpts 
 	}
 }
 
-// GetHelmReleaseStatus retrieves the status of a Helm release within a specified namespace.
-func GetHelmReleaseStatus(cfg *Config, releaseName string) (release.Status, error) {
+// GetHelmRelease retrieves the Helm release within a specified namespace.
+func GetHelmRelease(cfg *Config, releaseName string) (*release.Release, error) {
 	actionCfg, err := NewActionConfig(cfg)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	client := action.NewGet(actionCfg)
 	rel, err := client.Run(releaseName)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return rel.Info.Status, nil
+	return rel, nil
 }
