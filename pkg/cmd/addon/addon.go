@@ -225,7 +225,7 @@ func newEnableCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.
 				util.CheckErr(o.complete(o, cmd, []string{name}))
 				util.CheckErr(o.CmdComplete(cmd))
 				util.CheckErr(o.Run())
-				util.CheckErr(clusterCmd.RegisterClusterChart(f, streams, "", name, o.addon.Spec.Version, types.ClusterChartsRepoURL))
+				util.CheckErr(clusterCmd.RegisterClusterChart(f, streams, "", name, getAddonVersion(&o.addon), types.ClusterChartsRepoURL))
 			}
 		},
 	}
