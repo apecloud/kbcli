@@ -106,11 +106,17 @@ func (o *InstallOptions) Upgrade() error {
 
 	// check helm release status
 	KBRelease, err := helm.GetHelmRelease(o.HelmCfg, types.KubeBlocksChartName)
-	status := KBRelease.Info.Status
 	if err != nil {
-		return fmt.Errorf("failed to get Helm release status: %v", err)
+		return fmt.Errorf("failed to get Helm release: %v", err)
 	}
+
 	// intercept status of pending, unknown, uninstalling and uninstalled.
+	var status release.Status
+	if KBRelease != nil && KBRelease.Info != nil {
+		status = KBRelease.Info.Status
+	} else {
+		return fmt.Errorf("failed to get Helm release status: release or release info is nil")
+	}
 	if status.IsPending() {
 		return fmt.Errorf("helm release status is %s. Please wait until the release status changes to ‘deployed’ before upgrading KubeBlocks", status.String())
 	} else if status != release.StatusDeployed && status != release.StatusFailed && status != release.StatusSuperseded {
@@ -125,7 +131,10 @@ func (o *InstallOptions) Upgrade() error {
 	}
 
 	// check if KubeBlocks has been installed
-	kbVersion := KBRelease.Chart.Metadata.Version
+	var kbVersion string
+	if KBRelease != nil && KBRelease.Chart != nil && KBRelease.Chart.Metadata != nil {
+		kbVersion = KBRelease.Chart.Metadata.Version
+	}
 	if kbVersion == "" {
 		return errors.New("KubeBlocks does not exist, try to run \"kbcli kubeblocks install\" to install")
 	}
