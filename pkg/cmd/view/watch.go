@@ -22,10 +22,7 @@ package view
 import (
 	"context"
 	"fmt"
-	"github.com/76creates/stickers/flexbox"
-	zone "github.com/lrstanley/bubblezone"
 
-	"github.com/NimbleMarkets/ntcharts/barchart"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,6 +35,7 @@ import (
 	"k8s.io/kubectl/pkg/util/templates"
 
 	viewv1 "github.com/apecloud/kbcli/apis/view/v1"
+	"github.com/apecloud/kbcli/pkg/cmd/view/chart"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
 )
@@ -80,59 +78,7 @@ func watch(f cmdutil.Factory, streams genericiooptions.IOStreams, args []string)
 }
 
 func renderView(view *viewv1.ReconciliationView) error {
-	v1 := barchart.BarData{
-		Label: "Pod",
-		Values: []barchart.BarValue{
-			{Name: "Initial", Value: 21.2, Style: blockStyle},
-			{Name: "Added", Value: 10.1, Style: blockStyle2},
-			{Name: "Updated", Value: 6.5, Style: blockStyle3},
-			{Name: "Deleted", Value: 7.7, Style: blockStyle4},
-		},
-	}
-	v2 := barchart.BarData{
-		Label: "PVC",
-		Values: []barchart.BarValue{
-			{Name: "Initial", Value: 15.1, Style: blockStyle},
-			{Name: "Added", Value: 15.1, Style: blockStyle2},
-			{Name: "Updated", Value: 3.3, Style: blockStyle3},
-			{Name: "Deleted", Value: 7.7, Style: blockStyle4},
-		},
-	}
-	v3 := barchart.BarData{
-		Label: "ITS",
-		Values: []barchart.BarValue{
-			{Name: "Initial", Value: 13.6, Style: blockStyle},
-			{Name: "Added", Value: 14.1, Style: blockStyle2},
-			{Name: "Updated", Value: 4.4, Style: blockStyle3},
-			{Name: "Deleted", Value: 4.4, Style: blockStyle4},
-		},
-	}
-	v4 := barchart.BarData{
-		Label: "SVC",
-		Values: []barchart.BarValue{
-			{Name: "Initial", Value: 13.1, Style: blockStyle},
-			{Name: "Added", Value: 11.1, Style: blockStyle2},
-			{Name: "Updated", Value: 10.9, Style: blockStyle3},
-			{Name: "Deleted", Value: 9.8, Style: blockStyle4},
-		},
-	}
-	values := []barchart.BarData{v1, v2, v3, v4}
-
-	// create new bubblezone Manager to enable mouse support to zoom in and out of chart
-	zoneManager := zone.New()
-
-	// all barcharts contain the same values
-	// different options are displayed on the screen and below
-	// and first barchart has axis and label styles
-	m := &teaModel{
-		view:        view,
-		lv:          values,
-		zM:          zoneManager,
-		base:        flexbox.NewHorizontal(0, 0),
-		statusBar:   flexbox.New(0, 0),
-		mainContent: flexbox.New(0, 0),
-	}
-
+	m := chart.NewReconciliationViewChart(view)
 	_, err := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion()).Run()
 	return err
 }
