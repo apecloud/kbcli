@@ -24,7 +24,6 @@ import (
 
 	"github.com/76creates/stickers/flexbox"
 	"github.com/NimbleMarkets/ntcharts/barchart"
-	"github.com/NimbleMarkets/ntcharts/canvas/runes"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -38,50 +37,55 @@ import (
 	"github.com/apecloud/kbcli/pkg/cmd/view/chart/timeserieslinechart"
 )
 
+var (
+	defaultStyle = lipgloss.NewStyle().
+			BorderStyle(lipgloss.NormalBorder()).
+			BorderForeground(lipgloss.Color("63")) // purple
+
+	axisStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("3")) // yellow
+
+	labelStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("6")) // cyan
+
+	totalBlockStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("6")) // cyan
+
+	addedBlockStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("2")) // green
+
+	updatedBlockStyle = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("3")) // yellow
+
+	deletedBlockStyle = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("9")) // red
+
+	statusBarColumnStyle = lipgloss.NewStyle().
+				Border(lipgloss.NormalBorder(), true).
+				BorderForeground(lipgloss.Color("#26de81"))
+
+	mainContentColumnStyle = lipgloss.NewStyle().
+				Border(lipgloss.NormalBorder(), true).
+				BorderForeground(lipgloss.Color("#2bcbba"))
+
+	latestChangeCellStyle = lipgloss.NewStyle().
+				Align(lipgloss.Center, lipgloss.Center)
+
+	changesLineStyle = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("4")) // blue
+
+	enumeratorStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("63")).
+			MarginRight(1)
+
+	rootStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("35"))
+
+	itemStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("212"))
+)
+
 // Model defines the BubbleTea Model of the ReconciliationView.
-
-var defaultStyle = lipgloss.NewStyle().
-	BorderStyle(lipgloss.NormalBorder()).
-	BorderForeground(lipgloss.Color("63")) // purple
-
-var axisStyle = lipgloss.NewStyle().
-	Foreground(lipgloss.Color("3")) // yellow
-
-var labelStyle = lipgloss.NewStyle().
-	Foreground(lipgloss.Color("6")) // cyan
-
-var blockStyle = lipgloss.NewStyle().
-	Foreground(lipgloss.Color("6")) // cyan
-
-var blockStyle2 = lipgloss.NewStyle().
-	Foreground(lipgloss.Color("2")) // green
-
-var blockStyle3 = lipgloss.NewStyle().
-	Foreground(lipgloss.Color("3")) // yellow
-
-var blockStyle4 = lipgloss.NewStyle().
-	Foreground(lipgloss.Color("9")) // red
-
-var style4 = lipgloss.NewStyle().
-	Border(lipgloss.NormalBorder(), true).
-	BorderForeground(lipgloss.Color("#26de81"))
-
-var style5 = lipgloss.NewStyle().
-	Border(lipgloss.NormalBorder(), true).
-	BorderForeground(lipgloss.Color("#2bcbba"))
-
-var style6 = lipgloss.NewStyle().
-	Align(lipgloss.Center, lipgloss.Center)
-
-var tsGraphLineStyle1 = lipgloss.NewStyle().
-	Foreground(lipgloss.Color("4")) // blue
-
-var tsAxisStyle = lipgloss.NewStyle().
-	Foreground(lipgloss.Color("3")) // yellow
-
-var tsLabelStyle = lipgloss.NewStyle().
-	Foreground(lipgloss.Color("6")) // cyan
-
 type Model struct {
 	// base framework
 	base        *flexbox.HorizontalFlexBox
@@ -100,26 +104,31 @@ type Model struct {
 	// changes
 	changes timeserieslinechart.Model
 
-	zM *zone.Manager
+	zoneManager *zone.Manager
 
 	view *viewv1.ReconciliationView
 }
 
 func (m *Model) Init() tea.Cmd {
+	m.zoneManager = zone.New()
+
+	m.base = flexbox.NewHorizontal(0, 0)
 	columns := []*flexbox.Column{
 		m.base.NewColumn().AddCells(
-			flexbox.NewCell(1, 1).SetStyle(style4),
-			flexbox.NewCell(1, 2).SetStyle(style5),
+			flexbox.NewCell(1, 1).SetStyle(statusBarColumnStyle),
+			flexbox.NewCell(1, 2).SetStyle(mainContentColumnStyle),
 		),
 	}
 	m.base.AddColumns(columns)
 
+	m.statusBar = flexbox.New(0, 0)
 	statusRow := m.statusBar.NewRow().AddCells(
 		flexbox.NewCell(1, 1).SetContent("Summary"),
-		flexbox.NewCell(1, 1).SetStyle(style6).SetContent("Latest Change"),
+		flexbox.NewCell(1, 1).SetStyle(latestChangeCellStyle).SetContent("Latest Change"),
 	)
 	m.statusBar.AddRows([]*flexbox.Row{statusRow})
 
+	m.mainContent = flexbox.New(0, 0)
 	mainRow := m.mainContent.NewRow().AddCells(
 		flexbox.NewCell(1, 1).SetContent("ObjectTree"),
 		flexbox.NewCell(3, 1).SetContent("Changes"),
@@ -137,96 +146,129 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 	case tea.MouseMsg:
-		if msg.Action == tea.MouseActionPress {
+		if msg.Action == tea.MouseActionPress && m.summary != nil {
 			m.summary.Update(msg)
 		}
 	case tea.WindowSizeMsg:
 		m.base.SetWidth(msg.Width)
 		m.base.SetHeight(msg.Height)
+		m.base.ForceRecalculate()
+		m.statusBar.SetWidth(m.base.GetColumn(0).GetCell(0).GetWidth())
+		m.statusBar.SetHeight(m.base.GetColumn(0).GetCell(0).GetHeight())
+		m.statusBar.ForceRecalculate()
+		m.mainContent.SetWidth(m.base.GetColumn(0).GetCell(1).GetWidth())
+		m.mainContent.SetHeight(m.base.GetColumn(0).GetCell(1).GetHeight())
+		m.mainContent.ForceRecalculate()
 	}
 	return m, nil
 }
 
 func (m *Model) View() string {
-	tree.Root("Cluster").Child()
-	m.base.ForceRecalculate()
-	m.statusBar.SetWidth(m.base.GetColumn(0).GetCell(0).GetWidth())
-	m.statusBar.SetHeight(m.base.GetColumn(0).GetCell(0).GetHeight())
+	m.updateSummaryView()
+	m.updateLatestChangeView()
+	m.updateObjectTreeView()
+	m.updateChangesView()
+
+	m.updateStatusBarView()
+	m.updateMainContentView()
+
+	return m.zoneManager.Scan(m.base.Render())
+}
+
+func (m *Model) updateSummaryView() {
 	summaryCell := m.statusBar.GetRow(0).GetCell(0)
-	summaryCell.SetMinWidth(50)
-	m.statusBar.ForceRecalculate()
-
-	if summaryCell.GetHeight() > 0 {
-		var dataSet []barchart.BarData
-		for i := range m.view.Status.CurrentState.Summary.ObjectSummaries {
-			n := normalize(&m.view.Status.CurrentState.Summary.ObjectSummaries[i])
-			d := barchart.BarData{
-				Label: n.ObjectType.Kind,
-				Values: []barchart.BarValue{
-					{Name: "Total", Value: float64(n.Total), Style: blockStyle},
-					{Name: "Added", Value: float64(*n.ChangeSummary.Added), Style: blockStyle2},
-					{Name: "Updated", Value: float64(*n.ChangeSummary.Updated), Style: blockStyle3},
-					{Name: "Deleted", Value: float64(*n.ChangeSummary.Deleted), Style: blockStyle4},
-				},
-			}
-			dataSet = append(dataSet, d)
-		}
-		m.summary = summary.New(summaryCell.GetWidth(), summaryCell.GetHeight(),
-			dataSet,
-			barchart.WithZoneManager(m.zM),
-			barchart.WithStyles(axisStyle, labelStyle))
-		summaryCell.SetContent(m.summary.View())
+	if summaryCell.GetHeight() <= 0 {
+		return
 	}
+	dataSet := buildSummaryDataSet(&m.view.Status.CurrentState.Summary)
+	m.summary = summary.New(summaryCell.GetWidth(), summaryCell.GetHeight(),
+		dataSet,
+		barchart.WithZoneManager(m.zoneManager),
+		barchart.WithStyles(axisStyle, labelStyle))
+	summaryCell.SetContent(m.summary.View())
+}
 
+func (m *Model) updateLatestChangeView() {
 	change := ""
 	if l := len(m.view.Status.CurrentState.Changes); l > 0 {
 		change = m.view.Status.CurrentState.Changes[l-1].Description
 	}
 	change = defaultStyle.Render(change)
-	m.statusBar.GetRow(0).GetCell(1).SetContent(change)
-
-	m.objectTree = buildObjectTree(m.view.Status.CurrentState.ObjectTree)
-
-	m.mainContent.SetWidth(m.base.GetColumn(0).GetCell(1).GetWidth())
-	m.mainContent.SetHeight(m.base.GetColumn(0).GetCell(1).GetHeight())
-	m.mainContent.ForceRecalculate()
-
-	m.mainContent.GetRow(0).GetCell(0).SetContent(m.objectTree.String())
-
-	if m.mainContent.GetRow(0).GetCell(1).GetWidth() > 0 {
-		minYValue := 0.0
-		maxYValue := 100.0
-		changesChart := timeserieslinechart.New(m.mainContent.GetRow(0).GetCell(1).GetWidth()-2, m.mainContent.GetHeight()-2)
-		changesChart.AxisStyle = tsAxisStyle
-		changesChart.LabelStyle = tsLabelStyle
-		changesChart.XLabelFormatter = timeserieslinechart.HourTimeLabelFormatter()
-		changesChart.UpdateHandler = timeserieslinechart.SecondUpdateHandler(1)
-		changesChart.SetYRange(minYValue, maxYValue)     // set expected Y values (values can be less or greater than what is displayed)
-		changesChart.SetViewYRange(minYValue, maxYValue) // setting display Y values will fail unless set expected Y values first
-		changesChart.SetStyle(tsGraphLineStyle1)
-		changesChart.SetLineStyle(runes.ThinLineStyle) // ThinLineStyle replaces default linechart arcline rune style
-		changesChart.SetZoneManager(m.zM)
-		m.changes = changesChart
-		depthMap := make(map[corev1.ObjectReference]float64)
-		buildDepthMap(m.view.Status.CurrentState.ObjectTree, 0, depthMap)
-		for _, change := range m.view.Status.CurrentState.Changes {
-			objRef := change.ObjectReference
-			objRef.UID = ""
-			objRef.ResourceVersion = ""
-			m.changes.Push(timeserieslinechart.TimePoint{change.Timestamp.Time, depthMap[objRef]})
-		}
-		m.changes.DrawBraille()
-		m.mainContent.GetRow(0).GetCell(1).SetContent(m.changes.View())
-	}
-
-	m.base.GetColumn(0).GetCell(0).SetContent(m.statusBar.Render())
-	m.base.GetColumn(0).GetCell(1).SetContent(m.mainContent.Render())
-	res := m.base.Render()
-
-	return m.zM.Scan(res) // call zone Manager.Scan() at root Model
+	latestChangeCell := m.statusBar.GetRow(0).GetCell(1)
+	latestChangeCell.SetContent(change)
 }
 
-func normalize(s *viewv1.ObjectSummary) *viewv1.ObjectSummary {
+func (m *Model) updateObjectTreeView() {
+	m.objectTree = buildObjectTree(m.view.Status.CurrentState.ObjectTree)
+	m.mainContent.GetRow(0).GetCell(0).SetContent(m.objectTree.String())
+}
+
+func (m *Model) updateChangesView() {
+	changesCell := m.mainContent.GetRow(0).GetCell(1)
+	if changesCell.GetWidth() <= 0 {
+		return
+	}
+
+	depthMap := make(map[corev1.ObjectReference]float64)
+	depth := buildDepthMap(m.view.Status.CurrentState.ObjectTree, 0, depthMap)
+	minYValue := 0.0
+	maxYValue := float64(len(depthMap))
+	objectTreeHeight := lipgloss.Height(m.objectTree.String())
+	changesChart := timeserieslinechart.New(changesCell.GetWidth()-2, objectTreeHeight+2)
+	changesChart.AxisStyle = axisStyle
+	changesChart.LabelStyle = labelStyle
+	changesChart.XLabelFormatter = timeserieslinechart.HourTimeLabelFormatter()
+	changesChart.YLabelFormatter = func(i int, f float64) string {
+		return ""
+	}
+	changesChart.UpdateHandler = timeserieslinechart.SecondUpdateHandler(1)
+	changesChart.SetYRange(minYValue, maxYValue)
+	changesChart.SetViewYRange(minYValue, maxYValue)
+	changesChart.SetStyle(changesLineStyle)
+	changesChart.SetZoneManager(m.zoneManager)
+	m.changes = changesChart
+	for _, change := range m.view.Status.CurrentState.Changes {
+		objRef := normalizeObjectRef(&change.ObjectReference)
+		m.changes.Push(timeserieslinechart.TimePoint{Time: change.Timestamp.Time, Value: depth - depthMap[*objRef] + 1})
+	}
+	m.changes.DrawBraille()
+	m.mainContent.GetRow(0).GetCell(1).SetContent(m.changes.View())
+}
+
+func (m *Model) updateStatusBarView() {
+	m.base.GetColumn(0).GetCell(0).SetContent(m.statusBar.Render())
+}
+
+func (m *Model) updateMainContentView() {
+	m.base.GetColumn(0).GetCell(1).SetContent(m.mainContent.Render())
+}
+
+func buildSummaryDataSet(summary *viewv1.ObjectTreeDiffSummary) []barchart.BarData {
+	var dataSet []barchart.BarData
+	for i := range summary.ObjectSummaries {
+		n := normalizeObjectSummary(&summary.ObjectSummaries[i])
+		d := barchart.BarData{
+			Label: n.ObjectType.Kind,
+			Values: []barchart.BarValue{
+				{Name: "Total", Value: float64(n.Total), Style: totalBlockStyle},
+				{Name: "Added", Value: float64(*n.ChangeSummary.Added), Style: addedBlockStyle},
+				{Name: "Updated", Value: float64(*n.ChangeSummary.Updated), Style: updatedBlockStyle},
+				{Name: "Deleted", Value: float64(*n.ChangeSummary.Deleted), Style: deletedBlockStyle},
+			},
+		}
+		dataSet = append(dataSet, d)
+	}
+	return dataSet
+}
+
+func normalizeObjectRef(ref *corev1.ObjectReference) *corev1.ObjectReference {
+	objRef := *ref
+	objRef.UID = ""
+	objRef.ResourceVersion = ""
+	return &objRef
+}
+
+func normalizeObjectSummary(s *viewv1.ObjectSummary) *viewv1.ObjectSummary {
 	if s == nil {
 		return nil
 	}
@@ -249,21 +291,13 @@ func buildDepthMap(objectTree *viewv1.ObjectTreeNode, depth float64, depthMap ma
 	if objectTree == nil {
 		return depth
 	}
-	objRef := objectTree.Primary
-	objRef.UID = ""
-	objRef.ResourceVersion = ""
-	depthMap[objRef] = depth
+	objRef := normalizeObjectRef(&objectTree.Primary)
+	depthMap[*objRef] = depth
 	for _, secondary := range objectTree.Secondaries {
 		depth = buildDepthMap(secondary, depth+1, depthMap)
 	}
 	return depth
 }
-
-var (
-	enumeratorStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("63")).MarginRight(1)
-	rootStyle       = lipgloss.NewStyle().Foreground(lipgloss.Color("35"))
-	itemStyle       = lipgloss.NewStyle().Foreground(lipgloss.Color("212"))
-)
 
 func buildObjectTree(objectTree *viewv1.ObjectTreeNode) *tree.Tree {
 	if objectTree == nil {
@@ -272,26 +306,16 @@ func buildObjectTree(objectTree *viewv1.ObjectTreeNode) *tree.Tree {
 	formatNode := func(reference *corev1.ObjectReference) string {
 		return fmt.Sprintf("%s/%s", reference.Kind, reference.Name)
 	}
-	tree := tree.New()
-	tree.Root(formatNode(&objectTree.Primary)).EnumeratorStyle(enumeratorStyle).RootStyle(rootStyle).ItemStyle(itemStyle)
+	treeNode := tree.New()
+	treeNode.Root(formatNode(&objectTree.Primary)).EnumeratorStyle(enumeratorStyle).RootStyle(rootStyle).ItemStyle(itemStyle)
 	for _, secondary := range objectTree.Secondaries {
 		child := buildObjectTree(secondary)
 		child.Root(formatNode(&secondary.Primary)).EnumeratorStyle(enumeratorStyle).RootStyle(rootStyle).ItemStyle(itemStyle)
-		tree.Child(child)
+		treeNode.Child(child)
 	}
-	return tree
+	return treeNode
 }
 
 func NewReconciliationViewChart(view *viewv1.ReconciliationView) *Model {
-
-	// all barcharts contain the same values
-	// different options are displayed on the screen and below
-	// and first barchart has axis and label styles
-	return &Model{
-		view:        view,
-		zM:          zone.New(),
-		base:        flexbox.NewHorizontal(0, 0),
-		statusBar:   flexbox.New(0, 0),
-		mainContent: flexbox.New(0, 0),
-	}
+	return &Model{view: view}
 }

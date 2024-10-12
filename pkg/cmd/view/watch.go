@@ -79,7 +79,7 @@ func watch(f cmdutil.Factory, streams genericiooptions.IOStreams, args []string)
 
 func renderView(view *viewv1.ReconciliationView) error {
 	m := chart.NewReconciliationViewChart(view)
-	_, err := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion()).Run()
+	_, err := tea.NewProgram(m, tea.WithAltScreen()).Run()
 	return err
 }
 

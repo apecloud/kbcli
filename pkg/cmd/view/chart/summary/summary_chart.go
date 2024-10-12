@@ -70,6 +70,11 @@ func (m *Model) View() string {
 	)
 }
 
+func (m *Model) setBarData(b *barchart.Model, msg tea.MouseMsg) {
+	x, y := m.summary.ZoneManager().Get(b.ZoneID()).Pos(msg)
+	selectedBarData = b.BarDataFromPoint(canvas.Point{x, y})
+}
+
 func legend(bd barchart.BarData) (r string) {
 	r = "Legend\n"
 	for _, bv := range bd.Values {
@@ -77,7 +82,6 @@ func legend(bd barchart.BarData) (r string) {
 	}
 	return
 }
-
 func totals(lv []barchart.BarData) (r string) {
 	r = "Totals\n"
 	for _, bd := range lv {
@@ -89,6 +93,7 @@ func totals(lv []barchart.BarData) (r string) {
 	}
 	return
 }
+
 func selectedData() (r string) {
 	r = "Selected\n"
 	if len(selectedBarData.Values) == 0 {
@@ -99,11 +104,6 @@ func selectedData() (r string) {
 		r += " " + bv.Style.Render(fmt.Sprintf("%.01f", bv.Value))
 	}
 	return
-}
-
-func (m *Model) setBarData(b *barchart.Model, msg tea.MouseMsg) {
-	x, y := m.summary.ZoneManager().Get(b.ZoneID()).Pos(msg)
-	selectedBarData = b.BarDataFromPoint(canvas.Point{x, y})
 }
 
 func New(w int, h int, dataSet []barchart.BarData, opts ...barchart.Option) *Model {
