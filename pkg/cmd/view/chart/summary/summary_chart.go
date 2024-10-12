@@ -45,16 +45,12 @@ func (m *Model) Init() tea.Cmd {
 }
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.MouseMsg:
-		if msg.Action == tea.MouseActionPress {
-			if m.summary.ZoneManager() == nil {
-				return m, nil
-			}
-			switch {
-			case m.summary.ZoneManager().Get(m.summary.ZoneID()).InBounds(msg):
-				m.setBarData(&m.summary, msg)
-			}
+	if mm, ok := msg.(tea.MouseMsg); ok && mm.Action == tea.MouseActionPress {
+		if m.summary.ZoneManager() == nil {
+			return m, nil
+		}
+		if m.summary.ZoneManager().Get(m.summary.ZoneID()).InBounds(mm) {
+			m.setBarData(&m.summary, mm)
 		}
 	}
 	return m, nil

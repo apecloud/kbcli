@@ -21,7 +21,6 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/apecloud/kbcli/pkg/cmd/view"
 	"os"
 	"strings"
 
@@ -51,6 +50,7 @@ import (
 	"github.com/apecloud/kbcli/pkg/cmd/plugin"
 	"github.com/apecloud/kbcli/pkg/cmd/report"
 	"github.com/apecloud/kbcli/pkg/cmd/version"
+	"github.com/apecloud/kbcli/pkg/cmd/view"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
 )

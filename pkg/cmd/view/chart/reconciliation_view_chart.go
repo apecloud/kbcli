@@ -168,7 +168,7 @@ func (m *Model) updateSummaryView() {
 		return
 	}
 	dataSet := buildSummaryDataSet(&m.view.Status.CurrentState.Summary)
-	if len(dataSet) <= 0 {
+	if len(dataSet) == 0 {
 		return
 	}
 	m.summary = summary.New(m.base.GetColumn(0).GetCell(0).GetHeight(),
@@ -197,9 +197,7 @@ func (m *Model) updateLatestChangeView() {
 			change = *m.selectedChange.LocalDescription
 		}
 	}
-	//change = defaultStyle.Render(change)
-	summary := m.summary.View()
-	w := lipgloss.Width(summary)
+	w := lipgloss.Width(m.summary.View())
 	baseBorder := 2
 	m.latestChange = richviewport.NewViewPort(
 		m.base.GetWidth()-baseBorder-w-len(summaryNLatestChangeSeparator),
@@ -260,7 +258,7 @@ func (m *Model) updateStatusBarView() {
 	}
 	summary := m.summary.View()
 	latestChange := m.latestChange.View()
-	status := lipgloss.JoinHorizontal(lipgloss.Left, summary, "    ", latestChange)
+	status := lipgloss.JoinHorizontal(lipgloss.Left, summary, summaryNLatestChangeSeparator, latestChange)
 	m.base.GetColumn(0).GetCell(0).SetContent(status)
 }
 
