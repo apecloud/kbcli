@@ -265,8 +265,11 @@ func (o *OperationsOptions) CompleteCharacterType(clusterObj *appsv1alpha1.Clust
 		if err := util.GetResourceObjectFromGVR(types.ClusterDefGVR(), clusterDefKey, o.Dynamic, &clusterDefObj); err != nil {
 			return err
 		}
-
-		componentDef := clusterDefObj.GetComponentDefByName(componentSpec.ComponentDefRef)
+		compDefName := componentSpec.ComponentDefRef
+		if compDefName == "" {
+			compDefName = componentSpec.ComponentDef
+		}
+		componentDef := clusterDefObj.GetComponentDefByName(compDefName)
 		if componentDef == nil {
 			return fmt.Errorf("failed to get component def :%s", componentSpec.ComponentDefRef)
 		}
