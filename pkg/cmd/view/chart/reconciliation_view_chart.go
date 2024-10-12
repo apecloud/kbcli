@@ -25,7 +25,6 @@ import (
 	"github.com/76creates/stickers/flexbox"
 	"github.com/NimbleMarkets/ntcharts/barchart"
 	"github.com/NimbleMarkets/ntcharts/canvas"
-	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/tree"
@@ -34,15 +33,12 @@ import (
 	"k8s.io/utils/pointer"
 
 	viewv1 "github.com/apecloud/kbcli/apis/view/v1"
+	"github.com/apecloud/kbcli/pkg/cmd/view/chart/richviewport"
 	"github.com/apecloud/kbcli/pkg/cmd/view/chart/summary"
 	"github.com/apecloud/kbcli/pkg/cmd/view/chart/timeserieslinechart"
 )
 
 var (
-	defaultStyle = lipgloss.NewStyle().
-			BorderStyle(lipgloss.NormalBorder()).
-			BorderForeground(lipgloss.Color("63")) // purple
-
 	axisStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("3")) // yellow
 
@@ -69,9 +65,6 @@ var (
 				Border(lipgloss.NormalBorder(), true).
 				BorderForeground(lipgloss.Color("#2bcbba"))
 
-	latestChangeCellStyle = lipgloss.NewStyle().
-				Align(lipgloss.Center, lipgloss.Center)
-
 	changesLineStyle = lipgloss.NewStyle().
 				Foreground(lipgloss.Color("4")) // blue
 
@@ -84,6 +77,8 @@ var (
 
 	itemStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("212"))
+
+	summaryNLatestChangeSeparator = "    "
 )
 
 type ViewUpdateMsg struct {
@@ -93,15 +88,13 @@ type ViewUpdateMsg struct {
 // Model defines the BubbleTea Model of the ReconciliationView.
 type Model struct {
 	// base framework
-	base        *flexbox.HorizontalFlexBox
-	statusBar   *flexbox.FlexBox
-	mainContent *flexbox.FlexBox
+	base *flexbox.HorizontalFlexBox
 
 	// summary
 	summary *summary.Model
 
 	// latest change
-	latestChange viewport.Model
+	latestChange *richviewport.Model
 
 	// current object tree
 	objectTree *tree.Tree
@@ -126,20 +119,6 @@ func (m *Model) Init() tea.Cmd {
 		),
 	}
 	m.base.AddColumns(columns)
-
-	m.statusBar = flexbox.New(0, 0)
-	statusRow := m.statusBar.NewRow().AddCells(
-		flexbox.NewCell(1, 1).SetContent("Summary"),
-		flexbox.NewCell(1, 1).SetStyle(latestChangeCellStyle).SetContent("Latest Change"),
-	)
-	m.statusBar.AddRows([]*flexbox.Row{statusRow})
-
-	m.mainContent = flexbox.New(0, 0)
-	mainRow := m.mainContent.NewRow().AddCells(
-		flexbox.NewCell(1, 1).SetContent("ObjectTree"),
-		flexbox.NewCell(1, 1).SetContent("Changes"),
-	)
-	m.mainContent.AddRows([]*flexbox.Row{mainRow})
 
 	return nil
 }
@@ -166,12 +145,6 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.base.SetWidth(msg.Width)
 		m.base.SetHeight(msg.Height)
 		m.base.ForceRecalculate()
-		m.statusBar.SetWidth(m.base.GetColumn(0).GetCell(0).GetWidth())
-		m.statusBar.SetHeight(m.base.GetColumn(0).GetCell(0).GetHeight())
-		m.statusBar.ForceRecalculate()
-		m.mainContent.SetWidth(m.base.GetColumn(0).GetCell(1).GetWidth())
-		m.mainContent.SetHeight(m.base.GetColumn(0).GetCell(1).GetHeight())
-		m.mainContent.ForceRecalculate()
 	case ViewUpdateMsg:
 		m.view = msg.View
 	}
@@ -187,31 +160,28 @@ func (m *Model) View() string {
 	m.updateStatusBarView()
 	m.updateMainContentView()
 
-	res := m.base.Render()
-	return m.zoneManager.Scan(res)
+	return m.zoneManager.Scan(m.base.Render())
 }
 
 func (m *Model) updateSummaryView() {
 	if m.view == nil {
 		return
 	}
-	summaryCell := m.statusBar.GetRow(0).GetCell(0)
-	if summaryCell.GetHeight() <= 0 {
-		return
-	}
 	dataSet := buildSummaryDataSet(&m.view.Status.CurrentState.Summary)
 	if len(dataSet) <= 0 {
 		return
 	}
-	m.summary = summary.New(summaryCell.GetWidth(), summaryCell.GetHeight(),
+	m.summary = summary.New(m.base.GetColumn(0).GetCell(0).GetHeight(),
 		dataSet,
 		barchart.WithZoneManager(m.zoneManager),
 		barchart.WithStyles(axisStyle, labelStyle))
-	summaryCell.SetContent(m.summary.View())
 }
 
 func (m *Model) updateLatestChangeView() {
 	if m.view == nil {
+		return
+	}
+	if m.summary == nil {
 		return
 	}
 	change := ""
@@ -227,9 +197,15 @@ func (m *Model) updateLatestChangeView() {
 			change = *m.selectedChange.LocalDescription
 		}
 	}
-	change = defaultStyle.Render(change)
-	latestChangeCell := m.statusBar.GetRow(0).GetCell(1)
-	latestChangeCell.SetContent(change)
+	//change = defaultStyle.Render(change)
+	summary := m.summary.View()
+	w := lipgloss.Width(summary)
+	baseBorder := 2
+	m.latestChange = richviewport.NewViewPort(
+		m.base.GetWidth()-baseBorder-w-len(summaryNLatestChangeSeparator),
+		m.base.GetColumn(0).GetCell(0).GetHeight()-baseBorder,
+		"Latest Change",
+		change)
 }
 
 func (m *Model) updateObjectTreeView() {
@@ -237,10 +213,6 @@ func (m *Model) updateObjectTreeView() {
 		return
 	}
 	m.objectTree = buildObjectTree(m.view.Status.CurrentState.ObjectTree)
-	if m.objectTree == nil {
-		return
-	}
-	m.mainContent.GetRow(0).GetCell(0).SetContent(m.objectTree.String())
 }
 
 func (m *Model) updateChangesView() {
@@ -251,17 +223,12 @@ func (m *Model) updateChangesView() {
 		return
 	}
 
-	changesCell := m.mainContent.GetRow(0).GetCell(1)
-	if changesCell.GetWidth() <= 0 {
-		return
-	}
-
 	depthMap := make(map[corev1.ObjectReference]float64)
 	depth := buildDepthMap(m.view.Status.CurrentState.ObjectTree, 0, depthMap)
 	minYValue := 0.0
 	maxYValue := float64(len(depthMap))
-	objectTreeHeight := lipgloss.Height(m.objectTree.String())
-	changesChart := timeserieslinechart.New(changesCell.GetWidth()-2, objectTreeHeight+2, timeserieslinechart.WithZoneManager(m.zoneManager))
+	w, h := lipgloss.Size(m.objectTree.String())
+	changesChart := timeserieslinechart.New(m.base.GetWidth()-2-w, h+2, timeserieslinechart.WithZoneManager(m.zoneManager))
 	changesChart.AxisStyle = axisStyle
 	changesChart.LabelStyle = labelStyle
 	changesChart.XLabelFormatter = timeserieslinechart.HourTimeLabelFormatter()
@@ -279,15 +246,38 @@ func (m *Model) updateChangesView() {
 		m.changes.Push(timeserieslinechart.TimePoint{Time: change.Timestamp.Time, Value: depth - depthMap[*objRef] + 1})
 	}
 	m.changes.DrawBraille()
-	m.mainContent.GetRow(0).GetCell(1).SetContent(m.changes.View())
 }
 
 func (m *Model) updateStatusBarView() {
-	m.base.GetColumn(0).GetCell(0).SetContent(m.statusBar.Render())
+	if m.view == nil {
+		return
+	}
+	if m.summary == nil {
+		return
+	}
+	if m.latestChange == nil {
+		return
+	}
+	summary := m.summary.View()
+	latestChange := m.latestChange.View()
+	status := lipgloss.JoinHorizontal(lipgloss.Left, summary, "    ", latestChange)
+	m.base.GetColumn(0).GetCell(0).SetContent(status)
 }
 
 func (m *Model) updateMainContentView() {
-	m.base.GetColumn(0).GetCell(1).SetContent(m.mainContent.Render())
+	if m.view == nil {
+		return
+	}
+	if m.objectTree == nil {
+		return
+	}
+	if m.changes == nil {
+		return
+	}
+	objectTree := m.objectTree.String()
+	changes := m.changes.View()
+	mainContent := lipgloss.JoinHorizontal(lipgloss.Left, objectTree, changes)
+	m.base.GetColumn(0).GetCell(1).SetContent(mainContent)
 }
 
 func (m *Model) setSelectedChange(msg tea.MouseMsg) {

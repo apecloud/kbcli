@@ -86,7 +86,7 @@ func totals(lv []barchart.BarData) (r string) {
 	r = "Totals\n"
 	for _, bd := range lv {
 		sum := bd.Values[0].Value
-		r += "\n" + fmt.Sprintf("%s %.01f", bd.Label, sum)
+		r += "\n" + fmt.Sprintf("%s %d", bd.Label, int(sum))
 	}
 	return
 }
@@ -98,12 +98,12 @@ func selectedData() (r string) {
 	}
 	r += selectedBarData.Label
 	for _, bv := range selectedBarData.Values {
-		r += " " + bv.Style.Render(fmt.Sprintf("%.01f", bv.Value))
+		r += " " + bv.Style.Render(fmt.Sprintf("%d", int(bv.Value)))
 	}
 	return
 }
 
-func New(w int, h int, dataSet []barchart.BarData, opts ...barchart.Option) *Model {
+func New(h int, dataSet []barchart.BarData, opts ...barchart.Option) *Model {
 	gap := 1
 	barWidth := 4
 	opts = append(opts, barchart.WithDataSet(dataSet), barchart.WithBarWidth(barWidth), barchart.WithBarGap(gap))
