@@ -34,6 +34,7 @@ func NewViewCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Co
 	cmd.AddCommand(
 		newListCmd(f, streams),
 		newWatchCmd(f, streams),
+		newCreateCmd(f, streams),
 	)
 	return cmd
 }
