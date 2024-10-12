@@ -91,6 +91,8 @@ type Model struct {
 	dLineStyle runes.LineStyle     // default data set LineStyletype
 	dStyle     lipgloss.Style      // default data set Style
 	dSets      map[string]*dataSet // maps names to data sets
+
+	pointToDataMap map[canvas.Point]*TimePoint // canvas point to time point map
 }
 
 // New returns a timeserieslinechart Model initialized from
@@ -348,6 +350,7 @@ func (m *Model) DrawBrailleDataSets(names []string) {
 	}
 	m.Clear()
 	m.DrawXYAxisAndLabel()
+	m.pointToDataMap = make(map[canvas.Point]*TimePoint)
 	for _, n := range names {
 		if ds, ok := m.dSets[n]; ok {
 			dataPoints := ds.tBuf.ReadAll()
@@ -360,27 +363,21 @@ func (m *Model) DrawBrailleDataSets(names []string) {
 				0, float64(m.GraphWidth()), // X values already scaled to graph
 				0, float64(m.GraphHeight())) // Y values already scaled to graph
 			for i := 0; i < dataLen; i++ {
-				j := i + 1
-				if j >= dataLen {
-					j = i
-				}
-				p1 := dataPoints[i]
-				p2 := dataPoints[j]
+				p := dataPoints[i]
 				// ignore points that will not be displayed
-				bothBeforeMin := (p1.X < 0 && p2.X < 0)
-				bothAfterMax := (p1.X > float64(m.GraphWidth()) && p2.X > float64(m.GraphWidth()))
+				bothBeforeMin := p.X < 0
+				bothAfterMax := p.X > float64(m.GraphWidth())
 				if bothBeforeMin || bothAfterMax {
 					continue
 				}
 				// get braille grid points from two Float64Point data points
-				gp1 := bGrid.GridPoint(p1)
-				gp2 := bGrid.GridPoint(p2)
-				// set all points in the braille grid
-				// between two points that approximates a line
-				points := graph.GetLinePoints(gp1, gp2)
-				for _, p := range points {
-					bGrid.Set(p)
-				}
+				gp := bGrid.GridPoint(p)
+				bGrid.Set(gp)
+
+				// cache the mapping relationship
+				pos := canvas.Point{X: gp.X / 2, Y: gp.Y / 4}
+				raw := ds.tBuf.AtRaw(i)
+				m.pointToDataMap[pos] = &TimePoint{Time: time.Unix(int64(raw.X), 0), Value: raw.Y}
 			}
 
 			// get all rune patterns for braille grid
@@ -485,4 +482,12 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	m.UpdateHandler(&m.Model, msg)
 	m.rescaleData()
 	return m, nil
+}
+
+func (m *Model) TimePointFromPoint(point canvas.Point) *TimePoint {
+	if m.pointToDataMap == nil {
+		return nil
+	}
+	point.X -= 1
+	return m.pointToDataMap[point]
 }

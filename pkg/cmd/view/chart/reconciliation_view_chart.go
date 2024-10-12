@@ -24,6 +24,7 @@ import (
 
 	"github.com/76creates/stickers/flexbox"
 	"github.com/NimbleMarkets/ntcharts/barchart"
+	"github.com/NimbleMarkets/ntcharts/canvas"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -102,11 +103,12 @@ type Model struct {
 	objectTree *tree.Tree
 
 	// changes
-	changes timeserieslinechart.Model
+	changes *timeserieslinechart.Model
 
 	zoneManager *zone.Manager
 
-	view *viewv1.ReconciliationView
+	view           *viewv1.ReconciliationView
+	selectedChange *viewv1.ObjectChange
 }
 
 func (m *Model) Init() tea.Cmd {
@@ -146,8 +148,15 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 	case tea.MouseMsg:
-		if msg.Action == tea.MouseActionPress && m.summary != nil {
-			m.summary.Update(msg)
+		if msg.Action == tea.MouseActionPress {
+			if m.summary != nil {
+				m.summary.Update(msg)
+			}
+			if m.changes != nil {
+				if m.zoneManager.Get(m.changes.ZoneID()).InBounds(msg) {
+					m.setSelectedChange(msg)
+				}
+			}
 		}
 	case tea.WindowSizeMsg:
 		m.base.SetWidth(msg.Width)
@@ -172,7 +181,8 @@ func (m *Model) View() string {
 	m.updateStatusBarView()
 	m.updateMainContentView()
 
-	return m.zoneManager.Scan(m.base.Render())
+	res := m.base.Render()
+	return m.zoneManager.Scan(res)
 }
 
 func (m *Model) updateSummaryView() {
@@ -192,6 +202,9 @@ func (m *Model) updateLatestChangeView() {
 	change := ""
 	if l := len(m.view.Status.CurrentState.Changes); l > 0 {
 		change = m.view.Status.CurrentState.Changes[l-1].Description
+	}
+	if m.selectedChange != nil {
+		change = m.selectedChange.Description
 	}
 	change = defaultStyle.Render(change)
 	latestChangeCell := m.statusBar.GetRow(0).GetCell(1)
@@ -214,7 +227,7 @@ func (m *Model) updateChangesView() {
 	minYValue := 0.0
 	maxYValue := float64(len(depthMap))
 	objectTreeHeight := lipgloss.Height(m.objectTree.String())
-	changesChart := timeserieslinechart.New(changesCell.GetWidth()-2, objectTreeHeight+2)
+	changesChart := timeserieslinechart.New(changesCell.GetWidth()-2, objectTreeHeight+2, timeserieslinechart.WithZoneManager(m.zoneManager))
 	changesChart.AxisStyle = axisStyle
 	changesChart.LabelStyle = labelStyle
 	changesChart.XLabelFormatter = timeserieslinechart.HourTimeLabelFormatter()
@@ -226,7 +239,7 @@ func (m *Model) updateChangesView() {
 	changesChart.SetViewYRange(minYValue, maxYValue)
 	changesChart.SetStyle(changesLineStyle)
 	changesChart.SetZoneManager(m.zoneManager)
-	m.changes = changesChart
+	m.changes = &changesChart
 	for _, change := range m.view.Status.CurrentState.Changes {
 		objRef := normalizeObjectRef(&change.ObjectReference)
 		m.changes.Push(timeserieslinechart.TimePoint{Time: change.Timestamp.Time, Value: depth - depthMap[*objRef] + 1})
@@ -241,6 +254,28 @@ func (m *Model) updateStatusBarView() {
 
 func (m *Model) updateMainContentView() {
 	m.base.GetColumn(0).GetCell(1).SetContent(m.mainContent.Render())
+}
+
+func (m *Model) setSelectedChange(msg tea.MouseMsg) {
+	m.selectedChange = nil
+	x, y := m.zoneManager.Get(m.changes.ZoneID()).Pos(msg)
+	point := m.changes.TimePointFromPoint(canvas.Point{X: x, Y: y})
+	if point == nil {
+		return
+	}
+	depthMap := make(map[corev1.ObjectReference]float64)
+	depth := buildDepthMap(m.view.Status.CurrentState.ObjectTree, 0, depthMap)
+	for i := range m.view.Status.CurrentState.Changes {
+		change := &m.view.Status.CurrentState.Changes[i]
+		if change.Timestamp.Time.Unix() != point.Time.Unix() {
+			continue
+		}
+		objRef := normalizeObjectRef(&change.ObjectReference)
+		if depthMap[*objRef] == (depth + 1 - point.Value) {
+			m.selectedChange = change
+			break
+		}
+	}
 }
 
 func buildSummaryDataSet(summary *viewv1.ObjectTreeDiffSummary) []barchart.BarData {
