@@ -137,7 +137,7 @@ func (m *Model) Init() tea.Cmd {
 	m.mainContent = flexbox.New(0, 0)
 	mainRow := m.mainContent.NewRow().AddCells(
 		flexbox.NewCell(1, 1).SetContent("ObjectTree"),
-		flexbox.NewCell(3, 1).SetContent("Changes"),
+		flexbox.NewCell(1, 1).SetContent("Changes"),
 	)
 	m.mainContent.AddRows([]*flexbox.Row{mainRow})
 
@@ -200,6 +200,9 @@ func (m *Model) updateSummaryView() {
 		return
 	}
 	dataSet := buildSummaryDataSet(&m.view.Status.CurrentState.Summary)
+	if len(dataSet) <= 0 {
+		return
+	}
 	m.summary = summary.New(summaryCell.GetWidth(), summaryCell.GetHeight(),
 		dataSet,
 		barchart.WithZoneManager(m.zoneManager),
@@ -214,9 +217,15 @@ func (m *Model) updateLatestChangeView() {
 	change := ""
 	if l := len(m.view.Status.CurrentState.Changes); l > 0 {
 		change = m.view.Status.CurrentState.Changes[l-1].Description
+		if m.view.Status.CurrentState.Changes[l-1].LocalDescription != nil {
+			change = *m.view.Status.CurrentState.Changes[l-1].LocalDescription
+		}
 	}
 	if m.selectedChange != nil {
 		change = m.selectedChange.Description
+		if m.selectedChange.LocalDescription != nil {
+			change = *m.selectedChange.LocalDescription
+		}
 	}
 	change = defaultStyle.Render(change)
 	latestChangeCell := m.statusBar.GetRow(0).GetCell(1)
@@ -228,11 +237,17 @@ func (m *Model) updateObjectTreeView() {
 		return
 	}
 	m.objectTree = buildObjectTree(m.view.Status.CurrentState.ObjectTree)
+	if m.objectTree == nil {
+		return
+	}
 	m.mainContent.GetRow(0).GetCell(0).SetContent(m.objectTree.String())
 }
 
 func (m *Model) updateChangesView() {
 	if m.view == nil {
+		return
+	}
+	if m.objectTree == nil {
 		return
 	}
 
