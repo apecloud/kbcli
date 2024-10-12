@@ -98,37 +98,36 @@ const (
 
 // Apps API group
 const (
-	AppsAPIGroup                        = "apps.kubeblocks.io"
-	AppsAPIVersion                      = "v1alpha1"
-	AppsAPIBetaVersion                  = "v1beta1"
-	ResourcePods                        = "pods"
-	ResourceClusters                    = "clusters"
-	ResourceClusterDefs                 = "clusterdefinitions"
-	ResourceClusterVersions             = "clusterversions"
-	ResourceComponentDefs               = "componentdefinitions"
-	ResourceComponents                  = "components"
-	ResourceOpsRequests                 = "opsrequests"
-	ResourceOpsDefinitions              = "opsdefinitions"
-	ResourceConfigConstraintVersions    = "configconstraints"
-	ResourceConfigurationVersions       = "configurations"
-	ResourceComponentResourceConstraint = "componentresourceconstraints"
-	ResourceComponentClassDefinition    = "componentclassdefinitions"
-	KindCluster                         = "Cluster"
-	KindComponentClassDefinition        = "ComponentClassDefinition"
-	KindClusterDef                      = "ClusterDefinition"
-	KindClusterVersion                  = "ClusterVersion"
-	KindConfigConstraint                = "ConfigConstraint"
-	KindConfiguration                   = "Configuration"
-	KindBackup                          = "Backup"
-	KindRestore                         = "Restore"
-	KindBackupPolicy                    = "BackupPolicy"
-	KindOps                             = "OpsRequest"
-	KindBackupSchedule                  = "BackupSchedule"
-	KindBackupPolicyTemplate            = "BackupPolicyTemplate"
-	KindStatefulSet                     = "StatefulSet"
-	KindDeployment                      = "Deployment"
-	KindRSM                             = "ReplicatedStateMachine"
-	KindConfigMap                       = "ConfigMap"
+	AppsAPIGroup                     = "apps.kubeblocks.io"
+	OpsAPIGroup                      = "operations.kubeblocks.io"
+	OpsAPIVersion                    = "v1alpha1"
+	AppsAPIVersion                   = "v1alpha1"
+	AppsV1APIVersion                 = "v1"
+	AppsAPIBetaVersion               = "v1beta1"
+	ResourcePods                     = "pods"
+	ResourceClusters                 = "clusters"
+	ResourceClusterDefs              = "clusterdefinitions"
+	ResourceClusterVersions          = "clusterversions"
+	ResourceComponentDefs            = "componentdefinitions"
+	ResourceComponents               = "components"
+	ResourceOpsRequests              = "opsrequests"
+	ResourceOpsDefinitions           = "opsdefinitions"
+	ResourceConfigConstraintVersions = "configconstraints"
+	ResourceConfigurationVersions    = "configurations"
+	KindCluster                      = "Cluster"
+	KindClusterDef                   = "ClusterDefinition"
+	KindConfigConstraint             = "ConfigConstraint"
+	KindConfiguration                = "Configuration"
+	KindBackup                       = "Backup"
+	KindRestore                      = "Restore"
+	KindBackupPolicy                 = "BackupPolicy"
+	KindOps                          = "OpsRequest"
+	KindBackupSchedule               = "BackupSchedule"
+	KindBackupPolicyTemplate         = "BackupPolicyTemplate"
+	KindStatefulSet                  = "StatefulSet"
+	KindDeployment                   = "Deployment"
+	KindConfigMap                    = "ConfigMap"
+	KindCronJob                      = "CronJob"
 )
 
 // K8S rbac API group
@@ -295,31 +294,27 @@ func PodGVR() schema.GroupVersionResource {
 }
 
 func ClusterGVR() schema.GroupVersionResource {
-	return schema.GroupVersionResource{Group: AppsAPIGroup, Version: AppsAPIVersion, Resource: ResourceClusters}
+	return schema.GroupVersionResource{Group: AppsAPIGroup, Version: AppsV1APIVersion, Resource: ResourceClusters}
 }
 
 func ClusterDefGVR() schema.GroupVersionResource {
-	return schema.GroupVersionResource{Group: AppsAPIGroup, Version: AppsAPIVersion, Resource: ResourceClusterDefs}
-}
-
-func ClusterVersionGVR() schema.GroupVersionResource {
-	return schema.GroupVersionResource{Group: AppsAPIGroup, Version: AppsAPIVersion, Resource: ResourceClusterVersions}
+	return schema.GroupVersionResource{Group: AppsAPIGroup, Version: AppsV1APIVersion, Resource: ResourceClusterDefs}
 }
 
 func CompDefGVR() schema.GroupVersionResource {
-	return schema.GroupVersionResource{Group: AppsAPIGroup, Version: AppsAPIVersion, Resource: ResourceComponentDefs}
+	return schema.GroupVersionResource{Group: AppsAPIGroup, Version: AppsV1APIVersion, Resource: ResourceComponentDefs}
 }
 
 func ComponentGVR() schema.GroupVersionResource {
-	return schema.GroupVersionResource{Group: AppsAPIGroup, Version: AppsAPIVersion, Resource: ResourceComponents}
+	return schema.GroupVersionResource{Group: AppsAPIGroup, Version: AppsV1APIVersion, Resource: ResourceComponents}
 }
 
 func OpsDefinitionGVR() schema.GroupVersionResource {
-	return schema.GroupVersionResource{Group: AppsAPIGroup, Version: AppsAPIVersion, Resource: ResourceOpsDefinitions}
+	return schema.GroupVersionResource{Group: OpsAPIGroup, Version: OpsAPIVersion, Resource: ResourceOpsDefinitions}
 }
 
 func OpsGVR() schema.GroupVersionResource {
-	return schema.GroupVersionResource{Group: AppsAPIGroup, Version: AppsAPIVersion, Resource: ResourceOpsRequests}
+	return schema.GroupVersionResource{Group: OpsAPIGroup, Version: OpsAPIVersion, Resource: ResourceOpsRequests}
 }
 
 func BackupGVR() schema.GroupVersionResource {
@@ -364,14 +359,6 @@ func StorageProviderGVR() schema.GroupVersionResource {
 
 func LegacyStorageProviderGVR() schema.GroupVersionResource {
 	return schema.GroupVersionResource{Group: StorageAPIGroup, Version: StorageAPIVersion, Resource: ResourceStorageProviders}
-}
-
-func ComponentResourceConstraintGVR() schema.GroupVersionResource {
-	return schema.GroupVersionResource{Group: AppsAPIGroup, Version: AppsAPIVersion, Resource: ResourceComponentResourceConstraint}
-}
-
-func ComponentClassDefinitionGVR() schema.GroupVersionResource {
-	return schema.GroupVersionResource{Group: AppsAPIGroup, Version: AppsAPIVersion, Resource: ResourceComponentClassDefinition}
 }
 
 func CRDGVR() schema.GroupVersionResource {
@@ -490,34 +477,6 @@ func JobGVR() schema.GroupVersionResource {
 }
 func CronJobGVR() schema.GroupVersionResource {
 	return schema.GroupVersionResource{Group: K8SBatchAPIGroup, Version: K8sBatchAPIVersion, Resource: ResourceCronJobs}
-}
-
-func PgBenchGVR() schema.GroupVersionResource {
-	return schema.GroupVersionResource{Group: KubebenchAPIGroup, Version: KubebenchAPIVersion, Resource: ResourcePgBench}
-}
-
-func SysbenchGVR() schema.GroupVersionResource {
-	return schema.GroupVersionResource{Group: KubebenchAPIGroup, Version: KubebenchAPIVersion, Resource: ResourceSysBench}
-}
-
-func YcsbGVR() schema.GroupVersionResource {
-	return schema.GroupVersionResource{Group: KubebenchAPIGroup, Version: KubebenchAPIVersion, Resource: ResourceYcsb}
-}
-
-func TpccGVR() schema.GroupVersionResource {
-	return schema.GroupVersionResource{Group: KubebenchAPIGroup, Version: KubebenchAPIVersion, Resource: ResourceTpcc}
-}
-
-func TpchGVR() schema.GroupVersionResource {
-	return schema.GroupVersionResource{Group: KubebenchAPIGroup, Version: KubebenchAPIVersion, Resource: ResourceTpch}
-}
-
-func TpcdsGVR() schema.GroupVersionResource {
-	return schema.GroupVersionResource{Group: KubebenchAPIGroup, Version: KubebenchAPIVersion, Resource: ResourceTpcds}
-}
-
-func RedisBenchGVR() schema.GroupVersionResource {
-	return schema.GroupVersionResource{Group: KubebenchAPIGroup, Version: KubebenchAPIVersion, Resource: ResourceRedisBench}
 }
 
 func ViewGVR() schema.GroupVersionResource {

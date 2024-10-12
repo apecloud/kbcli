@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package cluster
 
 import (
+	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
@@ -27,9 +28,9 @@ import (
 )
 
 type ClusterObjects struct {
-	Cluster        *appsv1alpha1.Cluster
-	ClusterDef     *appsv1alpha1.ClusterDefinition
-	ClusterVersion *appsv1alpha1.ClusterVersion
+	Cluster    *kbappsv1.Cluster
+	ClusterDef *kbappsv1.ClusterDefinition
+	// ClusterVersion *appsv1alpha1.ClusterVersion
 
 	Pods       *corev1.PodList
 	Services   *corev1.ServiceList

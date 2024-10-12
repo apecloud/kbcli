@@ -39,7 +39,7 @@ kbcli addon install [flags]
   -h, --help                           help for install
       --index string                   specify the addon index, use 'kubeblocks' by default (default "kubeblocks")
       --path string                    specify the local path contains addon CRs and needs to be specified when operating offline
-      --version string                 specify the addon version
+      --version string                 specify the addon version to install, run 'kbcli addon search <addon-name>' to get the available versions
 ```
 
 ### Options inherited from parent commands

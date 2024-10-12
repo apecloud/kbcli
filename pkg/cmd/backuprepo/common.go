@@ -30,7 +30,6 @@ import (
 	"k8s.io/client-go/dynamic"
 
 	dpv1alpha1 "github.com/apecloud/kubeblocks/apis/dataprotection/v1alpha1"
-	storagev1alpha1 "github.com/apecloud/kubeblocks/apis/storage/v1alpha1"
 
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
@@ -55,7 +54,7 @@ func createPatchData(oldObj, newObj runtime.Object) ([]byte, error) {
 }
 
 func tryConvertLegacyStorageProvider(dynamic dynamic.Interface, name string) (*dpv1alpha1.StorageProvider, error) {
-	provider := &storagev1alpha1.StorageProvider{}
+	provider := &dpv1alpha1.StorageProvider{}
 	err := util.GetK8SClientObject(dynamic, provider, types.LegacyStorageProviderGVR(), "", name)
 	if err != nil {
 		if apierrors.IsNotFound(err) {

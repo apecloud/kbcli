@@ -62,7 +62,7 @@ var _ = Describe("Expose", func() {
 		}
 
 		tf.UnstructuredClient = &clientfake.RESTClient{
-			GroupVersion:         schema.GroupVersion{Group: types.AppsAPIGroup, Version: types.AppsAPIVersion},
+			GroupVersion:         schema.GroupVersion{Group: types.AppsAPIGroup, Version: types.AppsV1APIVersion},
 			NegotiatedSerializer: resource.UnstructuredPlusDefaultContentConfig().NegotiatedSerializer,
 			Client: clientfake.CreateHTTPClient(func(req *http.Request) (*http.Response, error) {
 				urlPrefix := "/api/v1/namespaces/" + namespace
@@ -78,7 +78,7 @@ var _ = Describe("Expose", func() {
 		}
 
 		tf.Client = tf.UnstructuredClient
-		tf.FakeDynamicClient = testing.FakeDynamicClient(cluster, testing.FakeClusterDef(), testing.FakeClusterVersion())
+		tf.FakeDynamicClient = testing.FakeDynamicClient(cluster, testing.FakeClusterDef())
 	})
 
 	AfterEach(func() {

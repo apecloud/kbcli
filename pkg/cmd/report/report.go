@@ -25,6 +25,7 @@ import (
 	"strings"
 	"time"
 
+	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -41,7 +42,6 @@ import (
 	"k8s.io/kubectl/pkg/util/templates"
 	"k8s.io/utils/strings/slices"
 
-	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	"github.com/apecloud/kubeblocks/pkg/constant"
 
 	clischeme "github.com/apecloud/kbcli/pkg/scheme"
@@ -160,7 +160,7 @@ type reportClusterOptions struct {
 	reportOptions
 	clusterName     string
 	clusterSelector metav1.ListOptions
-	cluster         *appsv1alpha1.Cluster
+	cluster         *kbappsv1.Cluster
 }
 
 func newReportOptions(f genericiooptions.IOStreams) reportOptions {
@@ -452,7 +452,7 @@ func (o *reportClusterOptions) run(f cmdutil.Factory, streams genericiooptions.I
 	defer cancel()
 	var err error
 	// make cluster exists before processing
-	if _, err = o.genericClientSet.kbClientSet.AppsV1alpha1().Clusters(o.namespace).Get(ctx, o.clusterName, metav1.GetOptions{}); err != nil {
+	if _, err = o.genericClientSet.kbClientSet.AppsV1().Clusters(o.namespace).Get(ctx, o.clusterName, metav1.GetOptions{}); err != nil {
 		return err
 	}
 
@@ -507,7 +507,7 @@ func (o *reportClusterOptions) handleManifests(ctx context.Context) error {
 	)
 
 	var err error
-	if o.cluster, err = o.genericClientSet.kbClientSet.AppsV1alpha1().Clusters(o.namespace).Get(ctx, o.clusterName, metav1.GetOptions{}); err != nil {
+	if o.cluster, err = o.genericClientSet.kbClientSet.AppsV1().Clusters(o.namespace).Get(ctx, o.clusterName, metav1.GetOptions{}); err != nil {
 		return err
 	}
 
@@ -530,20 +530,18 @@ func (o *reportClusterOptions) handleManifests(ctx context.Context) error {
 	}
 
 	// get cluster definition
-	clusterDefName := o.cluster.Spec.ClusterDefRef
-	if clusterDef, err := o.genericClientSet.kbClientSet.AppsV1alpha1().ClusterDefinitions().Get(ctx, clusterDefName, metav1.GetOptions{}); err != nil {
-		return err
-	} else if err = o.reportWritter.WriteSingleObject(manifestsFolder, types.KindClusterDef, clusterDef.Name, clusterDef, o.outputFormat); err != nil {
-		return err
+	clusterDefName := o.cluster.Spec.ClusterDef
+	if clusterDefName != "" {
+		clusterDef, err := o.genericClientSet.kbClientSet.AppsV1().ClusterDefinitions().Get(ctx, clusterDefName, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		if err = o.reportWritter.WriteSingleObject(manifestsFolder, types.KindClusterDef, clusterDef.Name, clusterDef, o.outputFormat); err != nil {
+			return err
+		}
 	}
 
-	// get cluster version
-	clusterVersionName := o.cluster.Spec.ClusterVersionRef
-	if clusterVersion, err := o.genericClientSet.kbClientSet.AppsV1alpha1().ClusterVersions().Get(ctx, clusterVersionName, metav1.GetOptions{}); err != nil {
-		return err
-	} else if err = o.reportWritter.WriteSingleObject(manifestsFolder, types.KindClusterVersion, clusterVersion.Name, clusterVersion, o.outputFormat); err != nil {
-		return err
-	}
+	// TODO: add new api
 
 	s.Success()
 	return nil

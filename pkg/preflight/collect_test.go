@@ -83,7 +83,7 @@ var _ = Describe("collect_test", func() {
 		}
 
 		tf.Client = tf.UnstructuredClient
-		tf.FakeDynamicClient = testing.FakeDynamicClient(cluster, testing.FakeClusterDef(), testing.FakeClusterVersion())
+		tf.FakeDynamicClient = testing.FakeDynamicClient(cluster, testing.FakeClusterDef())
 
 		preflight = preflightTesting.FakeKbPreflight()
 		hostPreflight = preflightTesting.FakeKbHostPreflight()

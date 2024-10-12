@@ -1,5 +1,5 @@
 - name: test
-  componentDefRef: mysql
+  componentDef: apecloud-mysql
   monitor: true
   enabledLogs: [error, slow]
   replicas: 1

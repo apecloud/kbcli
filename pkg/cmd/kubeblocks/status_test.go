@@ -170,7 +170,7 @@ var _ = Describe("kubeblocks status", func() {
 		// will list update to five types of worklaods
 		Expect(len(unstructuredList)).Should(BeEquivalentTo(5))
 		for _, list := range unstructuredList {
-			if list.GetKind() == constant.DeploymentKind || list.GetKind() == constant.StatefulSetKind || list.GetKind() == constant.JobKind || list.GetKind() == constant.CronJobKind {
+			if list.GetKind() == types.KindDeployment || list.GetKind() == constant.StatefulSetKind || list.GetKind() == constant.JobKind || list.GetKind() == types.KindCronJob {
 				Expect(len(list.Items)).Should(BeEquivalentTo(1))
 			} else {
 				Expect(len(list.Items)).Should(BeEquivalentTo(0))

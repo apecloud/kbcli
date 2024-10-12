@@ -31,7 +31,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
-	cfgcore "github.com/apecloud/kubeblocks/pkg/configuration/core"
 
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
@@ -80,7 +79,7 @@ func PrintComponentConfigMeta(tplInfos []types.ConfigTemplateInfo, clusterName, 
 	tbl := NewTablePrinter(out)
 	PrintTitle("ConfigSpecs Meta")
 	enableReconfiguring := func(tpl appsv1alpha1.ComponentConfigSpec, configFileKey string) string {
-		if len(tpl.ConfigConstraintRef) > 0 && cfgcore.IsSupportConfigFileReconfigure(tpl, configFileKey) {
+		if len(tpl.ConfigConstraintRef) > 0 && util.IsSupportConfigFileReconfigure(tpl, configFileKey) {
 			return "true"
 		}
 		return "false"

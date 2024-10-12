@@ -20,6 +20,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package scheme
 
 import (
+	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
+	opsv1alpha1 "github.com/apecloud/kubeblocks/apis/operations/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
@@ -39,6 +41,8 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(Scheme))
 	utilruntime.Must(appsv1alpha1.AddToScheme(Scheme))
 	utilruntime.Must(appsv1beta1.AddToScheme(Scheme))
+	utilruntime.Must(kbappsv1.AddToScheme(Scheme))
+	utilruntime.Must(opsv1alpha1.AddToScheme(Scheme))
 	utilruntime.Must(dpv1alpha1.AddToScheme(Scheme))
 	utilruntime.Must(snapshotv1.AddToScheme(Scheme))
 	utilruntime.Must(snapshotv1beta1.AddToScheme(Scheme))

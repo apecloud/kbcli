@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"net/http"
 
+	opsv1alpha1 "github.com/apecloud/kubeblocks/apis/operations/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -35,8 +36,6 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	clientfake "k8s.io/client-go/rest/fake"
 	cmdtesting "k8s.io/kubectl/pkg/cmd/testing"
-
-	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 
 	"github.com/apecloud/kbcli/pkg/action"
 	clitesting "github.com/apecloud/kbcli/pkg/testing"
@@ -55,17 +54,17 @@ var _ = Describe("Expose", func() {
 		tf      *cmdtesting.TestFactory
 		in      *bytes.Buffer
 	)
-	generateOpsObject := func(opsName string, phase appsv1alpha1.OpsPhase) *appsv1alpha1.OpsRequest {
-		return &appsv1alpha1.OpsRequest{
+	generateOpsObject := func(opsName string, phase opsv1alpha1.OpsPhase) *opsv1alpha1.OpsRequest {
+		return &opsv1alpha1.OpsRequest{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      opsName,
 				Namespace: namespace,
 			},
-			Spec: appsv1alpha1.OpsRequestSpec{
+			Spec: opsv1alpha1.OpsRequestSpec{
 				ClusterName: "test-cluster",
 				Type:        "Restart",
 			},
-			Status: appsv1alpha1.OpsRequestStatus{
+			Status: opsv1alpha1.OpsRequestStatus{
 				Phase: phase,
 			},
 		}
@@ -80,7 +79,7 @@ var _ = Describe("Expose", func() {
 	})
 
 	initClient := func(opsRequest runtime.Object) {
-		_ = appsv1alpha1.AddToScheme(scheme.Scheme)
+		_ = opsv1alpha1.AddToScheme(scheme.Scheme)
 		codec := scheme.Codecs.LegacyCodec(scheme.Scheme.PrioritizedVersionsAllGroups()...)
 		httpResp := func(obj runtime.Object) *http.Response {
 			return &http.Response{StatusCode: http.StatusOK, Header: cmdtesting.DefaultHeader(), Body: cmdtesting.ObjBody(codec, obj)}
@@ -122,7 +121,7 @@ var _ = Describe("Expose", func() {
 
 	It("Testing the deletion of running OpsRequest", func() {
 		By("init opsRequests and k8s client")
-		runningOps := generateOpsObject(opsName, appsv1alpha1.OpsRunningPhase)
+		runningOps := generateOpsObject(opsName, opsv1alpha1.OpsRunningPhase)
 		initClient(runningOps)
 
 		By("expect error when deleting running opsRequest")

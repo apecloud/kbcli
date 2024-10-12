@@ -29,6 +29,7 @@ import (
 	"strings"
 	"time"
 
+	opsv1alpha1 "github.com/apecloud/kubeblocks/apis/operations/v1alpha1"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/maps"
@@ -50,7 +51,6 @@ import (
 	"k8s.io/kubectl/pkg/util/templates"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	dpv1alpha1 "github.com/apecloud/kubeblocks/apis/dataprotection/v1alpha1"
 	"github.com/apecloud/kubeblocks/pkg/constant"
 	dptypes "github.com/apecloud/kubeblocks/pkg/dataprotection/types"
@@ -131,11 +131,11 @@ const (
 )
 
 type CreateBackupOptions struct {
-	BackupSpec     appsv1alpha1.Backup `json:"backupSpec"`
-	ClusterName    string              `json:"clusterName"`
-	OpsType        string              `json:"opsType"`
-	OpsRequestName string              `json:"opsRequestName"`
-	Force          bool                `json:"force"`
+	BackupSpec     opsv1alpha1.Backup `json:"backupSpec"`
+	ClusterName    string             `json:"clusterName"`
+	OpsType        string             `json:"opsType"`
+	OpsRequestName string             `json:"opsRequestName"`
+	Force          bool               `json:"force"`
 
 	action.CreateOptions `json:"-"`
 }
@@ -168,7 +168,7 @@ func (o *CreateBackupOptions) CompleteBackup() error {
 	}
 
 	// set ops type, ops request name and clusterName
-	o.OpsType = string(appsv1alpha1.BackupType)
+	o.OpsType = string(opsv1alpha1.BackupType)
 	o.OpsRequestName = o.BackupSpec.BackupName
 	o.ClusterName = o.Name
 
@@ -552,11 +552,11 @@ func completeForDeleteBackup(o *action.DeleteOptions, args []string) error {
 }
 
 type CreateRestoreOptions struct {
-	RestoreSpec    appsv1alpha1.Restore `json:"restoreSpec"`
-	ClusterName    string               `json:"clusterName"`
-	OpsType        string               `json:"opsType"`
-	OpsRequestName string               `json:"opsRequestName"`
-	Force          bool                 `json:"force"`
+	RestoreSpec    opsv1alpha1.Restore `json:"restoreSpec"`
+	ClusterName    string              `json:"clusterName"`
+	OpsType        string              `json:"opsType"`
+	OpsRequestName string              `json:"opsRequestName"`
+	Force          bool                `json:"force"`
 
 	action.CreateOptions `json:"-"`
 }
@@ -578,7 +578,7 @@ func (o *CreateRestoreOptions) Validate() error {
 	}
 
 	// set ops type, ops request name and clusterName
-	o.OpsType = string(appsv1alpha1.RestoreType)
+	o.OpsType = string(opsv1alpha1.RestoreType)
 	o.ClusterName = o.Name
 	o.OpsRequestName = o.Name
 

@@ -36,6 +36,8 @@ import (
 	"github.com/apecloud/kubeblocks/pkg/constant"
 	"github.com/apecloud/kubeblocks/pkg/unstructured"
 
+	opsv1alpha1 "github.com/apecloud/kubeblocks/apis/operations/v1alpha1"
+
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
@@ -47,8 +49,8 @@ type configDiffOptions struct {
 	clusterName   string
 	componentName string
 	templateNames []string
-	baseVersion   *appsv1alpha1.OpsRequest
-	diffVersion   *appsv1alpha1.OpsRequest
+	baseVersion   *opsv1alpha1.OpsRequest
+	diffVersion   *opsv1alpha1.OpsRequest
 }
 
 var (
@@ -58,8 +60,8 @@ var (
 )
 
 func (o *configDiffOptions) complete(args []string) error {
-	isValidReconfigureOps := func(ops *appsv1alpha1.OpsRequest) bool {
-		return ops.Spec.Type == appsv1alpha1.ReconfiguringType && ops.Spec.Reconfigure != nil
+	isValidReconfigureOps := func(ops *opsv1alpha1.OpsRequest) bool {
+		return ops.Spec.Type == opsv1alpha1.ReconfiguringType && ops.Spec.Reconfigures != nil
 	}
 
 	if len(args) != 2 {
@@ -70,8 +72,8 @@ func (o *configDiffOptions) complete(args []string) error {
 		return err
 	}
 
-	baseVersion := &appsv1alpha1.OpsRequest{}
-	diffVersion := &appsv1alpha1.OpsRequest{}
+	baseVersion := &opsv1alpha1.OpsRequest{}
+	diffVersion := &opsv1alpha1.OpsRequest{}
 	if err := util.GetResourceObjectFromGVR(types.OpsGVR(), client.ObjectKey{
 		Namespace: o.baseOptions.namespace,
 		Name:      args[0],
@@ -102,7 +104,7 @@ func (o *configDiffOptions) complete(args []string) error {
 	return nil
 }
 
-func findTemplateStatusByName(status *appsv1alpha1.ReconfiguringStatus, tplName string) *appsv1alpha1.ConfigurationItemStatus {
+func findTemplateStatusByName(status *opsv1alpha1.ReconfiguringStatus, tplName string) *opsv1alpha1.ConfigurationItemStatus {
 	if status == nil {
 		return nil
 	}
@@ -122,16 +124,16 @@ func (o *configDiffOptions) validate() error {
 		diffStatus = o.diffVersion.Status
 	)
 
-	if baseStatus.Phase != appsv1alpha1.OpsSucceedPhase {
+	if baseStatus.Phase != opsv1alpha1.OpsSucceedPhase {
 		return core.MakeError("require reconfiguring phase is success!, name: %s, phase: %s", o.baseVersion.Name, baseStatus.Phase)
 	}
-	if diffStatus.Phase != appsv1alpha1.OpsSucceedPhase {
+	if diffStatus.Phase != opsv1alpha1.OpsSucceedPhase {
 		return core.MakeError("require reconfiguring phase is success!, name: %s, phase: %s", o.diffVersion.Name, diffStatus.Phase)
 	}
 
 	for _, tplName := range o.templateNames {
-		s1 := findTemplateStatusByName(baseStatus.ReconfiguringStatus, tplName)
-		s2 := findTemplateStatusByName(diffStatus.ReconfiguringStatus, tplName)
+		s1 := findTemplateStatusByName(baseStatus.ReconfiguringStatusAsComponent[o.componentName], tplName)
+		s2 := findTemplateStatusByName(diffStatus.ReconfiguringStatusAsComponent[o.componentName], tplName)
 		if s1 == nil || len(s1.LastAppliedConfiguration) == 0 {
 			return core.MakeError("invalid reconfiguring status. CR[%v]", client.ObjectKeyFromObject(o.baseVersion))
 		}
@@ -183,7 +185,7 @@ func (o *configDiffOptions) run() error {
 	return nil
 }
 
-func (o *configDiffOptions) maybeCompareOps(base *appsv1alpha1.OpsRequest, diff *appsv1alpha1.OpsRequest) bool {
+func (o *configDiffOptions) maybeCompareOps(base *opsv1alpha1.OpsRequest, diff *opsv1alpha1.OpsRequest) bool {
 	getClusterName := func(ops client.Object) string {
 		labels := ops.GetLabels()
 		if len(labels) == 0 {
@@ -191,11 +193,12 @@ func (o *configDiffOptions) maybeCompareOps(base *appsv1alpha1.OpsRequest, diff 
 		}
 		return labels[constant.AppInstanceLabelKey]
 	}
-	getComponentName := func(ops appsv1alpha1.OpsRequestSpec) string {
-		return ops.Reconfigure.ComponentName
+	// TODO: compare all reconfigures
+	getComponentName := func(ops opsv1alpha1.OpsRequestSpec) string {
+		return ops.Reconfigures[0].ComponentName
 	}
-	getTemplateName := func(ops appsv1alpha1.OpsRequestSpec) []string {
-		configs := ops.Reconfigure.Configurations
+	getTemplateName := func(ops opsv1alpha1.OpsRequestSpec) []string {
+		configs := ops.Reconfigures[0].Configurations
 		names := make([]string, len(configs))
 		for i, config := range configs {
 			names[i] = config.Name
@@ -228,7 +231,7 @@ func (o *configDiffOptions) diffConfig(tplName string) ([]core.VisualizedParam, 
 		configConstraint = &appsv1beta1.ConfigConstraint{}
 	)
 
-	tplList, err := util.GetConfigTemplateList(o.clusterName, o.baseOptions.namespace, o.baseOptions.dynamic, o.componentName, true)
+	tplList, err := util.GetConfigSpecsFromComponentName(o.baseOptions.dynamic, o.baseOptions.namespace, o.clusterName, o.componentName, true)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -243,9 +246,8 @@ func (o *configDiffOptions) diffConfig(tplName string) ([]core.VisualizedParam, 
 	}
 
 	formatCfg := configConstraint.Spec.FileFormatConfig
-
-	base := findTemplateStatusByName(o.baseVersion.Status.ReconfiguringStatus, tplName)
-	diff := findTemplateStatusByName(o.diffVersion.Status.ReconfiguringStatus, tplName)
+	base := findTemplateStatusByName(o.baseVersion.Status.ReconfiguringStatusAsComponent[o.componentName], tplName)
+	diff := findTemplateStatusByName(o.diffVersion.Status.ReconfiguringStatusAsComponent[o.componentName], tplName)
 	patch, _, err := core.CreateConfigPatch(base.LastAppliedConfiguration, diff.LastAppliedConfiguration, formatCfg.Format, tpl.Keys, false)
 	if err != nil {
 		return nil, nil, err

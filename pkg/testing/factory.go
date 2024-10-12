@@ -31,6 +31,8 @@ import (
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	cmdtesting "k8s.io/kubectl/pkg/cmd/testing"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
+
+	"github.com/apecloud/kbcli/pkg/types"
 )
 
 // NewTestFactory is like cmdtesting.NewTestFactory, registers KubeBlocks custom objects
@@ -98,8 +100,8 @@ func testDynamicResources() []*restmapper.APIGroupResources {
 			},
 			VersionedResources: map[string][]metav1.APIResource{
 				"v1": {
-					{Name: "deployments", Namespaced: true, Kind: "Deployment"},
-					{Name: "statefulsets", Namespaced: true, Kind: "StatefulSet"},
+					{Name: "deployments", Namespaced: true, Kind: types.KindDeployment},
+					{Name: "statefulsets", Namespaced: true, Kind: types.KindStatefulSet},
 				},
 			},
 		},
@@ -123,19 +125,33 @@ func testDynamicResources() []*restmapper.APIGroupResources {
 			Group: metav1.APIGroup{
 				Name: "apps.kubeblocks.io",
 				Versions: []metav1.GroupVersionForDiscovery{
-					{GroupVersion: "apps.kubeblocks.io/v1alpha1", Version: "v1alpha1"},
+					{GroupVersion: "apps.kubeblocks.io/v1", Version: "v1"},
 				},
 				PreferredVersion: metav1.GroupVersionForDiscovery{
-					GroupVersion: "apps.kubeblocks.io/v1alpha1",
+					GroupVersion: "apps.kubeblocks.io/v1",
+					Version:      "v1"},
+			},
+			VersionedResources: map[string][]metav1.APIResource{
+				"v1": {
+					{Name: "clusters", Namespaced: true, Kind: "Cluster"},
+					{Name: "clusterdefinitions", Namespaced: false, Kind: "clusterdefinition"},
+					{Name: "servicedescriptors", Namespaced: true, Kind: "ServiceDescriptor"},
+				},
+			},
+		},
+		{
+			Group: metav1.APIGroup{
+				Name: "operations.kubeblocks.io",
+				Versions: []metav1.GroupVersionForDiscovery{
+					{GroupVersion: "operations.kubeblocks.io/v1alpha1", Version: "v1alpha1"},
+				},
+				PreferredVersion: metav1.GroupVersionForDiscovery{
+					GroupVersion: "operations.kubeblocks.io/v1alpha1",
 					Version:      "v1alpha1"},
 			},
 			VersionedResources: map[string][]metav1.APIResource{
 				"v1alpha1": {
-					{Name: "clusters", Namespaced: true, Kind: "Cluster"},
-					{Name: "clusterdefinitions", Namespaced: false, Kind: "clusterdefinition"},
-					{Name: "clusterversions", Namespaced: false, Kind: "clusterversion"},
 					{Name: "opsrequests", Namespaced: true, Kind: "OpsRequest"},
-					{Name: "servicedescriptors", Namespaced: true, Kind: "ServiceDescriptor"},
 				},
 			},
 		},

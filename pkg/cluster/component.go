@@ -23,6 +23,7 @@ import (
 	"context"
 	"fmt"
 
+	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	"github.com/apecloud/kubeblocks/pkg/constant"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -65,7 +66,7 @@ func BuildShardingComponentName(shardingCompName, componentName string) string {
 	return fmt.Sprintf("%s(%s)", shardingCompName, componentName)
 }
 
-func GetCompSpecAndCheckSharding(cluster *appsv1alpha1.Cluster, componentName string) (*appsv1alpha1.ClusterComponentSpec, bool) {
+func GetCompSpecAndCheckSharding(cluster *kbappsv1.Cluster, componentName string) (*kbappsv1.ClusterComponentSpec, bool) {
 	compSpec := cluster.Spec.GetComponentByName(componentName)
 	if compSpec != nil {
 		return compSpec, false
@@ -77,7 +78,7 @@ func GetCompSpecAndCheckSharding(cluster *appsv1alpha1.Cluster, componentName st
 	return &shardingSpec.Template, true
 }
 
-func GetClusterComponentPairs(dynamicClient dynamic.Interface, cluster *appsv1alpha1.Cluster) ([]ComponentPair, error) {
+func GetClusterComponentPairs(dynamicClient dynamic.Interface, cluster *kbappsv1.Cluster) ([]ComponentPair, error) {
 	var componentPairs []ComponentPair
 	for _, compSpec := range cluster.Spec.ComponentSpecs {
 		componentPairs = append(componentPairs, ComponentPair{
@@ -95,7 +96,7 @@ func GetClusterComponentPairs(dynamicClient dynamic.Interface, cluster *appsv1al
 	return componentPairs, nil
 }
 
-func GetShardingComponentPairs(dynamicClient dynamic.Interface, cluster *appsv1alpha1.Cluster, shardingSpec appsv1alpha1.ShardingSpec) ([]ComponentPair, error) {
+func GetShardingComponentPairs(dynamicClient dynamic.Interface, cluster *kbappsv1.Cluster, shardingSpec kbappsv1.ShardingSpec) ([]ComponentPair, error) {
 	var componentPairs []ComponentPair
 	shardingComps, err := ListShardingComponents(dynamicClient, cluster.Name, cluster.Namespace, shardingSpec.Name)
 	if err != nil {

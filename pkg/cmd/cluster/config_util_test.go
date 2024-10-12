@@ -43,7 +43,6 @@ func NewFakeOperationsOptions(ns, cName string, objs ...runtime.Object) (*cmdtes
 	// TODO using GroupVersionResource of FakeKubeObjectHelper
 	listMapping := map[schema.GroupVersionResource]string{
 		types.ClusterDefGVR():       types.KindClusterDef + "List",
-		types.ClusterVersionGVR():   types.KindClusterVersion + "List",
 		types.ClusterGVR():          types.KindCluster + "List",
 		types.ConfigConstraintGVR(): types.KindConfigConstraint + "List",
 		types.ConfigurationGVR():    types.KindConfiguration + "List",

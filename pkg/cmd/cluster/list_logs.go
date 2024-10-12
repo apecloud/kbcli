@@ -20,11 +20,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package cluster
 
 import (
-	"bytes"
 	"fmt"
-	"os"
 	"strings"
 
+	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
@@ -33,7 +32,6 @@ import (
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
 
-	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	"github.com/apecloud/kubeblocks/pkg/constant"
 
 	"github.com/apecloud/kbcli/pkg/action"
@@ -169,7 +167,7 @@ type logFileInfo struct {
 }
 
 // gatherLogFilesData gathers all log files data from each instance of the cluster.
-func (o *ListLogsOptions) gatherLogFilesData(c *appsv1alpha1.Cluster, cd *appsv1alpha1.ClusterDefinition, pods *corev1.PodList) []logFileInfo {
+func (o *ListLogsOptions) gatherLogFilesData(c *kbappsv1.Cluster, cd *kbappsv1.ClusterDefinition, pods *corev1.PodList) []logFileInfo {
 	logFileInfoList := make([]logFileInfo, 0, len(pods.Items))
 	for _, p := range pods.Items {
 		if len(o.instName) > 0 && !strings.EqualFold(p.Name, o.instName) {
@@ -186,16 +184,18 @@ func (o *ListLogsOptions) gatherLogFilesData(c *appsv1alpha1.Cluster, cd *appsv1
 			if !strings.EqualFold(comCluster.Name, componentName) {
 				continue
 			}
-			compDefName = comCluster.ComponentDefRef
-			for _, logType := range comCluster.EnabledLogs {
+			compDefName = comCluster.ComponentDef
+			// TODO: update with new API for enabledLogs
+			/*for _, logType := range comCluster.EnabledLogs {
 				logTypeMap[logType] = struct{}{}
-			}
+			}*/
 			break
 		}
 		if len(compDefName) == 0 || len(logTypeMap) == 0 {
 			continue
 		}
-		for _, com := range cd.Spec.ComponentDefs {
+		// TODO: update with new API for enabledLogs
+		/*for _, com := range cd.Spec.ComponentDefs {
 			if !strings.EqualFold(com.Name, compDefName) {
 				continue
 			}
@@ -208,7 +208,7 @@ func (o *ListLogsOptions) gatherLogFilesData(c *appsv1alpha1.Cluster, cd *appsv1
 				}
 			}
 			break
-		}
+		}*/
 	}
 	return logFileInfoList
 }
@@ -235,7 +235,7 @@ func convertToLogFileInfo(fileInfo, logType, instName, component string) []logFi
 }
 
 // getRealFileFromContainer gets real log files against pattern from container, and returns file info in string format
-func (o *ListLogsOptions) getRealFileFromContainer(pod *corev1.Pod, pattern string) (string, error) {
+/*func (o *ListLogsOptions) getRealFileFromContainer(pod *corev1.Pod, pattern string) (string, error) {
 	o.exec.Pod = pod
 	// linux cmd : ls -lh --time-style='+%b %d, %Y %H:%M (UTC%:z)' pattern
 	o.exec.Command = []string{"/bin/bash", "-c", "ls -lh --time-style='+%b %d, %Y %H:%M (UTC%:z)' " + pattern}
@@ -248,4 +248,4 @@ func (o *ListLogsOptions) getRealFileFromContainer(pod *corev1.Pod, pattern stri
 		return out.String(), err
 	}
 	return out.String(), nil
-}
+}*/

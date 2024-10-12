@@ -28,7 +28,7 @@ import (
 	"github.com/apecloud/dbctl/engines"
 	"github.com/apecloud/dbctl/engines/models"
 	"github.com/apecloud/dbctl/engines/register"
-	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
+	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
 	"github.com/apecloud/kubeblocks/pkg/constant"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
@@ -69,7 +69,7 @@ type ConnectOptions struct {
 	clusterName string
 	// componentName in cluster.spec
 	clusterComponentName string
-	targetCluster        *appsv1alpha1.Cluster
+	targetCluster        *kbappsv1.Cluster
 	clientType           string
 	serviceKind          string
 	node                 *corev1.Node
@@ -220,7 +220,7 @@ func (o *ConnectOptions) getConnectionInfo() error {
 			return fmt.Errorf(`cannot found the component "%s" in the cluster "%s"`, o.clusterComponentName, o.clusterName)
 		}
 		if isSharding {
-			if componentPairs, err = cluster.GetShardingComponentPairs(o.Dynamic, o.targetCluster, appsv1alpha1.ShardingSpec{
+			if componentPairs, err = cluster.GetShardingComponentPairs(o.Dynamic, o.targetCluster, kbappsv1.ShardingSpec{
 				Name:     o.clusterComponentName,
 				Template: *compSpec,
 			}); err != nil {
@@ -307,10 +307,9 @@ func (o *ConnectOptions) getConnectInfoWithClusterService(services *corev1.Servi
 				continue
 			}
 			o.appendService(svc)
-			if v.ComponentSelector != "" {
-				clusterComponentMap[v.ComponentSelector] = false
-			} else if v.ShardingSelector != "" {
-				clusterComponentMap[v.ShardingSelector] = true
+			clusterComponentMap[v.ComponentSelector] = false
+			if o.targetCluster.Spec.GetShardingByName(v.ComponentSelector) != nil {
+				clusterComponentMap[v.ComponentSelector] = true
 			}
 			break
 		}
@@ -350,7 +349,7 @@ func (o *ConnectOptions) getConnectInfoWithClusterService(services *corev1.Servi
 }
 
 func (o *ConnectOptions) getComponentAccounts(componentDefName, componentName string) error {
-	compDef, err := cluster.GetComponentDefByName(o.Dynamic, componentDefName)
+	compDef, err := util.GetComponentDefByName(o.Dynamic, componentDefName)
 	if err != nil {
 		return err
 	}
