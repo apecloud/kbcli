@@ -86,6 +86,10 @@ var (
 			Foreground(lipgloss.Color("212"))
 )
 
+type ViewUpdateMsg struct {
+	View *viewv1.ReconciliationView
+}
+
 // Model defines the BubbleTea Model of the ReconciliationView.
 type Model struct {
 	// base framework
@@ -168,6 +172,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.mainContent.SetWidth(m.base.GetColumn(0).GetCell(1).GetWidth())
 		m.mainContent.SetHeight(m.base.GetColumn(0).GetCell(1).GetHeight())
 		m.mainContent.ForceRecalculate()
+	case ViewUpdateMsg:
+		m.view = msg.View
 	}
 	return m, nil
 }
@@ -186,6 +192,9 @@ func (m *Model) View() string {
 }
 
 func (m *Model) updateSummaryView() {
+	if m.view == nil {
+		return
+	}
 	summaryCell := m.statusBar.GetRow(0).GetCell(0)
 	if summaryCell.GetHeight() <= 0 {
 		return
@@ -199,6 +208,9 @@ func (m *Model) updateSummaryView() {
 }
 
 func (m *Model) updateLatestChangeView() {
+	if m.view == nil {
+		return
+	}
 	change := ""
 	if l := len(m.view.Status.CurrentState.Changes); l > 0 {
 		change = m.view.Status.CurrentState.Changes[l-1].Description
@@ -212,11 +224,18 @@ func (m *Model) updateLatestChangeView() {
 }
 
 func (m *Model) updateObjectTreeView() {
+	if m.view == nil {
+		return
+	}
 	m.objectTree = buildObjectTree(m.view.Status.CurrentState.ObjectTree)
 	m.mainContent.GetRow(0).GetCell(0).SetContent(m.objectTree.String())
 }
 
 func (m *Model) updateChangesView() {
+	if m.view == nil {
+		return
+	}
+
 	changesCell := m.mainContent.GetRow(0).GetCell(1)
 	if changesCell.GetWidth() <= 0 {
 		return
@@ -351,6 +370,6 @@ func buildObjectTree(objectTree *viewv1.ObjectTreeNode) *tree.Tree {
 	return treeNode
 }
 
-func NewReconciliationViewChart(view *viewv1.ReconciliationView) *Model {
-	return &Model{view: view}
+func NewReconciliationViewChart() *Model {
+	return &Model{}
 }

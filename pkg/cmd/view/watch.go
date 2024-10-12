@@ -26,11 +26,13 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	"k8s.io/client-go/dynamic"
 	clientset "k8s.io/client-go/kubernetes"
+	"k8s.io/klog/v2"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
 
@@ -44,6 +46,8 @@ var (
 	watchExamples = templates.Examples(`
 		# watch a view
 		kbcli view watch pg-cluster-view`)
+
+	program *tea.Program
 )
 
 func newWatchCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
@@ -60,26 +64,39 @@ func newWatchCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.C
 }
 
 func watch(f cmdutil.Factory, streams genericiooptions.IOStreams, args []string) error {
-	o := &watchOptions{factory: f, streams: streams, gvr: types.ViewGVR()}
-	if err := o.complete(args); err != nil {
-		return err
-	}
-	// get view object
-	ctx := context.TODO()
-	obj, err := o.dynamic.Resource(o.gvr).Namespace(o.namespace).Get(ctx, o.name, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-	view := &viewv1.ReconciliationView{}
-	if err = runtime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, view); err != nil {
-		return err
-	}
-	return renderView(view)
+	go doWatch(f, streams, args)
+	return renderView()
 }
 
-func renderView(view *viewv1.ReconciliationView) error {
-	m := chart.NewReconciliationViewChart(view)
-	_, err := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion()).Run()
+func doWatch(f cmdutil.Factory, streams genericiooptions.IOStreams, args []string) {
+	o := &watchOptions{factory: f, streams: streams, gvr: types.ViewGVR()}
+	if err := o.complete(args); err != nil {
+		klog.Fatal("failed to init clientset", err)
+	}
+	ctx := context.TODO()
+	watcher, err := o.dynamic.Resource(o.gvr).Namespace(o.namespace).Watch(ctx, metav1.ListOptions{})
+	if err != nil {
+		klog.Fatal("failed to watch view", err)
+	}
+	for event := range watcher.ResultChan() {
+		obj, ok := event.Object.(*unstructured.Unstructured)
+		if !ok {
+			continue
+		}
+		view := &viewv1.ReconciliationView{}
+		if err = runtime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, view); err != nil {
+			klog.Fatal("failed to convert view object", err)
+		}
+		if view.Name == args[0] && program != nil {
+			program.Send(chart.ViewUpdateMsg{View: view})
+		}
+	}
+}
+
+func renderView() error {
+	m := chart.NewReconciliationViewChart()
+	program = tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion())
+	_, err := program.Run()
 	return err
 }
 

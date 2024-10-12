@@ -85,10 +85,7 @@ func legend(bd barchart.BarData) (r string) {
 func totals(lv []barchart.BarData) (r string) {
 	r = "Totals\n"
 	for _, bd := range lv {
-		var sum float64
-		for _, bv := range bd.Values {
-			sum += bv.Value
-		}
+		sum := bd.Values[0].Value
 		r += "\n" + fmt.Sprintf("%s %.01f", bd.Label, sum)
 	}
 	return
