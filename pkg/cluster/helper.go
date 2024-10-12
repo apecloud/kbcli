@@ -202,6 +202,29 @@ func GetDefaultCompName(cd *appsv1alpha1.ClusterDefinition) (string, error) {
 	return "", fmt.Errorf("failed to get the default component definition name")
 }
 
+func IsShardingComponent(cluster *kbappsv1.Cluster, compName string) bool {
+	if cluster.Spec.GetShardingByName(compName) != nil {
+		return true
+	}
+	return false
+}
+
+func ComponentNameLabelKey(cluster *kbappsv1.Cluster, compName string) string {
+	compLabelKey := constant.KBAppComponentLabelKey
+	if IsShardingComponent(cluster, compName) {
+		compLabelKey = constant.KBAppShardingNameLabelKey
+	}
+	return compLabelKey
+}
+
+func GetComponentSpec(cluster *kbappsv1.Cluster, compName string) *kbappsv1.ClusterComponentSpec {
+	shardingSpec := cluster.Spec.GetShardingByName(compName)
+	if shardingSpec != nil {
+		return &shardingSpec.Template
+	}
+	return cluster.Spec.GetComponentByName(compName)
+}
+
 func GetClusterByName(dynamic dynamic.Interface, name string, namespace string) (*kbappsv1.Cluster, error) {
 	cluster := &kbappsv1.Cluster{}
 	if err := util.GetK8SClientObject(dynamic, cluster, types.ClusterGVR(), namespace, name); err != nil {
