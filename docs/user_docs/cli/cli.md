@@ -185,7 +185,10 @@ Print the version information, include kubernetes, KubeBlocks and kbcli version.
 
 view management command
 
+* [kbcli view create](kbcli_view_create.md)	 - create a view.
+* [kbcli view delete](kbcli_view_delete.md)	 - Delete a view.
 * [kbcli view list](kbcli_view_list.md)	 - list all views.
+* [kbcli view update](kbcli_view_update.md)	 - update a view.
 * [kbcli view watch](kbcli_view_watch.md)	 - watch a view.
 
 
