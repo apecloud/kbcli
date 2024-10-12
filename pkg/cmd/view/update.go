@@ -21,6 +21,7 @@ package view
 
 import (
 	"github.com/spf13/cobra"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
@@ -30,65 +31,72 @@ import (
 	"github.com/apecloud/kbcli/pkg/util"
 )
 
-const (
-	CueTemplateName = "view_template.cue"
-)
-
 var (
-	createExamples = templates.Examples(`
-		# create a view for cluster has the same name 'pg-cluster'
-		kbcli view create pg-cluster
-
-		# create a view for cluster has the name of 'pg-cluster'
-		kbcli view create pg-cluster-view --cluster-name pg-cluster
-
-		# create a view with custom locale, stateEvaluationExpression
-		kbcli view create pg-cluster-view --locale zh_cn --cel-state-evaluation-expression "has(object.status.phase) && object.status.phase == \"Running\""`)
+	updateExamples = templates.Examples(`
+		# update a view with custom locale, stateEvaluationExpression
+		kbcli view update pg-cluster-view --locale zh_cn --cel-state-evaluation-expression "has(object.status.phase) && object.status.phase == \"Running\""`)
 )
 
-type CreateViewOptions struct {
-	action.CreateOptions         `json:"-"`
-	ClusterName                  string `json:"clusterName,omitempty"`
+type UpdateOptions struct {
+	*action.PatchOptions
 	Locale                       string `json:"locale,omitempty"`
 	Depth                        int64  `json:"depth,omitempty"`
 	CelStateEvaluationExpression string `json:"celStateEvaluationExpression,omitempty"`
 }
 
-func (o *CreateViewOptions) Complete() error {
-	o.CreateOptions.Options = o
-	return o.CreateOptions.Complete()
+func (o *UpdateOptions) CmdComplete(cmd *cobra.Command) error {
+	if err := o.PatchOptions.CmdComplete(cmd); err != nil {
+		return err
+	}
+	return o.buildPatch()
 }
 
-func (o *CreateViewOptions) Run() error {
-	return o.CreateOptions.Run()
-}
-
-func newCreateCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := &CreateViewOptions{
-		CreateOptions: action.CreateOptions{
-			Factory:         f,
-			IOStreams:       streams,
-			CueTemplateName: CueTemplateName,
-			GVR:             types.ViewGVR(),
+func (o *UpdateOptions) buildPatch() error {
+	spec := make(map[string]interface{})
+	if o.Depth >= 0 {
+		spec["depth"] = o.Depth
+	}
+	if o.Locale != "" {
+		spec["locale"] = o.Locale
+	}
+	if o.CelStateEvaluationExpression != "" {
+		spec["celStateEvaluationExpression"] = o.CelStateEvaluationExpression
+	}
+	obj := unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"spec": spec,
 		},
 	}
+	bytes, err := obj.MarshalJSON()
+	if err != nil {
+		return err
+	}
+	o.Patch = string(bytes)
+	return nil
+}
+
+func newUpdateCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
+	o := &UpdateOptions{
+		PatchOptions: action.NewPatchOptions(f, streams, types.ViewGVR()),
+	}
 	cmd := &cobra.Command{
-		Use:               "create view-name",
-		Short:             "create a view.",
-		Example:           createExamples,
-		Aliases:           []string{"c"},
+		Use:               "update view-name",
+		Short:             "update a view.",
+		Example:           updateExamples,
+		Aliases:           []string{"u"},
 		ValidArgsFunction: util.ResourceNameCompletionFunc(f, types.ViewGVR()),
 		Run: func(cmd *cobra.Command, args []string) {
-			o.CreateOptions.Args = args
-			util.CheckErr(o.Complete())
+			o.Names = args
+			util.CheckErr(o.CmdComplete(cmd))
 			util.CheckErr(o.Run())
 		},
 	}
 
-	cmd.Flags().StringVar(&o.ClusterName, "cluster-name", "", "Specify target cluster name.")
 	cmd.Flags().StringVar(&o.Locale, "locale", "", "Specify locale.")
-	cmd.Flags().Int64Var(&o.Depth, "depth", 0, "Specify object tree depth to display.")
+	cmd.Flags().Int64Var(&o.Depth, "depth", -1, "Specify object tree depth to display.")
 	cmd.Flags().StringVar(&o.CelStateEvaluationExpression, "cel-state-evaluation-expression", "", "Specify CEL state evaluation expression.")
+
+	o.PatchOptions.AddFlags(cmd)
 
 	return cmd
 }

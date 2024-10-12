@@ -19,7 +19,7 @@
 options: {
 	name:                         string
 	namespace:                    string
-	clusterName:                  string
+	clusterName:                  string | *null
 	depth:                        int64 | *null
 	locale:                       string | *null
 	celStateEvaluationExpression: string | *null
@@ -34,7 +34,7 @@ content: {
 		namespace: options.namespace
 	}
 	spec: {
-		if options.clusterName != "" {
+		if options.clusterName != null {
 			targetObject: {
 				namespace: options.namespace
 				name:      options.clusterName

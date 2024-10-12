@@ -52,10 +52,11 @@ var (
 
 func newWatchCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "watch view-name",
-		Short:   "watch a view.",
-		Aliases: []string{"w"},
-		Example: watchExamples,
+		Use:               "watch view-name",
+		Short:             "watch a view.",
+		Example:           watchExamples,
+		Aliases:           []string{"w"},
+		ValidArgsFunction: util.ResourceNameCompletionFunc(f, types.ViewGVR()),
 		Run: func(cmd *cobra.Command, args []string) {
 			util.CheckErr(watch(f, streams, args))
 		},
