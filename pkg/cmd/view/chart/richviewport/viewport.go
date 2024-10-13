@@ -29,20 +29,27 @@ import (
 )
 
 var (
+	borderColor = lipgloss.Color("63") // purple
+
 	defaultStyle = lipgloss.NewStyle().
-			BorderStyle(lipgloss.NormalBorder()).
-			BorderForeground(lipgloss.Color("63")) // purple
+			Border(lipgloss.NormalBorder(), false, true).
+			BorderForeground(borderColor)
+
+	lineStyle = lipgloss.NewStyle().
+			Foreground(borderColor)
 
 	titleStyle = func() lipgloss.Style {
 		b := lipgloss.RoundedBorder()
 		b.Right = "├"
-		return lipgloss.NewStyle().BorderStyle(b).Padding(0, 1)
+		return lipgloss.NewStyle().BorderStyle(b).Padding(0, 1).
+			BorderForeground(borderColor)
 	}()
 
 	infoStyle = func() lipgloss.Style {
 		b := lipgloss.RoundedBorder()
 		b.Left = "┤"
-		return titleStyle.BorderStyle(b)
+		return titleStyle.BorderStyle(b).
+			BorderForeground(borderColor)
 	}()
 )
 
@@ -79,13 +86,13 @@ func (m *Model) View() string {
 func (m *Model) headerView() string {
 	title := titleStyle.Render(m.header)
 	line := strings.Repeat("─", max(0, m.width-lipgloss.Width(title)))
-	return lipgloss.JoinHorizontal(lipgloss.Center, title, line)
+	return lipgloss.JoinHorizontal(lipgloss.Center, title, lineStyle.Render(line))
 }
 
 func (m *Model) footerView() string {
 	info := infoStyle.Render(fmt.Sprintf("%3.f%%", m.viewport.ScrollPercent()*100))
 	line := strings.Repeat("─", max(0, m.width-lipgloss.Width(info)))
-	return lipgloss.JoinHorizontal(lipgloss.Center, line, info)
+	return lipgloss.JoinHorizontal(lipgloss.Center, lineStyle.Render(line), info)
 }
 
 func max(a, b int) int {
@@ -105,7 +112,7 @@ func NewViewPort(w, h int, header, content string) *Model {
 	headerHeight := lipgloss.Height(m.headerView())
 	footerHeight := lipgloss.Height(m.footerView())
 	verticalMarginHeight := headerHeight + footerHeight
-	m.viewport = viewport.New(m.width-2, m.height-verticalMarginHeight-1)
+	m.viewport = viewport.New(m.width-2, m.height-verticalMarginHeight)
 	m.viewport.SetContent(m.content)
 	m.viewport.YPosition = headerHeight + 1
 	return m
