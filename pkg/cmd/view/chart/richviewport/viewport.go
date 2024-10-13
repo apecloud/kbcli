@@ -29,7 +29,7 @@ import (
 )
 
 var (
-	borderColor = lipgloss.Color("63") // purple
+	borderColor = lipgloss.Color("6") // cyan
 
 	defaultStyle = lipgloss.NewStyle().
 			Border(lipgloss.NormalBorder(), false, true).
