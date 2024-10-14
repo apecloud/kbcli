@@ -93,18 +93,6 @@ func newUpgradeCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 
 func (o *InstallOptions) Upgrade() error {
 	klog.V(1).Info("##### Start to upgrade KubeBlocks #####")
-	// check helm release status
-	status, err := helm.GetHelmReleaseStatus(o.HelmCfg, types.KubeBlocksChartName)
-	if err != nil {
-		return fmt.Errorf("failed to get Helm release status: %v", err)
-	}
-	// intercept status of pending, unknown, uninstalling and uninstalled.
-	if status.IsPending() {
-		return fmt.Errorf("helm release status is %s. Please wait until the release status changes to ‘deployed’ before upgrading KubeBlocks", status.String())
-	} else if status != release.StatusDeployed && status != release.StatusFailed && status != release.StatusSuperseded {
-		return fmt.Errorf("helm release status is %s. Please fix the release before upgrading KubeBlocks", status.String())
-	}
-
 	if o.HelmCfg.Namespace() == "" {
 		ns, err := util.GetKubeBlocksNamespace(o.Client)
 		if err != nil || ns == "" {
@@ -116,6 +104,25 @@ func (o *InstallOptions) Upgrade() error {
 		o.HelmCfg.SetNamespace(ns)
 	}
 
+	// check helm release status
+	KBRelease, err := helm.GetHelmRelease(o.HelmCfg, types.KubeBlocksChartName)
+	if err != nil {
+		return fmt.Errorf("failed to get Helm release: %v", err)
+	}
+
+	// intercept status of pending, unknown, uninstalling and uninstalled.
+	var status release.Status
+	if KBRelease != nil && KBRelease.Info != nil {
+		status = KBRelease.Info.Status
+	} else {
+		return fmt.Errorf("failed to get Helm release status: release or release info is nil")
+	}
+	if status.IsPending() {
+		return fmt.Errorf("helm release status is %s. Please wait until the release status changes to ‘deployed’ before upgrading KubeBlocks", status.String())
+	} else if status != release.StatusDeployed && status != release.StatusFailed && status != release.StatusSuperseded {
+		return fmt.Errorf("helm release status is %s. Please fix the release before upgrading KubeBlocks", status.String())
+	}
+
 	o.Version = util.TrimVersionPrefix(o.Version)
 	// check flags already been set
 	if o.Version == "" && helm.ValueOptsIsEmpty(&o.ValueOpts) {
@@ -124,12 +131,10 @@ func (o *InstallOptions) Upgrade() error {
 	}
 
 	// check if KubeBlocks has been installed
-	v, err := util.GetVersionInfo(o.Client)
-	if err != nil {
-		return err
+	var kbVersion string
+	if KBRelease != nil && KBRelease.Chart != nil && KBRelease.Chart.Metadata != nil {
+		kbVersion = KBRelease.Chart.Metadata.Version
 	}
-
-	kbVersion := v.KubeBlocks
 	if kbVersion == "" {
 		return errors.New("KubeBlocks does not exist, try to run \"kbcli kubeblocks install\" to install")
 	}
@@ -138,13 +143,19 @@ func (o *InstallOptions) Upgrade() error {
 		fmt.Fprintf(o.Out, "Current version %s is same with the upgraded version, no need to upgrade.\n", o.Version)
 		return nil
 	}
-	fmt.Fprintf(o.Out, "Current KubeBlocks version %s.\n", v.KubeBlocks)
+	fmt.Fprintf(o.Out, "Current KubeBlocks version %s.\n", kbVersion)
 
 	// check installing version exists
+	v, err := util.GetVersionInfo(o.Client)
+	if err != nil {
+		return err
+	}
+	v.KubeBlocks = kbVersion
 	if err = o.checkVersion(v); err != nil {
 		return err
 	}
 	o.OldVersion = kbVersion
+
 	// double check when KubeBlocks version change
 	if !o.autoApprove && o.Version != "" {
 		oldVersion, err := version.NewVersion(kbVersion)
