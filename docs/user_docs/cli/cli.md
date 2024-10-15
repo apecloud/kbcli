@@ -160,20 +160,20 @@ Report kubeblocks or cluster info.
 * [kbcli report kubeblocks](kbcli_report_kubeblocks.md)	 - Report KubeBlocks information, including deployments, events, logs, etc.
 
 
+## [trace](kbcli_trace.md)
+
+trace management command
+
+* [kbcli trace create](kbcli_trace_create.md)	 - create a trace.
+* [kbcli trace delete](kbcli_trace_delete.md)	 - Delete a trace.
+* [kbcli trace list](kbcli_trace_list.md)	 - list all traces.
+* [kbcli trace update](kbcli_trace_update.md)	 - update a trace.
+* [kbcli trace watch](kbcli_trace_watch.md)	 - watch a trace.
+
+
 ## [version](kbcli_version.md)
 
 Print the version information, include kubernetes, KubeBlocks and kbcli version.
 
-
-
-## [view](kbcli_view.md)
-
-view management command
-
-* [kbcli view create](kbcli_view_create.md)	 - create a view.
-* [kbcli view delete](kbcli_view_delete.md)	 - Delete a view.
-* [kbcli view list](kbcli_view_list.md)	 - list all views.
-* [kbcli view update](kbcli_view_update.md)	 - update a view.
-* [kbcli view watch](kbcli_view_watch.md)	 - watch a view.
 
 
