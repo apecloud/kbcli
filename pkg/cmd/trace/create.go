@@ -17,7 +17,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package view
+package trace
 
 import (
 	"github.com/spf13/cobra"
@@ -31,22 +31,22 @@ import (
 )
 
 const (
-	CueTemplateName = "view_template.cue"
+	CueTemplateName = "trace_template.cue"
 )
 
 var (
 	createExamples = templates.Examples(`
-		# create a view for cluster has the same name 'pg-cluster'
-		kbcli view create pg-cluster
+		# create a trace for cluster has the same name 'pg-cluster'
+		kbcli trace create pg-cluster
 
-		# create a view for cluster has the name of 'pg-cluster'
-		kbcli view create pg-cluster-view --cluster-name pg-cluster
+		# create a trace for cluster has the name of 'pg-cluster'
+		kbcli trace create pg-cluster-trace --cluster-name pg-cluster
 
-		# create a view with custom locale, stateEvaluationExpression
-		kbcli view create pg-cluster-view --locale zh_cn --cel-state-evaluation-expression "has(object.status.phase) && object.status.phase == \"Running\""`)
+		# create a trace with custom locale, stateEvaluationExpression
+		kbcli trace create pg-cluster-trace --locale zh_cn --cel-state-evaluation-expression "has(object.status.phase) && object.status.phase == \"Running\""`)
 )
 
-type CreateViewOptions struct {
+type CreateOptions struct {
 	action.CreateOptions         `json:"-"`
 	ClusterName                  string `json:"clusterName,omitempty"`
 	Locale                       string `json:"locale,omitempty"`
@@ -54,30 +54,30 @@ type CreateViewOptions struct {
 	CelStateEvaluationExpression string `json:"celStateEvaluationExpression,omitempty"`
 }
 
-func (o *CreateViewOptions) Complete() error {
+func (o *CreateOptions) Complete() error {
 	o.CreateOptions.Options = o
 	return o.CreateOptions.Complete()
 }
 
-func (o *CreateViewOptions) Run() error {
+func (o *CreateOptions) Run() error {
 	return o.CreateOptions.Run()
 }
 
 func newCreateCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := &CreateViewOptions{
+	o := &CreateOptions{
 		CreateOptions: action.CreateOptions{
 			Factory:         f,
 			IOStreams:       streams,
 			CueTemplateName: CueTemplateName,
-			GVR:             types.ViewGVR(),
+			GVR:             types.TraceGVR(),
 		},
 	}
 	cmd := &cobra.Command{
-		Use:               "create view-name",
-		Short:             "create a view.",
+		Use:               "create trace-name",
+		Short:             "create a trace.",
 		Example:           createExamples,
 		Aliases:           []string{"c"},
-		ValidArgsFunction: util.ResourceNameCompletionFunc(f, types.ViewGVR()),
+		ValidArgsFunction: util.ResourceNameCompletionFunc(f, types.TraceGVR()),
 		Run: func(cmd *cobra.Command, args []string) {
 			o.CreateOptions.Args = args
 			util.CheckErr(o.Complete())

@@ -17,25 +17,26 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-// Package v1 contains API Schema definitions for the view v1 API group
-// +kubebuilder:object:generate=true
-// +groupName=view.kubeblocks.io
-package v1
+package trace
 
 import (
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/controller-runtime/pkg/scheme"
+	"github.com/spf13/cobra"
+	"k8s.io/cli-runtime/pkg/genericiooptions"
+	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 )
 
-var (
-	// GroupVersion is group version used to register these objects
-	GroupVersion = schema.GroupVersion{Group: "view.kubeblocks.io", Version: "v1"}
-
-	// SchemeBuilder is used to add go types to the GroupVersionKind scheme
-	SchemeBuilder = &scheme.Builder{GroupVersion: GroupVersion}
-
-	// AddToScheme adds the types in this group-version to the given scheme.
-	AddToScheme = SchemeBuilder.AddToScheme
-)
-
-const Kind = "ReconciliationView"
+func NewTraceCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:     "trace",
+		Short:   "trace management command",
+		Aliases: []string{"v"},
+	}
+	cmd.AddCommand(
+		newListCmd(f, streams),
+		newWatchCmd(f, streams),
+		newCreateCmd(f, streams),
+		newUpdateCmd(f, streams),
+		newDeleteCmd(f, streams),
+	)
+	return cmd
+}

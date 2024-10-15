@@ -17,7 +17,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package view
+package trace
 
 import (
 	"github.com/spf13/cobra"
@@ -33,8 +33,8 @@ import (
 
 var (
 	updateExamples = templates.Examples(`
-		# update a view with custom locale, stateEvaluationExpression
-		kbcli view update pg-cluster-view --locale zh_cn --cel-state-evaluation-expression "has(object.status.phase) && object.status.phase == \"Running\""`)
+		# update a trace with custom locale, stateEvaluationExpression
+		kbcli trace update pg-cluster-trace --locale zh_cn --cel-state-evaluation-expression "has(object.status.phase) && object.status.phase == \"Running\""`)
 )
 
 type UpdateOptions struct {
@@ -77,14 +77,14 @@ func (o *UpdateOptions) buildPatch() error {
 
 func newUpdateCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
 	o := &UpdateOptions{
-		PatchOptions: action.NewPatchOptions(f, streams, types.ViewGVR()),
+		PatchOptions: action.NewPatchOptions(f, streams, types.TraceGVR()),
 	}
 	cmd := &cobra.Command{
-		Use:               "update view-name",
-		Short:             "update a view.",
+		Use:               "update trace-name",
+		Short:             "update a trace.",
 		Example:           updateExamples,
 		Aliases:           []string{"u"},
-		ValidArgsFunction: util.ResourceNameCompletionFunc(f, types.ViewGVR()),
+		ValidArgsFunction: util.ResourceNameCompletionFunc(f, types.TraceGVR()),
 		Run: func(cmd *cobra.Command, args []string) {
 			o.Names = args
 			util.CheckErr(o.CmdComplete(cmd))

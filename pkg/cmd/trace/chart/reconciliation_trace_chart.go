@@ -32,10 +32,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
 
-	viewv1 "github.com/apecloud/kbcli/apis/view/v1"
-	"github.com/apecloud/kbcli/pkg/cmd/view/chart/richviewport"
-	"github.com/apecloud/kbcli/pkg/cmd/view/chart/summary"
-	"github.com/apecloud/kbcli/pkg/cmd/view/chart/timeserieslinechart"
+	tracev1 "github.com/apecloud/kbcli/apis/trace/v1"
+	"github.com/apecloud/kbcli/pkg/cmd/trace/chart/richviewport"
+	"github.com/apecloud/kbcli/pkg/cmd/trace/chart/summary"
+	"github.com/apecloud/kbcli/pkg/cmd/trace/chart/timeserieslinechart"
 )
 
 var (
@@ -81,11 +81,11 @@ var (
 	summaryNLatestChangeSeparator = "    "
 )
 
-type ViewUpdateMsg struct {
-	View *viewv1.ReconciliationView
+type TraceUpdateMsg struct {
+	Trace *tracev1.ReconciliationTrace
 }
 
-// Model defines the BubbleTea Model of the ReconciliationView.
+// Model defines the BubbleTea Model of the ReconciliationTrace.
 type Model struct {
 	// base framework
 	base *flexbox.HorizontalFlexBox
@@ -104,8 +104,8 @@ type Model struct {
 
 	zoneManager *zone.Manager
 
-	view           *viewv1.ReconciliationView
-	selectedChange *viewv1.ObjectChange
+	trace          *tracev1.ReconciliationTrace
+	selectedChange *tracev1.ObjectChange
 }
 
 func (m *Model) Init() tea.Cmd {
@@ -145,8 +145,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.base.SetWidth(msg.Width)
 		m.base.SetHeight(msg.Height)
 		m.base.ForceRecalculate()
-	case ViewUpdateMsg:
-		m.view = msg.View
+	case TraceUpdateMsg:
+		m.trace = msg.Trace
 	}
 	return m, nil
 }
@@ -164,10 +164,10 @@ func (m *Model) View() string {
 }
 
 func (m *Model) updateSummaryView() {
-	if m.view == nil {
+	if m.trace == nil {
 		return
 	}
-	dataSet := buildSummaryDataSet(&m.view.Status.CurrentState.Summary)
+	dataSet := buildSummaryDataSet(&m.trace.Status.CurrentState.Summary)
 	if len(dataSet) == 0 {
 		return
 	}
@@ -178,17 +178,17 @@ func (m *Model) updateSummaryView() {
 }
 
 func (m *Model) updateLatestChangeView() {
-	if m.view == nil {
+	if m.trace == nil {
 		return
 	}
 	if m.summary == nil {
 		return
 	}
 	change := ""
-	if l := len(m.view.Status.CurrentState.Changes); l > 0 {
-		change = m.view.Status.CurrentState.Changes[l-1].Description
-		if m.view.Status.CurrentState.Changes[l-1].LocalDescription != nil {
-			change = *m.view.Status.CurrentState.Changes[l-1].LocalDescription
+	if l := len(m.trace.Status.CurrentState.Changes); l > 0 {
+		change = m.trace.Status.CurrentState.Changes[l-1].Description
+		if m.trace.Status.CurrentState.Changes[l-1].LocalDescription != nil {
+			change = *m.trace.Status.CurrentState.Changes[l-1].LocalDescription
 		}
 	}
 	if m.selectedChange != nil {
@@ -207,14 +207,14 @@ func (m *Model) updateLatestChangeView() {
 }
 
 func (m *Model) updateObjectTreeView() {
-	if m.view == nil {
+	if m.trace == nil {
 		return
 	}
-	m.objectTree = buildObjectTree(m.view.Status.CurrentState.ObjectTree)
+	m.objectTree = buildObjectTree(m.trace.Status.CurrentState.ObjectTree)
 }
 
 func (m *Model) updateChangesView() {
-	if m.view == nil {
+	if m.trace == nil {
 		return
 	}
 	if m.objectTree == nil {
@@ -222,7 +222,7 @@ func (m *Model) updateChangesView() {
 	}
 
 	depthMap := make(map[corev1.ObjectReference]float64)
-	depth := buildDepthMap(m.view.Status.CurrentState.ObjectTree, 0, depthMap)
+	depth := buildDepthMap(m.trace.Status.CurrentState.ObjectTree, 0, depthMap)
 	minYValue := 0.0
 	maxYValue := float64(len(depthMap))
 	w, h := lipgloss.Size(m.objectTree.String())
@@ -239,7 +239,7 @@ func (m *Model) updateChangesView() {
 	changesChart.SetStyle(changesLineStyle)
 	changesChart.SetZoneManager(m.zoneManager)
 	m.changes = &changesChart
-	for _, change := range m.view.Status.CurrentState.Changes {
+	for _, change := range m.trace.Status.CurrentState.Changes {
 		objRef := normalizeObjectRef(&change.ObjectReference)
 		m.changes.Push(timeserieslinechart.TimePoint{Time: change.Timestamp.Time, Value: depth - depthMap[*objRef] + 1})
 	}
@@ -247,7 +247,7 @@ func (m *Model) updateChangesView() {
 }
 
 func (m *Model) updateStatusBarView() {
-	if m.view == nil {
+	if m.trace == nil {
 		return
 	}
 	if m.summary == nil {
@@ -263,7 +263,7 @@ func (m *Model) updateStatusBarView() {
 }
 
 func (m *Model) updateMainContentView() {
-	if m.view == nil {
+	if m.trace == nil {
 		return
 	}
 	if m.objectTree == nil {
@@ -286,9 +286,9 @@ func (m *Model) setSelectedChange(msg tea.MouseMsg) {
 		return
 	}
 	depthMap := make(map[corev1.ObjectReference]float64)
-	depth := buildDepthMap(m.view.Status.CurrentState.ObjectTree, 0, depthMap)
-	for i := range m.view.Status.CurrentState.Changes {
-		change := &m.view.Status.CurrentState.Changes[i]
+	depth := buildDepthMap(m.trace.Status.CurrentState.ObjectTree, 0, depthMap)
+	for i := range m.trace.Status.CurrentState.Changes {
+		change := &m.trace.Status.CurrentState.Changes[i]
 		if change.Timestamp.Time.Unix() != point.Time.Unix() {
 			continue
 		}
@@ -300,7 +300,7 @@ func (m *Model) setSelectedChange(msg tea.MouseMsg) {
 	}
 }
 
-func buildSummaryDataSet(summary *viewv1.ObjectTreeDiffSummary) []barchart.BarData {
+func buildSummaryDataSet(summary *tracev1.ObjectTreeDiffSummary) []barchart.BarData {
 	var dataSet []barchart.BarData
 	for i := range summary.ObjectSummaries {
 		n := normalizeObjectSummary(&summary.ObjectSummaries[i])
@@ -325,12 +325,12 @@ func normalizeObjectRef(ref *corev1.ObjectReference) *corev1.ObjectReference {
 	return &objRef
 }
 
-func normalizeObjectSummary(s *viewv1.ObjectSummary) *viewv1.ObjectSummary {
+func normalizeObjectSummary(s *tracev1.ObjectSummary) *tracev1.ObjectSummary {
 	if s == nil {
 		return nil
 	}
 	if s.ChangeSummary == nil {
-		s.ChangeSummary = &viewv1.ObjectChangeSummary{}
+		s.ChangeSummary = &tracev1.ObjectChangeSummary{}
 	}
 	if s.ChangeSummary.Added == nil {
 		s.ChangeSummary.Added = pointer.Int32(0)
@@ -344,7 +344,7 @@ func normalizeObjectSummary(s *viewv1.ObjectSummary) *viewv1.ObjectSummary {
 	return s
 }
 
-func buildDepthMap(objectTree *viewv1.ObjectTreeNode, depth float64, depthMap map[corev1.ObjectReference]float64) float64 {
+func buildDepthMap(objectTree *tracev1.ObjectTreeNode, depth float64, depthMap map[corev1.ObjectReference]float64) float64 {
 	if objectTree == nil {
 		return depth
 	}
@@ -356,7 +356,7 @@ func buildDepthMap(objectTree *viewv1.ObjectTreeNode, depth float64, depthMap ma
 	return depth
 }
 
-func buildObjectTree(objectTree *viewv1.ObjectTreeNode) *tree.Tree {
+func buildObjectTree(objectTree *tracev1.ObjectTreeNode) *tree.Tree {
 	if objectTree == nil {
 		return nil
 	}
@@ -373,6 +373,6 @@ func buildObjectTree(objectTree *viewv1.ObjectTreeNode) *tree.Tree {
 	return treeNode
 }
 
-func NewReconciliationViewChart() *Model {
+func NewReconciliationTraceChart() *Model {
 	return &Model{}
 }

@@ -27,8 +27,8 @@ options: {
 
 // required, k8s api resource content
 content: {
-	apiVersion: "view.kubeblocks.io/v1"
-	kind:       "ReconciliationView"
+	apiVersion: "trace.kubeblocks.io/v1"
+	kind:       "ReconciliationTrace"
 	metadata: {
 		name:      options.name
 		namespace: options.namespace

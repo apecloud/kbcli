@@ -17,7 +17,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package view
+package trace
 
 import (
 	"fmt"
@@ -34,17 +34,17 @@ import (
 
 var (
 	deleteExamples = templates.Examples(`
-		# Delete a view
-		kbcli view delete pg-cluster`)
+		# Delete a trace
+		kbcli trace delete pg-cluster`)
 )
 
 func newDeleteCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := action.NewDeleteOptions(f, streams, types.ViewGVR())
+	o := action.NewDeleteOptions(f, streams, types.TraceGVR())
 	cmd := &cobra.Command{
-		Use:               "delete view-name",
-		Short:             "Delete a view.",
+		Use:               "delete trace-name",
+		Short:             "Delete a trace.",
 		Example:           deleteExamples,
-		ValidArgsFunction: util.ResourceNameCompletionFunc(f, types.ViewGVR()),
+		ValidArgsFunction: util.ResourceNameCompletionFunc(f, types.TraceGVR()),
 		Run: func(cmd *cobra.Command, args []string) {
 			cmdutil.CheckErr(complete(o, args))
 			cmdutil.CheckErr(o.Run())
@@ -55,7 +55,7 @@ func newDeleteCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.
 
 func complete(o *action.DeleteOptions, args []string) error {
 	if len(args) == 0 {
-		return fmt.Errorf("missing view name")
+		return fmt.Errorf("missing trace name")
 	}
 	if len(args) > 1 {
 		return fmt.Errorf("can't delete multiple views at once")

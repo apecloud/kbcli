@@ -214,11 +214,11 @@ const (
 	ResourceRSM = "replicatedstatemachines"
 )
 
-// view API group
+// trace API group
 const (
-	ViewAPIGroup   = "view.kubeblocks.io"
-	ViewAPIVersion = "v1"
-	ResourceView   = "reconciliationviews"
+	TraceAPIGroup   = "trace.kubeblocks.io"
+	TraceAPIVersion = "v1"
+	ResourceTrace   = "reconciliationtraces"
 )
 
 const (
@@ -479,6 +479,6 @@ func CronJobGVR() schema.GroupVersionResource {
 	return schema.GroupVersionResource{Group: K8SBatchAPIGroup, Version: K8sBatchAPIVersion, Resource: ResourceCronJobs}
 }
 
-func ViewGVR() schema.GroupVersionResource {
-	return schema.GroupVersionResource{Group: ViewAPIGroup, Version: ViewAPIVersion, Resource: ResourceView}
+func TraceGVR() schema.GroupVersionResource {
+	return schema.GroupVersionResource{Group: TraceAPIGroup, Version: TraceAPIVersion, Resource: ResourceTrace}
 }

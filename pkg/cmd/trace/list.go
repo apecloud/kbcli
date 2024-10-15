@@ -17,7 +17,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package view
+package trace
 
 import (
 	"github.com/spf13/cobra"
@@ -32,15 +32,15 @@ import (
 
 var (
 	listExamples = templates.Examples(`
-		# list all views
-		kbcli view list`)
+		# list all traces
+		kbcli trace list`)
 )
 
 func newListCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := action.NewListOptions(f, streams, types.ViewGVR())
+	o := action.NewListOptions(f, streams, types.TraceGVR())
 	cmd := &cobra.Command{
 		Use:               "list",
-		Short:             "list all views.",
+		Short:             "list all traces.",
 		Example:           listExamples,
 		Aliases:           []string{"ls"},
 		ValidArgsFunction: util.ResourceNameCompletionFunc(f, o.GVR),

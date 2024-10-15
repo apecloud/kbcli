@@ -17,7 +17,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package view
+package trace
 
 import (
 	"context"
@@ -36,27 +36,27 @@ import (
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
 
-	viewv1 "github.com/apecloud/kbcli/apis/view/v1"
-	"github.com/apecloud/kbcli/pkg/cmd/view/chart"
+	tracev1 "github.com/apecloud/kbcli/apis/trace/v1"
+	"github.com/apecloud/kbcli/pkg/cmd/trace/chart"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
 )
 
 var (
 	watchExamples = templates.Examples(`
-		# watch a view
-		kbcli view watch pg-cluster-view`)
+		# watch a trace
+		kbcli trace watch pg-cluster-trace`)
 
 	program *tea.Program
 )
 
 func newWatchCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:               "watch view-name",
-		Short:             "watch a view.",
+		Use:               "watch trace-name",
+		Short:             "watch a trace.",
 		Example:           watchExamples,
 		Aliases:           []string{"w"},
-		ValidArgsFunction: util.ResourceNameCompletionFunc(f, types.ViewGVR()),
+		ValidArgsFunction: util.ResourceNameCompletionFunc(f, types.TraceGVR()),
 		Run: func(cmd *cobra.Command, args []string) {
 			util.CheckErr(watch(f, streams, args))
 		},
@@ -66,36 +66,36 @@ func newWatchCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.C
 
 func watch(f cmdutil.Factory, streams genericiooptions.IOStreams, args []string) error {
 	go doWatch(f, streams, args)
-	return renderView()
+	return renderTrace()
 }
 
 func doWatch(f cmdutil.Factory, streams genericiooptions.IOStreams, args []string) {
-	o := &watchOptions{factory: f, streams: streams, gvr: types.ViewGVR()}
+	o := &watchOptions{factory: f, streams: streams, gvr: types.TraceGVR()}
 	if err := o.complete(args); err != nil {
 		klog.Fatal("failed to init clientset", err)
 	}
 	ctx := context.TODO()
 	watcher, err := o.dynamic.Resource(o.gvr).Namespace(o.namespace).Watch(ctx, metav1.ListOptions{})
 	if err != nil {
-		klog.Fatal("failed to watch view", err)
+		klog.Fatal("failed to watch trace", err)
 	}
 	for event := range watcher.ResultChan() {
 		obj, ok := event.Object.(*unstructured.Unstructured)
 		if !ok {
 			continue
 		}
-		view := &viewv1.ReconciliationView{}
-		if err = runtime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, view); err != nil {
-			klog.Fatal("failed to convert view object", err)
+		trace := &tracev1.ReconciliationTrace{}
+		if err = runtime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, trace); err != nil {
+			klog.Fatal("failed to convert trace object", err)
 		}
-		if view.Name == args[0] && program != nil {
-			program.Send(chart.ViewUpdateMsg{View: view})
+		if trace.Name == args[0] && program != nil {
+			program.Send(chart.TraceUpdateMsg{Trace: trace})
 		}
 	}
 }
 
-func renderView() error {
-	m := chart.NewReconciliationViewChart()
+func renderTrace() error {
+	m := chart.NewReconciliationTraceChart()
 	program = tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion())
 	_, err := program.Run()
 	return err
@@ -117,7 +117,7 @@ func (o *watchOptions) complete(args []string) error {
 	var err error
 
 	if len(args) == 0 {
-		return fmt.Errorf("a view name is required")
+		return fmt.Errorf("a trace name is required")
 	}
 	o.name = args[0]
 	if o.client, err = o.factory.KubernetesClientSet(); err != nil {
