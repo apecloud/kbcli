@@ -37,7 +37,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	apitypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
@@ -111,10 +110,6 @@ type OperationsOptions struct {
 	// Switchover options
 	Component           string                        `json:"component"`
 	Instance            string                        `json:"instance"`
-	Primary             string                        `json:"-"`
-	CharacterType       string                        `json:"-"`
-	LorryHAEnabled      bool                          `json:"-"`
-	ExecPod             *corev1.Pod                   `json:"-"`
 	BackupName          string                        `json:"-"`
 	Inplace             bool                          `json:"-"`
 	InstanceNames       []string                      `json:"-"`
@@ -222,91 +217,7 @@ func (o *OperationsOptions) CompleteSwitchoverOps() error {
 		}
 		o.Component = clusterObj.Spec.ComponentSpecs[0].Name
 	}
-	o.CompleteHaEnabled()
-	return o.CompleteCharacterType(clusterObj)
-}
-
-// CompleteCharacterType will get the cluster character type compatible with 0.7
-// If both componentDefRef and componentDef are provided, the componentDef will take precedence over componentDefRef.
-func (o *OperationsOptions) CompleteCharacterType(clusterObj *appsv1.Cluster) error {
-	var primaryRoles []string
-	componentSpec := cluster.GetComponentSpec(clusterObj, o.Component)
-	if componentSpec.ComponentDef != "" {
-		componentDefV2 := &appsv1.ComponentDefinition{}
-		if err := util.GetK8SClientObject(o.Dynamic, componentDefV2, types.CompDefGVR(), "", componentSpec.ComponentDef); err != nil {
-			return err
-		}
-		o.CharacterType = componentDefV2.Spec.ServiceKind
-
-		primaryRole, _ := func(roles []appsv1.ReplicaRole) (string, error) {
-			targetRole := ""
-			if len(roles) == 0 {
-				return targetRole, fmt.Errorf("component has no roles definition, does not support switchover")
-			}
-			for _, role := range roles {
-				if role.Serviceable && role.Writable {
-					if targetRole != "" {
-						return targetRole, fmt.Errorf("componentDefinition has more than role is serviceable and writable, does not support switchover")
-					}
-					targetRole = role.Name
-				}
-			}
-			return targetRole, nil
-		}(componentDefV2.Spec.Roles)
-		primaryRoles = append(primaryRoles, primaryRole)
-	}
-
-	if o.Instance != "" {
-		pod, err := o.Client.CoreV1().Pods(o.Namespace).Get(context.Background(), o.Instance, metav1.GetOptions{})
-		if err != nil {
-			return err
-		}
-		o.ExecPod = pod
-		return nil
-	}
-
-	if len(primaryRoles) == 0 {
-		return nil
-	}
-
-	labelsMap := map[string]string{
-		constant.AppInstanceLabelKey:    o.Name,
-		constant.AppManagedByLabelKey:   constant.AppName,
-		constant.KBAppComponentLabelKey: o.Component,
-	}
-	selector := labels.SelectorFromSet(labelsMap)
-	podList, err := o.Client.CoreV1().Pods(o.Namespace).List(context.Background(), metav1.ListOptions{LabelSelector: selector.String()})
-	if err != nil {
-		return err
-	}
-	for _, pod := range podList.Items {
-		podRole, ok := pod.Labels[constant.RoleLabelKey]
-		for _, role := range primaryRoles {
-			if ok && podRole == role {
-				o.ExecPod = pod.DeepCopy()
-				o.Primary = pod.Name
-				break
-			}
-		}
-	}
-	if o.ExecPod == nil {
-		return fmt.Errorf("component %s has no primary", o.Component)
-	}
-
 	return nil
-}
-
-func (o *OperationsOptions) CompleteHaEnabled() {
-	cmName := fmt.Sprintf("%s-%s-haconfig", o.Name, o.Component)
-
-	cm, err := o.Client.CoreV1().ConfigMaps(o.Namespace).Get(context.Background(), cmName, metav1.GetOptions{})
-	if err != nil {
-		return
-	}
-	enable, ok := cm.Annotations["enable"]
-	if ok && strings.EqualFold(enable, "true") {
-		o.LorryHAEnabled = true
-	}
 }
 
 func (o *OperationsOptions) validateUpgrade(cluster *appsv1.Cluster) error {
