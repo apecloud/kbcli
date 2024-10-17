@@ -20,12 +20,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package flags
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
+	"github.com/apecloud/kubeblocks/pkg/constant"
 	"github.com/spf13/cobra"
+	flag "github.com/spf13/pflag"
 	"github.com/stoewer/go-strcase"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/kube-openapi/pkg/validation/spec"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	utilcomp "k8s.io/kubectl/pkg/util/completion"
@@ -104,17 +108,22 @@ func buildOneFlag(cmd *cobra.Command, k string, s *spec.Schema, isArray bool) er
 	if len(s.Type) > 0 {
 		tpe = s.Type[0]
 	}
-
+	getFlags := func() *flag.FlagSet {
+		if cmd.Flag(name) != nil {
+			return cmd.LocalFlags()
+		}
+		return cmd.Flags()
+	}
 	if isArray {
 		switch tpe {
 		case typeString:
-			cmd.Flags().StringArray(name, []string{castOrZero[string](s.Default)}, buildFlagDescription(s))
+			getFlags().StringArray(name, []string{castOrZero[string](s.Default)}, buildFlagDescription(s))
 		case typeInteger:
-			cmd.Flags().IntSlice(name, []int{castOrZero[int](s.Default)}, buildFlagDescription(s))
+			getFlags().IntSlice(name, []int{castOrZero[int](s.Default)}, buildFlagDescription(s))
 		case typeNumber:
-			cmd.Flags().Float64Slice(name, []float64{castOrZero[float64](s.Default)}, buildFlagDescription(s))
+			getFlags().Float64Slice(name, []float64{castOrZero[float64](s.Default)}, buildFlagDescription(s))
 		case typeBoolean:
-			cmd.Flags().BoolSlice(name, []bool{castOrZero[bool](s.Default)}, buildFlagDescription(s))
+			getFlags().BoolSlice(name, []bool{castOrZero[bool](s.Default)}, buildFlagDescription(s))
 		case typeObject:
 			for subName, prop := range s.Properties {
 				if err := buildOneFlag(cmd, fmt.Sprintf("%s.%s", name, subName), &prop, true); err != nil {
@@ -131,13 +140,13 @@ func buildOneFlag(cmd *cobra.Command, k string, s *spec.Schema, isArray bool) er
 	} else {
 		switch tpe {
 		case typeString:
-			cmd.Flags().String(name, castOrZero[string](s.Default), buildFlagDescription(s))
+			getFlags().String(name, castOrZero[string](s.Default), buildFlagDescription(s))
 		case typeInteger:
-			cmd.Flags().Int(name, int(castOrZero[float64](s.Default)), buildFlagDescription(s))
+			getFlags().Int(name, int(castOrZero[float64](s.Default)), buildFlagDescription(s))
 		case typeNumber:
-			cmd.Flags().Float64(name, castOrZero[float64](s.Default), buildFlagDescription(s))
+			getFlags().Float64(name, castOrZero[float64](s.Default), buildFlagDescription(s))
 		case typeBoolean:
-			cmd.Flags().Bool(name, castOrZero[bool](s.Default), buildFlagDescription(s))
+			getFlags().Bool(name, castOrZero[bool](s.Default), buildFlagDescription(s))
 		case typeObject:
 			for subName, prop := range s.Properties {
 				if err := buildOneFlag(cmd, fmt.Sprintf("%s.%s", name, subName), &prop, false); err != nil {
@@ -229,5 +238,52 @@ func autoCompleteClusterComponent(cmd *cobra.Command, f cmdutil.Factory, flag st
 		return components, cobra.ShellCompDirectiveNoFileComp
 	}
 	return cmd.RegisterFlagCompletionFunc(flag, autoComplete)
+}
 
+func CompletedInstanceFlag(cmd *cobra.Command, f cmdutil.Factory, flag string) error {
+	autoComplete := func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		if len(args) == 0 {
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		}
+		clusterName := args[0]
+		namespace, _, _ := f.ToRawKubeConfigLoader().Namespace()
+		cli, _ := f.KubernetesClientSet()
+		pods, err := cli.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{
+			LabelSelector: fmt.Sprintf("%s=%s", constant.AppInstanceLabelKey, clusterName),
+		})
+		if err != nil {
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		}
+		var podNames []string
+		for _, v := range pods.Items {
+			podNames = append(podNames, v.Name)
+		}
+		return podNames, cobra.ShellCompDirectiveNoFileComp
+	}
+	return cmd.RegisterFlagCompletionFunc(flag, autoComplete)
+}
+
+func CompletedInstanceTemplatesFlag(cmd *cobra.Command, f cmdutil.Factory, flag string) error {
+	autoComplete := func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		if len(args) == 0 {
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		}
+		namespace, _, _ := f.ToRawKubeConfigLoader().Namespace()
+		dynamic, _ := f.DynamicClient()
+		cluster := &appsv1alpha1.Cluster{}
+		_ = util.GetK8SClientObject(dynamic, cluster, types.ClusterGVR(), namespace, util.GetClusterNameFromArgsOrFlag(cmd, args))
+		var templateNames []string
+		for _, comp := range cluster.Spec.ComponentSpecs {
+			for _, insTpl := range comp.Instances {
+				templateNames = append(templateNames, insTpl.Name)
+			}
+		}
+		for _, comp := range cluster.Spec.ShardingSpecs {
+			for _, insTpl := range comp.Template.Instances {
+				templateNames = append(templateNames, insTpl.Name)
+			}
+		}
+		return templateNames, cobra.ShellCompDirectiveNoFileComp
+	}
+	return cmd.RegisterFlagCompletionFunc(flag, autoComplete)
 }

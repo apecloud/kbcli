@@ -31,6 +31,7 @@ kbcli cluster custom-ops OpsDef --cluster <clusterName> <your custom params> [fl
       --cluster string                 Specify the cluster name
       --component string               Specify the component name of the cluster. if not specified, using the first component which referenced the defined componentDefinition.
       --dry-run string[="unchanged"]   Must be "client", or "server". If with client strategy, only print the object that would be sent, and no data is actually sent. If with server strategy, submit the server-side request, but no data is persistent. (default "none")
+      --edit                           Edit the API resource before creating
       --force                           skip the pre-checks of the opsRequest to run the opsRequest forcibly
   -h, --help                           help for custom-ops
       --name string                    OpsRequest name. if not specified, it will be randomly generated
