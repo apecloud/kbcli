@@ -1050,7 +1050,7 @@ func NewCustomOpsCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cob
 
 func buildCustomOpsExamples(t unstructured.Unstructured) string {
 	opsDef := &opsv1alpha1.OpsDefinition{}
-	apiruntime.DefaultUnstructuredConverter.FromUnstructured(t.UnstructuredContent(), opsDef)
+	_ = apiruntime.DefaultUnstructuredConverter.FromUnstructured(t.UnstructuredContent(), opsDef)
 	parametersSchema := opsDef.Spec.ParametersSchema
 	commandName := strcase.KebabCase(t.GetName())
 	baseCommand := fmt.Sprintf(`
@@ -1107,7 +1107,7 @@ func buildCustomOpsCmds(option *OperationsOptions) []*cobra.Command {
 
 func (o *CustomOperations) addOpsDefFlags(cmd *cobra.Command, t unstructured.Unstructured) error {
 	opsDef := &opsv1alpha1.OpsDefinition{}
-	apiruntime.DefaultUnstructuredConverter.FromUnstructured(t.UnstructuredContent(), opsDef)
+	_ = apiruntime.DefaultUnstructuredConverter.FromUnstructured(t.UnstructuredContent(), opsDef)
 	parametersSchema := opsDef.Spec.ParametersSchema
 	if parametersSchema == nil {
 		return nil
