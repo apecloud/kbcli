@@ -16,6 +16,10 @@
 //along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 // required, command line input options for parameters and flags
+package stdlib
+
+import "strconv"
+
 options: {
 	name:                    string
 	namespace:               string
@@ -23,23 +27,24 @@ options: {
 	type:                    string
 	typeLower:               string
 	ttlSecondsAfterSucceed:  int
-	clusterVersionRef:       string
 	componentDefinitionName: string
 	serviceVersion:          string
 	component:               string
 	instance:                string
 	componentNames: [...string]
+	instanceTPLNames: [...string]
 	rebuildInstanceFrom: [
 		...{
 			componentName: string
 			backupName?:   string
+			inPlace?:      bool
 			instances: [
 				...{
 					name:            string
 					targetNodeName?: string
 				},
 			]
-			envForRestore?: [
+			restoreEnv?: [
 				...{
 					name:  string
 					value: string
@@ -49,8 +54,12 @@ options: {
 	]
 	cpu:      string
 	memory:   string
-	replicas: int
+	replicas: string
+	offlineInstancesToOnline: [...string]
+	onlineInstancesToOffline: [...string]
+	scaleOut: bool
 	storage:  string
+	opsDefinitionName: string
 	vctNames: [...string]
 	keyValues: [string]: {string | null}
 	hasPatch:        bool
@@ -78,7 +87,6 @@ options: {
 
 // define operation block,
 #upgrade: {
-	clusterVersionRef: options.clusterVersionRef
 	if len(options.componentNames) > 0 {
 		components: [ for _, cName in options.componentNames {
 			componentName: cName
@@ -94,7 +102,7 @@ options: {
 
 // required, k8s api resource content
 content: {
-	apiVersion: "apps.kubeblocks.io/v1alpha1"
+	apiVersion: "operations.kubeblocks.io/v1alpha1"
 	kind:       "OpsRequest"
 	metadata: {
 		if options.opsRequestName == "" {
@@ -129,7 +137,26 @@ content: {
 		if options.type == "HorizontalScaling" {
 			horizontalScaling: [ for _, cName in options.componentNames {
 				componentName: cName
-				replicas:      options.replicas
+				if options.scaleOut {
+					scaleOut: {
+						if options.replicas != "" {
+							replicaChanges: strconv.Atoi(options.replicas)
+						}
+						if len(options.offlineInstancesToOnline) > 0 {
+						    offlineInstancesToOnline: options.offlineInstancesToOnline
+						}
+					}
+				}
+				if !options.scaleOut {
+					scaleIn: {
+						if options.replicas != "" {
+							replicaChanges: strconv.Atoi(options.replicas)
+						}
+						if len(options.onlineInstancesToOffline) > 0 {
+                            onlineInstancesToOffline: options.onlineInstancesToOffline
+                        }
+					}
+				}
 			}]
 		}
 		if options.type == "Restart" {
@@ -141,21 +168,40 @@ content: {
 			verticalScaling: [ for _, cName in options.componentNames {
 				componentName: cName
 				requests: {
-					if options.memory != "" {
+					if options.memory != "" && len(options.instanceTPLNames) == 0 {
 						memory: options.memory
 					}
-					if options.cpu != "" {
+					if options.cpu != "" && len(options.instanceTPLNames) == 0 {
 						cpu: options.cpu
 					}
 				}
 				limits: {
-					if options.memory != "" {
+					if options.memory != "" && len(options.instanceTPLNames) == 0 {
 						memory: options.memory
 					}
-					if options.cpu != "" {
+					if options.cpu != "" && len(options.instanceTPLNames) == 0 {
 						cpu: options.cpu
 					}
 				}
+				instances: [ for _, tplName in options.instanceTPLNames {
+					name: tplName
+					requests: {
+						if options.memory != "" {
+							memory: options.memory
+						}
+						if options.cpu != "" {
+							cpu: options.cpu
+						}
+					}
+					limits: {
+						if options.memory != "" {
+							memory: options.memory
+						}
+						if options.cpu != "" {
+							cpu: options.cpu
+						}
+					}
+				}]
 			}]
 		}
 		if options.type == "Reconfiguring" {
@@ -222,18 +268,12 @@ content: {
 						annotations: svc.annotations
 					}
 					roleSelector: *svc.roleSelector | ""
-
 				}]
 			}]
 		}
 		if options.type == "Switchover" {
 			switchover: [{
-				if options.component == "" {
-					componentName: options.componentNames[0]
-				}
-				if options.component != "" {
-					componentName: options.component
-				}
+				componentName: options.component
 				if options.instance == "" {
 					instanceName: "*"
 				}
@@ -251,7 +291,9 @@ content: {
 				components: [
 					{
 						componentName: options.component
-						parameters:    options.params
+						if len(options.params) > 0 {
+						    parameters:    options.params
+						}
 					},
 				]
 			}
