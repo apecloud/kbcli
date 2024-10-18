@@ -21,7 +21,6 @@ package cluster
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -29,17 +28,18 @@ import (
 	"github.com/apecloud/kubeblocks/pkg/common"
 	jsonpatch "github.com/evanphx/json-patch"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 	"github.com/stoewer/go-strcase"
 	"golang.org/x/exp/slices"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	apiruntime "k8s.io/apimachinery/pkg/runtime"
 	apitypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
+	"k8s.io/kube-openapi/pkg/validation/spec"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -55,8 +55,6 @@ import (
 	"github.com/apecloud/kbcli/pkg/util/flags"
 	"github.com/apecloud/kbcli/pkg/util/prompt"
 )
-
-var customOpsDefinedFlags = []string{"component", "cluster"}
 
 type OperationsOptions struct {
 	action.CreateOptions  `json:"-"`
@@ -1038,54 +1036,102 @@ type CustomOperations struct {
 }
 
 func NewCustomOpsCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := &CustomOperations{
-		OperationsOptions: newBaseOperationsOptions(f, streams, "Custom", false),
-	}
-	// set options to build cue struct
-	o.CreateOptions.Options = o
+	o := newBaseOperationsOptions(f, streams, opsv1alpha1.CustomType, false)
 	cmd := &cobra.Command{
-		Use:                "custom-ops OpsDef --cluster <clusterName> <your custom params>",
-		Example:            customOpsExample,
-		ValidArgsFunction:  util.ResourceNameCompletionFunc(f, types.OpsDefinitionGVR()),
-		DisableFlagParsing: true,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			o.Args = args
-			cmdutil.BehaviorOnFatal(printer.FatalWithRedColor)
-			cmdutil.CheckErr(o.init())
-			err := o.parseOpsDefinitionAndParams(cmd, args)
-			if errors.Is(err, pflag.ErrHelp) {
-				return err
-			} else {
-				util.CheckErr(err)
-			}
-			cmdutil.CheckErr(o.validateAndCompleteComponentName())
-			cmdutil.CheckErr(o.completeCustomSpec(cmd))
-			cmdutil.CheckErr(o.Run())
-			return nil
+		Use:     "custom-ops OpsDef --cluster <clusterName> <your custom params>",
+		Example: customOpsExample,
+		Run: func(cmd *cobra.Command, args []string) {
+			println(`execute "kbcli cluster custom-ops --help" to list the supported command`)
 		},
 	}
-	o.addCommonFlags(cmd, f)
-	flags.AddComponentFlag(f, cmd, &o.Component, "Specify the component name of the cluster. if not specified, using the first component which referenced the defined componentDefinition.")
-	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "Skip interactive approval before promote the instance")
-	cmd.Flags().StringVar(&o.Name, "cluster", "", "Specify the cluster name")
-	_ = cmd.MarkFlagRequired("cluster")
+	cmd.AddCommand(buildCustomOpsCmds(o)...)
 	return cmd
 }
 
-func (o *CustomOperations) init() error {
-	var err error
-	if o.Namespace == "" {
-		if o.Namespace, _, err = o.Factory.ToRawKubeConfigLoader().Namespace(); err != nil {
-			return err
+func buildCustomOpsExamples(t unstructured.Unstructured) string {
+	opsDef := &opsv1alpha1.OpsDefinition{}
+	apiruntime.DefaultUnstructuredConverter.FromUnstructured(t.UnstructuredContent(), opsDef)
+	parametersSchema := opsDef.Spec.ParametersSchema
+	commandName := strcase.KebabCase(t.GetName())
+	baseCommand := fmt.Sprintf(`
+	# Create a %s ops 
+	kbcli cluster custom-ops %s <clusterName> --component <componentName>`, commandName, commandName)
+	if parametersSchema == nil {
+		return templates.Examples(baseCommand)
+	}
+
+	for _, name := range parametersSchema.OpenAPIV3Schema.Required {
+		if name == "component" {
+			baseCommand += fmt.Sprintf(" --%s-fork=<%s>", name, name)
+		} else {
+			baseCommand += fmt.Sprintf(" --%s=<%s>", strcase.KebabCase(name), name)
 		}
 	}
-	if o.Dynamic, err = o.Factory.DynamicClient(); err != nil {
+	return templates.Examples(baseCommand)
+}
+
+func buildCustomOpsCmds(option *OperationsOptions) []*cobra.Command {
+	dynamic, _ := option.Factory.DynamicClient()
+	opsDefs, _ := dynamic.Resource(types.OpsDefinitionGVR()).List(context.TODO(), metav1.ListOptions{})
+	var cmds []*cobra.Command
+	for _, t := range opsDefs.Items {
+		o := &CustomOperations{
+			OperationsOptions: option,
+			OpsDefinitionName: t.GetName(),
+		}
+		// set options to build cue struct
+		o.CreateOptions.Options = o
+		cmd := &cobra.Command{
+			Use:               strcase.KebabCase(t.GetName()) + " <ClusterName>",
+			Short:             fmt.Sprintf("Create a custom ops with opsDef %s", t.GetName()),
+			Example:           buildCustomOpsExamples(t),
+			ValidArgsFunction: util.ResourceNameCompletionFunc(option.Factory, types.ClusterGVR()),
+			Run: func(cmd *cobra.Command, args []string) {
+				o.Args = args
+				cmdutil.BehaviorOnFatal(printer.FatalWithRedColor)
+				cmdutil.CheckErr(o.Complete())
+				cmdutil.CheckErr(o.validateAndCompleteComponentName())
+				cmdutil.CheckErr(o.completeCustomSpec(cmd))
+				cmdutil.CheckErr(o.Run())
+			},
+		}
+		o.addCommonFlags(cmd, option.Factory)
+		flags.AddComponentFlag(option.Factory, cmd, &o.Component, "Specify the component name of the cluster. if not specified, using the first component which referenced the defined componentDefinition.")
+		cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "Skip interactive approval before promote the instance")
+		// build opsDef flags
+		util.CheckErr(o.addOpsDefFlags(cmd, t))
+		cmds = append(cmds, cmd)
+	}
+	return cmds
+}
+
+func (o *CustomOperations) addOpsDefFlags(cmd *cobra.Command, t unstructured.Unstructured) error {
+	opsDef := &opsv1alpha1.OpsDefinition{}
+	apiruntime.DefaultUnstructuredConverter.FromUnstructured(t.UnstructuredContent(), opsDef)
+	parametersSchema := opsDef.Spec.ParametersSchema
+	if parametersSchema == nil {
+		return nil
+	}
+	o.SchemaProperties = parametersSchema.OpenAPIV3Schema.DeepCopy()
+	newProperties := map[string]apiextensionsv1.JSONSchemaProps{}
+	for name := range parametersSchema.OpenAPIV3Schema.Properties {
+		value := parametersSchema.OpenAPIV3Schema.Properties[name]
+		if name == "component" {
+			name = fmt.Sprintf("%s-fork", name)
+		}
+		newProperties[name] = value
+	}
+	parametersSchema.OpenAPIV3Schema.Properties = newProperties
+	// Convert apiextensionsv1.JSONSchemaProps to spec.Schema
+	schemaData, err := json.Marshal(parametersSchema.OpenAPIV3Schema)
+	if err != nil {
 		return err
 	}
-	if o.Client, err = o.Factory.KubernetesClientSet(); err != nil {
+	schema := &spec.Schema{}
+	if err = json.Unmarshal(schemaData, schema); err != nil {
 		return err
 	}
-	return nil
+	return flags.BuildFlagsBySchema(cmd, schema)
 }
 
 func (o *CustomOperations) validateAndCompleteComponentName() error {
@@ -1132,41 +1178,9 @@ func (o *CustomOperations) validateAndCompleteComponentName() error {
 	return nil
 }
 
-func (o *CustomOperations) parseOpsDefinitionAndParams(cmd *cobra.Command, args []string) error {
-	if len(args) == 0 {
-		return fmt.Errorf("please specify the custom ops which you want to do")
-	}
-	return flags.BuildFlagsWithOpenAPISchema(cmd, args, func() (*apiextensionsv1.JSONSchemaProps, error) {
-		o.OpsDefinitionName = args[0]
-		// Get ops Definition from API server
-		opsDef := &opsv1alpha1.OpsDefinition{}
-		if err := util.GetK8SClientObject(o.Dynamic, opsDef, types.OpsDefinitionGVR(), "", o.OpsDefinitionName); err != nil {
-			if apierrors.IsNotFound(err) {
-				return nil, fmt.Errorf("OpsDefintion \"%s\" is not found", o.OpsDefinitionName)
-			}
-			return nil, err
-		}
-		parametersSchema := opsDef.Spec.ParametersSchema
-		if parametersSchema == nil {
-			return nil, nil
-		}
-		o.SchemaProperties = parametersSchema.OpenAPIV3Schema.DeepCopy()
-		newProperties := map[string]apiextensionsv1.JSONSchemaProps{}
-		for name := range parametersSchema.OpenAPIV3Schema.Properties {
-			value := parametersSchema.OpenAPIV3Schema.Properties[name]
-			if slices.Contains(customOpsDefinedFlags, name) {
-				name = fmt.Sprintf("%s-fork", name)
-			}
-			newProperties[name] = value
-		}
-		parametersSchema.OpenAPIV3Schema.Properties = newProperties
-		return parametersSchema.OpenAPIV3Schema, nil
-	})
-}
-
 func (o *CustomOperations) completeCustomSpec(cmd *cobra.Command) error {
 	var (
-		params   []opsv1alpha1.Parameter
+		params   = make([]opsv1alpha1.Parameter, 0, 0)
 		paramMap = map[string]string{}
 	)
 	// Construct config and credential map from flags
@@ -1174,7 +1188,7 @@ func (o *CustomOperations) completeCustomSpec(cmd *cobra.Command) error {
 		fromFlags := flags.FlagsToValues(cmd.LocalNonPersistentFlags(), true)
 		for name := range o.SchemaProperties.Properties {
 			flagName := strcase.KebabCase(name)
-			if slices.Contains(customOpsDefinedFlags, name) {
+			if name == "component" {
 				flagName = fmt.Sprintf("%s-fork", flagName)
 			}
 			if val, ok := fromFlags[flagName]; ok {

@@ -22,6 +22,7 @@ package cluster
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/spf13/cobra"
 
 	"bytes"
 	"fmt"
@@ -411,33 +412,20 @@ var _ = Describe("operations", func() {
 
 	It("Custom ops base on component definition", func() {
 		o := initCommonOperationOps(opsv1alpha1.CustomType, clusterNameWithCompDef, false)
-		customOperations := &CustomOperations{
-			OperationsOptions: o,
-		}
-		cmd := NewCustomOpsCmd(tf, streams)
+		_ = NewCustomOpsCmd(tf, streams)
+		cmds := buildCustomOpsCmds(o)
+		Expect(cmds).Should(HaveLen(1))
 
-		By("expect an error if opsDefinition is not found")
-		err := customOperations.parseOpsDefinitionAndParams(cmd, []string{clusterNameWithCompDef})
-		Expect(err).Should(HaveOccurred())
-		Expect(err.Error()).Should(ContainSubstring(fmt.Sprintf(`OpsDefintion "%s" is not found`, clusterNameWithCompDef)))
-
-		By("test clusterName and p1 of opsDefinition params are required")
-		err = customOperations.parseOpsDefinitionAndParams(cmd, []string{opsDefName})
-		Expect(err).Should(HaveOccurred())
-		Expect(err.Error()).Should(ContainSubstring(`required flag(s) "cluster", "p1" not set`))
-
-		By("test auto-complete the component name flag")
-		cmd1 := NewCustomOpsCmd(tf, streams)
-		validArgs := []string{opsDefName, "--cluster", clusterNameWithCompDef, "--p1", "test"}
-		err = customOperations.parseOpsDefinitionAndParams(cmd1, validArgs)
-		Expect(err).Should(Succeed())
-		Expect(customOperations.validateAndCompleteComponentName()).Should(Succeed())
-		Expect(customOperations.Component).Should(Equal(testing.ComponentName))
+		By("expect required flags")
+		cmd := cmds[0]
+		Expect(cmd.Flag("p1")).ShouldNot(BeNil())
+		Expect(cmd.Flag("p2")).ShouldNot(BeNil())
+		Expect(cmd.Flag("p1").Annotations[cobra.BashCompOneRequiredFlag]).ShouldNot(BeEmpty())
 
 		By("expect to create custom ops successfully")
-		cmd2 := NewCustomOpsCmd(tf, streams)
 		done := testing.Capture()
-		_ = cmd1.RunE(cmd2, validArgs)
+		_ = cmd.Flags().Set("p1", "test")
+		cmd.Run(cmd, []string{clusterNameWithCompDef})
 		capturedOutput, _ := done()
 		Expect(testing.ContainExpectStrings(capturedOutput, "kbcli cluster describe-ops")).Should(BeTrue())
 	})

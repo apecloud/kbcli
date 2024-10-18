@@ -27,16 +27,7 @@ kbcli cluster custom-ops OpsDef --cluster <clusterName> <your custom params> [fl
 ### Options
 
 ```
-      --auto-approve                   Skip interactive approval before promote the instance
-      --cluster string                 Specify the cluster name
-      --component string               Specify the component name of the cluster. if not specified, using the first component which referenced the defined componentDefinition.
-      --dry-run string[="unchanged"]   Must be "client", or "server". If with client strategy, only print the object that would be sent, and no data is actually sent. If with server strategy, submit the server-side request, but no data is persistent. (default "none")
-      --edit                           Edit the API resource before creating
-      --force                           skip the pre-checks of the opsRequest to run the opsRequest forcibly
-  -h, --help                           help for custom-ops
-      --name string                    OpsRequest name. if not specified, it will be randomly generated
-  -o, --output format                  Prints the output in the specified format. Allowed values: JSON and YAML (default yaml)
-      --ttlSecondsAfterSucceed int     Time to live after the OpsRequest succeed
+  -h, --help   help for custom-ops
 ```
 
 ### Options inherited from parent commands
@@ -49,6 +40,7 @@ kbcli cluster custom-ops OpsDef --cluster <clusterName> <your custom params> [fl
       --certificate-authority string   Path to a cert file for the certificate authority
       --client-certificate string      Path to a client certificate file for TLS
       --client-key string              Path to a client key file for TLS
+      --cluster string                 The name of the kubeconfig cluster to use
       --context string                 The name of the kubeconfig context to use
       --disable-compression            If true, opt-out of response compression for all requests to the server
       --insecure-skip-tls-verify       If true, the server's certificate will not be checked for validity. This will make your HTTPS connections insecure
@@ -65,6 +57,11 @@ kbcli cluster custom-ops OpsDef --cluster <clusterName> <your custom params> [fl
 ### SEE ALSO
 
 * [kbcli cluster](kbcli_cluster.md)	 - Cluster command.
+* [kbcli cluster custom-ops etcd-defragmentation](kbcli_cluster_custom-ops_etcd-defragmentation.md)	 - Create a custom ops with opsDef etcd-defragmentation
+* [kbcli cluster custom-ops kafka-quota](kbcli_cluster_custom-ops_kafka-quota.md)	 - Create a custom ops with opsDef kafka-quota
+* [kbcli cluster custom-ops kafka-topic](kbcli_cluster_custom-ops_kafka-topic.md)	 - Create a custom ops with opsDef kafka-topic
+* [kbcli cluster custom-ops kafka-user-acl](kbcli_cluster_custom-ops_kafka-user-acl.md)	 - Create a custom ops with opsDef kafka-user-acl
+* [kbcli cluster custom-ops mysql-orc-switchover](kbcli_cluster_custom-ops_mysql-orc-switchover.md)	 - Create a custom ops with opsDef mysql-orc-switchover
 
 #### Go Back to [CLI Overview](cli.md) Homepage.
 

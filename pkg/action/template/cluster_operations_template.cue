@@ -59,6 +59,7 @@ options: {
 	onlineInstancesToOffline: [...string]
 	scaleOut: bool
 	storage:  string
+	opsDefinitionName: string
 	vctNames: [...string]
 	keyValues: [string]: {string | null}
 	hasPatch:        bool
@@ -290,7 +291,9 @@ content: {
 				components: [
 					{
 						componentName: options.component
-						parameters:    options.params
+						if len(options.params) > 0 {
+						    parameters:    options.params
+						}
 					},
 				]
 			}
