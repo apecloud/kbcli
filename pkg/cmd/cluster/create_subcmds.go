@@ -23,6 +23,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"regexp"
 
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -97,8 +98,8 @@ func buildCreateSubCmds(createOptions *action.CreateOptions) []*cobra.Command {
 			Run: func(cmd *cobra.Command, args []string) {
 				o.Args = args
 				cmdutil.CheckErr(o.CreateOptions.Complete())
-				cmdutil.CheckErr(o.complete(cmd))
-				cmdutil.CheckErr(o.validate())
+				cmdutil.CheckErr(o.Complete(cmd))
+				cmdutil.CheckErr(o.Validate())
 				cmdutil.CheckErr(o.Run())
 			},
 		}
@@ -150,7 +151,7 @@ func generateClusterName(dynamic dynamic.Interface, namespace string) (string, e
 	return "", fmt.Errorf("failed to generate cluster name")
 }
 
-func (o *CreateSubCmdsOptions) complete(cmd *cobra.Command) error {
+func (o *CreateSubCmdsOptions) Complete(cmd *cobra.Command) error {
 	var err error
 
 	// if name is not specified, generate a random cluster name
@@ -162,7 +163,9 @@ func (o *CreateSubCmdsOptions) complete(cmd *cobra.Command) error {
 	}
 
 	// get values from flags
-	o.Values = getValuesFromFlags(cmd.LocalNonPersistentFlags())
+	if cmd != nil {
+		o.Values = getValuesFromFlags(cmd.LocalNonPersistentFlags())
+	}
 
 	// get all the rendered objects
 	objs, err := o.getObjectsInfo()
@@ -211,7 +214,14 @@ func (o *CreateSubCmdsOptions) complete(cmd *cobra.Command) error {
 	return nil
 }
 
-func (o *CreateSubCmdsOptions) validate() error {
+func (o *CreateSubCmdsOptions) Validate() error {
+	matched, _ := regexp.MatchString(`^[a-z]([-a-z0-9]*[a-z0-9])?$`, o.Name)
+	if !matched {
+		return fmt.Errorf("cluster name must begin with a letter and can only contain lowercase letters, numbers, and '-'")
+	}
+	if len(o.Name) > 16 {
+		return fmt.Errorf("cluster name should be less than 16 characters")
+	}
 	return cluster.ValidateValues(o.ChartInfo, o.Values)
 }
 
