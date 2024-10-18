@@ -36,7 +36,6 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
-	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
 
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
@@ -48,7 +47,6 @@ import (
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
 	"github.com/apecloud/kbcli/pkg/util/helm"
-	"github.com/apecloud/kbcli/pkg/util/prompt"
 )
 
 var (
@@ -95,10 +93,7 @@ func (o *destroyOptions) destroy() error {
 		return fmt.Errorf("no playground cluster found")
 	}
 
-	if o.prevCluster.CloudProvider == cp.Local {
-		return o.destroyLocal()
-	}
-	return o.destroyCloud()
+	return o.destroyLocal()
 }
 
 // destroyLocal destroy local k3d cluster that will destroy all resources
@@ -118,75 +113,6 @@ func (o *destroyOptions) destroyLocal() error {
 		return err
 	}
 	return o.removeStateFile()
-}
-
-// destroyCloud destroys cloud kubernetes cluster, before destroying, we should delete
-// all clusters created by KubeBlocks, uninstall KubeBlocks and remove the KubeBlocks
-// namespace that will destroy all resources created by KubeBlocks, avoid to leave resources behind
-func (o *destroyOptions) destroyCloud() error {
-	var err error
-
-	printer.Warning(o.Out, `This action will destroy the kubernetes cluster, there may be residual resources,
-  please confirm and manually clean up related resources after this action.
-
-`)
-
-	fmt.Fprintf(o.Out, "Do you really want to destroy the kubernetes cluster %s?\n%s\n\n  The operation cannot be rollbacked. Only 'yes' will be accepted to confirm.\n\n",
-		o.prevCluster.ClusterName, o.prevCluster.String())
-
-	// confirm to destroy
-	if !o.autoApprove {
-		entered, _ := prompt.NewPrompt("Enter a value:", nil, o.In).Run()
-		if entered != yesStr {
-			fmt.Fprintf(o.Out, "\nPlayground destroy cancelled.\n")
-			return cmdutil.ErrExit
-		}
-	}
-
-	o.startTime = time.Now()
-
-	// for cloud provider, we should delete all clusters created by KubeBlocks first,
-	// uninstall KubeBlocks and remove the KubeBlocks namespace, then destroy the
-	// playground cluster, avoid to leave resources behind.
-	// delete all clusters created by KubeBlocks, MUST BE VERY CAUTIOUS, use the right
-	// kubeconfig and context, otherwise, it will delete the wrong cluster.
-	if err = o.deleteClustersAndUninstallKB(); err != nil {
-		if strings.Contains(err.Error(), kubeClusterUnreachableErr.Error()) {
-			printer.Warning(o.Out, err.Error())
-		} else {
-			return err
-		}
-	}
-
-	// destroy playground kubernetes cluster
-	cpPath, err := cloudProviderRepoDir(o.prevCluster.KbcliVersion)
-	if err != nil {
-		return err
-	}
-
-	provider, err := cp.New(o.prevCluster.CloudProvider, cpPath, o.Out, o.ErrOut)
-	if err != nil {
-		return err
-	}
-
-	fmt.Fprintf(o.Out, "Destroy %s %s cluster %s...\n",
-		o.prevCluster.CloudProvider, cp.K8sService(o.prevCluster.CloudProvider), o.prevCluster.ClusterName)
-	if err = provider.DeleteK8sCluster(o.prevCluster); err != nil {
-		return err
-	}
-
-	// remove the cluster kubeconfig from the use default kubeconfig
-	if err = o.removeKubeConfig(); err != nil {
-		return err
-	}
-
-	// at last, remove the state file
-	if err = o.removeStateFile(); err != nil {
-		return err
-	}
-
-	fmt.Fprintf(o.Out, "Playground destroy completed in %s.\n", time.Since(o.startTime).Truncate(time.Second))
-	return nil
 }
 
 func (o *destroyOptions) deleteClustersAndUninstallKB() error {
