@@ -30,8 +30,7 @@ kbcli cluster edit-backup-policy
 ### Options
 
 ```
-  -h, --help              help for edit-backup-policy
-      --set stringArray   set values on the command line (can specify multiple or separate values with commas: key1=val1,key2=val2)
+  -h, --help   help for edit-backup-policy
 ```
 
 ### Options inherited from parent commands
