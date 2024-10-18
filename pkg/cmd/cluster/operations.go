@@ -1044,7 +1044,10 @@ func NewCustomOpsCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cob
 			println(`execute "kbcli cluster custom-ops --help" to list the supported command`)
 		},
 	}
-	cmd.AddCommand(buildCustomOpsCmds(o)...)
+	cmds := buildCustomOpsCmds(o)
+	if len(cmds) > 0 {
+		cmd.AddCommand(cmds...)
+	}
 	return cmd
 }
 
@@ -1073,6 +1076,9 @@ func buildCustomOpsExamples(t unstructured.Unstructured) string {
 func buildCustomOpsCmds(option *OperationsOptions) []*cobra.Command {
 	dynamic, _ := option.Factory.DynamicClient()
 	opsDefs, _ := dynamic.Resource(types.OpsDefinitionGVR()).List(context.TODO(), metav1.ListOptions{})
+	if opsDefs == nil {
+		return nil
+	}
 	var cmds []*cobra.Command
 	for _, t := range opsDefs.Items {
 		o := &CustomOperations{
