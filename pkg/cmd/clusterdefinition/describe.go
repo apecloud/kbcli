@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 
+	dpv1alpha1 "github.com/apecloud/kubeblocks/apis/dataprotection/v1alpha1"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -32,10 +33,7 @@ import (
 
 	"github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	"github.com/apecloud/kubeblocks/pkg/constant"
-	dptypes "github.com/apecloud/kubeblocks/pkg/dataprotection/types"
-	"github.com/apecloud/kubeblocks/pkg/dataprotection/utils/boolptr"
 
-	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
 )
@@ -121,9 +119,9 @@ func (o *describeOptions) describeClusterDef(name string) error {
 	if err != nil {
 		return err
 	}
-	var backupPolicyTemplates []*v1alpha1.BackupPolicyTemplate
+	var backupPolicyTemplates []*dpv1alpha1.BackupPolicyTemplate
 	for _, item := range backupTemplatesListObj.Items {
-		backupTemplate := v1alpha1.BackupPolicyTemplate{}
+		backupTemplate := dpv1alpha1.BackupPolicyTemplate{}
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(item.Object, &backupTemplate); err != nil {
 			return err
 		}
@@ -132,7 +130,8 @@ func (o *describeOptions) describeClusterDef(name string) error {
 
 	showClusterDef(clusterDef, o.Out)
 
-	showBackupConfig(backupPolicyTemplates, o.Out)
+	// TODO: add it with componentDefinition
+	// showBackupConfig(backupPolicyTemplates, o.Out)
 
 	return nil
 }
@@ -144,13 +143,14 @@ func showClusterDef(cd *v1alpha1.ClusterDefinition, out io.Writer) {
 	fmt.Fprintf(out, "Name: %s\t Type: %s\n\n", cd.Name, cd.Spec.Type)
 }
 
-func showBackupConfig(backupPolicyTemplates []*v1alpha1.BackupPolicyTemplate, out io.Writer) {
+/*
+func showBackupConfig(backupPolicyTemplates []*dpv1alpha1.BackupPolicyTemplate, out io.Writer) {
 	if len(backupPolicyTemplates) == 0 {
 		return
 	}
 	fmt.Fprintf(out, "Backup Config:\n")
 	tbl := printer.NewTablePrinter(out)
-	defaultBackupPolicyTemplate := &v1alpha1.BackupPolicyTemplate{}
+	defaultBackupPolicyTemplate := &dpv1alpha1.BackupPolicyTemplate{}
 	// if there is only one backup policy template, it will be the default backup policy template
 	if len(backupPolicyTemplates) == 1 {
 		defaultBackupPolicyTemplate = backupPolicyTemplates[0]
@@ -172,4 +172,4 @@ func showBackupConfig(backupPolicyTemplates []*v1alpha1.BackupPolicyTemplate, ou
 		}
 	}
 	tbl.Print()
-}
+}*/

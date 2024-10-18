@@ -27,6 +27,7 @@ BackupRepo command.
 * [kbcli backuprepo delete](kbcli_backuprepo_delete.md)	 - Delete a backup repository.
 * [kbcli backuprepo describe](kbcli_backuprepo_describe.md)	 - Describe a backup repository.
 * [kbcli backuprepo list](kbcli_backuprepo_list.md)	 - List Backup Repositories.
+* [kbcli backuprepo list-storage-provider](kbcli_backuprepo_list-storage-provider.md)	 - List storage providers.
 * [kbcli backuprepo update](kbcli_backuprepo_update.md)	 - Update a backup repository.
 
 
@@ -48,6 +49,7 @@ Cluster command.
 * [kbcli cluster describe-backup-policy](kbcli_cluster_describe-backup-policy.md)	 - Describe backup policy
 * [kbcli cluster describe-config](kbcli_cluster_describe-config.md)	 - Show details of a specific reconfiguring.
 * [kbcli cluster describe-ops](kbcli_cluster_describe-ops.md)	 - Show details of a specific OpsRequest.
+* [kbcli cluster describe-restore](kbcli_cluster_describe-restore.md)	 - Describe a restore
 * [kbcli cluster diff-config](kbcli_cluster_diff-config.md)	 - Show the difference in parameters between the two submitted OpsRequest.
 * [kbcli cluster edit-backup-policy](kbcli_cluster_edit-backup-policy.md)	 - Edit backup policy
 * [kbcli cluster edit-config](kbcli_cluster_edit-config.md)	 - Edit the config file of the component.
@@ -55,13 +57,14 @@ Cluster command.
 * [kbcli cluster expose](kbcli_cluster_expose.md)	 - Expose a cluster with a new endpoint, the new endpoint can be found by executing 'kbcli cluster describe NAME'.
 * [kbcli cluster label](kbcli_cluster_label.md)	 - Update the labels on cluster
 * [kbcli cluster list](kbcli_cluster_list.md)	 - List clusters.
+* [kbcli cluster list-backup](kbcli_cluster_list-backup.md)	 - List backups.
 * [kbcli cluster list-backup-policy](kbcli_cluster_list-backup-policy.md)	 - List backups policies.
-* [kbcli cluster list-backups](kbcli_cluster_list-backups.md)	 - List backups.
 * [kbcli cluster list-components](kbcli_cluster_list-components.md)	 - List cluster components.
 * [kbcli cluster list-events](kbcli_cluster_list-events.md)	 - List cluster events.
 * [kbcli cluster list-instances](kbcli_cluster_list-instances.md)	 - List cluster instances.
 * [kbcli cluster list-logs](kbcli_cluster_list-logs.md)	 - List supported log files in cluster.
 * [kbcli cluster list-ops](kbcli_cluster_list-ops.md)	 - List all opsRequests.
+* [kbcli cluster list-restore](kbcli_cluster_list-restore.md)	 - List restores.
 * [kbcli cluster logs](kbcli_cluster_logs.md)	 - Access cluster log file.
 * [kbcli cluster promote](kbcli_cluster_promote.md)	 - Promote a non-primary or non-leader instance as the new primary or leader of the cluster
 * [kbcli cluster rebuild-instance](kbcli_cluster_rebuild-instance.md)	 - Rebuild the specified instances in the cluster.
@@ -104,8 +107,13 @@ Data protection command.
 * [kbcli dataprotection delete-backup](kbcli_dataprotection_delete-backup.md)	 - Delete a backup.
 * [kbcli dataprotection describe-backup](kbcli_dataprotection_describe-backup.md)	 - Describe a backup
 * [kbcli dataprotection describe-backup-policy](kbcli_dataprotection_describe-backup-policy.md)	 - Describe a backup policy
+* [kbcli dataprotection describe-restore](kbcli_dataprotection_describe-restore.md)	 - Describe a restore
+* [kbcli dataprotection edit-backup-policy](kbcli_dataprotection_edit-backup-policy.md)	 - Edit backup policy
+* [kbcli dataprotection list-action-set](kbcli_dataprotection_list-action-set.md)	 - List actionsets
+* [kbcli dataprotection list-backup](kbcli_dataprotection_list-backup.md)	 - List backups.
 * [kbcli dataprotection list-backup-policy](kbcli_dataprotection_list-backup-policy.md)	 - List backup policies
-* [kbcli dataprotection list-backups](kbcli_dataprotection_list-backups.md)	 - List backups.
+* [kbcli dataprotection list-backup-policy-template](kbcli_dataprotection_list-backup-policy-template.md)	 - List backup policy template
+* [kbcli dataprotection list-restore](kbcli_dataprotection_list-restore.md)	 - List restores.
 * [kbcli dataprotection restore](kbcli_dataprotection_restore.md)	 - Restore a new cluster from backup
 
 

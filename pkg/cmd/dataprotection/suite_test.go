@@ -1,7 +1,7 @@
 /*
 Copyright (C) 2022-2024 ApeCloud Co., Ltd
 
-# This file is part of KubeBlocks project
+This file is part of KubeBlocks project
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published by
@@ -17,26 +17,27 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package backuprepo
+package dataprotection
 
 import (
-	"github.com/spf13/cobra"
-	"k8s.io/cli-runtime/pkg/genericiooptions"
-	cmdutil "k8s.io/kubectl/pkg/cmd/util"
+	"testing"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+
+	viper "github.com/apecloud/kubeblocks/pkg/viperx"
+
+	"github.com/apecloud/kbcli/pkg/types"
 )
 
-func NewBackupRepoCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "backuprepo COMMAND",
-		Short: "BackupRepo command.",
-	}
-	cmd.AddCommand(
-		newCreateCommand(nil, f, streams),
-		newUpdateCommand(nil, f, streams),
-		newListCommand(f, streams),
-		newDescribeCommand(f, streams),
-		newDeleteCommand(f, streams),
-		newListStorageProviderCommand(f, streams),
-	)
-	return cmd
+func TestCluster(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Dataprotection Suite")
 }
+
+var _ = BeforeSuite(func() {
+	viper.SetDefault(types.CfgKeyClusterDefaultStorageSize, "20Gi")
+	viper.SetDefault(types.CfgKeyClusterDefaultReplicas, 1)
+	viper.SetDefault(types.CfgKeyClusterDefaultCPU, "1000m")
+	viper.SetDefault(types.CfgKeyClusterDefaultMemory, "1Gi")
+})

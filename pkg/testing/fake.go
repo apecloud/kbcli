@@ -61,6 +61,8 @@ const (
 	SecretName       = "fake-secret-conn-credential"
 	StorageClassName = "fake-storage-class"
 	PVCName          = "fake-pvc"
+	BPTName          = "fake-bpt"
+	RestoreName      = "fake-restore"
 
 	KubeBlocksRepoName  = "fake-kubeblocks-repo"
 	KubeBlocksChartName = "fake-kubeblocks"
@@ -403,6 +405,25 @@ func FakeBackupPolicy(backupPolicyName, clusterName string) *dpv1alpha1.BackupPo
 	return template
 }
 
+func FakeRestore(backupName string) *dpv1alpha1.Restore {
+	restore := &dpv1alpha1.Restore{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: fmt.Sprintf("%s/%s", types.DPAPIGroup, types.DPAPIVersion),
+			Kind:       types.KindRestore,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      RestoreName,
+			Namespace: Namespace,
+		},
+		Spec: dpv1alpha1.RestoreSpec{
+			Backup: dpv1alpha1.BackupRef{
+				Name: backupName,
+			},
+		},
+	}
+	return restore
+}
+
 func FakeBackup(backupName string) *dpv1alpha1.Backup {
 	backup := &dpv1alpha1.Backup{
 		TypeMeta: metav1.TypeMeta{
@@ -412,6 +433,10 @@ func FakeBackup(backupName string) *dpv1alpha1.Backup {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      backupName,
 			Namespace: Namespace,
+		},
+		Spec: dpv1alpha1.BackupSpec{
+			BackupPolicyName: "policy-name",
+			BackupMethod:     BackupMethodName,
 		},
 	}
 	backup.SetCreationTimestamp(metav1.Now())
@@ -449,21 +474,26 @@ func FakeBackupSchedule(backupScheduleName, backupPolicyName string) *dpv1alpha1
 	return backupSchedule
 }
 
-func FakeBackupPolicyTemplate(backupPolicyTemplateName string, clusterDef string) *appsv1alpha1.BackupPolicyTemplate {
-	backupPolicyTemplate := &appsv1alpha1.BackupPolicyTemplate{
+func FakeBackupPolicyTemplate() *dpv1alpha1.BackupPolicyTemplate {
+	backupPolicyTemplate := &dpv1alpha1.BackupPolicyTemplate{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: fmt.Sprintf("%s/%s", types.AppsAPIGroup, types.AppsAPIVersion),
+			APIVersion: fmt.Sprintf("%s/%s", types.DPAPIGroup, types.AppsAPIVersion),
 			Kind:       types.KindBackupPolicyTemplate,
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      backupPolicyTemplateName,
+			Name:      BPTName,
 			Namespace: Namespace,
 			Labels: map[string]string{
 				constant.ClusterDefLabelKey: ClusterDefName,
 			},
 		},
-		Spec: appsv1alpha1.BackupPolicyTemplateSpec{
-			Identifier: "fake-identifier",
+		Spec: dpv1alpha1.BackupPolicyTemplateSpec{
+			CompDefs: []string{CompDefName},
+			BackupMethods: []dpv1alpha1.BackupMethodTPL{
+				{
+					Name: BackupMethodName,
+				},
+			},
 		},
 	}
 	return backupPolicyTemplate

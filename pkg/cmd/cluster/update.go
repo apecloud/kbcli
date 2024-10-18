@@ -71,9 +71,6 @@ var clusterUpdateExample = templates.Examples(`
     # enable all logs
 	kbcli cluster update mycluster --enable-all-logs=true
 
-    # update cluster topology keys and affinity
-	kbcli cluster update mycluster --topology-keys=kubernetes.io/hostname --pod-anti-affinity=Required
-
 	# update cluster tolerations
 	kbcli cluster update mycluster --tolerations='"key=engineType,value=mongo,operator=Equal,effect=NoSchedule","key=diskType,value=ssd,operator=Equal,effect=NoSchedule"'
 
@@ -104,6 +101,34 @@ var clusterUpdateExample = templates.Examples(`
 	# update cluster backup pitr enabled
 	kbcli cluster update mycluster --pitr-enabled=true
 `)
+
+// UpdatableFlags is the flags that cat be updated by update command
+type UpdatableFlags struct {
+	// Options for cluster termination policy
+	TerminationPolicy string `json:"terminationPolicy"`
+
+	// Add-on switches for cluster observability
+	DisableExporter bool `json:"monitor"`
+	EnableAllLogs   bool `json:"enableAllLogs"`
+
+	// Configuration and options for cluster affinity and tolerations
+	PodAntiAffinity  string `json:"podAntiAffinity"`
+	RuntimeClassName string `json:"runtimeClassName,omitempty"`
+	// TopologyKeys if TopologyKeys is nil, add omitempty json tag, because CueLang can not covert null to list.
+	TopologyKeys   []string          `json:"topologyKeys,omitempty"`
+	NodeLabels     map[string]string `json:"nodeLabels,omitempty"`
+	Tenancy        string            `json:"tenancy"`
+	TolerationsRaw []string          `json:"-"`
+
+	// backup config
+	BackupEnabled                 bool   `json:"-"`
+	BackupRetentionPeriod         string `json:"-"`
+	BackupMethod                  string `json:"-"`
+	BackupCronExpression          string `json:"-"`
+	BackupStartingDeadlineMinutes int64  `json:"-"`
+	BackupRepoName                string `json:"-"`
+	BackupPITREnabled             bool   `json:"-"`
+}
 
 type UpdateOptions struct {
 	namespace string
@@ -145,6 +170,31 @@ func NewUpdateCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.
 	o.PatchOptions.AddFlags(cmd)
 
 	return cmd
+}
+
+func (f *UpdatableFlags) addFlags(cmd *cobra.Command) {
+	cmd.Flags().BoolVar(&f.DisableExporter, "disable-exporter", true, "Enable or disable monitoring")
+	cmd.Flags().BoolVar(&f.EnableAllLogs, "enable-all-logs", false, "Enable advanced application all log extraction, set to true will ignore enabledLogs of component level, default is false")
+	cmd.Flags().StringVar(&f.TerminationPolicy, "termination-policy", "Delete", "Termination policy, one of: (DoNotTerminate, Halt, Delete, WipeOut)")
+	cmd.Flags().StringSliceVar(&f.TolerationsRaw, "tolerations", nil, `Tolerations for cluster, such as "key=value:effect, key:effect", for example '"engineType=mongo:NoSchedule", "diskType:NoSchedule"'`)
+	cmd.Flags().BoolVar(&f.BackupEnabled, "backup-enabled", false, "Specify whether enabled automated backup")
+	cmd.Flags().StringVar(&f.BackupRetentionPeriod, "backup-retention-period", "1d", "a time string ending with the 'd'|'D'|'h'|'H' character to describe how long the Backup should be retained")
+	cmd.Flags().StringVar(&f.BackupMethod, "backup-method", "", "the backup method, view it by \"kbcli cd describe <cluster-definition>\", if not specified, the default backup method will be to take snapshots of the volume")
+	cmd.Flags().StringVar(&f.BackupCronExpression, "backup-cron-expression", "", "the cron expression for schedule, the timezone is in UTC. see https://en.wikipedia.org/wiki/Cron.")
+	cmd.Flags().Int64Var(&f.BackupStartingDeadlineMinutes, "backup-starting-deadline-minutes", 0, "the deadline in minutes for starting the backup job if it misses its scheduled time for any reason")
+	cmd.Flags().StringVar(&f.BackupRepoName, "backup-repo-name", "", "the backup repository name")
+	cmd.Flags().BoolVar(&f.BackupPITREnabled, "pitr-enabled", false, "Specify whether enabled point in time recovery")
+	cmd.Flags().StringVar(&f.RuntimeClassName, "runtime-class-name", "", "Specifies runtimeClassName for all Pods managed by this Cluster.")
+	util.CheckErr(cmd.RegisterFlagCompletionFunc(
+		"termination-policy",
+		func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			return []string{
+				"DoNotTerminate\tblock delete operation",
+				"Halt\tdelete workload resources such as statefulset, deployment workloads but keep PVCs",
+				"Delete\tbased on Halt and deletes PVCs",
+				"WipeOut\tbased on Delete and wipe out all volume snapshots and snapshot data from backup storage location",
+			}, cobra.ShellCompDirectiveNoFileComp
+		}))
 }
 
 func (o *UpdateOptions) CmdComplete(cmd *cobra.Command, args []string) error {
@@ -268,7 +318,8 @@ func (o *UpdateOptions) buildPatch() error {
 	}
 
 	spec := map[string]interface{}{}
-	affinity := map[string]interface{}{}
+	// affinity := map[string]interface{}{}
+	schedulingPolicy := map[string]interface{}{}
 	type filedObj struct {
 		field string
 		obj   map[string]interface{}
@@ -277,13 +328,8 @@ func (o *UpdateOptions) buildPatch() error {
 
 	flagFieldMapping := map[string]*filedObj{
 		"termination-policy": {field: "terminationPolicy", obj: spec, fn: buildFlagObj},
-		"pod-anti-affinity":  {field: "podAntiAffinity", obj: affinity, fn: buildFlagObj},
-		"topology-keys":      {field: "topologyKeys", obj: affinity, fn: buildFlagObj},
-		"node-labels":        {field: "nodeLabels", obj: affinity, fn: buildFlagObj},
-		"tenancy":            {field: "tenancy", obj: affinity, fn: buildFlagObj},
-
 		// tolerations
-		"tolerations": {field: "tolerations", obj: spec, fn: buildTolObj},
+		"tolerations": {field: "tolerations", obj: schedulingPolicy, fn: buildTolObj},
 
 		// monitor and logs
 		"disable-exporter": {field: "disableExporter", obj: nil, fn: buildComps},
@@ -297,6 +343,7 @@ func (o *UpdateOptions) buildPatch() error {
 		"backup-starting-deadline-minutes": {field: "startingDeadlineMinutes", obj: nil, fn: buildBackup},
 		"backup-repo-name":                 {field: "repoName", obj: nil, fn: buildBackup},
 		"pitr-enabled":                     {field: "pitrEnabled", obj: nil, fn: buildBackup},
+		"runtime-class-name":               {field: "runtimeClassName", obj: spec, fn: buildFlagObj},
 	}
 
 	for name, val := range o.ValMap {
@@ -307,8 +354,8 @@ func (o *UpdateOptions) buildPatch() error {
 		}
 	}
 
-	if len(affinity) > 0 {
-		if err = unstructured.SetNestedField(spec, affinity, "affinity"); err != nil {
+	if len(schedulingPolicy) > 0 {
+		if err = unstructured.SetNestedField(spec, schedulingPolicy, "schedulingPolicy"); err != nil {
 			return err
 		}
 	}
@@ -619,6 +666,9 @@ func (o *UpdateOptions) updateMonitor(val string) error {
 
 	for i := range o.cluster.Spec.ComponentSpecs {
 		o.cluster.Spec.ComponentSpecs[i].DisableExporter = cfgutil.ToPointer(disableExporter)
+	}
+	for i := range o.cluster.Spec.ShardingSpecs {
+		o.cluster.Spec.ShardingSpecs[i].Template.DisableExporter = cfgutil.ToPointer(disableExporter)
 	}
 	return nil
 }
