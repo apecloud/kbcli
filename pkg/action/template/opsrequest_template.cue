@@ -28,7 +28,7 @@ options: {
 
 // required, k8s api resource content
 content: {
-	apiVersion: "apps.kubeblocks.io/v1alpha1"
+	apiVersion: "operations.kubeblocks.io/v1alpha1"
 	kind:       "OpsRequest"
 	metadata: {
 		name:      options.opsRequestName

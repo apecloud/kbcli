@@ -56,7 +56,6 @@ Cluster command.
 * [kbcli cluster edit-config](kbcli_cluster_edit-config.md)	 - Edit the config file of the component.
 * [kbcli cluster explain-config](kbcli_cluster_explain-config.md)	 - List the constraint for supported configuration params.
 * [kbcli cluster expose](kbcli_cluster_expose.md)	 - Expose a cluster with a new endpoint, the new endpoint can be found by executing 'kbcli cluster describe NAME'.
-* [kbcli cluster hscale](kbcli_cluster_hscale.md)	 - Horizontally scale the specified components in the cluster.
 * [kbcli cluster label](kbcli_cluster_label.md)	 - Update the labels on cluster
 * [kbcli cluster list](kbcli_cluster_list.md)	 - List clusters.
 * [kbcli cluster list-backup-policy](kbcli_cluster_list-backup-policy.md)	 - List backups policies.
@@ -72,10 +71,12 @@ Cluster command.
 * [kbcli cluster register](kbcli_cluster_register.md)	 - Pull the cluster chart to the local cache and register the type to 'create' sub-command
 * [kbcli cluster restart](kbcli_cluster_restart.md)	 - Restart the specified components in the cluster.
 * [kbcli cluster restore](kbcli_cluster_restore.md)	 - Restore a new cluster from backup.
+* [kbcli cluster scale-in](kbcli_cluster_scale-in.md)	 - scale in replicas of the specified components in the cluster.
+* [kbcli cluster scale-out](kbcli_cluster_scale-out.md)	 - scale out replicas of the specified components in the cluster.
 * [kbcli cluster start](kbcli_cluster_start.md)	 - Start the cluster if cluster is stopped.
 * [kbcli cluster stop](kbcli_cluster_stop.md)	 - Stop the cluster and release all the pods of the cluster.
 * [kbcli cluster update](kbcli_cluster_update.md)	 - Update the cluster settings, such as enable or disable monitor or log.
-* [kbcli cluster upgrade](kbcli_cluster_upgrade.md)	 - Upgrade the cluster version.
+* [kbcli cluster upgrade](kbcli_cluster_upgrade.md)	 - Upgrade the service version(only support to upgrade minor version).
 * [kbcli cluster volume-expand](kbcli_cluster_volume-expand.md)	 - Expand volume with the specified components and volumeClaimTemplates in the cluster.
 * [kbcli cluster vscale](kbcli_cluster_vscale.md)	 - Vertically scale the specified components in the cluster.
 

@@ -13,6 +13,9 @@ kbcli cluster vscale NAME [flags]
 ```
   # scale the computing resources of specified components, separate with commas for multiple components
   kbcli cluster vscale mycluster --components=mysql --cpu=500m --memory=500Mi
+  
+  # scale the computing resources of instance template, separate with commas for multiple components
+  kbcli cluster vscale mycluster --components=mysql --cpu=500m --memory=500Mi --instance-tpl default
 ```
 
 ### Options
@@ -22,8 +25,10 @@ kbcli cluster vscale NAME [flags]
       --components strings             Component names to this operations
       --cpu string                     Request and limit size of component cpu
       --dry-run string[="unchanged"]   Must be "client", or "server". If with client strategy, only print the object that would be sent, and no data is actually sent. If with server strategy, submit the server-side request, but no data is persistent. (default "none")
+      --edit                           Edit the API resource before creating
       --force                           skip the pre-checks of the opsRequest to run the opsRequest forcibly
   -h, --help                           help for vscale
+      --instance-tpl strings           vertically scaling the specified instance template in the specified component
       --memory string                  Request and limit size of component memory
       --name string                    OpsRequest name. if not specified, it will be randomly generated
   -o, --output format                  Prints the output in the specified format. Allowed values: JSON and YAML (default yaml)

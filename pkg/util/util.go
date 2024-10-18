@@ -867,7 +867,7 @@ func GetKubeBlocksNamespaceByDynamic(dynamic dynamic.Interface) (string, error) 
 type ExposeType string
 
 const (
-	ExposeToVPC      ExposeType = "vpc"
+	ExposeToIntranet ExposeType = "intranet"
 	ExposeToInternet ExposeType = "internet"
 
 	NodePort     string = "NodePort"
@@ -879,7 +879,7 @@ const (
 
 var ProviderExposeAnnotations = map[K8sProvider]map[ExposeType]map[string]string{
 	EKSProvider: {
-		ExposeToVPC: map[string]string{
+		ExposeToIntranet: map[string]string{
 			"service.beta.kubernetes.io/aws-load-balancer-type":     "nlb",
 			"service.beta.kubernetes.io/aws-load-balancer-internal": "true",
 		},
@@ -889,13 +889,13 @@ var ProviderExposeAnnotations = map[K8sProvider]map[ExposeType]map[string]string
 		},
 	},
 	GKEProvider: {
-		ExposeToVPC: map[string]string{
+		ExposeToIntranet: map[string]string{
 			"networking.gke.io/load-balancer-type": "Internal",
 		},
 		ExposeToInternet: map[string]string{},
 	},
 	AKSProvider: {
-		ExposeToVPC: map[string]string{
+		ExposeToIntranet: map[string]string{
 			"service.beta.kubernetes.io/azure-load-balancer-internal": "true",
 		},
 		ExposeToInternet: map[string]string{
@@ -903,7 +903,7 @@ var ProviderExposeAnnotations = map[K8sProvider]map[ExposeType]map[string]string
 		},
 	},
 	ACKProvider: {
-		ExposeToVPC: map[string]string{
+		ExposeToIntranet: map[string]string{
 			"service.beta.kubernetes.io/alibaba-cloud-loadbalancer-address-type": "intranet",
 		},
 		ExposeToInternet: map[string]string{
@@ -916,13 +916,13 @@ var ProviderExposeAnnotations = map[K8sProvider]map[ExposeType]map[string]string
 		ExposeToInternet: map[string]string{},
 	},
 	KINDProvider: {
-		ExposeToVPC: map[string]string{},
+		ExposeToIntranet: map[string]string{},
 	},
 	K3SProvider: {
-		ExposeToVPC: map[string]string{},
+		ExposeToIntranet: map[string]string{},
 	},
 	UnknownProvider: {
-		ExposeToVPC:      map[string]string{},
+		ExposeToIntranet: map[string]string{},
 		ExposeToInternet: map[string]string{},
 	},
 }
