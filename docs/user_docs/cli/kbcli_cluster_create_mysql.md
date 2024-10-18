@@ -41,7 +41,7 @@ kbcli cluster create mysql NAME [flags]
       --termination-policy string      The termination policy of cluster. Legal values [DoNotTerminate, Halt, Delete, WipeOut]. (default "Delete")
       --tolerations strings            Tolerations for cluster, such as "key=value:effect, key:effect", for example '"engineType=mongo:NoSchedule", "diskType:NoSchedule"'
       --topology-keys stringArray      Topology keys for affinity
-      --version string                 Cluster version, run "kbcli cv list --devel" to see all versions. Legal values [mysql-8.4.2, mysql-8.0.33, mysql-5.7.44]. (default "mysql-8.0")
+      --version string                 Cluster version, run "kbcli cv list --devel" to see all versions. Legal values [mysql-8.4, mysql-8.0, mysql-5.7]. (default "mysql-8.0")
 ```
 
 ### Options inherited from parent commands
