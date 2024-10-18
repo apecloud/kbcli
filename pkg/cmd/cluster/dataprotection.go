@@ -20,7 +20,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package cluster
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"reflect"
@@ -32,6 +31,7 @@ import (
 	opsv1alpha1 "github.com/apecloud/kubeblocks/apis/operations/v1alpha1"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"github.com/stoewer/go-strcase"
 	"golang.org/x/exp/maps"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -44,10 +44,7 @@ import (
 	"k8s.io/client-go/dynamic"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/util/jsonpath"
-	"k8s.io/kubectl/pkg/cmd/get"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
-	"k8s.io/kubectl/pkg/cmd/util/editor"
 	"k8s.io/kubectl/pkg/util/templates"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -342,7 +339,7 @@ func NewCreateBackupCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *
 			cmdutil.CheckErr(o.Run())
 		},
 	}
-
+	o.AddCommonFlags(cmd)
 	cmd.Flags().StringVar(&o.BackupSpec.BackupMethod, "method", "", "Backup methods are defined in backup policy (required), if only one backup method in backup policy, use it as default backup method, if multiple backup methods in backup policy, use method which volume snapshot is true as default backup method")
 	cmd.Flags().StringVar(&o.BackupSpec.BackupName, "name", "", "Backup name")
 	cmd.Flags().StringVar(&o.BackupSpec.BackupPolicyName, "policy", "", "Backup policy name, if not specified, use the cluster default backup policy")
@@ -353,6 +350,7 @@ func NewCreateBackupCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *
 	o.RegisterBackupFlagCompletionFunc(cmd, f)
 	return cmd
 }
+
 func (o *CreateBackupOptions) RegisterBackupFlagCompletionFunc(cmd *cobra.Command, f cmdutil.Factory) {
 	util.CheckErr(cmd.RegisterFlagCompletionFunc(
 		"deletion-policy",
@@ -434,7 +432,7 @@ func PrintBackupList(o ListBackupOptions) error {
 	// sort the unstructured objects with the creationTimestamp in positive order
 	sort.Sort(unstructuredList(backupList.Items))
 	tbl := printer.NewTablePrinter(o.Out)
-	tbl.SetHeader("NAME", "NAMESPACE", "SOURCE-CLUSTER", "METHOD", "STATUS", "TOTAL-SIZE", "DURATION", "CREATE-TIME", "COMPLETION-TIME", "EXPIRATION")
+	tbl.SetHeader("NAME", "NAMESPACE", "SOURCE-CLUSTER", "METHOD", "STATUS", "TOTAL-SIZE", "DURATION", "DELETION-POLICY", "CREATE-TIME", "COMPLETION-TIME", "EXPIRATION")
 	for _, obj := range backupList.Items {
 		backup := &dpv1alpha1.Backup{}
 		if err = runtime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, backup); err != nil {
@@ -461,7 +459,7 @@ func PrintBackupList(o ListBackupOptions) error {
 			statusString = fmt.Sprintf("%s(AvailablePods: %d)", statusString, *availableReplicas)
 		}
 		tbl.AddRow(backup.Name, backup.Namespace, sourceCluster, backup.Spec.BackupMethod, statusString, backup.Status.TotalSize,
-			durationStr, util.TimeFormat(&backup.CreationTimestamp), util.TimeFormat(backup.Status.CompletionTimestamp),
+			durationStr, backup.Spec.DeletionPolicy, util.TimeFormat(&backup.CreationTimestamp), util.TimeFormat(backup.Status.CompletionTimestamp),
 			util.TimeFormat(backup.Status.Expiration))
 	}
 	tbl.Print()
@@ -628,12 +626,13 @@ func NewCreateRestoreCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) 
 			util.CheckErr(o.Run())
 		},
 	}
-
+	o.AddCommonFlags(cmd)
 	cmd.Flags().StringVar(&o.RestoreSpec.BackupName, "backup", "", "Backup name")
 	cmd.Flags().StringVar(&o.RestoreSpec.RestorePointInTime, "restore-to-time", "", "point in time recovery(PITR)")
 	cmd.Flags().StringVar(&restoreKey, "restore-key", "", "specify the key to restore in kv database, support multiple keys split by comma with wildcard pattern matching")
 	cmd.Flags().BoolVar(&restoreKeyIgnoreErrors, "restore-key-ignore-errors", false, "whether or not to ignore errors when restore kv database by keys")
 	cmd.Flags().StringVar(&o.RestoreSpec.VolumeRestorePolicy, "volume-restore-policy", "Parallel", "the volume claim restore policy, supported values: [Serial, Parallel]")
+	cmd.Flags().BoolVar(&o.RestoreSpec.DeferPostReadyUntilClusterRunning, "restore-after-cluster-running", false, "do the postReady phase when the cluster is Running rather than the component is Running.")
 	return cmd
 }
 
@@ -690,7 +689,7 @@ func PrintBackupPolicyList(o action.ListOptions) error {
 	}
 
 	tbl := printer.NewTablePrinter(o.Out)
-	tbl.SetHeader("NAME", "NAMESPACE", "DEFAULT", "CLUSTER", "CREATE-TIME", "STATUS")
+	tbl.SetHeader("NAME", "NAMESPACE", "DEFAULT", "CLUSTER", "COMPONENT", "CREATE-TIME", "STATUS")
 	for _, obj := range backupPolicyList.Items {
 		defaultPolicy, ok := obj.GetAnnotations()[dptypes.DefaultBackupPolicyAnnotationKey]
 		backupPolicy := &dpv1alpha1.BackupPolicy{}
@@ -705,7 +704,7 @@ func PrintBackupPolicyList(o action.ListOptions) error {
 		}
 		createTime := obj.GetCreationTimestamp()
 		tbl.AddRow(obj.GetName(), obj.GetNamespace(), defaultPolicy, obj.GetLabels()[constant.AppInstanceLabelKey],
-			util.TimeFormat(&createTime), backupPolicy.Status.Phase)
+			obj.GetLabels()[constant.KBAppComponentLabelKey], util.TimeFormat(&createTime), backupPolicy.Status.Phase)
 	}
 	tbl.Print()
 	return nil
@@ -722,12 +721,7 @@ type editBackupPolicyOptions struct {
 
 	GVR schema.GroupVersionResource
 	genericiooptions.IOStreams
-	editContent       []editorRow
-	editContentKeyMap map[string]updateBackupPolicyFieldFunc
-	original          string
-	target            string
-	values            []string
-	isTest            bool
+	isTest bool
 }
 
 type editorRow struct {
@@ -754,8 +748,6 @@ func NewEditBackupPolicyCmd(f cmdutil.Factory, streams genericiooptions.IOStream
 			cmdutil.CheckErr(o.runEditBackupPolicy())
 		},
 	}
-	cmd.Flags().StringArrayVar(&o.values, "set", []string{},
-		"set values on the command line (can specify multiple or separate values with commas: key1=val1,key2=val2)")
 	return cmd
 }
 
@@ -852,48 +844,6 @@ func (o *editBackupPolicyOptions) complete(args []string) error {
 	if o.client, err = o.Factory.KubernetesClientSet(); err != nil {
 		return err
 	}
-
-	o.editContent = []editorRow{
-		{
-			key:        "backupRepoName",
-			jsonpath:   "backupRepoName",
-			updateFunc: o.updateRepoName,
-		},
-		{
-			key:      "encryption.algorithm",
-			jsonpath: "encryptionConfig.algorithm",
-			updateFunc: func(backupPolicy *dpv1alpha1.BackupPolicy, targetVal string) error {
-				if backupPolicy.Spec.EncryptionConfig == nil {
-					backupPolicy.Spec.EncryptionConfig = &dpv1alpha1.EncryptionConfig{}
-				}
-				backupPolicy.Spec.EncryptionConfig.Algorithm = targetVal
-				return nil
-			},
-		},
-		{
-			key:        "encryption.passPhrase",
-			jsonpath:   "__not_a_field",
-			updateFunc: o.updateEncryptionPassPhrase,
-		},
-		{
-			key:      "encryption.disabled",
-			jsonpath: "__not_a_field",
-			updateFunc: func(backupPolicy *dpv1alpha1.BackupPolicy, targetVal string) error {
-				if targetVal != "true" {
-					return nil
-				}
-				backupPolicy.Spec.EncryptionConfig = nil
-				return nil
-			},
-		},
-	}
-	o.editContentKeyMap = map[string]updateBackupPolicyFieldFunc{}
-	for _, v := range o.editContent {
-		if v.updateFunc == nil {
-			return fmt.Errorf("updateFunc can not be nil")
-		}
-		o.editContentKeyMap[v.key] = v.updateFunc
-	}
 	return nil
 }
 
@@ -907,135 +857,18 @@ func (o *editBackupPolicyOptions) runEditBackupPolicy() error {
 	if err != nil {
 		return err
 	}
-	if len(o.values) == 0 {
-		edited, err := o.runWithEditor(backupPolicy)
-		if err != nil {
-			return err
-		}
-		o.values = strings.Split(edited, "\n")
+	oldBackupPolicy := backupPolicy.DeepCopy()
+	customEdit := action.NewCustomEditOptions(o.Factory, o.IOStreams, action.EditForPatched)
+	if err := customEdit.Run(backupPolicy); err != nil {
+		return err
 	}
-	return o.applyChanges(backupPolicy)
-}
-
-func (o *editBackupPolicyOptions) runWithEditor(backupPolicy *dpv1alpha1.BackupPolicy) (string, error) {
-	editor := editor.NewDefaultEditor([]string{
-		"KUBE_EDITOR",
-		"EDITOR",
-	})
-	contents, err := o.buildEditorContent(backupPolicy)
-	if err != nil {
-		return "", err
-	}
-	addHeader := func() string {
-		return fmt.Sprintf(`# Please edit the object below. Lines beginning with a '#' will be ignored,
-# and an empty file will abort the edit. If an error occurs while saving this file will be
-# reopened with the relevant failures.
-#
-%s
-`, *contents)
-	}
-	if o.isTest {
-		// only for testing
-		return "", nil
-	}
-	edited, _, err := editor.LaunchTempFile(fmt.Sprintf("%s-edit-", backupPolicy.Name), "", bytes.NewBufferString(addHeader()))
-	if err != nil {
-		return "", err
-	}
-	return string(edited), nil
-}
-
-// buildEditorContent builds the editor content.
-func (o *editBackupPolicyOptions) buildEditorContent(backPolicy *dpv1alpha1.BackupPolicy) (*string, error) {
-	var contents []string
-	for _, v := range o.editContent {
-		// get the value with jsonpath
-		val, err := o.getValueWithJsonpath(backPolicy.Spec, v.jsonpath)
-		if err != nil {
-			return nil, err
-		}
-		if val == nil {
-			continue
-		}
-		row := fmt.Sprintf("%s=%s", v.key, *val)
-		o.original += row
-		contents = append(contents, row)
-	}
-	result := strings.Join(contents, "\n")
-	return &result, nil
-}
-
-// getValueWithJsonpath gets the value with jsonpath.
-func (o *editBackupPolicyOptions) getValueWithJsonpath(spec dpv1alpha1.BackupPolicySpec, path string) (*string, error) {
-	parser := jsonpath.New("edit-backup-policy").AllowMissingKeys(true)
-	pathExpression, err := get.RelaxedJSONPathExpression(path)
-	if err != nil {
-		return nil, err
-	}
-	if err = parser.Parse(pathExpression); err != nil {
-		return nil, err
-	}
-	values, err := parser.FindResults(spec)
-	if err != nil {
-		return nil, err
-	}
-	for _, v := range values {
-		if len(v) == 0 {
-			continue
-		}
-		v1 := v[0]
-		switch v1.Kind() {
-		case reflect.Ptr, reflect.Interface:
-			if v1.IsNil() {
-				return nil, nil
-			}
-			val := fmt.Sprintf("%v", v1.Elem())
-			return &val, nil
-		default:
-			val := fmt.Sprintf("%v", v1.Interface())
-			return &val, nil
-		}
-	}
-	return nil, nil
-}
-
-func trimQuotes(s string) string {
-	if len(s) < 2 {
-		return s
-	}
-	if s[0] == '"' && s[len(s)-1] == '"' {
-		return s[1 : len(s)-1]
-	}
-	if s[0] == '\'' && s[len(s)-1] == '\'' {
-		return s[1 : len(s)-1]
-	}
-	return s
+	return o.applyChanges(oldBackupPolicy, backupPolicy)
 }
 
 // applyChanges applies the changes of backupPolicy.
-func (o *editBackupPolicyOptions) applyChanges(backupPolicy *dpv1alpha1.BackupPolicy) error {
-	for _, v := range o.values {
-		row := strings.TrimSpace(v)
-		if strings.HasPrefix(row, "#") || row == "" {
-			continue
-		}
-		o.target += row
-		arr := strings.Split(row, "=")
-		if len(arr) != 2 {
-			return fmt.Errorf(`invalid row: %s, format should be "key=value"`, v)
-		}
-		arr[0] = strings.TrimSpace(arr[0])
-		updateFn, ok := o.editContentKeyMap[arr[0]]
-		if !ok {
-			return fmt.Errorf(`invalid key: %s`, arr[0])
-		}
-		arr[1] = trimQuotes(strings.TrimSpace(arr[1]))
-		if err := updateFn(backupPolicy, arr[1]); err != nil {
-			return err
-		}
-	}
+func (o *editBackupPolicyOptions) applyChanges(oldBackupPolicy, backupPolicy *dpv1alpha1.BackupPolicy) error {
 	// if no changes, return.
-	if o.original == o.target {
+	if reflect.DeepEqual(oldBackupPolicy, backupPolicy) {
 		fmt.Fprintln(o.Out, "updated (no change)")
 		return nil
 	}
@@ -1134,6 +967,7 @@ func (o *DescribeBackupPolicyOptions) printBackupPolicyObj(obj *dpv1alpha1.Backu
 	printer.PrintLine("Summary:")
 	realPrintPairStringToLine("Name", obj.Name)
 	realPrintPairStringToLine("Cluster", obj.Labels[constant.AppInstanceLabelKey])
+	realPrintPairStringToLine("Component", obj.Labels[constant.KBAppComponentLabelKey])
 	realPrintPairStringToLine("Namespace", obj.Namespace)
 	realPrintPairStringToLine("Default", strconv.FormatBool(obj.Annotations[dptypes.DefaultBackupPolicyAnnotationKey] == "true"))
 	if obj.Spec.BackupRepoName != nil {
@@ -1222,18 +1056,35 @@ func (o *DescribeBackupOptions) printBackupObj(obj *dpv1alpha1.Backup) error {
 	realPrintPairStringToLine("Method", obj.Spec.BackupMethod)
 	realPrintPairStringToLine("Policy Name", obj.Spec.BackupPolicyName)
 
+	printer.PrintLine("\nActions:")
+	for _, v := range obj.Status.Actions {
+		printer.PrintPairStringToLine(v.Name, "")
+		realPrintPairStringToLine("ActionType", string(v.ActionType), 4)
+		realPrintPairStringToLine("WorkloadName", v.ObjectRef.Name, 4)
+		realPrintPairStringToLine("TargetPodName", v.TargetPodName, 4)
+		realPrintPairStringToLine("Phase", string(v.Phase), 4)
+		realPrintPairStringToLine("FailureReason", v.FailureReason, 4)
+		realPrintPairStringToLine("Start Time", util.TimeFormat(v.StartTimestamp), 4)
+		realPrintPairStringToLine("Completion Time", util.TimeFormat(v.CompletionTimestamp), 4)
+	}
+	if len(obj.Status.Extras) > 0 {
+		printer.PrintLine("\nExtras:")
+		for i, extra := range obj.Status.Extras {
+			fmt.Printf("=============%d=============\n", i+1)
+			for key, value := range extra {
+				realPrintPairStringToLine(strcase.LowerCamelCase(key), value)
+			}
+		}
+	}
 	printer.PrintLine("\nStatus:")
 	realPrintPairStringToLine("Phase", string(obj.Status.Phase))
+	realPrintPairStringToLine("FailureReason", obj.Status.FailureReason)
 	realPrintPairStringToLine("Total Size", obj.Status.TotalSize)
 	if obj.Status.BackupMethod != nil {
 		realPrintPairStringToLine("ActionSet Name", obj.Status.BackupMethod.ActionSetName)
 	}
-	if obj.Status.BackupRepoName != "" {
-		realPrintPairStringToLine("Repository", obj.Status.BackupRepoName)
-	}
-	if obj.Status.PersistentVolumeClaimName != "" {
-		realPrintPairStringToLine("PVC Name", obj.Status.PersistentVolumeClaimName)
-	}
+	realPrintPairStringToLine("Repository", obj.Status.BackupRepoName)
+	realPrintPairStringToLine("PVC Name", obj.Status.PersistentVolumeClaimName)
 	if obj.Status.Duration != nil {
 		realPrintPairStringToLine("Duration", duration.HumanDuration(obj.Status.Duration.Duration))
 	}
