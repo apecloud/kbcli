@@ -28,7 +28,6 @@ import (
 	gv "github.com/hashicorp/go-version"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
-	cp "github.com/apecloud/kbcli/pkg/cloudprovider"
 	clitesting "github.com/apecloud/kbcli/pkg/testing"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util/helm"
@@ -52,38 +51,26 @@ var _ = Describe("playground", func() {
 		Expect(cmd != nil).Should(BeTrue())
 
 		o := &initOptions{
-			clusterDef:    clitesting.ClusterDefName,
+			clusterType:   clitesting.ClusterType,
 			IOStreams:     streams,
-			cloudProvider: defaultCloudProvider,
 			helmCfg:       helm.NewConfig("", testKubeConfigPath, "", false),
 			dockerVersion: version.MinimumDockerVersion,
 		}
 		Expect(o.validate()).Should(Succeed())
 		Expect(o.run()).Should(HaveOccurred())
 		Expect(o.installKubeBlocks("test")).Should(HaveOccurred())
-		// TODO: re-add it when updating cluster creation function
-		// Expect(o.createCluster()).Should(HaveOccurred())
+		Expect(o.createCluster()).Should(HaveOccurred())
 	})
 
 	It("init at local host without outdate docker", func() {
 		var err error
 		o := &initOptions{
-			clusterDef:    clitesting.ClusterDefName,
-			IOStreams:     streams,
-			cloudProvider: defaultCloudProvider,
-			helmCfg:       helm.NewConfig("", testKubeConfigPath, "", false),
+			clusterType: clitesting.ClusterType,
+			IOStreams:   streams,
+			helmCfg:     helm.NewConfig("", testKubeConfigPath, "", false),
 		}
 		o.dockerVersion, err = gv.NewVersion("20.10.0")
 		Expect(err).Should(BeNil())
-		Expect(o.validate()).Should(HaveOccurred())
-	})
-
-	It("init at remote cloud", func() {
-		o := &initOptions{
-			IOStreams:     streams,
-			clusterDef:    clitesting.ClusterDefName,
-			cloudProvider: cp.AWS,
-		}
 		Expect(o.validate()).Should(HaveOccurred())
 	})
 })
