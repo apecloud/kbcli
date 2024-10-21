@@ -20,9 +20,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package cluster
 
 import (
+	"github.com/apecloud/kbcli/pkg/cluster"
+	"github.com/apecloud/kbcli/pkg/printer"
 	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/version"
+	fakediscovery "k8s.io/client-go/discovery/fake"
 	"k8s.io/client-go/kubernetes/scheme"
 
 	"fmt"
@@ -40,33 +46,126 @@ import (
 )
 
 var _ = Describe("Cluster", func() {
-
 	const (
+		clusterType = "apecloud-mysql"
 		clusterName = "test"
 		namespace   = "default"
 	)
-	var streams genericiooptions.IOStreams
-	var tf *cmdtesting.TestFactory
-	fakeConfigData := map[string]string{
-		"config.yaml": `# the default storage class name.
-    DEFAULT_STORAGE_CLASS: ""`,
-	}
+	var (
+		tf            *cmdtesting.TestFactory
+		streams       genericiooptions.IOStreams
+		createOptions *action.CreateOptions
+		mockClient    = func(data runtime.Object) *cmdtesting.TestFactory {
+			tf = testing.NewTestFactory(testing.Namespace)
+			codec := scheme.Codecs.LegacyCodec(scheme.Scheme.PrioritizedVersionsAllGroups()...)
+			tf.UnstructuredClient = &clientfake.RESTClient{
+				NegotiatedSerializer: resource.UnstructuredPlusDefaultContentConfig().NegotiatedSerializer,
+				GroupVersion:         schema.GroupVersion{Group: types.AppsAPIGroup, Version: types.AppsAPIVersion},
+				Resp:                 &http.Response{StatusCode: http.StatusOK, Header: cmdtesting.DefaultHeader(), Body: cmdtesting.ObjBody(codec, data)},
+			}
+			tf.Client = tf.UnstructuredClient
+			tf.FakeDynamicClient = testing.FakeDynamicClient(data)
+			tf.WithDiscoveryClient(cmdtesting.NewFakeCachedDiscoveryClient())
+			return tf
+		}
+	)
+
 	BeforeEach(func() {
+		_ = kbappsv1.AddToScheme(scheme.Scheme)
+		_ = metav1.AddMetaToScheme(scheme.Scheme)
 		streams, _, _, _ = genericiooptions.NewTestIOStreams()
-		tf = cmdtesting.NewTestFactory().WithNamespace(namespace)
-		cd := testing.FakeClusterDef()
-		fakeDefaultStorageClass := testing.FakeStorageClass(testing.StorageClassName, testing.IsDefault)
-		// TODO: remove unused codes?
-		tf.FakeDynamicClient = testing.FakeDynamicClient(cd, fakeDefaultStorageClass, testing.FakeConfigMap("kubeblocks-manager-config", types.DefaultNamespace, fakeConfigData), testing.FakeSecret(types.DefaultNamespace, clusterName))
-		tf.Client = &clientfake.RESTClient{}
+		tf = mockClient(testing.FakeCompDef())
+		createOptions = &action.CreateOptions{
+			IOStreams: streams,
+			Factory:   tf,
+		}
 	})
 
 	AfterEach(func() {
 		tf.Cleanup()
 	})
 
-	// TODO: add create cluster case
-	Context("delete cluster", func() {
+	Context("create", func() {
+		It("without name", func() {
+			o, err := NewSubCmdsOptions(createOptions, clusterType)
+			Expect(err).Should(Succeed())
+			Expect(o).ShouldNot(BeNil())
+			Expect(o.ChartInfo).ShouldNot(BeNil())
+			o.Format = printer.YAML
+
+			Expect(o.CreateOptions.Complete()).To(Succeed())
+			o.Client = testing.FakeClientSet()
+			fakeDiscovery1, _ := o.Client.Discovery().(*fakediscovery.FakeDiscovery)
+			fakeDiscovery1.FakedServerVersion = &version.Info{Major: "1", Minor: "27", GitVersion: "v1.27.0"}
+			Expect(o.Complete(nil)).To(Succeed())
+			Expect(o.Validate()).To(Succeed())
+			Expect(o.Name).ShouldNot(BeEmpty())
+			Expect(o.Run()).Should(Succeed())
+		})
+	})
+
+	Context("create validate", func() {
+		var o *CreateSubCmdsOptions
+		BeforeEach(func() {
+			o = &CreateSubCmdsOptions{
+				CreateOptions: &action.CreateOptions{
+					Factory:   tf,
+					Namespace: namespace,
+					Dynamic:   tf.FakeDynamicClient,
+					IOStreams: streams,
+				},
+			}
+			o.Name = "mycluster"
+			o.ChartInfo, _ = cluster.BuildChartInfo(clusterType)
+		})
+
+		It("can validate the cluster name must begin with a letter and can only contain lowercase letters, numbers, and '-'.", func() {
+			type fn func()
+			var succeed = func(name string) fn {
+				return func() {
+					o.Name = name
+					Expect(o.Validate()).Should(Succeed())
+				}
+			}
+			var failed = func(name string) fn {
+				return func() {
+					o.Name = name
+					Expect(o.Validate()).Should(HaveOccurred())
+				}
+			}
+			// more case to add
+			invalidCase := []string{
+				"1abcd", "abcd-", "-abcd", "abc#d", "ABCD", "*&(&%",
+			}
+
+			validCase := []string{
+				"abcd", "abcd1", "a1-2b-3d",
+			}
+
+			for i := range invalidCase {
+				failed(invalidCase[i])
+			}
+
+			for i := range validCase {
+				succeed(validCase[i])
+			}
+
+		})
+
+		It("can validate whether the name is not longer than 16 characters when create a new cluster", func() {
+			Expect(len(o.Name)).Should(BeNumerically("<=", 16))
+			Expect(o.Validate()).Should(Succeed())
+			moreThan16 := 17
+			bytes := make([]byte, 0)
+			var clusterNameMoreThan16 string
+			for i := 0; i < moreThan16; i++ {
+				bytes = append(bytes, byte(i%26+'a'))
+			}
+			clusterNameMoreThan16 = string(bytes)
+			Expect(len(clusterNameMoreThan16)).Should(BeNumerically(">", 16))
+			o.Name = clusterNameMoreThan16
+			Expect(o.Validate()).Should(HaveOccurred())
+		})
 
 	})
 
