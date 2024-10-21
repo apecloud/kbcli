@@ -26,9 +26,11 @@ import (
 	"regexp"
 
 	"github.com/spf13/cobra"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 
 	"github.com/apecloud/kbcli/pkg/action"
@@ -132,21 +134,36 @@ func buildCreateSubCmds(createOptions *action.CreateOptions) []*cobra.Command {
 	return cmds
 }
 
+func generateClusterName(dynamic dynamic.Interface, namespace string) (string, error) {
+	var name string
+	// retry 10 times
+	for i := 0; i < 10; i++ {
+		name = cluster.GenerateName()
+		// check whether the cluster exists, if not found, return it
+		_, err := dynamic.Resource(types.ClusterGVR()).Namespace(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+		if errors.IsNotFound(err) {
+			return name, nil
+		}
+		if err != nil {
+			return "", err
+		}
+	}
+	return "", fmt.Errorf("failed to generate cluster name")
+}
+
 func (o *CreateSubCmdsOptions) Complete(cmd *cobra.Command) error {
 	var err error
 
 	// if name is not specified, generate a random cluster name
 	if o.Name == "" {
-		o.Name, err = cluster.GenerateClusterName(o.Dynamic, o.Namespace)
+		o.Name, err = generateClusterName(o.Dynamic, o.Namespace)
 		if err != nil {
 			return err
 		}
 	}
 
 	// get values from flags
-	if cmd != nil {
-		o.Values = getValuesFromFlags(cmd.LocalNonPersistentFlags())
-	}
+	o.Values = getValuesFromFlags(cmd.LocalNonPersistentFlags())
 
 	// get all the rendered objects
 	objs, err := o.getObjectsInfo()
