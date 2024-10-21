@@ -23,15 +23,6 @@ kbcli playground init [flags]
   # create an AWS EKS cluster and install KubeBlocks, the region is required
   kbcli playground init --cloud-provider aws --region us-west-1
   
-  # create an Alibaba cloud ACK cluster and install KubeBlocks, the region is required
-  kbcli playground init --cloud-provider alicloud --region cn-hangzhou
-  
-  # create a Tencent cloud TKE cluster and install KubeBlocks, the region is required
-  kbcli playground init --cloud-provider tencentcloud --region ap-chengdu
-  
-  # create a Google cloud GKE cluster and install KubeBlocks, the region is required
-  kbcli playground init --cloud-provider gcp --region us-east1
-  
   # after init, run the following commands to experience KubeBlocks quickly
   # list database cluster and check its status
   kbcli cluster list
@@ -52,13 +43,13 @@ kbcli playground init [flags]
 ### Options
 
 ```
-      --auto-approve                Skip interactive approval during the initialization of playground
+      --auto-approve          Skip interactive approval during the initialization of playground
+      --cluster-type string   Specify the cluster type to create, use 'kbcli cluster create --help' to get the available cluster type. (default "apecloud-mysql")
       --cloud-provider string       Cloud provider type, one of [local aws gcp alicloud tencentcloud] (default "local")
-      --cluster-definition string   Specify the cluster definition, run "kbcli cd list" to get the available cluster definitions (default "apecloud-mysql")
-  -h, --help                        help for init
-      --region string               The region to create kubernetes cluster
-      --timeout duration            Time to wait for init playground, such as --timeout=10m (default 10m0s)
-      --version string              KubeBlocks version
+  -h, --help                  help for init
+      --region string         The region to create kubernetes cluster
+      --timeout duration      Time to wait for init playground, such as --timeout=10m (default 10m0s)
+      --version string        KubeBlocks version
 ```
 
 ### Options inherited from parent commands

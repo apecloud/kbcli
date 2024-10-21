@@ -163,7 +163,9 @@ func (o *CreateSubCmdsOptions) Complete(cmd *cobra.Command) error {
 	}
 
 	// get values from flags
-	o.Values = getValuesFromFlags(cmd.LocalNonPersistentFlags())
+	if cmd != nil {
+		o.Values = getValuesFromFlags(cmd.LocalNonPersistentFlags())
+	}
 
 	// get all the rendered objects
 	objs, err := o.getObjectsInfo()

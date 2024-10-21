@@ -42,7 +42,7 @@ type Interface interface {
 
 func New(provider, tfRootPath string, stdout, stderr io.Writer) (Interface, error) {
 	switch provider {
-	case AWS, TencentCloud, AliCloud, GCP:
+	case AWS:
 		return newCloudProvider(provider, tfRootPath, stdout, stderr)
 	case Local:
 		return newLocalCloudProvider(stdout, stderr), nil

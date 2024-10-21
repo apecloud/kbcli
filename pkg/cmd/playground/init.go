@@ -38,6 +38,8 @@ import (
 	"k8s.io/kubectl/pkg/util/templates"
 
 	cp "github.com/apecloud/kbcli/pkg/cloudprovider"
+	"github.com/apecloud/kbcli/pkg/cluster"
+	cmdcluster "github.com/apecloud/kbcli/pkg/cmd/cluster"
 	"github.com/apecloud/kbcli/pkg/cmd/kubeblocks"
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/spinner"
@@ -62,15 +64,6 @@ on the created kubernetes cluster, and an apecloud-mysql cluster named mycluster
 		# create an AWS EKS cluster and install KubeBlocks, the region is required
 		kbcli playground init --cloud-provider aws --region us-west-1
 
-		# create an Alibaba cloud ACK cluster and install KubeBlocks, the region is required
-		kbcli playground init --cloud-provider alicloud --region cn-hangzhou
-
-		# create a Tencent cloud TKE cluster and install KubeBlocks, the region is required
-		kbcli playground init --cloud-provider tencentcloud --region ap-chengdu
-
-		# create a Google cloud GKE cluster and install KubeBlocks, the region is required
-		kbcli playground init --cloud-provider gcp --region us-east1
-
 		# after init, run the following commands to experience KubeBlocks quickly
 		# list database cluster and check its status
 		kbcli cluster list
@@ -87,7 +80,7 @@ on the created kubernetes cluster, and an apecloud-mysql cluster named mycluster
 		# destroy playground
 		kbcli playground destroy`)
 
-	supportedCloudProviders = []string{cp.Local, cp.AWS, cp.GCP, cp.AliCloud, cp.TencentCloud}
+	supportedCloudProviders = []string{cp.Local, cp.AWS}
 
 	spinnerMsg = func(format string, a ...any) spinner.Option {
 		return spinner.WithMessage(fmt.Sprintf("%-50s", fmt.Sprintf(format, a...)))
@@ -97,7 +90,7 @@ on the created kubernetes cluster, and an apecloud-mysql cluster named mycluster
 type initOptions struct {
 	genericiooptions.IOStreams
 	helmCfg       *helm.Config
-	clusterDef    string
+	clusterType   string
 	kbVersion     string
 	cloudProvider string
 	region        string
@@ -124,7 +117,7 @@ func newInitCmd(streams genericiooptions.IOStreams) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&o.clusterDef, "cluster-definition", defaultClusterDef, "Specify the cluster definition, run \"kbcli cd list\" to get the available cluster definitions")
+	cmd.Flags().StringVar(&o.clusterType, "cluster-type", defaultClusterType, "Specify the cluster type to create, use 'kbcli cluster create --help' to get the available cluster type.")
 	cmd.Flags().StringVar(&o.kbVersion, "version", version.DefaultKubeBlocksVersion, "KubeBlocks version")
 	cmd.Flags().StringVar(&o.cloudProvider, "cloud-provider", defaultCloudProvider, fmt.Sprintf("Cloud provider type, one of %v", supportedCloudProviders))
 	cmd.Flags().StringVar(&o.region, "region", "", "The region to create kubernetes cluster")
@@ -166,8 +159,8 @@ func (o *initOptions) validate() error {
 		return fmt.Errorf("region should be specified when cloud provider %s is specified", o.cloudProvider)
 	}
 
-	if o.clusterDef == "" {
-		return fmt.Errorf("a valid cluster definition is needed, use --cluster-definition to specify one")
+	if o.clusterType == "" {
+		return fmt.Errorf("a valid cluster type is needed, use --cluster-type to specify one")
 	}
 
 	if o.cloudProvider == cp.Local && o.dockerVersion.LessThan(version.MinimumDockerVersion) {
@@ -410,7 +403,7 @@ func (o *initOptions) installKBAndCluster(info *cp.K8sClusterInfo) error {
 	}
 	klog.V(1).Info("KubeBlocks installed successfully")
 	// install database cluster
-	clusterInfo := "ClusterDefinition: " + o.clusterDef
+	clusterInfo := "ClusterType: " + o.clusterType
 	s := spinner.New(o.Out, spinnerMsg("Create cluster %s (%s)", kbClusterName, clusterInfo))
 	defer s.Fail()
 	if err = o.createCluster(); err != nil && !apierrors.IsAlreadyExists(err) {
@@ -494,38 +487,24 @@ func (o *initOptions) installKubeBlocks(k8sClusterName string) error {
 
 // createCluster constructs a cluster create options and run
 func (o *initOptions) createCluster() error {
-	// TODO: Update with new creation cmd
-	/*c := cmdcluster.NewCreateOptions(util.NewFactory(), genericiooptions.NewTestIOStreamsDiscard())
-	c.ClusterDefRef = o.clusterDef
-	// c.ClusterVersionRef = o.clusterVersion
-	c.Namespace = defaultNamespace
-	c.Name = kbClusterName
-	c.UpdatableFlags = cmdcluster.UpdatableFlags{
-		TerminationPolicy: "WipeOut",
-		DisableExporter:   false,
-		PodAntiAffinity:   "Preferred",
-		Tenancy:           "SharedNode",
-	}
-
-	// if we are running on local, create cluster with one replica
-	if o.cloudProvider == cp.Local {
-		c.Values = append(c.Values, "replicas=1")
-	} else {
-		// if we are running on cloud, create cluster with three replicas
-		c.Values = append(c.Values, "replicas=3")
-	}
-
-	if err := c.CreateOptions.Complete(); err != nil {
+	c, err := cmdcluster.NewSubCmdsOptions(&cmdcluster.NewCreateOptions(util.NewFactory(), genericiooptions.NewTestIOStreamsDiscard()).CreateOptions, cluster.ClusterType(o.clusterType))
+	if err != nil {
 		return err
 	}
-	if err := c.Validate(); err != nil {
+	c.Args = []string{kbClusterName}
+	err = c.CreateOptions.Complete()
+	if err != nil {
 		return err
 	}
-	if err := c.Complete(); err != nil {
+	err = c.Complete(nil)
+	if err != nil {
 		return err
 	}
-	return c.Run()*/
-	return nil
+	err = c.Validate()
+	if err != nil {
+		return err
+	}
+	return c.Run()
 }
 
 // checkExistedCluster checks playground kubernetes cluster exists or not, a kbcli client only
