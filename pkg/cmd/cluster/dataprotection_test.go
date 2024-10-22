@@ -22,7 +22,6 @@ package cluster
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -71,20 +70,8 @@ var _ = Describe("DataProtection", func() {
 			NegotiatedSerializer: resource.UnstructuredPlusDefaultContentConfig().NegotiatedSerializer,
 			Client: clientfake.CreateHTTPClient(func(req *http.Request) (*http.Response, error) {
 				urlPrefix := "/api/v1/namespaces/" + testing.Namespace
-				if req.URL.Path == urlPrefix+"/secrets" && req.Method == http.MethodPost {
-					dec := json.NewDecoder(req.Body)
-					secret := &corev1.Secret{}
-					_ = dec.Decode(secret)
-					if secret.Name == "" && secret.GenerateName != "" {
-						secret.Name = secret.GenerateName + "123456"
-					}
-					return httpResp(secret), nil
-				}
-				if strings.HasPrefix(req.URL.Path, urlPrefix+"/secrets") && req.Method == http.MethodPatch {
-					return httpResp(&corev1.Secret{}), nil
-				}
 				mapping := map[string]*http.Response{
-					"/api/v1/secrets": httpResp(&corev1.SecretList{}),
+					urlPrefix + "/events": httpResp(&corev1.EventList{}),
 				}
 				return mapping[req.URL.Path], nil
 			}),
@@ -311,15 +298,7 @@ var _ = Describe("DataProtection", func() {
 	})
 
 	It("describe-backup", func() {
-		cmd := NewDescribeBackupCmd(tf, streams)
-		Expect(cmd).ShouldNot(BeNil())
-		o := dp.DescribeDPOptions{
-			Factory:   tf,
-			IOStreams: streams,
-			Gvr:       types.BackupGVR(),
-		}
-
-		By("test describe-backup")
+		By("init backup")
 		backupName := "test1"
 		backup1 := testing.FakeBackup(backupName)
 		backup1.Status.Phase = dpv1alpha1.BackupPhaseCompleted
@@ -329,12 +308,13 @@ var _ = Describe("DataProtection", func() {
 		backup1.Status.Expiration = &logNow
 		backup1.Status.Duration = &metav1.Duration{Duration: logNow.Sub(logNow.Time)}
 		tf.FakeDynamicClient = testing.FakeDynamicClient(backup1)
-		Expect(o.Complete()).Should(Succeed())
-		o.Client = testing.FakeClientSet()
+
+		By("test describe-backup")
+		cmd := NewDescribeBackupCmd(tf, streams)
 		Expect(cmd).ShouldNot(BeNil())
 		done := testing.Capture()
 		_ = cmd.Flags().Set("names", backupName)
-		cmd.Run(cmd, nil)
+		cmd.Run(cmd, []string{})
 		capturedOutput, _ := done()
 		Expect(capturedOutput).Should(ContainSubstring(backupName))
 	})
@@ -342,29 +322,15 @@ var _ = Describe("DataProtection", func() {
 	It("describe-backup-policy", func() {
 		cmd := NewDescribeBackupPolicyCmd(tf, streams)
 		Expect(cmd).ShouldNot(BeNil())
-		By("test describe-backup-policy cmd with cluster and backupPolicy")
-		tf.FakeDynamicClient = testing.FakeDynamicClient()
-		o := dp.DescribeDPOptions{
-			Factory:   tf,
-			IOStreams: streams,
-		}
 
 		By("test describe-backup-policy with cluster")
 		policyName := "test1"
 		policy1 := testing.FakeBackupPolicy(policyName, testing.ClusterName)
 		tf.FakeDynamicClient = testing.FakeDynamicClient(policy1)
-		o.Client = testing.FakeClientSet()
 		cmd.Run(cmd, []string{testing.ClusterName})
 		Expect(out.String()).Should(ContainSubstring(testing.BackupMethodName))
 
 		By("test describe-backup-policy with backupPolicy")
-		o = dp.DescribeDPOptions{
-			Factory:   tf,
-			IOStreams: streams,
-		}
-		o.Names = []string{policyName}
-		o.Client = testing.FakeClientSet()
-		o.Client = testing.FakeClientSet()
 		_ = cmd.Flags().Set("names", policyName)
 		cmd.Run(cmd, []string{})
 		Expect(out.String()).Should(ContainSubstring(testing.BackupMethodName))
