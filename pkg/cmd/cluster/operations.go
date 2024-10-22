@@ -175,8 +175,8 @@ func (o *OperationsOptions) CompleteRestartOps() error {
 	for i := range componentSpecs {
 		o.ComponentNames = append(o.ComponentNames, componentSpecs[i].Name)
 	}
-	for i := range clusterObj.Spec.ShardingSpecs {
-		o.ComponentNames = append(o.ComponentNames, clusterObj.Spec.ShardingSpecs[i].Name)
+	for i := range clusterObj.Spec.Shardings {
+		o.ComponentNames = append(o.ComponentNames, clusterObj.Spec.Shardings[i].Name)
 	}
 	return nil
 }
@@ -237,7 +237,7 @@ func (o *OperationsOptions) handleComponentOps(cluster *appsv1.Cluster, handleF 
 			return err
 		}
 	}
-	for _, v := range cluster.Spec.ShardingSpecs {
+	for _, v := range cluster.Spec.Shardings {
 		if !slices.Contains(o.ComponentNames, v.Name) {
 			continue
 		}

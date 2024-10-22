@@ -391,7 +391,7 @@ func (o *ClusterObjects) GetComponentInfo() []*ComponentInfo {
 	for _, c := range o.Cluster.Spec.ComponentSpecs {
 		buildComponentInfos(c, c.Name, false)
 	}
-	for _, c := range o.Cluster.Spec.ShardingSpecs {
+	for _, c := range o.Cluster.Spec.Shardings {
 		buildComponentInfos(c.Template, c.Name, true)
 	}
 	return comps
@@ -436,9 +436,9 @@ func (o *ClusterObjects) GetInstanceInfo() []*InstanceInfo {
 		shardingCompName := pod.Labels[constant.KBAppShardingNameLabelKey]
 		if shardingCompName != "" {
 			instance.Component = BuildShardingComponentName(shardingCompName, instance.Component)
-			for i, c := range o.Cluster.Spec.ShardingSpecs {
+			for i, c := range o.Cluster.Spec.Shardings {
 				if c.Name == shardingCompName {
-					componentSpec = &o.Cluster.Spec.ShardingSpecs[i].Template
+					componentSpec = &o.Cluster.Spec.Shardings[i].Template
 				}
 			}
 		} else {

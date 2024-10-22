@@ -667,8 +667,8 @@ func (o *UpdateOptions) updateMonitor(val string) error {
 	for i := range o.cluster.Spec.ComponentSpecs {
 		o.cluster.Spec.ComponentSpecs[i].DisableExporter = cfgutil.ToPointer(disableExporter)
 	}
-	for i := range o.cluster.Spec.ShardingSpecs {
-		o.cluster.Spec.ShardingSpecs[i].Template.DisableExporter = cfgutil.ToPointer(disableExporter)
+	for i := range o.cluster.Spec.Shardings {
+		o.cluster.Spec.Shardings[i].Template.DisableExporter = cfgutil.ToPointer(disableExporter)
 	}
 	return nil
 }

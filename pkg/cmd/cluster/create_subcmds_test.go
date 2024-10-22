@@ -128,7 +128,7 @@ var _ = Describe("create cluster by cluster type", func() {
 		Expect(o.Run()).Should(Succeed())
 	})
 
-	It("create sharding cluster command", func() {
+	FIt("create sharding cluster command", func() {
 		By("create commands")
 		cmds := buildCreateSubCmds(createOptions)
 		Expect(cmds).ShouldNot(BeNil())

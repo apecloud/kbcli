@@ -47,6 +47,14 @@ var (
 	createRestoreExample = templates.Examples(`
 		# restore a new cluster from a backup
 		kbcli dp restore mybackup --cluster cluster-name`)
+
+	describeRestoreExample = templates.Examples(`
+		# describe a restore 
+		kbcli dp describe-restore <restoreName>`)
+
+	listRestoreExample = templates.Examples(`
+		# list all restores
+		kbcli dp list-restore`)
 )
 
 type CreateRestoreOptions struct {

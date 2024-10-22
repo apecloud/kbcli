@@ -176,7 +176,7 @@ func (o *CreateSubCmdsOptions) Complete(cmd *cobra.Command) error {
 			}
 		}
 	}
-	if shardingSpec, ok := spec["shardingSpecs"].([]interface{}); ok {
+	if shardingSpec, ok := spec["shardings"].([]interface{}); ok {
 		for i := range shardingSpec {
 			shard := shardingSpec[i].(map[string]interface{})
 			if compSpec, ok := shard["template"].(map[string]interface{}); ok {
