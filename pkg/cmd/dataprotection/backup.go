@@ -455,7 +455,9 @@ func DescribeBackups(o *DescribeDPOptions, backupNames []string) error {
 		if err := util.GetK8SClientObject(o.Dynamic, obj, o.Gvr, o.Namespace, backupName); err != nil {
 			return err
 		}
-		PrintBackupObjDescribe(o, obj)
+		if err := PrintBackupObjDescribe(o, obj); err != nil {
+			return err
+		}
 	}
 	return nil
 }

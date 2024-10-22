@@ -206,10 +206,12 @@ func describeBackups(o *dp.DescribeDPOptions, args []string) error {
 	}
 	for _, v := range backupLIst.Items {
 		obj := &dpv1alpha1.Backup{}
-		if err := apiruntime.DefaultUnstructuredConverter.FromUnstructured(v.UnstructuredContent(), obj); err != nil {
+		if err = apiruntime.DefaultUnstructuredConverter.FromUnstructured(v.UnstructuredContent(), obj); err != nil {
 			return err
 		}
-		dp.PrintBackupObjDescribe(o, obj)
+		if err = dp.PrintBackupObjDescribe(o, obj); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -440,7 +442,9 @@ func describeRestores(o *dp.DescribeDPOptions, args []string) error {
 		if err := apiruntime.DefaultUnstructuredConverter.FromUnstructured(v.UnstructuredContent(), obj); err != nil {
 			return err
 		}
-		dp.PrintRestoreDescribe(o, obj)
+		if err = dp.PrintRestoreDescribe(o, obj); err != nil {
+			return err
+		}
 	}
 	return nil
 }
