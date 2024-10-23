@@ -1182,7 +1182,7 @@ func (o *CustomOperations) validateAndCompleteComponentName() error {
 
 func (o *CustomOperations) completeCustomSpec(cmd *cobra.Command) error {
 	var (
-		params   = make([]opsv1alpha1.Parameter, 0, 0)
+		params   = make([]opsv1alpha1.Parameter, 0)
 		paramMap = map[string]string{}
 	)
 	// Construct config and credential map from flags

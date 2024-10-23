@@ -20,27 +20,27 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package cluster
 
 import (
-	"github.com/apecloud/kbcli/pkg/cluster"
-	"github.com/apecloud/kbcli/pkg/printer"
-	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
+	"fmt"
+	"net/http"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/version"
-	fakediscovery "k8s.io/client-go/discovery/fake"
-	"k8s.io/client-go/kubernetes/scheme"
-
-	"fmt"
-	"net/http"
-
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	"k8s.io/cli-runtime/pkg/resource"
+	fakediscovery "k8s.io/client-go/discovery/fake"
+	"k8s.io/client-go/kubernetes/scheme"
 	clientfake "k8s.io/client-go/rest/fake"
 	cmdtesting "k8s.io/kubectl/pkg/cmd/testing"
 
+	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
+
 	"github.com/apecloud/kbcli/pkg/action"
+	"github.com/apecloud/kbcli/pkg/cluster"
+	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/testing"
 	"github.com/apecloud/kbcli/pkg/types"
 )

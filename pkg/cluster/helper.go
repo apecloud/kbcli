@@ -204,10 +204,7 @@ func GetDefaultCompName(cd *appsv1alpha1.ClusterDefinition) (string, error) {
 }
 
 func IsShardingComponent(cluster *kbappsv1.Cluster, compName string) bool {
-	if cluster.Spec.GetShardingByName(compName) != nil {
-		return true
-	}
-	return false
+	return cluster.Spec.GetShardingByName(compName) != nil
 }
 
 func ComponentNameLabelKey(cluster *kbappsv1.Cluster, compName string) string {
