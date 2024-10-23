@@ -158,7 +158,7 @@ func newListRestoreCommand(f cmdutil.Factory, streams genericiooptions.IOStreams
 		Use:               "list-restore",
 		Short:             "List restores.",
 		Aliases:           []string{"ls-restores"},
-		Example:           listBackupExample,
+		Example:           listRestoreExample,
 		ValidArgsFunction: util.ResourceNameCompletionFunc(f, o.GVR),
 		Run: func(cmd *cobra.Command, args []string) {
 			if clusterName != "" {
@@ -205,7 +205,7 @@ func newRestoreDescribeCommand(f cmdutil.Factory, streams genericiooptions.IOStr
 		Short:             "Describe a restore",
 		Aliases:           []string{"desc-restore"},
 		ValidArgsFunction: util.ResourceNameCompletionFunc(f, types.RestoreGVR()),
-		Example:           describeBackupExample,
+		Example:           describeRestoreExample,
 		Run: func(cmd *cobra.Command, args []string) {
 			cmdutil.BehaviorOnFatal(printer.FatalWithRedColor)
 			util.CheckErr(o.Validate(args))

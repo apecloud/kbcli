@@ -22,7 +22,6 @@ import (
 	"strings"
 
 	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
-	dpv1alpha1 "github.com/apecloud/kubeblocks/apis/dataprotection/v1alpha1"
 	"github.com/apecloud/kubeblocks/pkg/controller/component"
 	"github.com/spf13/cobra"
 	"github.com/stoewer/go-strcase"
@@ -34,8 +33,6 @@ import (
 	clientset "k8s.io/client-go/kubernetes"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
-
-	"github.com/apecloud/kubeblocks/pkg/constant"
 
 	"github.com/apecloud/kbcli/pkg/cluster"
 	"github.com/apecloud/kbcli/pkg/printer"
@@ -117,26 +114,29 @@ func (o *describeOptions) describeClusterDef(name string) error {
 		return err
 	}
 	// get backup policy templates of the cluster definition
-	opts := metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("%s=%s", constant.ClusterDefLabelKey, name),
-	}
-	backupTemplatesListObj, err := o.dynamic.Resource(types.BackupPolicyTemplateGVR()).List(context.TODO(), opts)
-	if err != nil {
-		return err
-	}
-	var backupPolicyTemplates []*dpv1alpha1.BackupPolicyTemplate
-	for _, item := range backupTemplatesListObj.Items {
-		backupTemplate := dpv1alpha1.BackupPolicyTemplate{}
-		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(item.Object, &backupTemplate); err != nil {
-			return err
-		}
-		backupPolicyTemplates = append(backupPolicyTemplates, &backupTemplate)
-	}
 
 	o.showClusterDef(clusterDef)
 
-	// TODO: add it with componentDefinition
-	// showBackupConfig(backupPolicyTemplates, o.Out)
+	// 	TODO: move it to list component definition
+	/*
+		opts := metav1.ListOptions{
+				LabelSelector: fmt.Sprintf("%s=%s", constant.ClusterDefLabelKey, name),
+			}
+			backupTemplatesListObj, err := o.dynamic.Resource(types.BackupPolicyTemplateGVR()).List(context.TODO(), opts)
+			if err != nil {
+				return err
+			}
+		var backupPolicyTemplates []*dpv1alpha1.BackupPolicyTemplate
+		for _, item := range backupTemplatesListObj.Items {
+			backupTemplate := dpv1alpha1.BackupPolicyTemplate{}
+			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(item.Object, &backupTemplate); err != nil {
+				return err
+			}
+			backupPolicyTemplates = append(backupPolicyTemplates, &backupTemplate)
+		}
+
+
+		 showBackupConfig(backupPolicyTemplates, o.Out)*/
 
 	return nil
 }
