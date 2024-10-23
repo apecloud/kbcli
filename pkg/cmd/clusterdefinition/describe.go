@@ -19,11 +19,15 @@ package clusterdefinition
 import (
 	"context"
 	"fmt"
-	"io"
+	"strings"
 
+	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
 	dpv1alpha1 "github.com/apecloud/kubeblocks/apis/dataprotection/v1alpha1"
+	"github.com/apecloud/kubeblocks/pkg/controller/component"
 	"github.com/spf13/cobra"
+	"github.com/stoewer/go-strcase"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	"k8s.io/client-go/dynamic"
@@ -31,9 +35,10 @@ import (
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
 
-	"github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	"github.com/apecloud/kubeblocks/pkg/constant"
 
+	"github.com/apecloud/kbcli/pkg/cluster"
+	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
 )
@@ -107,7 +112,7 @@ func (o *describeOptions) run() error {
 
 func (o *describeOptions) describeClusterDef(name string) error {
 	// get cluster definition
-	clusterDef := &v1alpha1.ClusterDefinition{}
+	clusterDef := &kbappsv1.ClusterDefinition{}
 	if err := util.GetK8SClientObject(o.dynamic, clusterDef, types.ClusterDefGVR(), "", name); err != nil {
 		return err
 	}
@@ -128,7 +133,7 @@ func (o *describeOptions) describeClusterDef(name string) error {
 		backupPolicyTemplates = append(backupPolicyTemplates, &backupTemplate)
 	}
 
-	showClusterDef(clusterDef, o.Out)
+	o.showClusterDef(clusterDef)
 
 	// TODO: add it with componentDefinition
 	// showBackupConfig(backupPolicyTemplates, o.Out)
@@ -136,13 +141,84 @@ func (o *describeOptions) describeClusterDef(name string) error {
 	return nil
 }
 
-func showClusterDef(cd *v1alpha1.ClusterDefinition, out io.Writer) {
+func (o *describeOptions) showClusterDef(cd *kbappsv1.ClusterDefinition) error {
 	if cd == nil {
-		return
+		return nil
 	}
-	fmt.Fprintf(out, "Name: %s\t Type: %s\n\n", cd.Name, cd.Spec.Type)
+	compDefList, err := o.dynamic.Resource(types.CompDefGVR()).List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+	cmpvList, err := o.dynamic.Resource(types.ComponentVersionsGVR()).List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+	printer.PrintPairStringToLine("Name", cd.Name)
+	printer.PrintPairStringToLine("Status", string(cd.Status.Phase))
+	printer.PrintPairStringToLine("Message", cd.Status.Message)
+	printer.PrintLine("Topologies\n")
+	for _, v := range cd.Spec.Topologies {
+		o.showTopology(v, compDefList, cmpvList)
+	}
+	return nil
 }
 
+func (o *describeOptions) getComponentDefAndVersions(compDefList, cmpvList *unstructured.UnstructuredList, compMatchRegex string) (string, string) {
+	var (
+		compDefs []string
+		releases []string
+	)
+	for _, v := range compDefList.Items {
+		if component.PrefixOrRegexMatched(v.GetName(), compMatchRegex) {
+			compDefs = append(compDefs, v.GetName())
+			for _, cmpv := range cmpvList.Items {
+				if _, ok := cmpv.GetLabels()[v.GetName()]; !ok {
+					continue
+				}
+				cmpvObj := &kbappsv1.ComponentVersion{}
+				_ = runtime.DefaultUnstructuredConverter.FromUnstructured(cmpv.Object, cmpvObj)
+				for _, rule := range cmpvObj.Spec.CompatibilityRules {
+					if cluster.CompatibleComponentDefs(rule.CompDefs, v.GetName()) {
+						releases = append(releases, rule.Releases...)
+					}
+				}
+				break
+			}
+		}
+	}
+	return strings.Join(compDefs, ", "), strings.Join(releases, ", ")
+}
+
+func (o *describeOptions) showTopology(topology kbappsv1.ClusterTopology, compDefList *unstructured.UnstructuredList, cmpvList *unstructured.UnstructuredList) error {
+	defaultStr := ""
+	if topology.Default {
+		defaultStr = "(default)"
+	}
+	printer.PrintPairStringToLine(fmt.Sprintf("%s%s", strcase.LowerCamelCase(topology.Name), defaultStr), "")
+	// print components
+	tbl := printer.NewTablePrinter(o.Out)
+	tbl.SetHeader("\tCOMPONENT-NAME", "COMPONENT-DEFS", "SERVICE-VERSIONS")
+	for _, v := range topology.Components {
+		compDefs, versions := o.getComponentDefAndVersions(compDefList, cmpvList, v.CompDef)
+		tbl.AddRow("\t"+v.Name, compDefs, versions)
+	}
+	tbl.Print()
+	// print orders
+	if topology.Orders != nil {
+		printOrders := func(name string, orders []string) {
+			if len(orders) > 0 {
+				printer.PrintPairStringToLine(name, strings.Join(orders, "->"), 6)
+			}
+		}
+		printer.PrintLine("\n    Orders")
+		printOrders("Provision", topology.Orders.Provision)
+		printOrders("Update", topology.Orders.Update)
+		printOrders("Terminate", topology.Orders.Terminate)
+	}
+	return nil
+}
+
+// TODO: add backup infos in describe componentDef command.
 /*
 func showBackupConfig(backupPolicyTemplates []*dpv1alpha1.BackupPolicyTemplate, out io.Writer) {
 	if len(backupPolicyTemplates) == 0 {

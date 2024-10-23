@@ -26,6 +26,7 @@ import (
 	"strings"
 
 	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
+	"github.com/apecloud/kubeblocks/pkg/controller/instanceset"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -330,6 +331,9 @@ func (o *ClusterObjects) GetComponentInfo() []*ComponentInfo {
 			insTplName := appsv1alpha1.GetInstanceTemplateName(o.Cluster.Name,
 				p.Labels[constant.KBAppComponentLabelKey], p.Name)
 			if insTplName != templateName {
+				continue
+			}
+			if _, ok := p.Labels[instanceset.WorkloadsManagedByLabelKey]; !ok {
 				continue
 			}
 			componentName = p.Labels[constant.KBAppComponentLabelKey]

@@ -42,9 +42,7 @@ func NewClusterDefinitionCmd(f cmdutil.Factory, streams genericiooptions.IOStrea
 	}
 
 	cmd.AddCommand(NewListCmd(f, streams))
-	cmd.AddCommand(NewListComponentsCmd(f, streams))
 	cmd.AddCommand(NewDescribeCmd(f, streams))
-	cmd.AddCommand(NewListServiceReferenceCmd(f, streams))
 	return cmd
 }
 
