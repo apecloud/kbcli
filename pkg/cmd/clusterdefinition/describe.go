@@ -115,7 +115,9 @@ func (o *describeOptions) describeClusterDef(name string) error {
 	}
 	// get backup policy templates of the cluster definition
 
-	o.showClusterDef(clusterDef)
+	if err := o.showClusterDef(clusterDef); err != nil {
+		return err
+	}
 
 	// 	TODO: move it to list component definition
 	/*
@@ -189,7 +191,7 @@ func (o *describeOptions) getComponentDefAndVersions(compDefList, cmpvList *unst
 	return strings.Join(compDefs, ", "), strings.Join(releases, ", ")
 }
 
-func (o *describeOptions) showTopology(topology kbappsv1.ClusterTopology, compDefList *unstructured.UnstructuredList, cmpvList *unstructured.UnstructuredList) error {
+func (o *describeOptions) showTopology(topology kbappsv1.ClusterTopology, compDefList *unstructured.UnstructuredList, cmpvList *unstructured.UnstructuredList) {
 	defaultStr := ""
 	if topology.Default {
 		defaultStr = "(default)"
@@ -215,7 +217,6 @@ func (o *describeOptions) showTopology(topology kbappsv1.ClusterTopology, compDe
 		printOrders("Update", topology.Orders.Update)
 		printOrders("Terminate", topology.Orders.Terminate)
 	}
-	return nil
 }
 
 // TODO: add backup infos in describe componentDef command.

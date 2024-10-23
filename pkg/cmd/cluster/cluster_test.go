@@ -20,8 +20,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package cluster
 
 import (
-	"github.com/apecloud/kbcli/pkg/cluster"
-	"github.com/apecloud/kbcli/pkg/printer"
 	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -30,6 +28,9 @@ import (
 	"k8s.io/apimachinery/pkg/version"
 	fakediscovery "k8s.io/client-go/discovery/fake"
 	"k8s.io/client-go/kubernetes/scheme"
+
+	"github.com/apecloud/kbcli/pkg/cluster"
+	"github.com/apecloud/kbcli/pkg/printer"
 
 	"fmt"
 	"net/http"
