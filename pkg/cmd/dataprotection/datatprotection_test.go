@@ -55,7 +55,6 @@ import (
 var _ = Describe("DataProtection", func() {
 	const policyName = "policy"
 	const repoName = "repo"
-	const notExistName = "not-exists"
 	var streams genericiooptions.IOStreams
 	var tf *cmdtesting.TestFactory
 	var out *bytes.Buffer

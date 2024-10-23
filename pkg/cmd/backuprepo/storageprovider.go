@@ -48,7 +48,7 @@ func newListStorageProviderCommand(f cmdutil.Factory, streams genericiooptions.I
 		Use:               "list-storage-provider",
 		Short:             "List storage providers.",
 		Aliases:           []string{"list-sp"},
-		Example:           listExample,
+		Example:           listSPExample,
 		ValidArgsFunction: util.ResourceNameCompletionFunc(f, types.BackupRepoGVR()),
 		Run: func(cmd *cobra.Command, args []string) {
 			o.Names = args

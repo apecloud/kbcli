@@ -79,7 +79,6 @@ type EditBackupPolicyOptions struct {
 
 	GVR schema.GroupVersionResource
 	genericiooptions.IOStreams
-	isTest bool
 }
 
 func (o *EditBackupPolicyOptions) Complete(args []string) error {
