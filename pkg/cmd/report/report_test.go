@@ -425,7 +425,7 @@ var _ = Describe("report", func() {
 
 			tf.Client = tf.UnstructuredClient
 			tf.FakeDynamicClient = testing.FakeDynamicClient(deploy, sts, event)
-			kbfakeclient = testing.FakeKBClientSet(cluster, clusterDef)
+			kbfakeclient = testing.FakeKBClientSet(cluster, clusterDef, testing.FakeCompDef())
 			streams = genericiooptions.NewTestIOStreamsDiscard()
 		})
 
