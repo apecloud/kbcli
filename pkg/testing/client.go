@@ -22,6 +22,7 @@ package testing
 import (
 	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
 	opsv1alpha1 "github.com/apecloud/kubeblocks/apis/operations/v1alpha1"
+	workloadsv1 "github.com/apecloud/kubeblocks/apis/workloads/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	dynamicfakeclient "k8s.io/client-go/dynamic/fake"
 	kubefakeclient "k8s.io/client-go/kubernetes/fake"
@@ -47,6 +48,7 @@ func FakeDynamicClient(objects ...runtime.Object) *dynamicfakeclient.FakeDynamic
 	_ = appsv1beta1.AddToScheme(scheme.Scheme)
 	_ = extensionsv1alpha1.AddToScheme(scheme.Scheme)
 	_ = dpv1alpha1.AddToScheme(scheme.Scheme)
+	_ = workloadsv1.AddToScheme(scheme.Scheme)
 	return dynamicfakeclient.NewSimpleDynamicClient(scheme.Scheme, objects...)
 }
 
