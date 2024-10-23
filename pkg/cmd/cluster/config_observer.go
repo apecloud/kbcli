@@ -41,6 +41,7 @@ import (
 	cfgutil "github.com/apecloud/kubeblocks/pkg/configuration/util"
 	"github.com/apecloud/kubeblocks/pkg/constant"
 
+	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
@@ -249,7 +250,7 @@ func (r *configObserverOptions) printConfigureHistory(component string) error {
 		return err
 	}
 	// sort the unstructured objects with the creationTimestamp in positive order
-	sort.Sort(unstructuredList(opsList.Items))
+	sort.Sort(action.UnstructuredList(opsList.Items))
 	tbl := printer.NewTablePrinter(r.Out)
 	tbl.SetHeader("OPS-NAME", "CLUSTER", "COMPONENT", "CONFIG-SPEC-NAME", "FILE", "STATUS", "POLICY", "PROGRESS", "CREATED-TIME", "VALID-UPDATED")
 	for _, obj := range opsList.Items {

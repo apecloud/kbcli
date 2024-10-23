@@ -29,6 +29,7 @@ import (
 	appsv1beta1 "github.com/apecloud/kubeblocks/apis/apps/v1beta1"
 	"github.com/apecloud/kubeblocks/pkg/constant"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
@@ -457,4 +458,21 @@ func GetEndpointsFromNode(node *corev1.Node) (string, string) {
 		}
 	}
 	return internal, external
+}
+
+func GenerateClusterName(dynamic dynamic.Interface, namespace string) (string, error) {
+	var name string
+	// retry 10 times
+	for i := 0; i < 10; i++ {
+		name = GenerateName()
+		// check whether the cluster exists, if not found, return it
+		_, err := dynamic.Resource(types.ClusterGVR()).Namespace(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+		if errors.IsNotFound(err) {
+			return name, nil
+		}
+		if err != nil {
+			return "", err
+		}
+	}
+	return "", fmt.Errorf("failed to generate cluster name")
 }

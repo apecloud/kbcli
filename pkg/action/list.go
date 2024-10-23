@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package action
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -82,6 +83,7 @@ func NewListOptions(f cmdutil.Factory, streams genericiooptions.IOStreams,
 
 func (o *ListOptions) AddFlags(cmd *cobra.Command, isClusterScope ...bool) {
 	if len(isClusterScope) == 0 || !isClusterScope[0] {
+		cmd.Flags().StringVarP(&o.Namespace, "namespace", "n", "", "specified the namespace")
 		cmd.Flags().BoolVarP(&o.AllNamespaces, "all-namespaces", "A", o.AllNamespaces, "If present, list the requested object(s) across all namespaces. Namespace in current context is ignored even if specified with --namespace.")
 	}
 	cmd.Flags().StringVarP(&o.LabelSelector, "selector", "l", o.LabelSelector, "Selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2). Matching objects must satisfy all of the specified label constraints.")
@@ -92,9 +94,11 @@ func (o *ListOptions) AddFlags(cmd *cobra.Command, isClusterScope ...bool) {
 
 func (o *ListOptions) Complete() error {
 	var err error
-	o.Namespace, _, err = o.Factory.ToRawKubeConfigLoader().Namespace()
-	if err != nil {
-		return err
+	if o.Namespace == "" {
+		o.Namespace, _, err = o.Factory.ToRawKubeConfigLoader().Namespace()
+		if err != nil {
+			return err
+		}
 	}
 
 	o.ToPrinter = func(mapping *meta.RESTMapping, withNamespace bool) (printers.ResourcePrinterFunc, error) {
@@ -385,4 +389,83 @@ func (o *ListOptions) PrintNotFoundResources() {
 	} else {
 		fmt.Fprintf(o.ErrOut, "No %s found\n", o.GVR.Resource)
 	}
+}
+
+func (o *ListOptions) initList() (map[string]bool, error) {
+	var objNameMap = make(map[string]bool)
+	for _, name := range o.Names {
+		objNameMap[name] = true
+	}
+
+	// if format is JSON or YAML, use default printer to output the result.
+	if o.Format == printer.JSON || o.Format == printer.YAML {
+		_, err := o.Run()
+		return nil, err
+	}
+	return objNameMap, nil
+}
+
+func (o *ListOptions) ListObjects() (*unstructured.UnstructuredList, error) {
+	dynamic, err := o.Factory.DynamicClient()
+	if err != nil {
+		return nil, err
+	}
+	var objectList *unstructured.UnstructuredList
+	if o.AllNamespaces {
+		objectList, err = dynamic.Resource(o.GVR).List(context.TODO(), metav1.ListOptions{
+			LabelSelector: o.LabelSelector,
+			FieldSelector: o.FieldSelector,
+		})
+	} else {
+		objectList, err = dynamic.Resource(o.GVR).Namespace(o.Namespace).List(context.TODO(), metav1.ListOptions{
+			LabelSelector: o.LabelSelector,
+			FieldSelector: o.FieldSelector,
+		})
+	}
+
+	if err != nil {
+		return nil, err
+	}
+	if len(objectList.Items) == 0 {
+		o.PrintNotFoundResources()
+		return nil, nil
+	}
+	return objectList, err
+}
+
+func (o *ListOptions) PrintObjectList(headers []interface{}, addTableRow func(tbl *printer.TablePrinter, unstructuredObj unstructured.Unstructured) error) error {
+	specifiedMap, err := o.initList()
+	if specifiedMap == nil || err != nil {
+		return err
+	}
+	objList, err := o.ListObjects()
+	if objList == nil || err != nil {
+		return err
+	}
+	tbl := printer.NewTablePrinter(o.Out)
+	tbl.SetHeader(headers...)
+	for _, obj := range objList.Items {
+		if len(o.Names) > 0 && !specifiedMap[obj.GetName()] {
+			continue
+		}
+		if err = addTableRow(tbl, obj); err != nil {
+			return err
+		}
+	}
+	tbl.Print()
+	return nil
+}
+
+type UnstructuredList []unstructured.Unstructured
+
+func (us UnstructuredList) Len() int {
+	return len(us)
+}
+func (us UnstructuredList) Swap(i, j int) {
+	us[i], us[j] = us[j], us[i]
+}
+func (us UnstructuredList) Less(i, j int) bool {
+	createTimeForJ := us[j].GetCreationTimestamp()
+	createTimeForI := us[i].GetCreationTimestamp()
+	return createTimeForI.Before(&createTimeForJ)
 }

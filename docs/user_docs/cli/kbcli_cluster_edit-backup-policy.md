@@ -13,25 +13,12 @@ kbcli cluster edit-backup-policy
 ```
   # edit backup policy
   kbcli cluster edit-backup-policy <backup-policy-name>
-  
-  # specify a backup repository
-  kbcli cluster edit-backup-policy <backup-policy-name> --set backupRepoName=<backup-repo-name>
-  
-  # enable encryption
-  kbcli cluster edit-backup-policy <backup-policy-name> --set encryption.algorithm=AES-256-CFB --set encryption.passPhrase="SECRET!"
-  
-  # disable encryption
-  kbcli cluster edit-backup-policy <backup-policy-name> --set encryption.disabled=true
-  
-  # using short cmd to edit backup policy
-  kbcli cluster edit-bp <backup-policy-name>
 ```
 
 ### Options
 
 ```
-  -h, --help              help for edit-backup-policy
-      --set stringArray   set values on the command line (can specify multiple or separate values with commas: key1=val1,key2=val2)
+  -h, --help   help for edit-backup-policy
 ```
 
 ### Options inherited from parent commands

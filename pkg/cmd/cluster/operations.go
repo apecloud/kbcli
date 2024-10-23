@@ -148,14 +148,10 @@ func newBaseOperationsOptions(f cmdutil.Factory, streams genericiooptions.IOStre
 
 // addCommonFlags adds common flags for operations command
 func (o *OperationsOptions) addCommonFlags(cmd *cobra.Command, f cmdutil.Factory) {
-	// add print flags
-	printer.AddOutputFlagForCreate(cmd, &o.Format, false)
+	o.AddCommonFlags(cmd)
 	cmd.Flags().BoolVar(&o.Force, "force", false, " skip the pre-checks of the opsRequest to run the opsRequest forcibly")
 	cmd.Flags().StringVar(&o.OpsRequestName, "name", "", "OpsRequest name. if not specified, it will be randomly generated")
 	cmd.Flags().IntVar(&o.TTLSecondsAfterSucceed, "ttlSecondsAfterSucceed", 0, "Time to live after the OpsRequest succeed")
-	cmd.Flags().StringVar(&o.DryRun, "dry-run", "none", `Must be "client", or "server". If with client strategy, only print the object that would be sent, and no data is actually sent. If with server strategy, submit the server-side request, but no data is persistent.`)
-	cmd.Flags().Lookup("dry-run").NoOptDefVal = "unchanged"
-	cmd.Flags().BoolVar(&o.EditBeforeCreate, "edit", o.EditBeforeCreate, "Edit the API resource before creating")
 	if o.HasComponentNamesFlag {
 		flags.AddComponentsFlag(f, cmd, &o.ComponentNames, "Component names to this operations")
 	}
@@ -179,8 +175,8 @@ func (o *OperationsOptions) CompleteRestartOps() error {
 	for i := range componentSpecs {
 		o.ComponentNames = append(o.ComponentNames, componentSpecs[i].Name)
 	}
-	for i := range clusterObj.Spec.ShardingSpecs {
-		o.ComponentNames = append(o.ComponentNames, clusterObj.Spec.ShardingSpecs[i].Name)
+	for i := range clusterObj.Spec.Shardings {
+		o.ComponentNames = append(o.ComponentNames, clusterObj.Spec.Shardings[i].Name)
 	}
 	return nil
 }
@@ -241,7 +237,7 @@ func (o *OperationsOptions) handleComponentOps(cluster *appsv1.Cluster, handleF 
 			return err
 		}
 	}
-	for _, v := range cluster.Spec.ShardingSpecs {
+	for _, v := range cluster.Spec.Shardings {
 		if !slices.Contains(o.ComponentNames, v.Name) {
 			continue
 		}

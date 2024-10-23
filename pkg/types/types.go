@@ -319,7 +319,7 @@ func BackupPolicyGVR() schema.GroupVersionResource {
 }
 
 func BackupPolicyTemplateGVR() schema.GroupVersionResource {
-	return schema.GroupVersionResource{Group: AppsAPIGroup, Version: DPAPIVersion, Resource: ResourceBackupTemplates}
+	return schema.GroupVersionResource{Group: DPAPIGroup, Version: DPAPIVersion, Resource: ResourceBackupTemplates}
 }
 
 func BackupScheduleGVR() schema.GroupVersionResource {

@@ -86,7 +86,7 @@ func GetClusterComponentPairs(dynamicClient dynamic.Interface, cluster *kbappsv1
 			ComponentDefName: compSpec.ComponentDef,
 		})
 	}
-	for _, shardingSpec := range cluster.Spec.ShardingSpecs {
+	for _, shardingSpec := range cluster.Spec.Shardings {
 		shardingComponentPairs, err := GetShardingComponentPairs(dynamicClient, cluster, shardingSpec)
 		if err != nil {
 			return nil, err
@@ -96,7 +96,7 @@ func GetClusterComponentPairs(dynamicClient dynamic.Interface, cluster *kbappsv1
 	return componentPairs, nil
 }
 
-func GetShardingComponentPairs(dynamicClient dynamic.Interface, cluster *kbappsv1.Cluster, shardingSpec kbappsv1.ShardingSpec) ([]ComponentPair, error) {
+func GetShardingComponentPairs(dynamicClient dynamic.Interface, cluster *kbappsv1.Cluster, shardingSpec kbappsv1.ClusterSharding) ([]ComponentPair, error) {
 	var componentPairs []ComponentPair
 	shardingComps, err := ListShardingComponents(dynamicClient, cluster.Name, cluster.Namespace, shardingSpec.Name)
 	if err != nil {
