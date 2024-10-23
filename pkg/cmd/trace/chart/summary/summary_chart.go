@@ -29,9 +29,9 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-var defaultStyle = lipgloss.NewStyle().
+var borderStyle = lipgloss.NewStyle().
 	BorderStyle(lipgloss.NormalBorder()).
-	BorderForeground(lipgloss.Color("63")) // purple
+	BorderForeground(lipgloss.Color("6")) // cyan
 
 var selectedBarData barchart.BarData
 
@@ -60,9 +60,9 @@ func (m *Model) View() string {
 	m.summary.Draw()
 	return lipgloss.JoinHorizontal(lipgloss.Top,
 		m.summary.View(),
-		defaultStyle.Render(totals(m.data)),
-		defaultStyle.Render(legend(m.data[0])),
-		defaultStyle.Render(selectedData()),
+		borderStyle.Render(totals(m.data)),
+		borderStyle.Render(legend(m.data[0])),
+		borderStyle.Render(selectedData()),
 	)
 }
 
@@ -103,7 +103,7 @@ func New(h int, dataSet []barchart.BarData, opts ...barchart.Option) *Model {
 	gap := 1
 	barWidth := 4
 	opts = append(opts, barchart.WithDataSet(dataSet), barchart.WithBarWidth(barWidth), barchart.WithBarGap(gap))
-	bar := barchart.New(len(dataSet)*(barWidth+gap), h-2, opts...)
+	bar := barchart.New(len(dataSet)*(barWidth+gap), h-1, opts...)
 	return &Model{
 		summary: bar,
 		data:    dataSet,

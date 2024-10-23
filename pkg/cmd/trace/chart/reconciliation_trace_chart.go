@@ -21,19 +21,19 @@ package chart
 
 import (
 	"fmt"
-	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/76creates/stickers/flexbox"
 	"github.com/NimbleMarkets/ntcharts/barchart"
 	"github.com/NimbleMarkets/ntcharts/canvas"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/lipgloss/tree"
 	zone "github.com/lrstanley/bubblezone"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 
 	tracev1 "github.com/apecloud/kbcli/apis/trace/v1"
+	"github.com/apecloud/kbcli/pkg/cmd/trace/chart/objecttree"
 	"github.com/apecloud/kbcli/pkg/cmd/trace/chart/richviewport"
 	"github.com/apecloud/kbcli/pkg/cmd/trace/chart/summary"
 	"github.com/apecloud/kbcli/pkg/cmd/trace/chart/timeserieslinechart"
@@ -58,26 +58,12 @@ var (
 	deletedBlockStyle = lipgloss.NewStyle().
 				Foreground(lipgloss.Color("9")) // red
 
-	statusBarColumnStyle = lipgloss.NewStyle().
-				Border(lipgloss.NormalBorder(), true).
-				BorderForeground(lipgloss.Color("#26de81"))
-
-	mainContentColumnStyle = lipgloss.NewStyle().
-				Border(lipgloss.NormalBorder(), true).
-				BorderForeground(lipgloss.Color("#2bcbba"))
+	columnStyle = lipgloss.NewStyle().
+			Border(lipgloss.NormalBorder(), true, true, false, true).
+			BorderForeground(lipgloss.Color("#2bcbba"))
 
 	changesLineStyle = lipgloss.NewStyle().
 				Foreground(lipgloss.Color("4")) // blue
-
-	enumeratorStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("63")).
-			MarginRight(1)
-
-	rootStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("35"))
-
-	itemStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("212"))
 
 	summaryNLatestChangeSeparator = "    "
 )
@@ -98,7 +84,7 @@ type Model struct {
 	latestChange *richviewport.Model
 
 	// current object tree
-	objectTree *tree.Tree
+	objectTree *objecttree.Model
 
 	// changes
 	changes *timeserieslinechart.Model
@@ -115,11 +101,13 @@ func (m *Model) Init() tea.Cmd {
 	m.base = flexbox.NewHorizontal(0, 0)
 	columns := []*flexbox.Column{
 		m.base.NewColumn().AddCells(
-			flexbox.NewCell(1, 1).SetStyle(statusBarColumnStyle),
-			flexbox.NewCell(1, 2).SetStyle(mainContentColumnStyle),
+			flexbox.NewCell(1, 1).SetStyle(columnStyle),
+			flexbox.NewCell(1, 2).SetStyle(columnStyle),
 		),
 	}
 	m.base.AddColumns(columns)
+
+	m.objectTree = objecttree.NewTree(nil, m.zoneManager)
 
 	return nil
 }
@@ -135,6 +123,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.Action == tea.MouseActionPress {
 			if m.summary != nil {
 				m.summary.Update(msg)
+			}
+			if m.objectTree != nil {
+				m.objectTree.Update(msg)
 			}
 			if m.changes != nil {
 				if m.zoneManager.Get(m.changes.ZoneID()).InBounds(msg) {
@@ -201,9 +192,9 @@ func (m *Model) updateLatestChangeView() {
 		changeText = formatChange(m.selectedChange)
 	}
 	w := lipgloss.Width(m.summary.View())
-	baseBorder := 2
+	baseBorder := 1
 	m.latestChange = richviewport.NewViewPort(
-		m.base.GetWidth()-baseBorder-w-len(summaryNLatestChangeSeparator),
+		m.base.GetWidth()-2*baseBorder-w-len(summaryNLatestChangeSeparator),
 		m.base.GetColumn(0).GetCell(0).GetHeight()-baseBorder,
 		"Latest Change",
 		changeText)
@@ -213,7 +204,7 @@ func (m *Model) updateObjectTreeView() {
 	if m.trace == nil {
 		return
 	}
-	m.objectTree = buildObjectTree(m.trace.Status.CurrentState.ObjectTree)
+	m.objectTree.SetData(m.trace.Status.CurrentState.ObjectTree)
 }
 
 func (m *Model) updateChangesView() {
@@ -228,7 +219,7 @@ func (m *Model) updateChangesView() {
 	depth := buildDepthMap(m.trace.Status.CurrentState.ObjectTree, 0, depthMap)
 	minYValue := 0.0
 	maxYValue := float64(len(depthMap))
-	w, h := lipgloss.Size(m.objectTree.String())
+	w, h := lipgloss.Size(m.objectTree.View())
 	changesChart := timeserieslinechart.New(m.base.GetWidth()-2-w, h+2, timeserieslinechart.WithZoneManager(m.zoneManager))
 	changesChart.AxisStyle = axisStyle
 	changesChart.LabelStyle = labelStyle
@@ -241,6 +232,7 @@ func (m *Model) updateChangesView() {
 	changesChart.SetViewYRange(minYValue, maxYValue)
 	changesChart.SetStyle(changesLineStyle)
 	changesChart.SetZoneManager(m.zoneManager)
+	// TODO(free6om): set background color for line having same depth as m.objectTree.GetSelected()
 	m.changes = &changesChart
 	for _, change := range m.trace.Status.CurrentState.Changes {
 		objRef := normalizeObjectRef(&change.ObjectReference)
@@ -275,7 +267,7 @@ func (m *Model) updateMainContentView() {
 	if m.changes == nil {
 		return
 	}
-	objectTree := m.objectTree.String()
+	objectTree := m.objectTree.View()
 	changes := m.changes.View()
 	mainContent := lipgloss.JoinHorizontal(lipgloss.Left, objectTree, changes)
 	m.base.GetColumn(0).GetCell(1).SetContent(mainContent)
@@ -357,23 +349,6 @@ func buildDepthMap(objectTree *tracev1.ObjectTreeNode, depth float64, depthMap m
 		depth = buildDepthMap(secondary, depth+1, depthMap)
 	}
 	return depth
-}
-
-func buildObjectTree(objectTree *tracev1.ObjectTreeNode) *tree.Tree {
-	if objectTree == nil {
-		return nil
-	}
-	formatNode := func(reference *corev1.ObjectReference) string {
-		return fmt.Sprintf("%s/%s", reference.Kind, reference.Name)
-	}
-	treeNode := tree.New()
-	treeNode.Root(formatNode(&objectTree.Primary)).EnumeratorStyle(enumeratorStyle).RootStyle(rootStyle).ItemStyle(itemStyle)
-	for _, secondary := range objectTree.Secondaries {
-		child := buildObjectTree(secondary)
-		child.Root(formatNode(&secondary.Primary)).EnumeratorStyle(enumeratorStyle).RootStyle(rootStyle).ItemStyle(itemStyle)
-		treeNode.Child(child)
-	}
-	return treeNode
 }
 
 func NewReconciliationTraceChart() *Model {

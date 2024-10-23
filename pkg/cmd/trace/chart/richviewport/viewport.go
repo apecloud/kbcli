@@ -29,9 +29,9 @@ import (
 )
 
 var (
-	borderColor = lipgloss.Color("6") // cyan
+	borderColor = lipgloss.Color("63") // purple
 
-	defaultStyle = lipgloss.NewStyle().
+	borderStyle = lipgloss.NewStyle().
 			Border(lipgloss.NormalBorder(), false, true).
 			BorderForeground(borderColor)
 
@@ -39,14 +39,14 @@ var (
 			Foreground(borderColor)
 
 	titleStyle = func() lipgloss.Style {
-		b := lipgloss.RoundedBorder()
+		b := lipgloss.NormalBorder()
 		b.Right = "├"
 		return lipgloss.NewStyle().BorderStyle(b).Padding(0, 1).
 			BorderForeground(borderColor)
 	}()
 
 	infoStyle = func() lipgloss.Style {
-		b := lipgloss.RoundedBorder()
+		b := lipgloss.NormalBorder()
 		b.Left = "┤"
 		return titleStyle.BorderStyle(b).
 			BorderForeground(borderColor)
@@ -79,20 +79,20 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *Model) View() string {
 	return lipgloss.JoinVertical(lipgloss.Top,
 		m.headerView(),
-		defaultStyle.Render(m.viewport.View()),
+		borderStyle.Render(m.viewport.View()),
 		m.footerView())
 }
 
 func (m *Model) headerView() string {
 	title := titleStyle.Render(m.header)
-	line := strings.Repeat("─", max(0, m.width-lipgloss.Width(title)))
-	return lipgloss.JoinHorizontal(lipgloss.Center, title, lineStyle.Render(line))
+	line := strings.Repeat("─", max(0, m.width-lipgloss.Width(title)-1))
+	return lipgloss.JoinHorizontal(lipgloss.Center, title, lineStyle.Render(line), lineStyle.Render(" \n┐\n│"))
 }
 
 func (m *Model) footerView() string {
 	info := infoStyle.Render(fmt.Sprintf("%3.f%%", m.viewport.ScrollPercent()*100))
-	line := strings.Repeat("─", max(0, m.width-lipgloss.Width(info)))
-	return lipgloss.JoinHorizontal(lipgloss.Center, lineStyle.Render(line), info)
+	line := strings.Repeat("─", max(0, m.width-lipgloss.Width(info)-1))
+	return lipgloss.JoinHorizontal(lipgloss.Center, lineStyle.Render("│\n└\n "), lineStyle.Render(line), info)
 }
 
 func max(a, b int) int {
