@@ -135,10 +135,6 @@ func newInitCmd(streams genericiooptions.IOStreams) *cobra.Command {
 func (o *initOptions) complete(cmd *cobra.Command) error {
 	var err error
 
-	if o.cloudProvider != cp.Local {
-		return nil
-	}
-
 	if o.dockerVersion, err = util.GetDockerVersion(); err != nil {
 		return err
 	}
@@ -436,13 +432,14 @@ func (o *initOptions) installKubeBlocks(k8sClusterName string) error {
 	}
 	insOpts := kubeblocks.InstallOptions{
 		Options: kubeblocks.Options{
-			HelmCfg:   o.helmCfg,
-			Namespace: defaultNamespace,
-			IOStreams: o.IOStreams,
-			Client:    client,
-			Dynamic:   dynamic,
-			Wait:      true,
-			Timeout:   o.Timeout,
+			HelmCfg:    o.helmCfg,
+			Namespace:  defaultNamespace,
+			IOStreams:  o.IOStreams,
+			Client:     client,
+			Dynamic:    dynamic,
+			Wait:       true,
+			WaitAddons: true,
+			Timeout:    o.Timeout,
 		},
 		Version: o.kbVersion,
 		Quiet:   true,
