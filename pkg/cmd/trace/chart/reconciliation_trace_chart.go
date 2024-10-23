@@ -21,6 +21,7 @@ package chart
 
 import (
 	"fmt"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/76creates/stickers/flexbox"
 	"github.com/NimbleMarkets/ntcharts/barchart"
@@ -184,18 +185,20 @@ func (m *Model) updateLatestChangeView() {
 	if m.summary == nil {
 		return
 	}
-	change := ""
-	if l := len(m.trace.Status.CurrentState.Changes); l > 0 {
-		change = m.trace.Status.CurrentState.Changes[l-1].Description
-		if m.trace.Status.CurrentState.Changes[l-1].LocalDescription != nil {
-			change = *m.trace.Status.CurrentState.Changes[l-1].LocalDescription
+	formatChange := func(change *tracev1.ObjectChange) string {
+		desc := change.Description
+		if change.LocalDescription != nil {
+			desc = *change.LocalDescription
 		}
+		name := types.NamespacedName{Namespace: change.ObjectReference.Namespace, Name: change.ObjectReference.Name}.String()
+		return fmt.Sprintf("GVK: %s/%s\nObject: %s\nDescription: %s", change.ObjectReference.GroupVersionKind().GroupVersion(), change.ObjectReference.Kind, name, desc)
+	}
+	changeText := ""
+	if l := len(m.trace.Status.CurrentState.Changes); l > 0 {
+		changeText = formatChange(&m.trace.Status.CurrentState.Changes[l-1])
 	}
 	if m.selectedChange != nil {
-		change = m.selectedChange.Description
-		if m.selectedChange.LocalDescription != nil {
-			change = *m.selectedChange.LocalDescription
-		}
+		changeText = formatChange(m.selectedChange)
 	}
 	w := lipgloss.Width(m.summary.View())
 	baseBorder := 2
@@ -203,7 +206,7 @@ func (m *Model) updateLatestChangeView() {
 		m.base.GetWidth()-baseBorder-w-len(summaryNLatestChangeSeparator),
 		m.base.GetColumn(0).GetCell(0).GetHeight()-baseBorder,
 		"Latest Change",
-		change)
+		changeText)
 }
 
 func (m *Model) updateObjectTreeView() {
