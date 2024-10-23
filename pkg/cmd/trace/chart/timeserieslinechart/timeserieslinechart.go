@@ -393,7 +393,7 @@ func (m *Model) DrawBrailleDataSets(names []string) {
 				bGrid.Set(gp)
 
 				// cache the mapping relationship
-				pos := canvas.Point{X: gp.X / 2, Y: gp.Y / 4}
+				pos := canvas.Point{X: gp.X / m.XStep(), Y: gp.Y / m.YStep()}
 				raw := ds.tBuf.AtRaw(i)
 				m.pointToDataMap[pos] = &TimePoint{Time: time.Unix(int64(raw.X), 0), Value: raw.Y}
 			}
