@@ -231,13 +231,13 @@ func (m *Model) updateChangesView() {
 	changesChart.SetYRange(minYValue, maxYValue)
 	changesChart.SetViewYRange(minYValue, maxYValue)
 	changesChart.SetStyle(changesLineStyle)
-	// TODO(free6om): set background color for line having same depth as m.objectTree.GetSelected()
 	m.changes = &changesChart
 	for _, change := range m.trace.Status.CurrentState.Changes {
 		objRef := normalizeObjectRef(&change.ObjectReference)
 		m.changes.Push(timeserieslinechart.TimePoint{Time: change.Timestamp.Time, Value: depth - depthMap[*objRef] + 1})
 	}
 	m.changes.DrawRect()
+	m.changes.HighlightLine(m.objectTree.GetSelected(), lipgloss.Color("4"))
 }
 
 func (m *Model) updateStatusBarView() {

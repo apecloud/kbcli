@@ -559,3 +559,18 @@ func (m *Model) TimePointFromPoint(point canvas.Point) *TimePoint {
 	}
 	return m.pointToDataMap[point]
 }
+
+func (m *Model) HighlightLine(y int, color lipgloss.Color) {
+	if y < 0 || y >= m.Origin().Y {
+		return
+	}
+	startX := 0
+	if m.YStep() > 0 {
+		startX = m.Origin().X + 1
+	}
+	for i := 0; i < m.GraphWidth(); i++ {
+		p := canvas.Point{X: startX + i, Y: y}
+		cell := m.Canvas.Cell(p)
+		m.Canvas.SetCell(p, canvas.NewCellWithStyle(cell.Rune, cell.Style.Background(color)))
+	}
+}
