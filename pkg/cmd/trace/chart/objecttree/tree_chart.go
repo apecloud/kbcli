@@ -78,7 +78,20 @@ func (m *Model) View() string {
 		return ""
 	}
 
-	m.tree.RootStyle(workloadStyle)
+	depthObjectMap := make(map[int]string)
+	buildDepth2ObjectMap(m.data, 0, depthObjectMap)
+
+	setBackgroundColor := func(style lipgloss.Style, nodeValue string) lipgloss.Style {
+		if m.selected != nil {
+			if obj, ok := depthObjectMap[*m.selected]; ok && nodeValue == obj {
+				return style.Background(selectedBackgroundColor)
+			}
+		}
+		return style
+	}
+
+	rootStyle := setBackgroundColor(workloadStyle, m.tree.Value())
+	m.tree.RootStyle(rootStyle)
 	m.tree.EnumeratorStyle(enumeratorStyle)
 
 	isWorkload := func(node string) bool {
@@ -90,20 +103,13 @@ func (m *Model) View() string {
 		}
 		return false
 	}
-	depthObjectMap := make(map[int]string)
-	buildDepth2ObjectMap(m.data, 0, depthObjectMap)
 
 	m.tree.ItemStyleFunc(func(children tree.Children, i int) lipgloss.Style {
 		style := noneWorkloadStyle
 		if isWorkload(children.At(i).Value()) {
 			style = workloadStyle
 		}
-		if m.selected != nil {
-			if obj, ok := depthObjectMap[*m.selected]; ok && children.At(i).Value() == obj {
-				style = style.Background(selectedBackgroundColor)
-			}
-		}
-		return style
+		return setBackgroundColor(style, children.At(i).Value())
 	})
 
 	return m.zoneManager.Mark(m.zoneID, m.tree.String())
