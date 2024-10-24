@@ -29,7 +29,9 @@ import (
 	gv "github.com/hashicorp/go-version"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"golang.org/x/exp/slices"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	"k8s.io/klog/v2"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
@@ -59,6 +61,9 @@ on the created kubernetes cluster, and an apecloud-mysql cluster named mycluster
 		# create a k3d cluster on local host and install KubeBlocks
 		kbcli playground init
 
+		# create an AWS EKS cluster and install KubeBlocks, the region is required
+		kbcli playground init --cloud-provider aws --region us-west-1
+
 		# after init, run the following commands to experience KubeBlocks quickly
 		# list database cluster and check its status
 		kbcli cluster list
@@ -75,6 +80,8 @@ on the created kubernetes cluster, and an apecloud-mysql cluster named mycluster
 		# destroy playground
 		kbcli playground destroy`)
 
+	supportedCloudProviders = []string{cp.Local, cp.AWS}
+
 	spinnerMsg = func(format string, a ...any) spinner.Option {
 		return spinner.WithMessage(fmt.Sprintf("%-50s", fmt.Sprintf(format, a...)))
 	}
@@ -85,6 +92,7 @@ type initOptions struct {
 	helmCfg       *helm.Config
 	clusterType   string
 	kbVersion     string
+	cloudProvider string
 	region        string
 	autoApprove   bool
 	dockerVersion *gv.Version
@@ -111,10 +119,16 @@ func newInitCmd(streams genericiooptions.IOStreams) *cobra.Command {
 
 	cmd.Flags().StringVar(&o.clusterType, "cluster-type", defaultClusterType, "Specify the cluster type to create, use 'kbcli cluster create --help' to get the available cluster type.")
 	cmd.Flags().StringVar(&o.kbVersion, "version", version.DefaultKubeBlocksVersion, "KubeBlocks version")
+	cmd.Flags().StringVar(&o.cloudProvider, "cloud-provider", defaultCloudProvider, fmt.Sprintf("Cloud provider type, one of %v", supportedCloudProviders))
 	cmd.Flags().StringVar(&o.region, "region", "", "The region to create kubernetes cluster")
 	cmd.Flags().DurationVar(&o.Timeout, "timeout", 600*time.Second, "Time to wait for init playground, such as --timeout=10m")
 	cmd.Flags().BoolVar(&o.autoApprove, "auto-approve", false, "Skip interactive approval during the initialization of playground")
 
+	util.CheckErr(cmd.RegisterFlagCompletionFunc(
+		"cloud-provider",
+		func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			return cp.CloudProviders(), cobra.ShellCompDirectiveNoFileComp
+		}))
 	return cmd
 }
 
@@ -133,11 +147,19 @@ func (o *initOptions) complete(cmd *cobra.Command) error {
 }
 
 func (o *initOptions) validate() error {
+	if !slices.Contains(supportedCloudProviders, o.cloudProvider) {
+		return fmt.Errorf("cloud provider %s is not supported, only support %v", o.cloudProvider, supportedCloudProviders)
+	}
+
+	if o.cloudProvider != cp.Local && o.region == "" {
+		return fmt.Errorf("region should be specified when cloud provider %s is specified", o.cloudProvider)
+	}
+
 	if o.clusterType == "" {
 		return fmt.Errorf("a valid cluster type is needed, use --cluster-type to specify one")
 	}
 
-	if o.dockerVersion.LessThan(version.MinimumDockerVersion) {
+	if o.cloudProvider == cp.Local && o.dockerVersion.LessThan(version.MinimumDockerVersion) {
 		return fmt.Errorf("your docker version %s is lower than the minimum version %s, please upgrade your docker", o.dockerVersion, version.MinimumDockerVersion)
 	}
 
@@ -148,12 +170,15 @@ func (o *initOptions) validate() error {
 }
 
 func (o *initOptions) run() error {
-	return o.local()
+	if o.cloudProvider == cp.Local {
+		return o.local()
+	}
+	return o.cloud()
 }
 
 // local bootstraps a playground in the local host
 func (o *initOptions) local() error {
-	provider, err := cp.New(cp.Local, "", o.Out, o.ErrOut)
+	provider, err := cp.New(o.cloudProvider, "", o.Out, o.ErrOut)
 	if err != nil {
 		return err
 	}
@@ -195,6 +220,81 @@ func (o *initOptions) local() error {
 	return o.installKBAndCluster(clusterInfo)
 }
 
+// bootstraps a playground in the remote cloud
+func (o *initOptions) cloud() error {
+	cpPath, err := cloudProviderRepoDir("")
+	if err != nil {
+		return err
+	}
+
+	var clusterInfo *cp.K8sClusterInfo
+
+	// if kubernetes cluster exists, confirm to continue or not, if not, user should
+	// destroy the old cluster first
+	if o.prevCluster != nil {
+		clusterInfo = o.prevCluster
+		if err = o.confirmToContinue(); err != nil {
+			return err
+		}
+	} else {
+		clusterName := fmt.Sprintf("%s-%s", cloudClusterNamePrefix, rand.String(5))
+		clusterInfo = &cp.K8sClusterInfo{
+			ClusterName:   clusterName,
+			CloudProvider: o.cloudProvider,
+			Region:        o.region,
+		}
+		if err = o.confirmInitNewKubeCluster(); err != nil {
+			return err
+		}
+
+		fmt.Fprintf(o.Out, "\nWrite cluster info to state file %s\n", o.stateFilePath)
+		if err := writeClusterInfo(o.stateFilePath, clusterInfo); err != nil {
+			return errors.Wrapf(err, "failed to write kubernetes cluster info to state file %s:\n  %v", o.stateFilePath, clusterInfo)
+		}
+
+		fmt.Fprintf(o.Out, "Creating %s %s cluster %s ... \n", o.cloudProvider, cp.K8sService(o.cloudProvider), clusterName)
+	}
+
+	o.startTime = time.Now()
+	printer.PrintBlankLine(o.Out)
+
+	// clone apecloud/cloud-provider repo to local path
+	fmt.Fprintf(o.Out, "Clone ApeCloud cloud-provider repo to %s...\n", cpPath)
+	branchName := "kb-playground"
+	if err = util.CloneGitRepo(cp.GitRepoURL, branchName, cpPath); err != nil {
+		return err
+	}
+
+	provider, err := cp.New(o.cloudProvider, cpPath, o.Out, o.ErrOut)
+	if err != nil {
+		return err
+	}
+
+	// create a kubernetes cluster in the cloud
+	if err = provider.CreateK8sCluster(clusterInfo); err != nil {
+		klog.V(1).Infof("create K8S cluster failed: %s", err.Error())
+		return err
+	}
+	klog.V(1).Info("create K8S cluster success")
+
+	printer.PrintBlankLine(o.Out)
+
+	// write cluster info to state file and get new cluster info with kubeconfig
+	clusterInfo, err = o.writeStateFile(provider)
+	if err != nil {
+		return err
+	}
+
+	// write cluster kubeconfig to default kubeconfig file and switch current context to it
+	if err = o.setKubeConfig(clusterInfo); err != nil {
+		return err
+	}
+
+	// install KubeBlocks and create a database cluster
+	klog.V(1).Info("start to install KubeBlocks in K8S cluster... ")
+	return o.installKBAndCluster(clusterInfo)
+}
+
 // confirmToContinue confirms to continue init process if there is an existed kubernetes cluster
 func (o *initOptions) confirmToContinue() error {
 	clusterName := o.prevCluster.ClusterName
@@ -207,7 +307,7 @@ func (o *initOptions) confirmToContinue() error {
 		}
 	}
 	fmt.Fprintf(o.Out, "Continue to initialize %s %s cluster %s... \n",
-		cp.Local, cp.K8sService(cp.Local), clusterName)
+		o.cloudProvider, cp.K8sService(o.cloudProvider), clusterName)
 	return nil
 }
 
@@ -332,13 +432,14 @@ func (o *initOptions) installKubeBlocks(k8sClusterName string) error {
 	}
 	insOpts := kubeblocks.InstallOptions{
 		Options: kubeblocks.Options{
-			HelmCfg:   o.helmCfg,
-			Namespace: defaultNamespace,
-			IOStreams: o.IOStreams,
-			Client:    client,
-			Dynamic:   dynamic,
-			Wait:      true,
-			Timeout:   o.Timeout,
+			HelmCfg:    o.helmCfg,
+			Namespace:  defaultNamespace,
+			IOStreams:  o.IOStreams,
+			Client:     client,
+			Dynamic:    dynamic,
+			Wait:       true,
+			WaitAddons: true,
+			Timeout:    o.Timeout,
 		},
 		Version: o.kbVersion,
 		Quiet:   true,
@@ -352,11 +453,19 @@ func (o *initOptions) installKubeBlocks(k8sClusterName string) error {
 		"agamotto.enabled=true",
 	)
 
-	insOpts.ValueOpts.Values = append(insOpts.ValueOpts.Values,
-		// use hostpath csi driver to support snapshot
-		"snapshot-controller.enabled=true",
-		"csi-hostpath-driver.enabled=true",
-	)
+	if o.cloudProvider == cp.Local {
+		insOpts.ValueOpts.Values = append(insOpts.ValueOpts.Values,
+			// use hostpath csi driver to support snapshot
+			"snapshot-controller.enabled=true",
+			"csi-hostpath-driver.enabled=true",
+		)
+	} else if o.cloudProvider == cp.AWS {
+		insOpts.ValueOpts.Values = append(insOpts.ValueOpts.Values,
+			// enable aws-load-balancer-controller addon automatically on playground
+			"aws-load-balancer-controller.enabled=true",
+			fmt.Sprintf("aws-load-balancer-controller.clusterName=%s", k8sClusterName),
+		)
+	}
 
 	if err = insOpts.PreCheck(); err != nil {
 		// if the KubeBlocks has been installed, we ignore the error
@@ -407,7 +516,19 @@ func (o *initOptions) checkExistedCluster() error {
 	warningMsg := fmt.Sprintf("playground only supports one kubernetes cluster,\n  if a cluster is already existed, please destroy it first.\n%s\n", o.prevCluster.String())
 	// if cloud provider is not same with the existed cluster cloud provider, suggest
 	// user to destroy the previous cluster first
-	if o.prevCluster.CloudProvider != cp.Local {
+	if o.prevCluster.CloudProvider != o.cloudProvider {
+		printer.Warning(o.Out, warningMsg)
+		return cmdutil.ErrExit
+	}
+
+	if o.prevCluster.CloudProvider == cp.Local {
+		return nil
+	}
+
+	// previous kubernetes cluster is a cloud provider cluster, check if the region
+	// is same with the new cluster region, if not, suggest user to destroy the previous
+	// cluster first
+	if o.prevCluster.Region != o.region {
 		printer.Warning(o.Out, warningMsg)
 		return cmdutil.ErrExit
 	}
