@@ -418,7 +418,7 @@ func NewRestoreDescribeCommand(f cmdutil.Factory, streams genericiooptions.IOStr
 		Short:             "Describe a restore",
 		Aliases:           []string{"desc-restore"},
 		ValidArgsFunction: util.ResourceNameCompletionFunc(f, types.ClusterGVR()),
-		Example:           describeBackupExample,
+		Example:           describeRestoreExample,
 		Run: func(cmd *cobra.Command, args []string) {
 			cmdutil.BehaviorOnFatal(printer.FatalWithRedColor)
 			util.CheckErr(o.ValidateForClusterCmd(args))

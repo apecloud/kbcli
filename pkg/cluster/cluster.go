@@ -26,6 +26,7 @@ import (
 	"strings"
 
 	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
+	"github.com/apecloud/kubeblocks/pkg/controller/instanceset"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -288,9 +289,8 @@ func (o *ObjectsGetter) Get() (*ClusterObjects, error) {
 func (o *ClusterObjects) GetClusterInfo() *ClusterInfo {
 	c := o.Cluster
 	cluster := &ClusterInfo{
-		Name:      c.Name,
-		Namespace: c.Namespace,
-		// ClusterVersion:    c.Spec.ClusterVersionRef,
+		Name:              c.Name,
+		Namespace:         c.Namespace,
 		ClusterDefinition: c.Spec.ClusterDef,
 		TerminationPolicy: string(c.Spec.TerminationPolicy),
 		Status:            string(c.Status.Phase),
@@ -303,15 +303,6 @@ func (o *ClusterObjects) GetClusterInfo() *ClusterInfo {
 	if o.ClusterDef == nil {
 		return cluster
 	}
-
-	/*primaryComponent := FindClusterComp(o.Cluster, o.ClusterDef.Spec.ComponentDefs[0].Name)
-	internalEndpoints, externalEndpoints := GetComponentEndpoints(o.Nodes, o.Services, primaryComponent.Name)
-	if len(internalEndpoints) > 0 {
-		cluster.InternalEP = strings.Join(internalEndpoints, ",")
-	}
-	if len(externalEndpoints) > 0 {
-		cluster.ExternalEP = strings.Join(externalEndpoints, ",")
-	}*/
 	return cluster
 }
 
@@ -340,6 +331,9 @@ func (o *ClusterObjects) GetComponentInfo() []*ComponentInfo {
 			insTplName := appsv1alpha1.GetInstanceTemplateName(o.Cluster.Name,
 				p.Labels[constant.KBAppComponentLabelKey], p.Name)
 			if insTplName != templateName {
+				continue
+			}
+			if _, ok := p.Labels[instanceset.WorkloadsManagedByLabelKey]; !ok {
 				continue
 			}
 			componentName = p.Labels[constant.KBAppComponentLabelKey]
@@ -423,13 +417,13 @@ func (o *ClusterObjects) GetInstanceInfo() []*InstanceInfo {
 	for _, pod := range o.Pods.Items {
 		componentName := getLabelVal(pod.Labels, constant.KBAppComponentLabelKey)
 		instance := &InstanceInfo{
-			Name:      pod.Name,
-			Namespace: pod.Namespace,
-			Cluster:   getLabelVal(pod.Labels, constant.AppInstanceLabelKey),
-			Component: componentName,
-			Status:    o.getPodPhase(&pod),
-			Role:      getLabelVal(pod.Labels, constant.RoleLabelKey),
-			// AccessMode:  getLabelVal(pod.Labels, constant.ConsensusSetAccessModeLabelKey),
+			Name:        pod.Name,
+			Namespace:   pod.Namespace,
+			Cluster:     getLabelVal(pod.Labels, constant.AppInstanceLabelKey),
+			Component:   componentName,
+			Status:      o.getPodPhase(&pod),
+			Role:        getLabelVal(pod.Labels, constant.RoleLabelKey),
+			AccessMode:  getLabelVal(pod.Labels, constant.AccessModeLabelKey),
 			CreatedTime: util.TimeFormat(&pod.CreationTimestamp),
 		}
 		var componentSpec *kbappsv1.ClusterComponentSpec
@@ -559,7 +553,7 @@ func (o *ClusterObjects) getStorageInfo(vcts []kbappsv1.ClusterComponentVolumeCl
 		return nil
 	}
 
-	/*getClassName := func(vcTpl *kbappsv1.ClusterComponentVolumeClaimTemplate) string {
+	getClassName := func(vcTpl *kbappsv1.ClusterComponentVolumeClaimTemplate) string {
 		if vcTpl.Spec.StorageClassName != nil {
 			return *vcTpl.Spec.StorageClassName
 		}
@@ -590,10 +584,10 @@ func (o *ClusterObjects) getStorageInfo(vcts []kbappsv1.ClusterComponentVolumeCl
 		}
 
 		return types.None
-	}*/
+	}
 
 	var infos []StorageInfo
-	/*	for _, vcTpl := range vcts {
+	for _, vcTpl := range vcts {
 		s := StorageInfo{
 			Name: vcTpl.Name,
 		}
@@ -602,7 +596,7 @@ func (o *ClusterObjects) getStorageInfo(vcts []kbappsv1.ClusterComponentVolumeCl
 		s.Size = val.String()
 		s.AccessMode = getAccessModes(vcTpl.Spec.AccessModes)
 		infos = append(infos, s)
-	}*/
+	}
 	return infos
 }
 
@@ -657,7 +651,7 @@ func getLabelVal(labels map[string]string, key string) string {
 	return val
 }
 
-/*func getAccessModes(modes []corev1.PersistentVolumeAccessMode) string {
+func getAccessModes(modes []corev1.PersistentVolumeAccessMode) string {
 	modes = removeDuplicateAccessModes(modes)
 	var modesStr []string
 	if containsAccessMode(modes, corev1.ReadWriteOnce) {
@@ -689,4 +683,4 @@ func containsAccessMode(modes []corev1.PersistentVolumeAccessMode, mode corev1.P
 		}
 	}
 	return false
-}*/
+}

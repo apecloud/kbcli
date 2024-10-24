@@ -24,6 +24,7 @@ import (
 	"time"
 
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
+	"github.com/apecloud/kubeblocks/pkg/controller/instanceset"
 	chaosmeshv1alpha1 "github.com/chaos-mesh/chaos-mesh/api/v1alpha1"
 	snapshotv1 "github.com/kubernetes-csi/external-snapshotter/client/v6/apis/volumesnapshot/v1"
 	"github.com/sethvargo/go-password/password"
@@ -179,11 +180,12 @@ func FakePods(replicas int, namespace string, cluster string) *corev1.PodList {
 		}
 
 		pod.Labels = map[string]string{
-			constant.AppInstanceLabelKey:         cluster,
-			constant.RoleLabelKey:                role,
-			constant.KBAppComponentLabelKey:      ComponentName,
-			constant.ComponentDefinitionLabelKey: CompDefName,
-			constant.AppManagedByLabelKey:        constant.AppName,
+			constant.AppInstanceLabelKey:           cluster,
+			constant.RoleLabelKey:                  role,
+			constant.KBAppComponentLabelKey:        ComponentName,
+			constant.ComponentDefinitionLabelKey:   CompDefName,
+			constant.AppManagedByLabelKey:          constant.AppName,
+			instanceset.WorkloadsManagedByLabelKey: "InstanceSet",
 		}
 		pod.Spec.NodeName = NodeName
 		pod.Spec.Containers = []corev1.Container{

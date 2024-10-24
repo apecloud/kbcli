@@ -28,6 +28,7 @@ import (
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	appsv1beta1 "github.com/apecloud/kubeblocks/apis/apps/v1beta1"
 	"github.com/apecloud/kubeblocks/pkg/constant"
+	"github.com/apecloud/kubeblocks/pkg/controller/component"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -472,4 +473,13 @@ func GenerateClusterName(dynamic dynamic.Interface, namespace string) (string, e
 		}
 	}
 	return "", fmt.Errorf("failed to generate cluster name")
+}
+
+func CompatibleComponentDefs(compDefs []string, compDef string) bool {
+	for _, v := range compDefs {
+		if component.PrefixOrRegexMatched(compDef, v) {
+			return true
+		}
+	}
+	return false
 }
