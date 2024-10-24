@@ -340,6 +340,57 @@ func (m *Model) DrawDataSets(names []string) {
 	}
 }
 
+// DrawRect will draw rect dots. Uses default data set.
+func (m *Model) DrawRect() {
+	m.DrawRectDataSets([]string{DefaultDataSetName})
+}
+
+// DrawRectAll will draw rect dots for all data sets.
+func (m *Model) DrawRectAll() {
+	names := make([]string, 0, len(m.dSets))
+	for n, ds := range m.dSets {
+		if ds.tBuf.Length() > 0 {
+			names = append(names, n)
+		}
+	}
+	sort.Strings(names)
+	m.DrawRectDataSets(names)
+}
+
+// DrawRectDataSets will draw each point in data set as a rect.
+func (m *Model) DrawRectDataSets(names []string) {
+	if len(names) == 0 {
+		return
+	}
+	m.Clear()
+	m.DrawXYAxisAndLabel()
+	m.pointToDataMap = make(map[canvas.Point]*TimePoint)
+	for _, n := range names {
+		if ds, ok := m.dSets[n]; ok {
+			dataPoints := ds.tBuf.ReadAll()
+			dataLen := len(dataPoints)
+			if dataLen == 0 {
+				return
+			}
+			for i := 0; i < dataLen; i++ {
+				fp := dataPoints[i]
+				p := canvas.CanvasPointFromFloat64Point(m.Origin(), fp)
+				// get all rune patterns for braille grid
+				// and draw them on to the canvas
+				startX := 0
+				if m.YStep() > 0 {
+					startX = m.Origin().X + 1
+				}
+				p.X += startX
+				m.Canvas.SetCell(p, canvas.NewCellWithStyle(runes.FullBlock, m.dStyle))
+
+				raw := ds.tBuf.AtRaw(i)
+				m.pointToDataMap[p] = &TimePoint{Time: time.Unix(int64(raw.X), 0), Value: raw.Y}
+			}
+		}
+	}
+}
+
 // DrawBraille will draw braille runes displayed from right to left
 // of the graphing area of the canvas. Uses default data set.
 func (m *Model) DrawBraille() {
@@ -506,6 +557,5 @@ func (m *Model) TimePointFromPoint(point canvas.Point) *TimePoint {
 	if m.pointToDataMap == nil {
 		return nil
 	}
-	point.X -= 1
 	return m.pointToDataMap[point]
 }

@@ -21,6 +21,7 @@ package chart
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/76creates/stickers/flexbox"
 	"github.com/NimbleMarkets/ntcharts/barchart"
@@ -29,6 +30,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 
@@ -37,6 +39,7 @@ import (
 	"github.com/apecloud/kbcli/pkg/cmd/trace/chart/richviewport"
 	"github.com/apecloud/kbcli/pkg/cmd/trace/chart/summary"
 	"github.com/apecloud/kbcli/pkg/cmd/trace/chart/timeserieslinechart"
+	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
 )
 
 var (
@@ -139,6 +142,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.base.ForceRecalculate()
 	case TraceUpdateMsg:
 		m.trace = msg.Trace
+		//m.trace.Status.CurrentState = *mockState()
 	}
 	return m, nil
 }
@@ -231,14 +235,167 @@ func (m *Model) updateChangesView() {
 	changesChart.SetYRange(minYValue, maxYValue)
 	changesChart.SetViewYRange(minYValue, maxYValue)
 	changesChart.SetStyle(changesLineStyle)
-	changesChart.SetZoneManager(m.zoneManager)
 	// TODO(free6om): set background color for line having same depth as m.objectTree.GetSelected()
 	m.changes = &changesChart
 	for _, change := range m.trace.Status.CurrentState.Changes {
 		objRef := normalizeObjectRef(&change.ObjectReference)
 		m.changes.Push(timeserieslinechart.TimePoint{Time: change.Timestamp.Time, Value: depth - depthMap[*objRef] + 1})
 	}
-	m.changes.DrawBraille()
+	m.changes.DrawRect()
+}
+
+func mockState() *tracev1.ReconciliationCycleState {
+	t := time.Now()
+	return &tracev1.ReconciliationCycleState{
+		ObjectTree: &tracev1.ObjectTreeNode{
+			Primary: corev1.ObjectReference{
+				APIVersion: kbappsv1.SchemeGroupVersion.String(),
+				Kind:       kbappsv1.ClusterKind,
+				Namespace:  "foo",
+				Name:       "bar",
+			},
+			Secondaries: []*tracev1.ObjectTreeNode{
+				{
+					Primary: corev1.ObjectReference{
+						APIVersion: kbappsv1.SchemeGroupVersion.String(),
+						Kind:       kbappsv1.ComponentKind,
+						Namespace:  "foo",
+						Name:       "bar-bar-1",
+					},
+				},
+				{
+					Primary: corev1.ObjectReference{
+						APIVersion: kbappsv1.SchemeGroupVersion.String(),
+						Kind:       kbappsv1.ComponentKind,
+						Namespace:  "foo",
+						Name:       "bar-bar-2",
+					},
+				},
+				{
+					Primary: corev1.ObjectReference{
+						APIVersion: kbappsv1.SchemeGroupVersion.String(),
+						Kind:       kbappsv1.ComponentKind,
+						Namespace:  "foo",
+						Name:       "bar-bar-3",
+					},
+				},
+				{
+					Primary: corev1.ObjectReference{
+						APIVersion: kbappsv1.SchemeGroupVersion.String(),
+						Kind:       kbappsv1.ComponentKind,
+						Namespace:  "foo",
+						Name:       "bar-bar-4",
+					},
+				},
+				{
+					Primary: corev1.ObjectReference{
+						APIVersion: kbappsv1.SchemeGroupVersion.String(),
+						Kind:       kbappsv1.ComponentKind,
+						Namespace:  "foo",
+						Name:       "bar-bar-5",
+					},
+				},
+			},
+		},
+		Changes: []tracev1.ObjectChange{
+			{
+				ObjectReference: corev1.ObjectReference{
+					APIVersion:      kbappsv1.SchemeGroupVersion.String(),
+					Kind:            kbappsv1.ClusterKind,
+					Namespace:       "foo",
+					Name:            "bar",
+					ResourceVersion: "1",
+				},
+				Revision:    1,
+				Description: "Creation",
+				Timestamp:   &metav1.Time{Time: t},
+			},
+			{
+				ObjectReference: corev1.ObjectReference{
+					APIVersion:      kbappsv1.SchemeGroupVersion.String(),
+					Kind:            kbappsv1.ComponentKind,
+					Namespace:       "foo",
+					Name:            "bar-bar-1",
+					ResourceVersion: "2",
+				},
+				Revision:    2,
+				Description: "Creation",
+				Timestamp:   &metav1.Time{Time: t},
+			},
+			{
+				ObjectReference: corev1.ObjectReference{
+					APIVersion:      kbappsv1.SchemeGroupVersion.String(),
+					Kind:            kbappsv1.ComponentKind,
+					Namespace:       "foo",
+					Name:            "bar-bar-2",
+					ResourceVersion: "3",
+				},
+				Revision:    3,
+				Description: "Creation",
+				Timestamp:   &metav1.Time{Time: t},
+			},
+			{
+				ObjectReference: corev1.ObjectReference{
+					APIVersion:      kbappsv1.SchemeGroupVersion.String(),
+					Kind:            kbappsv1.ComponentKind,
+					Namespace:       "foo",
+					Name:            "bar-bar-3",
+					ResourceVersion: "4",
+				},
+				Revision:    4,
+				Description: "Creation",
+				Timestamp:   &metav1.Time{Time: t},
+			},
+			{
+				ObjectReference: corev1.ObjectReference{
+					APIVersion:      kbappsv1.SchemeGroupVersion.String(),
+					Kind:            kbappsv1.ComponentKind,
+					Namespace:       "foo",
+					Name:            "bar-bar-4",
+					ResourceVersion: "5",
+				},
+				Revision:    5,
+				Description: "Creation",
+				Timestamp:   &metav1.Time{Time: t},
+			},
+			{
+				ObjectReference: corev1.ObjectReference{
+					APIVersion:      kbappsv1.SchemeGroupVersion.String(),
+					Kind:            kbappsv1.ComponentKind,
+					Namespace:       "foo",
+					Name:            "bar-bar-5",
+					ResourceVersion: "5",
+				},
+				Revision:    5,
+				Description: "Creation",
+				Timestamp:   &metav1.Time{Time: t},
+			},
+		},
+		Summary: tracev1.ObjectTreeDiffSummary{
+			ObjectSummaries: []tracev1.ObjectSummary{
+				{
+					ObjectType: tracev1.ObjectType{
+						APIVersion: kbappsv1.SchemeGroupVersion.String(),
+						Kind:       kbappsv1.ClusterKind,
+					},
+					Total: 1,
+					ChangeSummary: &tracev1.ObjectChangeSummary{
+						Added: pointer.Int32(1),
+					},
+				},
+				{
+					ObjectType: tracev1.ObjectType{
+						APIVersion: kbappsv1.SchemeGroupVersion.String(),
+						Kind:       kbappsv1.ComponentKind,
+					},
+					Total: 5,
+					ChangeSummary: &tracev1.ObjectChangeSummary{
+						Added: pointer.Int32(5),
+					},
+				},
+			},
+		},
+	}
 }
 
 func (m *Model) updateStatusBarView() {
