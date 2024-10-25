@@ -54,6 +54,8 @@ kbcli [flags]
 
 ### SEE ALSO
 
+* [kbcli ComponentDefinition](kbcli_ComponentDefinition.md)	 - ComponentDefinition command.
+* [kbcli ComponentVersions](kbcli_ComponentVersions.md)	 - ComponentVersions command.
 * [kbcli addon](kbcli_addon.md)	 - Addon command.
 * [kbcli backuprepo](kbcli_backuprepo.md)	 - BackupRepo command.
 * [kbcli cluster](kbcli_cluster.md)	 - Cluster command.
