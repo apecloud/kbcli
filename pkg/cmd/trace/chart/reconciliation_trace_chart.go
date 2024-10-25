@@ -58,6 +58,9 @@ var (
 	deletedBlockStyle = lipgloss.NewStyle().
 				Foreground(lipgloss.Color("9")) // red
 
+	eventBlockStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("6")) // cyan
+
 	columnStyle = lipgloss.NewStyle().
 			Border(lipgloss.NormalBorder(), true, true, false, true).
 			BorderForeground(lipgloss.Color("#2bcbba"))
@@ -243,6 +246,23 @@ func (m *Model) updateChangesView() {
 		objRef := normalizeObjectRef(&change.ObjectReference)
 		m.changes.Push(timeserieslinechart.TimePoint{Time: change.Timestamp.Time, Value: depth - depthMap[*objRef] + 1})
 	}
+	m.changes.SetDataSetStyleFunc(func(tp *timeserieslinechart.TimePoint) lipgloss.Style {
+		change := m.findSelectedChange(tp)
+		if change == nil {
+			return lipgloss.NewStyle()
+		}
+		switch change.ChangeType {
+		case tracev1.ObjectCreationType:
+			return addedBlockStyle
+		case tracev1.ObjectUpdateType:
+			return updatedBlockStyle
+		case tracev1.ObjectDeletionType:
+			return deletedBlockStyle
+		case tracev1.EventType:
+			return eventBlockStyle
+		}
+		return lipgloss.NewStyle()
+	})
 	m.changes.DrawRect()
 	m.changes.HighlightLine(m.objectTree.GetSelected(), lipgloss.Color("4"))
 }
@@ -286,6 +306,13 @@ func (m *Model) setSelectedChange(msg tea.MouseMsg) {
 	if point == nil {
 		return
 	}
+	change := m.findSelectedChange(point)
+	if change != nil {
+		m.selectedChange = change
+	}
+}
+
+func (m *Model) findSelectedChange(point *timeserieslinechart.TimePoint) *tracev1.ObjectChange {
 	depthMap := make(map[corev1.ObjectReference]float64)
 	depth := buildDepthMap(m.trace.Status.CurrentState.ObjectTree, 0, depthMap)
 	for i := range m.trace.Status.CurrentState.Changes {
@@ -295,10 +322,10 @@ func (m *Model) setSelectedChange(msg tea.MouseMsg) {
 		}
 		objRef := normalizeObjectRef(&change.ObjectReference)
 		if depthMap[*objRef] == (depth + 1 - point.Value) {
-			m.selectedChange = change
-			break
+			return change
 		}
 	}
+	return nil
 }
 
 func buildSummaryDataSet(summary *tracev1.ObjectTreeDiffSummary) []barchart.BarData {

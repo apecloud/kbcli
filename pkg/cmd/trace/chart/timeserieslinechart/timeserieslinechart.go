@@ -42,6 +42,8 @@ import (
 
 const DefaultDataSetName = "default"
 
+type StyleFunc func(*TimePoint) lipgloss.Style
+
 func DateTimeLabelFormatter() linechart.LabelFormatter {
 	var yearLabel string
 	return func(i int, v float64) string {
@@ -106,8 +108,9 @@ type dataSet struct {
 // Uses linechart Model UpdateHandler() for processing keyboard and mouse messages.
 type Model struct {
 	linechart.Model
-	dLineStyle runes.LineStyle     // default data set LineStyletype
-	dStyle     lipgloss.Style      // default data set Style
+	dLineStyle runes.LineStyle // default data set LineStyletype
+	dStyle     lipgloss.Style  // default data set Style
+	dStyleFunc StyleFunc
 	dSets      map[string]*dataSet // maps names to data sets
 
 	pointToDataMap map[canvas.Point]*TimePoint // canvas point to time point map
@@ -259,6 +262,10 @@ func (m *Model) SetDataSetStyle(n string, s lipgloss.Style) {
 	ds.Style = s
 }
 
+func (m *Model) SetDataSetStyleFunc(f StyleFunc) {
+	m.dStyleFunc = f
+}
+
 // Push will push a TimePoint data value to the default data set
 // to be displayed with Draw.
 func (m *Model) Push(t TimePoint) {
@@ -380,10 +387,15 @@ func (m *Model) DrawRectDataSets(names []string) {
 					startX = m.Origin().X + 1
 				}
 				p.X += startX
-				m.Canvas.SetCell(p, canvas.NewCellWithStyle(runes.FullBlock, m.dStyle))
-
+				style := m.dStyle
 				raw := ds.tBuf.AtRaw(i)
-				m.pointToDataMap[p] = &TimePoint{Time: time.Unix(int64(raw.X), 0), Value: raw.Y}
+				tp := &TimePoint{Time: time.Unix(int64(raw.X), 0), Value: raw.Y}
+				if m.dStyleFunc != nil {
+					style = m.dStyleFunc(tp)
+				}
+				m.Canvas.SetCell(p, canvas.NewCellWithStyle(runes.FullBlock, style))
+
+				m.pointToDataMap[p] = tp
 			}
 		}
 	}
