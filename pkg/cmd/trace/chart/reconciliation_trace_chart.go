@@ -232,6 +232,13 @@ func (m *Model) updateChangesView() {
 	changesChart.SetViewYRange(minYValue, maxYValue)
 	changesChart.SetStyle(changesLineStyle)
 	m.changes = &changesChart
+	if len(m.trace.Status.CurrentState.Changes) > 0 {
+		change := m.trace.Status.CurrentState.Changes[0]
+		minX := change.Timestamp.Time.Unix()
+		maxX := minX + 1
+		m.changes.SetViewXRange(float64(minX), float64(maxX))
+		m.changes.SetXRange(float64(minX), float64(maxX))
+	}
 	for _, change := range m.trace.Status.CurrentState.Changes {
 		objRef := normalizeObjectRef(&change.ObjectReference)
 		m.changes.Push(timeserieslinechart.TimePoint{Time: change.Timestamp.Time, Value: depth - depthMap[*objRef] + 1})

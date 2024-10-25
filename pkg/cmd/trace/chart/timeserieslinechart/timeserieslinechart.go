@@ -119,10 +119,8 @@ type Model struct {
 // enable auto set X and Y value ranges,
 // and only allow moving viewport on X axis.
 func New(w, h int, opts ...Option) Model {
-	min := time.Now()
-	max := min.Add(time.Second)
 	m := Model{
-		Model: linechart.New(w, h, float64(min.Unix()), float64(max.Unix()), 0, 1,
+		Model: linechart.New(w, h, 0.0, float64(time.Now().Unix()), 0, 1,
 			linechart.WithXYSteps(4, 2),
 			linechart.WithXLabelFormatter(DateTimeLabelFormatter()),
 			linechart.WithAutoXYRange(),                        // automatically adjust value ranges
