@@ -16,7 +16,7 @@ ComponentDefinition command.
 
 ComponentVersions command.
 
-* [kbcli ComponentVersions describe](kbcli_ComponentVersions_describe.md)	 - Describe ClusterDefinition.
+* [kbcli ComponentVersions describe](kbcli_ComponentVersions_describe.md)	 - Describe ComponentVersion.
 * [kbcli ComponentVersions list](kbcli_ComponentVersions_list.md)	 - List ComponentVersion.
 
 
