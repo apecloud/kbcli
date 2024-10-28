@@ -42,8 +42,8 @@ import (
 
 var (
 	describeExample = templates.Examples(`
-		# describe a specified cluster definition
-		kbcli componentdefinition describe myclusterdef`)
+		# describe a specified component definition
+		kbcli componentdefinition describe mycomponentdef`)
 )
 
 type describeOptions struct {
@@ -127,7 +127,11 @@ func (o *describeOptions) describeCmpd(name string) error {
 func (o *describeOptions) showComponentDef(cmpd *kbappsv1.ComponentDefinition) error {
 	tbl := printer.NewTablePrinter(o.Out)
 	tbl.SetHeader("NAME", "SERVICE-KIND", "SERVICE-VERSIONS", "PROVIDER", "UPDATE-STRATEGY")
-	tbl.AddRow(cmpd.Name, cmpd.Spec.ServiceKind, cmpd.Spec.ServiceVersion, cmpd.Spec.Provider, *cmpd.Spec.UpdateStrategy)
+	tbl.AddRow(cmpd.Name,
+		cmpd.Spec.ServiceKind,
+		cmpd.Spec.ServiceVersion,
+		cmpd.Spec.Provider,
+		*cmpd.Spec.UpdateStrategy)
 	tbl.Print()
 	printer.PrintLine("")
 	showServices(cmpd.Spec.Services, o.Out)
@@ -136,7 +140,9 @@ func (o *describeOptions) showComponentDef(cmpd *kbappsv1.ComponentDefinition) e
 	showSystemAccounts(cmpd.Spec.SystemAccounts, o.Out)
 
 	printer.PrintPairStringToLine("Status", string(cmpd.Status.Phase), 0)
-	printer.PrintPairStringToLine("Message", cmpd.Status.Message, 0)
+	if cmpd.Status.Message != "" {
+		printer.PrintPairStringToLine("Message", cmpd.Status.Message, 0)
+	}
 	return nil
 }
 

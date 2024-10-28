@@ -49,7 +49,7 @@ func NewComponentDefinitionCmd(f cmdutil.Factory, streams genericiooptions.IOStr
 	cmd := &cobra.Command{
 		Use:     "ComponentDefinition",
 		Short:   "ComponentDefinition command.",
-		Aliases: []string{"componentdefinition"},
+		Aliases: []string{"cmpd"},
 	}
 
 	cmd.AddCommand(NewListCmd(f, streams))
@@ -94,7 +94,7 @@ func cmpdListRun(o *action.ListOptions) error {
 	}
 
 	if len(infos) == 0 {
-		fmt.Fprintln(o.IOStreams.Out, "No clusterDefinition found")
+		fmt.Fprintln(o.IOStreams.Out, "No ComponentDefinition found")
 		return nil
 	}
 

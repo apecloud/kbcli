@@ -49,7 +49,7 @@ func NewComponentVersionCmd(f cmdutil.Factory, streams genericiooptions.IOStream
 	cmd := &cobra.Command{
 		Use:     "ComponentVersions",
 		Short:   "ComponentVersions command.",
-		Aliases: []string{"componentversion"},
+		Aliases: []string{"cmpv"},
 	}
 
 	cmd.AddCommand(NewListCmd(f, streams))
@@ -94,7 +94,7 @@ func cmpvListRun(o *action.ListOptions) error {
 	}
 
 	if len(infos) == 0 {
-		fmt.Fprintln(o.IOStreams.Out, "No clusterDefinition found")
+		fmt.Fprintln(o.IOStreams.Out, "No componentversion found")
 		return nil
 	}
 
@@ -109,7 +109,6 @@ func cmpvListRun(o *action.ListOptions) error {
 			tbl.AddRow(
 				cmpv.Name,
 				cmpv.Status.ServiceVersions,
-				cmpv.Status.ObservedGeneration,
 				cmpv.Status.Phase,
 				util.TimeFormat(&cmpv.CreationTimestamp),
 			)
@@ -118,7 +117,7 @@ func cmpvListRun(o *action.ListOptions) error {
 	}
 
 	if err = printer.PrintTable(o.Out, nil, printRows,
-		"NAME", "VERSIONS", "GENERATION", "STATUS", "CREATED-TIME"); err != nil {
+		"NAME", "VERSIONS", "STATUS", "CREATED-TIME"); err != nil {
 		return err
 	}
 	return nil

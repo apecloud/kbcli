@@ -133,7 +133,9 @@ func (o *describeOptions) showClusterDef(cd *kbappsv1.ClusterDefinition) error {
 	}
 	printer.PrintPairStringToLine("Name", cd.Name)
 	printer.PrintPairStringToLine("Status", string(cd.Status.Phase))
-	printer.PrintPairStringToLine("Message", cd.Status.Message)
+	if cd.Status.Message != "" {
+		printer.PrintPairStringToLine("Message", cd.Status.Message)
+	}
 	printer.PrintLine("Topologies\n")
 	for _, v := range cd.Spec.Topologies {
 		o.showTopology(v, compDefList, cmpvList)

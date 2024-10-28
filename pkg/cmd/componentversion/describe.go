@@ -18,6 +18,8 @@ package componentversion
 
 import (
 	"fmt"
+	"io"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
@@ -26,14 +28,17 @@ import (
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
 
+	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
+
+	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
 )
 
 var (
 	describeExample = templates.Examples(`
-		# describe a specified cluster definition
-		kbcli clusterdefinition describe myclusterdef`)
+		# describe a specified componentversion
+		kbcli componentversion describe mycomponentversion`)
 )
 
 type describeOptions struct {
@@ -53,10 +58,10 @@ func NewDescribeCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobr
 	}
 	cmd := &cobra.Command{
 		Use:               "describe",
-		Short:             "Describe ClusterDefinition.",
+		Short:             "Describe ComponentVersion.",
 		Example:           describeExample,
 		Aliases:           []string{"desc"},
-		ValidArgsFunction: util.ResourceNameCompletionFunc(f, types.ClusterDefGVR()),
+		ValidArgsFunction: util.ResourceNameCompletionFunc(f, types.ComponentVersionsGVR()),
 		Run: func(cmd *cobra.Command, args []string) {
 			cmdutil.CheckErr(o.complete(args))
 			cmdutil.CheckErr(o.run())
@@ -69,7 +74,7 @@ func (o *describeOptions) complete(args []string) error {
 	var err error
 
 	if len(args) == 0 {
-		return fmt.Errorf("cluster definition name should be specified")
+		return fmt.Errorf("compinent definition name should be specified")
 	}
 	o.names = args
 
@@ -98,5 +103,39 @@ func (o *describeOptions) run() error {
 }
 
 func (o *describeOptions) describeCmpd(name string) error {
+	// get component version
+	cmpv := &kbappsv1.ComponentVersion{}
+	if err := util.GetK8SClientObject(o.dynamic, cmpv, types.ComponentVersionsGVR(), "", name); err != nil {
+		return err
+	}
+
+	if err := o.showComponentVersion(cmpv); err != nil {
+		return err
+	}
 	return nil
+}
+
+func (o *describeOptions) showComponentVersion(cmpv *kbappsv1.ComponentVersion) error {
+	printer.PrintPairStringToLine("Name", cmpv.Name, 0)
+
+	showCompatibilityRules(cmpv.Spec.CompatibilityRules, o.Out)
+	printer.PrintPairStringToLine("Status", string(cmpv.Status.Phase), 0)
+	if cmpv.Status.Message != "" {
+		printer.PrintPairStringToLine("Message", cmpv.Status.Message, 0)
+	}
+	return nil
+}
+
+func showCompatibilityRules(compatibilityRules []kbappsv1.ComponentVersionCompatibilityRule, out io.Writer) {
+	if len(compatibilityRules) == 0 {
+		return
+	}
+	fmt.Fprintf(out, "Compatibility Rules:\n")
+	tbl := printer.NewTablePrinter(out)
+	tbl.SetHeader("\tCOMPONENT-DEF", "RELEASES")
+	for _, rule := range compatibilityRules {
+		tbl.AddRow("\t"+strings.Join(rule.CompDefs, ", "), strings.Join(rule.Releases, ", "))
+	}
+	tbl.Print()
+	fmt.Fprint(out, "\n")
 }
