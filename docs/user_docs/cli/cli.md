@@ -8,7 +8,7 @@ sidebar_position: 1
 
 ComponentDefinition command.
 
-* [kbcli ComponentDefinition describe](kbcli_ComponentDefinition_describe.md)	 - Describe ClusterDefinition.
+* [kbcli ComponentDefinition describe](kbcli_ComponentDefinition_describe.md)	 - Describe ComponentDefinition.
 * [kbcli ComponentDefinition list](kbcli_ComponentDefinition_list.md)	 - List ComponentDefinition.
 
 
