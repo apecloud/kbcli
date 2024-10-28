@@ -21,8 +21,7 @@ package componentversion
 
 import (
 	"fmt"
-	"github.com/apecloud/kbcli/pkg/printer"
-	v1 "github.com/apecloud/kubeblocks/apis/apps/v1"
+
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -30,7 +29,10 @@ import (
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
 
+	v1 "github.com/apecloud/kubeblocks/apis/apps/v1"
+
 	"github.com/apecloud/kbcli/pkg/action"
+	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
 )
