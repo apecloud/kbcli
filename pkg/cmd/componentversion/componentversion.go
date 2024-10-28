@@ -17,7 +17,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package cmpv
+package componentversion
 
 import (
 	"fmt"
@@ -40,14 +40,14 @@ var listExample = templates.Examples(`
 		kbcli componentversion list
 	
 		# list all ComponentVersions by alias
-		kbcli cmpv list
+		kbcli componentversion list
 `)
 
 func NewComponentVersionCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "ComponentVersions",
 		Short:   "ComponentVersions command.",
-		Aliases: []string{"cmpv"},
+		Aliases: []string{"componentversion"},
 	}
 
 	cmd.AddCommand(NewListCmd(f, streams))

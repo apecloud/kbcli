@@ -17,7 +17,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package cmpd
+package componentdefinition
 
 import (
 	"fmt"
@@ -40,14 +40,14 @@ var listExample = templates.Examples(`
 		kbcli componentdefinition list
 	
 		# list all ComponentDefinitions by alias
-		kbcli cmpd list
+		kbcli componentdefinition list
 `)
 
 func NewComponentDefinitionCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "ComponentDefinition",
 		Short:   "ComponentDefinition command.",
-		Aliases: []string{"cmpd"},
+		Aliases: []string{"componentdefinition"},
 	}
 
 	cmd.AddCommand(NewListCmd(f, streams))
