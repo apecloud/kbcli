@@ -47,7 +47,7 @@ var listExample = templates.Examples(`
 
 func NewComponentDefinitionCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "ComponentDefinition",
+		Use:     "componentdefinition",
 		Short:   "ComponentDefinition command.",
 		Aliases: []string{"cmpd"},
 	}

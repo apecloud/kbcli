@@ -132,7 +132,7 @@ func showCompatibilityRules(compatibilityRules []kbappsv1.ComponentVersionCompat
 	}
 	fmt.Fprintf(out, "Compatibility Rules:\n")
 	tbl := printer.NewTablePrinter(out)
-	tbl.SetHeader("\tCOMPONENT-DEF", "RELEASES")
+	tbl.SetHeader("\tCOMPONENT-DEF-REGEX", "RELEASES")
 	for _, rule := range compatibilityRules {
 		tbl.AddRow("\t"+strings.Join(rule.CompDefs, ", "), strings.Join(rule.Releases, ", "))
 	}
