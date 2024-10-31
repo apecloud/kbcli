@@ -54,12 +54,12 @@ kbcli [flags]
 
 ### SEE ALSO
 
-* [kbcli ComponentDefinition](kbcli_ComponentDefinition.md)	 - ComponentDefinition command.
-* [kbcli ComponentVersions](kbcli_ComponentVersions.md)	 - ComponentVersions command.
 * [kbcli addon](kbcli_addon.md)	 - Addon command.
 * [kbcli backuprepo](kbcli_backuprepo.md)	 - BackupRepo command.
 * [kbcli cluster](kbcli_cluster.md)	 - Cluster command.
 * [kbcli clusterdefinition](kbcli_clusterdefinition.md)	 - ClusterDefinition command.
+* [kbcli componentdefinition](kbcli_componentdefinition.md)	 - ComponentDefinition command.
+* [kbcli componentversion](kbcli_componentversion.md)	 - ComponentVersions command.
 * [kbcli dashboard](kbcli_dashboard.md)	 - List and open the KubeBlocks dashboards.
 * [kbcli dataprotection](kbcli_dataprotection.md)	 - Data protection command.
 * [kbcli kubeblocks](kbcli_kubeblocks.md)	 - KubeBlocks operation commands.

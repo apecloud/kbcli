@@ -4,22 +4,6 @@ description: KubeBlocks CLI overview
 sidebar_position: 1
 ---
 
-## [ComponentDefinition](kbcli_ComponentDefinition.md)
-
-ComponentDefinition command.
-
-* [kbcli ComponentDefinition describe](kbcli_ComponentDefinition_describe.md)	 - Describe ComponentDefinition.
-* [kbcli ComponentDefinition list](kbcli_ComponentDefinition_list.md)	 - List ComponentDefinition.
-
-
-## [ComponentVersions](kbcli_ComponentVersions.md)
-
-ComponentVersions command.
-
-* [kbcli ComponentVersions describe](kbcli_ComponentVersions_describe.md)	 - Describe ComponentVersion.
-* [kbcli ComponentVersions list](kbcli_ComponentVersions_list.md)	 - List ComponentVersion.
-
-
 ## [addon](kbcli_addon.md)
 
 Addon command.
@@ -103,6 +87,22 @@ ClusterDefinition command.
 
 * [kbcli clusterdefinition describe](kbcli_clusterdefinition_describe.md)	 - Describe ClusterDefinition.
 * [kbcli clusterdefinition list](kbcli_clusterdefinition_list.md)	 - List ClusterDefinitions.
+
+
+## [componentdefinition](kbcli_componentdefinition.md)
+
+ComponentDefinition command.
+
+* [kbcli componentdefinition describe](kbcli_componentdefinition_describe.md)	 - Describe ComponentDefinition.
+* [kbcli componentdefinition list](kbcli_componentdefinition_list.md)	 - List ComponentDefinition.
+
+
+## [componentversion](kbcli_componentversion.md)
+
+ComponentVersions command.
+
+* [kbcli componentversion describe](kbcli_componentversion_describe.md)	 - Describe ComponentVersion.
+* [kbcli componentversion list](kbcli_componentversion_list.md)	 - List ComponentVersion.
 
 
 ## [dashboard](kbcli_dashboard.md)
