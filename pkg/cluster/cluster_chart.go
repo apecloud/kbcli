@@ -130,7 +130,7 @@ func (c *ChartInfo) BuildClusterSchema() error {
 	var err error
 	cht := c.Chart
 	buildSchema := func(bs []byte) (*spec.Schema, error) {
-		if bs == nil {
+		if len(bs) == 0 {
 			return nil, nil
 		}
 		schema := &spec.Schema{}
