@@ -303,7 +303,7 @@ func (o *CreateSubCmdsOptions) getObjectsInfo() ([]*objectInfo, error) {
 	}
 
 	// get cluster manifests
-	manifests, err := cluster.GetManifests(o.ChartInfo.Chart, o.Namespace, o.Name, kubeVersion, values)
+	manifests, err := cluster.GetManifests(o.ChartInfo.Chart, false, o.Namespace, o.Name, kubeVersion, values)
 	if err != nil {
 		return nil, err
 	}
