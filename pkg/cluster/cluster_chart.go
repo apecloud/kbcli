@@ -130,6 +130,9 @@ func (c *ChartInfo) BuildClusterSchema() error {
 	var err error
 	cht := c.Chart
 	buildSchema := func(bs []byte) (*spec.Schema, error) {
+		if bs == nil {
+			return nil, nil
+		}
 		schema := &spec.Schema{}
 		if err = json.Unmarshal(bs, schema); err != nil {
 			return nil, errors.Wrapf(err, "failed to build schema for engine %s", cht.Name())
