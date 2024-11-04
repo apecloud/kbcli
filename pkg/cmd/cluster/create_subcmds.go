@@ -62,14 +62,18 @@ type CreateSubCmdsOptions struct {
 	Tenancy        string            `json:"tenancy"`
 	TolerationsRaw []string          `json:"-"`
 
+	// SkipSchemaValidation is used to skip the schema validation of the helm chart.
+	SkipSchemaValidation bool `json:"-"`
+
 	*action.CreateOptions
 }
 
 func NewSubCmdsOptions(createOptions *action.CreateOptions, t cluster.ClusterType) (*CreateSubCmdsOptions, error) {
 	var err error
 	o := &CreateSubCmdsOptions{
-		CreateOptions: createOptions,
-		ClusterType:   t,
+		CreateOptions:        createOptions,
+		ClusterType:          t,
+		SkipSchemaValidation: false,
 	}
 
 	if o.ChartInfo, err = cluster.BuildChartInfo(t); err != nil {
@@ -297,7 +301,7 @@ func (o *CreateSubCmdsOptions) getObjectsInfo() ([]*objectInfo, error) {
 	}
 
 	// get cluster manifests
-	manifests, err := cluster.GetManifests(o.ChartInfo.Chart, o.Namespace, o.Name, kubeVersion, values)
+	manifests, err := cluster.GetManifests(o.ChartInfo.Chart, o.SkipSchemaValidation, o.Namespace, o.Name, kubeVersion, values)
 	if err != nil {
 		return nil, err
 	}
