@@ -46,7 +46,7 @@ var _ = Describe("cluster engine", func() {
 		Expect(c.SubChartName).ShouldNot(BeEmpty())
 
 		By("get manifests")
-		manifests, err := GetManifests(c.Chart, namespace, name, kubeVersion, nil)
+		manifests, err := GetManifests(c.Chart, false, namespace, name, kubeVersion, nil)
 		Expect(err).Should(Succeed())
 		Expect(manifests).ShouldNot(BeEmpty())
 
