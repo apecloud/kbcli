@@ -102,6 +102,28 @@ var _ = Describe("Cluster", func() {
 			Expect(o.Name).ShouldNot(BeEmpty())
 			Expect(o.Run()).Should(Succeed())
 		})
+		It("with schedulingPolicy", func() {
+			o, err := NewSubCmdsOptions(createOptions, clusterType)
+			o.Tenancy = "SharedNode"
+			o.TopologyKeys = []string{"zone", "hostname"}
+			o.NodeLabels = map[string]string{"environment": "environment", "region": "region"}
+			o.TolerationsRaw = []string{"key=value:effect", " key:effect"}
+			o.PodAntiAffinity = "Preferred"
+
+			Expect(err).Should(Succeed())
+			Expect(o).ShouldNot(BeNil())
+			Expect(o.ChartInfo).ShouldNot(BeNil())
+			o.Format = printer.YAML
+
+			Expect(o.CreateOptions.Complete()).To(Succeed())
+			o.Client = testing.FakeClientSet()
+			fakeDiscovery1, _ := o.Client.Discovery().(*fakediscovery.FakeDiscovery)
+			fakeDiscovery1.FakedServerVersion = &version.Info{Major: "1", Minor: "27", GitVersion: "v1.27.0"}
+			Expect(o.Complete(nil)).To(Succeed())
+			Expect(o.Validate()).To(Succeed())
+			Expect(o.Name).ShouldNot(BeEmpty())
+			Expect(o.Run()).Should(Succeed())
+		})
 	})
 
 	Context("create validate", func() {

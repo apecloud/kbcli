@@ -1083,6 +1083,18 @@ func DisplayDiffWithColor(out io.Writer, diffText string) {
 	}
 }
 
+func BuildSchedulingPolicy(tolerations []corev1.Toleration, nodeLabels map[string]string, podAntiAffinity *corev1.PodAntiAffinity) *kbappsv1.SchedulingPolicy {
+	schedulingPolicy := &kbappsv1.SchedulingPolicy{
+		NodeSelector: nodeLabels,
+		Affinity: &corev1.Affinity{
+			PodAntiAffinity: podAntiAffinity,
+		},
+		Tolerations: tolerations,
+	}
+
+	return schedulingPolicy
+}
+
 // BuildTolerations toleration format: key=value:effect or key:effect,
 func BuildTolerations(raw []string) ([]interface{}, error) {
 	tolerations := make([]interface{}, 0)

@@ -21,15 +21,20 @@ package cluster
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"regexp"
 
 	"github.com/spf13/cobra"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
+
+	v1 "github.com/apecloud/kubeblocks/apis/apps/v1"
 
 	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/cluster"
@@ -57,10 +62,11 @@ type CreateSubCmdsOptions struct {
 	// Configuration and options for cluster affinity and tolerations
 	PodAntiAffinity string `json:"podAntiAffinity"`
 	// TopologyKeys if TopologyKeys is nil, add omitempty json tag, because CueLang can not covert null to list.
-	TopologyKeys   []string          `json:"topologyKeys,omitempty"`
-	NodeLabels     map[string]string `json:"nodeLabels,omitempty"`
-	Tenancy        string            `json:"tenancy"`
-	TolerationsRaw []string          `json:"-"`
+	TopologyKeys     []string          `json:"topologyKeys,omitempty"`
+	NodeLabels       map[string]string `json:"nodeLabels,omitempty"`
+	Tenancy          string            `json:"tenancy"`
+	TolerationsRaw   []string          `json:"-"`
+	schedulingPolicy *v1.SchedulingPolicy
 
 	*action.CreateOptions
 }
@@ -119,7 +125,6 @@ func buildCreateSubCmds(createOptions *action.CreateOptions) []*cobra.Command {
 		util.CheckErr(addCreateFlags(cmd, o.Factory, o.ChartInfo, t.String()))
 
 		// Schedule policy
-		// TODO: implement them, and check whether the flag has been defined
 		cmd.Flags().StringVar(&o.PodAntiAffinity, "pod-anti-affinity", "Preferred", "Pod anti-affinity type, one of: (Preferred, Required)")
 		cmd.Flags().StringArrayVar(&o.TopologyKeys, "topology-keys", nil, "Topology keys for affinity")
 		cmd.Flags().StringToStringVar(&o.NodeLabels, "node-labels", nil, "Node label selector")
@@ -192,6 +197,50 @@ func (o *CreateSubCmdsOptions) Complete(cmd *cobra.Command) error {
 	if o.ChartInfo.ClusterDef == "" && len(o.ChartInfo.ComponentDef) == 0 {
 		return fmt.Errorf("cannot find clusterDef in cluster spec or componentDef in componentSpecs or shardingSpecs")
 	}
+
+	// Define scheduling related variables
+	var (
+		tolerations     = make([]corev1.Toleration, 0)
+		NodeLabels      = make(map[string]string)
+		podAntiAffinity = &corev1.PodAntiAffinity{
+			RequiredDuringSchedulingIgnoredDuringExecution:  make([]corev1.PodAffinityTerm, 0),
+			PreferredDuringSchedulingIgnoredDuringExecution: make([]corev1.WeightedPodAffinityTerm, 0),
+		}
+	)
+
+	hasSchedulingPolicy := false
+	// Build tolerations if raw toleration rules are configured
+	if o.TolerationsRaw != nil {
+		tolerationsResult, err := util.BuildTolerations(o.TolerationsRaw)
+		if err != nil {
+			return err
+		}
+		jsonData, err := json.Marshal(tolerationsResult)
+		if err != nil {
+			return err
+		}
+		err = json.Unmarshal(jsonData, &tolerations)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Set node labels if specified
+	if o.NodeLabels != nil {
+		hasSchedulingPolicy = true
+		NodeLabels = o.NodeLabels
+	}
+
+	// Build pod anti-affinity if either anti-affinity rule or topology keys are specified
+	if o.PodAntiAffinity != "" || len(o.TopologyKeys) > 0 {
+		hasSchedulingPolicy = true
+		podAntiAffinity = util.BuildPodAntiAffinity(o.PodAntiAffinity, o.TopologyKeys)
+	}
+
+	// Construct the final scheduling policy combining tolerations, node labels and pod anti-affinity
+	if hasSchedulingPolicy {
+		o.schedulingPolicy = util.BuildSchedulingPolicy(tolerations, NodeLabels, podAntiAffinity)
+	}
 	return nil
 }
 
@@ -222,12 +271,24 @@ func (o *CreateSubCmdsOptions) Run() error {
 		return nil, fmt.Errorf("failed to find cluster object from manifests rendered from %s chart", o.ClusterType)
 	}
 
+	clusterObj, err := getClusterObj()
+	if err != nil {
+		return err
+	}
+
+	if clusterObj != nil {
+		if o.schedulingPolicy != nil {
+			converted, err := runtime.DefaultUnstructuredConverter.ToUnstructured(o.schedulingPolicy)
+			if err != nil {
+				return err
+			}
+			_ = unstructured.SetNestedField(clusterObj.Object, converted, "spec", "schedulingPolicy")
+		}
+		_ = unstructured.SetNestedField(clusterObj.Object, o.Tenancy, "spec", "tenancy")
+	}
+
 	// only edits the cluster object, other dependency objects are created directly
 	if o.EditBeforeCreate {
-		clusterObj, err := getClusterObj()
-		if err != nil {
-			return err
-		}
 		customEdit := action.NewCustomEditOptions(o.Factory, o.IOStreams, "create")
 		if err = customEdit.Run(clusterObj); err != nil {
 			return err
