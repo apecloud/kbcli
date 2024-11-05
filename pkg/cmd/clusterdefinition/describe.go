@@ -113,33 +113,9 @@ func (o *describeOptions) describeClusterDef(name string) error {
 	if err := util.GetK8SClientObject(o.dynamic, clusterDef, types.ClusterDefGVR(), "", name); err != nil {
 		return err
 	}
-	// get backup policy templates of the cluster definition
-
 	if err := o.showClusterDef(clusterDef); err != nil {
 		return err
 	}
-
-	// 	TODO: move it to list component definition
-	/*
-		opts := metav1.ListOptions{
-				LabelSelector: fmt.Sprintf("%s=%s", constant.ClusterDefLabelKey, name),
-			}
-			backupTemplatesListObj, err := o.dynamic.Resource(types.BackupPolicyTemplateGVR()).List(context.TODO(), opts)
-			if err != nil {
-				return err
-			}
-		var backupPolicyTemplates []*dpv1alpha1.BackupPolicyTemplate
-		for _, item := range backupTemplatesListObj.Items {
-			backupTemplate := dpv1alpha1.BackupPolicyTemplate{}
-			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(item.Object, &backupTemplate); err != nil {
-				return err
-			}
-			backupPolicyTemplates = append(backupPolicyTemplates, &backupTemplate)
-		}
-
-
-		 showBackupConfig(backupPolicyTemplates, o.Out)*/
-
 	return nil
 }
 
@@ -157,7 +133,9 @@ func (o *describeOptions) showClusterDef(cd *kbappsv1.ClusterDefinition) error {
 	}
 	printer.PrintPairStringToLine("Name", cd.Name)
 	printer.PrintPairStringToLine("Status", string(cd.Status.Phase))
-	printer.PrintPairStringToLine("Message", cd.Status.Message)
+	if cd.Status.Message != "" {
+		printer.PrintPairStringToLine("Message", cd.Status.Message)
+	}
 	printer.PrintLine("Topologies\n")
 	for _, v := range cd.Spec.Topologies {
 		o.showTopology(v, compDefList, cmpvList)
@@ -218,35 +196,3 @@ func (o *describeOptions) showTopology(topology kbappsv1.ClusterTopology, compDe
 		printOrders("Terminate", topology.Orders.Terminate)
 	}
 }
-
-// TODO: add backup infos in describe componentDef command.
-/*
-func showBackupConfig(backupPolicyTemplates []*dpv1alpha1.BackupPolicyTemplate, out io.Writer) {
-	if len(backupPolicyTemplates) == 0 {
-		return
-	}
-	fmt.Fprintf(out, "Backup Config:\n")
-	tbl := printer.NewTablePrinter(out)
-	defaultBackupPolicyTemplate := &dpv1alpha1.BackupPolicyTemplate{}
-	// if there is only one backup policy template, it will be the default backup policy template
-	if len(backupPolicyTemplates) == 1 {
-		defaultBackupPolicyTemplate = backupPolicyTemplates[0]
-	}
-	for _, item := range backupPolicyTemplates {
-		if item.Annotations[dptypes.DefaultBackupPolicyTemplateAnnotationKey] == "true" {
-			defaultBackupPolicyTemplate = item
-			break
-		}
-	}
-	tbl.SetHeader("BACKUP-METHOD", "ACTION-SET", "SNAPSHOT-VOLUME")
-	for _, policy := range defaultBackupPolicyTemplate.Spec.BackupPolicies {
-		for _, method := range policy.BackupMethods {
-			snapshotVolume := "false"
-			if boolptr.IsSetToTrue(method.SnapshotVolumes) {
-				snapshotVolume = "true"
-			}
-			tbl.AddRow(method.Name, method.ActionSetName, snapshotVolume)
-		}
-	}
-	tbl.Print()
-}*/

@@ -89,6 +89,22 @@ ClusterDefinition command.
 * [kbcli clusterdefinition list](kbcli_clusterdefinition_list.md)	 - List ClusterDefinitions.
 
 
+## [componentdefinition](kbcli_componentdefinition.md)
+
+ComponentDefinition command.
+
+* [kbcli componentdefinition describe](kbcli_componentdefinition_describe.md)	 - Describe ComponentDefinition.
+* [kbcli componentdefinition list](kbcli_componentdefinition_list.md)	 - List ComponentDefinition.
+
+
+## [componentversion](kbcli_componentversion.md)
+
+ComponentVersions command.
+
+* [kbcli componentversion describe](kbcli_componentversion_describe.md)	 - Describe ComponentVersion.
+* [kbcli componentversion list](kbcli_componentversion_list.md)	 - List ComponentVersion.
+
+
 ## [dashboard](kbcli_dashboard.md)
 
 List and open the KubeBlocks dashboards.
