@@ -1083,13 +1083,33 @@ func DisplayDiffWithColor(out io.Writer, diffText string) {
 	}
 }
 
-func BuildSchedulingPolicy(tolerations []corev1.Toleration, nodeLabels map[string]string, podAntiAffinity *corev1.PodAntiAffinity) *kbappsv1.SchedulingPolicy {
+func BuildSchedulingPolicy(clusterName string, tolerations []corev1.Toleration, nodeLabels map[string]string, podAntiAffinity string, topologyKeys []string) *kbappsv1.SchedulingPolicy {
+
+	var topologySpreadConstraints []corev1.TopologySpreadConstraint
+
+	var whenUnsatisfiable corev1.UnsatisfiableConstraintAction
+	if kbappsv1alpha1.PodAntiAffinity(podAntiAffinity) == kbappsv1alpha1.Required {
+		whenUnsatisfiable = corev1.DoNotSchedule
+	} else {
+		whenUnsatisfiable = corev1.ScheduleAnyway
+	}
+	for _, topologyKey := range topologyKeys {
+		topologySpreadConstraints = append(topologySpreadConstraints, corev1.TopologySpreadConstraint{
+			MaxSkew:           1,
+			WhenUnsatisfiable: whenUnsatisfiable,
+			TopologyKey:       topologyKey,
+			LabelSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					constant.AppInstanceLabelKey: clusterName,
+				},
+			},
+		})
+	}
+
 	schedulingPolicy := &kbappsv1.SchedulingPolicy{
-		NodeSelector: nodeLabels,
-		Affinity: &corev1.Affinity{
-			PodAntiAffinity: podAntiAffinity,
-		},
-		Tolerations: tolerations,
+		NodeSelector:              nodeLabels,
+		Tolerations:               tolerations,
+		TopologySpreadConstraints: topologySpreadConstraints,
 	}
 
 	return schedulingPolicy

@@ -132,7 +132,7 @@ func buildCreateSubCmds(createOptions *action.CreateOptions) []*cobra.Command {
 		cmd.Flags().StringVar(&o.PodAntiAffinity, "pod-anti-affinity", "Preferred", "Pod anti-affinity type, one of: (Preferred, Required)")
 		cmd.Flags().StringArrayVar(&o.TopologyKeys, "topology-keys", nil, "Topology keys for affinity")
 		cmd.Flags().StringToStringVar(&o.NodeLabels, "node-labels", nil, "Node label selector")
-		cmd.Flags().StringSliceVar(&o.TolerationsRaw, "tolerations", nil, `Tolerations for cluster, such as "key=value:effect, key:effect", for example '"engineType=mongo:NoSchedule", "diskType:NoSchedule"'`)
+		cmd.Flags().StringSliceVar(&o.TolerationsRaw, "tolerations", nil, `Tolerations for cluster, such as "key=value:effect,key:effect", for example '"engineType=mongo:NoSchedule", "diskType:NoSchedule"'`)
 		if cmd.Flag("tenancy") == nil {
 			cmd.Flags().StringVar(&o.Tenancy, "tenancy", "SharedNode", "Tenancy options, one of: (SharedNode, DedicatedNode)")
 		}
@@ -202,18 +202,8 @@ func (o *CreateSubCmdsOptions) Complete(cmd *cobra.Command) error {
 		return fmt.Errorf("cannot find clusterDef in cluster spec or componentDef in componentSpecs or shardingSpecs")
 	}
 
-	// Define scheduling related variables
-	var (
-		tolerations     = make([]corev1.Toleration, 0)
-		NodeLabels      = make(map[string]string)
-		podAntiAffinity = &corev1.PodAntiAffinity{
-			RequiredDuringSchedulingIgnoredDuringExecution:  make([]corev1.PodAffinityTerm, 0),
-			PreferredDuringSchedulingIgnoredDuringExecution: make([]corev1.WeightedPodAffinityTerm, 0),
-		}
-	)
-
-	hasSchedulingPolicy := false
 	// Build tolerations if raw toleration rules are configured
+	tolerations := make([]corev1.Toleration, 0)
 	if o.TolerationsRaw != nil {
 		tolerationsResult, err := util.BuildTolerations(o.TolerationsRaw)
 		if err != nil {
@@ -229,22 +219,8 @@ func (o *CreateSubCmdsOptions) Complete(cmd *cobra.Command) error {
 		}
 	}
 
-	// Set node labels if specified
-	if o.NodeLabels != nil {
-		hasSchedulingPolicy = true
-		NodeLabels = o.NodeLabels
-	}
+	o.schedulingPolicy = util.BuildSchedulingPolicy(o.Name, tolerations, o.NodeLabels, o.PodAntiAffinity, o.TopologyKeys)
 
-	// Build pod anti-affinity if either anti-affinity rule or topology keys are specified
-	if o.PodAntiAffinity != "" || len(o.TopologyKeys) > 0 {
-		hasSchedulingPolicy = true
-		podAntiAffinity = util.BuildPodAntiAffinity(o.PodAntiAffinity, o.TopologyKeys)
-	}
-
-	// Construct the final scheduling policy combining tolerations, node labels and pod anti-affinity
-	if hasSchedulingPolicy {
-		o.schedulingPolicy = util.BuildSchedulingPolicy(tolerations, NodeLabels, podAntiAffinity)
-	}
 	return nil
 }
 
