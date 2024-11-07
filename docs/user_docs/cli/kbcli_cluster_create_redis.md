@@ -47,7 +47,7 @@ kbcli cluster create redis NAME [flags]
       --storage-class-name string         Storage class name of the data volume
       --tenancy string                    The tenancy of cluster. Legal values [SharedNode, DedicatedNode]. (default "SharedNode")
       --termination-policy string         The termination policy of cluster. Legal values [DoNotTerminate, Halt, Delete, WipeOut]. (default "Delete")
-      --tolerations strings               Tolerations for cluster, such as "key=value:effect, key:effect", for example '"engineType=mongo:NoSchedule", "diskType:NoSchedule"'
+      --tolerations strings               Tolerations for cluster, such as "key=value:effect,key:effect", for example '"engineType=mongo:NoSchedule", "diskType:NoSchedule"'
       --topology-keys stringArray         Topology keys for affinity
       --twemproxy.cpu float               twemproxy component cpu cores. Value range [0.1, 8]. (default 0.2)
       --twemproxy.enabled                 Whether have twemproxy component, default is false
