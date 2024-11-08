@@ -34,8 +34,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 
-	v1 "github.com/apecloud/kubeblocks/apis/apps/v1"
-
 	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/cluster"
 	"github.com/apecloud/kbcli/pkg/printer"
@@ -62,11 +60,11 @@ type CreateSubCmdsOptions struct {
 	// Configuration and options for cluster affinity and tolerations
 	PodAntiAffinity string `json:"podAntiAffinity"`
 	// TopologyKeys if TopologyKeys is nil, add omitempty json tag, because CueLang can not covert null to list.
-	TopologyKeys     []string          `json:"topologyKeys,omitempty"`
-	NodeLabels       map[string]string `json:"nodeLabels,omitempty"`
-	Tenancy          string            `json:"tenancy"`
-	TolerationsRaw   []string          `json:"-"`
-	schedulingPolicy *v1.SchedulingPolicy
+	TopologyKeys   []string          `json:"topologyKeys,omitempty"`
+	NodeLabels     map[string]string `json:"nodeLabels,omitempty"`
+	Tenancy        string            `json:"tenancy"`
+	TolerationsRaw []string          `json:"-"`
+	Tolerations    []corev1.Toleration
 
 	// SkipSchemaValidation is used to skip the schema validation of the helm chart.
 	SkipSchemaValidation bool `json:"-"`
@@ -203,7 +201,6 @@ func (o *CreateSubCmdsOptions) Complete(cmd *cobra.Command) error {
 	}
 
 	// Build tolerations if raw toleration rules are configured
-	tolerations := make([]corev1.Toleration, 0)
 	if o.TolerationsRaw != nil {
 		tolerationsResult, err := util.BuildTolerations(o.TolerationsRaw)
 		if err != nil {
@@ -213,14 +210,11 @@ func (o *CreateSubCmdsOptions) Complete(cmd *cobra.Command) error {
 		if err != nil {
 			return err
 		}
-		err = json.Unmarshal(jsonData, &tolerations)
+		err = json.Unmarshal(jsonData, &o.Tolerations)
 		if err != nil {
 			return err
 		}
 	}
-
-	o.schedulingPolicy = util.BuildSchedulingPolicy(o.Name, tolerations, o.NodeLabels, o.PodAntiAffinity, o.TopologyKeys)
-
 	return nil
 }
 
@@ -256,15 +250,27 @@ func (o *CreateSubCmdsOptions) Run() error {
 		return err
 	}
 
-	if clusterObj != nil {
-		if o.schedulingPolicy != nil {
-			converted, err := runtime.DefaultUnstructuredConverter.ToUnstructured(o.schedulingPolicy)
-			if err != nil {
+	spec, _ := clusterObj.Object["spec"].(map[string]interface{})
+	if compSpec, ok := spec["componentSpecs"].([]interface{}); ok {
+		for i := range compSpec {
+			comp := compSpec[i].(map[string]interface{})
+			if err := o.applySchedulingPolicyToComponent(comp); err != nil {
 				return err
 			}
-			_ = unstructured.SetNestedField(clusterObj.Object, converted, "spec", "schedulingPolicy")
+			compSpec[i] = comp
 		}
-		_ = unstructured.SetNestedField(clusterObj.Object, o.Tenancy, "spec", "tenancy")
+	}
+
+	if shardingSpec, ok := spec["shardings"].([]interface{}); ok {
+		for i := range shardingSpec {
+			shard := shardingSpec[i].(map[string]interface{})
+			if compSpec, ok := shard["template"].(map[string]interface{}); ok {
+				if err := o.applySchedulingPolicyToComponent(compSpec); err != nil {
+					return err
+				}
+				shard["template"] = compSpec
+			}
+		}
 	}
 
 	// only edits the cluster object, other dependency objects are created directly
@@ -355,4 +361,18 @@ func (o *CreateSubCmdsOptions) getClusterObj(objs []*objectInfo) (*unstructured.
 		}
 	}
 	return nil, fmt.Errorf("failed to find cluster object from manifests rendered from %s chart", o.ClusterType)
+}
+
+func (o *CreateSubCmdsOptions) applySchedulingPolicyToComponent(item map[string]interface{}) error {
+	if compName, ok := item["name"]; ok {
+		schedulingPolicy, needSet := util.BuildSchedulingPolicy(o.Tenancy, o.Name, compName.(string), o.Tolerations, o.NodeLabels, o.PodAntiAffinity, o.TopologyKeys)
+		if needSet {
+			converted, err := runtime.DefaultUnstructuredConverter.ToUnstructured(schedulingPolicy)
+			if err != nil {
+				return err
+			}
+			_ = unstructured.SetNestedField(item, converted, "schedulingPolicy")
+		}
+	}
+	return nil
 }
