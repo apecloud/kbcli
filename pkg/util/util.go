@@ -1083,6 +1083,47 @@ func DisplayDiffWithColor(out io.Writer, diffText string) {
 	}
 }
 
+func BuildSchedulingPolicy(tenancy string, clusterName string, compName string, tolerations []corev1.Toleration, nodeLabels map[string]string, podAntiAffinity string, topologyKeys []string) (*kbappsv1.SchedulingPolicy, bool) {
+	if len(tolerations) == 0 && len(nodeLabels) == 0 && len(topologyKeys) == 0 {
+		return nil, false
+	}
+	affinity := &corev1.Affinity{}
+	if podAntiAffinity != "" || len(topologyKeys) > 0 {
+		affinity.PodAntiAffinity = BuildPodAntiAffinityForComponent(tenancy, clusterName, compName, podAntiAffinity, topologyKeys)
+	}
+
+	var topologySpreadConstraints []corev1.TopologySpreadConstraint
+
+	var whenUnsatisfiable corev1.UnsatisfiableConstraintAction
+	if kbappsv1alpha1.PodAntiAffinity(podAntiAffinity) == kbappsv1alpha1.Required {
+		whenUnsatisfiable = corev1.DoNotSchedule
+	} else {
+		whenUnsatisfiable = corev1.ScheduleAnyway
+	}
+	for _, topologyKey := range topologyKeys {
+		topologySpreadConstraints = append(topologySpreadConstraints, corev1.TopologySpreadConstraint{
+			MaxSkew:           1,
+			WhenUnsatisfiable: whenUnsatisfiable,
+			TopologyKey:       topologyKey,
+			LabelSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					constant.AppInstanceLabelKey:    clusterName,
+					constant.KBAppComponentLabelKey: compName,
+				},
+			},
+		})
+	}
+
+	schedulingPolicy := &kbappsv1.SchedulingPolicy{
+		Affinity:                  affinity,
+		NodeSelector:              nodeLabels,
+		Tolerations:               tolerations,
+		TopologySpreadConstraints: topologySpreadConstraints,
+	}
+
+	return schedulingPolicy, true
+}
+
 // BuildTolerations toleration format: key=value:effect or key:effect,
 func BuildTolerations(raw []string) ([]interface{}, error) {
 	tolerations := make([]interface{}, 0)
@@ -1166,6 +1207,55 @@ func BuildPodAntiAffinity(podAntiAffinityStrategy string, topologyKeys []string)
 		podAntiAffinity = &corev1.PodAntiAffinity{
 			PreferredDuringSchedulingIgnoredDuringExecution: weightedPodAffinityTerms,
 		}
+	}
+
+	return podAntiAffinity
+}
+
+// BuildPodAntiAffinityForComponent build pod anti affinity from topology keys and tenancy for cluster
+func BuildPodAntiAffinityForComponent(tenancy string, clusterName string, compName string, podAntiAffinityStrategy string, topologyKeys []string) *corev1.PodAntiAffinity {
+	var podAntiAffinity *corev1.PodAntiAffinity
+	var podAffinityTerms []corev1.PodAffinityTerm
+	for _, topologyKey := range topologyKeys {
+		podAffinityTerms = append(podAffinityTerms, corev1.PodAffinityTerm{
+			TopologyKey: topologyKey,
+			LabelSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					constant.AppInstanceLabelKey:    clusterName,
+					constant.KBAppComponentLabelKey: compName,
+				},
+			},
+		})
+	}
+	if podAntiAffinityStrategy == string(kbappsv1alpha1.Required) {
+		podAntiAffinity = &corev1.PodAntiAffinity{
+			RequiredDuringSchedulingIgnoredDuringExecution: podAffinityTerms,
+		}
+	} else {
+		var weightedPodAffinityTerms []corev1.WeightedPodAffinityTerm
+		for _, podAffinityTerm := range podAffinityTerms {
+			weightedPodAffinityTerms = append(weightedPodAffinityTerms, corev1.WeightedPodAffinityTerm{
+				Weight:          100,
+				PodAffinityTerm: podAffinityTerm,
+			})
+		}
+		podAntiAffinity = &corev1.PodAntiAffinity{
+			PreferredDuringSchedulingIgnoredDuringExecution: weightedPodAffinityTerms,
+		}
+	}
+
+	// Add pod PodAffinityTerm for dedicated node
+	if kbappsv1alpha1.TenancyType(tenancy) == kbappsv1alpha1.DedicatedNode {
+		podAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution = append(
+			podAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution, corev1.PodAffinityTerm{
+				TopologyKey: corev1.LabelHostname,
+				LabelSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						constant.AppInstanceLabelKey:    clusterName,
+						constant.KBAppComponentLabelKey: compName,
+					},
+				},
+			})
 	}
 
 	return podAntiAffinity

@@ -21,13 +21,16 @@ package cluster
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"regexp"
 
 	"github.com/spf13/cobra"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 
@@ -61,6 +64,7 @@ type CreateSubCmdsOptions struct {
 	NodeLabels     map[string]string `json:"nodeLabels,omitempty"`
 	Tenancy        string            `json:"tenancy"`
 	TolerationsRaw []string          `json:"-"`
+	Tolerations    []corev1.Toleration
 
 	// SkipSchemaValidation is used to skip the schema validation of the helm chart.
 	SkipSchemaValidation bool `json:"-"`
@@ -123,11 +127,10 @@ func buildCreateSubCmds(createOptions *action.CreateOptions) []*cobra.Command {
 		util.CheckErr(addCreateFlags(cmd, o.Factory, o.ChartInfo, t.String()))
 
 		// Schedule policy
-		// TODO: implement them, and check whether the flag has been defined
 		cmd.Flags().StringVar(&o.PodAntiAffinity, "pod-anti-affinity", "Preferred", "Pod anti-affinity type, one of: (Preferred, Required)")
 		cmd.Flags().StringArrayVar(&o.TopologyKeys, "topology-keys", nil, "Topology keys for affinity")
 		cmd.Flags().StringToStringVar(&o.NodeLabels, "node-labels", nil, "Node label selector")
-		cmd.Flags().StringSliceVar(&o.TolerationsRaw, "tolerations", nil, `Tolerations for cluster, such as "key=value:effect, key:effect", for example '"engineType=mongo:NoSchedule", "diskType:NoSchedule"'`)
+		cmd.Flags().StringSliceVar(&o.TolerationsRaw, "tolerations", nil, `Tolerations for cluster, such as "key=value:effect,key:effect", for example '"engineType=mongo:NoSchedule", "diskType:NoSchedule"'`)
 		if cmd.Flag("tenancy") == nil {
 			cmd.Flags().StringVar(&o.Tenancy, "tenancy", "SharedNode", "Tenancy options, one of: (SharedNode, DedicatedNode)")
 		}
@@ -196,6 +199,22 @@ func (o *CreateSubCmdsOptions) Complete(cmd *cobra.Command) error {
 	if o.ChartInfo.ClusterDef == "" && len(o.ChartInfo.ComponentDef) == 0 {
 		return fmt.Errorf("cannot find clusterDef in cluster spec or componentDef in componentSpecs or shardingSpecs")
 	}
+
+	// Build tolerations if raw toleration rules are configured
+	if o.TolerationsRaw != nil {
+		tolerationsResult, err := util.BuildTolerations(o.TolerationsRaw)
+		if err != nil {
+			return err
+		}
+		jsonData, err := json.Marshal(tolerationsResult)
+		if err != nil {
+			return err
+		}
+		err = json.Unmarshal(jsonData, &o.Tolerations)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -226,12 +245,36 @@ func (o *CreateSubCmdsOptions) Run() error {
 		return nil, fmt.Errorf("failed to find cluster object from manifests rendered from %s chart", o.ClusterType)
 	}
 
+	clusterObj, err := getClusterObj()
+	if err != nil {
+		return err
+	}
+
+	spec, _ := clusterObj.Object["spec"].(map[string]interface{})
+	if compSpec, ok := spec["componentSpecs"].([]interface{}); ok {
+		for i := range compSpec {
+			comp := compSpec[i].(map[string]interface{})
+			if err := o.applySchedulingPolicyToComponent(comp); err != nil {
+				return err
+			}
+			compSpec[i] = comp
+		}
+	}
+
+	if shardingSpec, ok := spec["shardings"].([]interface{}); ok {
+		for i := range shardingSpec {
+			shard := shardingSpec[i].(map[string]interface{})
+			if compSpec, ok := shard["template"].(map[string]interface{}); ok {
+				if err := o.applySchedulingPolicyToComponent(compSpec); err != nil {
+					return err
+				}
+				shard["template"] = compSpec
+			}
+		}
+	}
+
 	// only edits the cluster object, other dependency objects are created directly
 	if o.EditBeforeCreate {
-		clusterObj, err := getClusterObj()
-		if err != nil {
-			return err
-		}
 		customEdit := action.NewCustomEditOptions(o.Factory, o.IOStreams, "create")
 		if err = customEdit.Run(clusterObj); err != nil {
 			return err
@@ -318,4 +361,18 @@ func (o *CreateSubCmdsOptions) getClusterObj(objs []*objectInfo) (*unstructured.
 		}
 	}
 	return nil, fmt.Errorf("failed to find cluster object from manifests rendered from %s chart", o.ClusterType)
+}
+
+func (o *CreateSubCmdsOptions) applySchedulingPolicyToComponent(item map[string]interface{}) error {
+	if compName, ok := item["name"]; ok {
+		schedulingPolicy, needSet := util.BuildSchedulingPolicy(o.Tenancy, o.Name, compName.(string), o.Tolerations, o.NodeLabels, o.PodAntiAffinity, o.TopologyKeys)
+		if needSet {
+			converted, err := runtime.DefaultUnstructuredConverter.ToUnstructured(schedulingPolicy)
+			if err != nil {
+				return err
+			}
+			_ = unstructured.SetNestedField(item, converted, "schedulingPolicy")
+		}
+	}
+	return nil
 }
