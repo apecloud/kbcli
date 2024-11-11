@@ -146,6 +146,14 @@ KubeBlocks operation commands.
 * [kbcli kubeblocks upgrade](kbcli_kubeblocks_upgrade.md)	 - Upgrade KubeBlocks.
 
 
+## [ops-definition](kbcli_ops-definition.md)
+
+ops-definitions command.
+
+* [kbcli ops-definition describe](kbcli_ops-definition_describe.md)	 - Describe OpsDefinition.
+* [kbcli ops-definition list](kbcli_ops-definition_list.md)	 - List OpsDefinition.
+
+
 ## [options](kbcli_options.md)
 
 Print the list of flags inherited by all commands.
