@@ -101,7 +101,7 @@ func (o *describeOptions) complete(args []string) error {
 func (o *describeOptions) run() error {
 	for _, name := range o.names {
 		if err := o.describeCmpd(name); err != nil {
-			return err
+			return fmt.Errorf("error describing componentDefinitions '%s': %w", name, err)
 		}
 	}
 	return nil

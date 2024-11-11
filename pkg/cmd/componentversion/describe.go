@@ -96,7 +96,7 @@ func (o *describeOptions) complete(args []string) error {
 func (o *describeOptions) run() error {
 	for _, name := range o.names {
 		if err := o.describeCmpv(name); err != nil {
-			return err
+			return fmt.Errorf("error describing componentVersions '%s': %w", name, err)
 		}
 	}
 	return nil
