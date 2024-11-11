@@ -106,7 +106,7 @@ func (o *describeOptions) run() error {
 
 func (o *describeOptions) describeOpsDefinition(name string) error {
 	opsDef := &v1alpha1.OpsDefinition{}
-	if err := util.GetK8SClientObject(o.dynamic, opsDef, types.OpsDefinitionGVR(), o.namespace, name); err != nil {
+	if err := util.GetK8SClientObject(o.dynamic, opsDef, types.OpsDefinitionGVR(), "", name); err != nil {
 		return fmt.Errorf("failed to get OpsDefinition '%s': %w", name, err)
 	}
 	return o.showOpsDefinition(opsDef)
