@@ -47,6 +47,7 @@ import (
 	"github.com/apecloud/kbcli/pkg/cmd/dashboard"
 	"github.com/apecloud/kbcli/pkg/cmd/dataprotection"
 	"github.com/apecloud/kbcli/pkg/cmd/kubeblocks"
+	"github.com/apecloud/kbcli/pkg/cmd/opsdefinition"
 	"github.com/apecloud/kbcli/pkg/cmd/options"
 	"github.com/apecloud/kbcli/pkg/cmd/playground"
 	"github.com/apecloud/kbcli/pkg/cmd/plugin"
@@ -174,6 +175,7 @@ A Command Line Interface for KubeBlocks`,
 		clusterdefinition.NewClusterDefinitionCmd(f, ioStreams),
 		componentdefinition.NewComponentDefinitionCmd(f, ioStreams),
 		componentversion.NewComponentVersionCmd(f, ioStreams),
+		opsdefinition.NewOpsDefinitionCmd(f, ioStreams),
 		addon.NewAddonCmd(f, ioStreams),
 		plugin.NewPluginCmd(ioStreams),
 		report.NewReportCmd(f, ioStreams),

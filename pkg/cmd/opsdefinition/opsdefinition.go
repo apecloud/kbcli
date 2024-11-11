@@ -17,7 +17,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package componentversion
+package opsdefinition
 
 import (
 	"github.com/spf13/cobra"
@@ -31,18 +31,18 @@ import (
 )
 
 var listExample = templates.Examples(`
-		# list all ComponentVersions
-		kbcli componentversion list
+		# list all ops-definitions
+		kbcli ops-definition list
 	
-		# list all ComponentVersions by alias
-		kbcli cmpv list
+		# list all ops-definitions by alias
+		kbcli ops-def list
 `)
 
-func NewComponentVersionCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
+func NewOpsDefinitionCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "componentversion",
-		Short:   "ComponentVersions command.",
-		Aliases: []string{"cmpv"},
+		Use:     "ops-definition",
+		Short:   "ops-definitions command.",
+		Aliases: []string{"ops-def"},
 	}
 
 	cmd.AddCommand(NewListCmd(f, streams))
@@ -51,10 +51,10 @@ func NewComponentVersionCmd(f cmdutil.Factory, streams genericiooptions.IOStream
 }
 
 func NewListCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := action.NewListOptions(f, streams, types.ComponentVersionsGVR())
+	o := action.NewListOptions(f, streams, types.OpsDefinitionGVR())
 	cmd := &cobra.Command{
 		Use:               "list",
-		Short:             "List ComponentVersion.",
+		Short:             "List OpsDefinition.",
 		Example:           listExample,
 		Aliases:           []string{"ls"},
 		ValidArgsFunction: util.ResourceNameCompletionFunc(f, o.GVR),
@@ -64,6 +64,6 @@ func NewListCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Co
 			util.CheckErr(err)
 		},
 	}
-	o.AddFlags(cmd, true)
+	o.AddFlags(cmd, false)
 	return cmd
 }

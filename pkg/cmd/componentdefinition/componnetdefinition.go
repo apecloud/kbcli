@@ -42,7 +42,7 @@ var listExample = templates.Examples(`
 		kbcli componentdefinition list
 	
 		# list all ComponentDefinitions by alias
-		kbcli componentdefinition list
+		kbcli cmpd list
 `)
 
 func NewComponentDefinitionCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {

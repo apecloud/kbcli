@@ -74,7 +74,7 @@ func (o *describeOptions) complete(args []string) error {
 	var err error
 
 	if len(args) == 0 {
-		return fmt.Errorf("compinent definition name should be specified")
+		return fmt.Errorf("component version name should be specified")
 	}
 	o.names = args
 
@@ -95,14 +95,14 @@ func (o *describeOptions) complete(args []string) error {
 
 func (o *describeOptions) run() error {
 	for _, name := range o.names {
-		if err := o.describeCmpd(name); err != nil {
+		if err := o.describeCmpv(name); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (o *describeOptions) describeCmpd(name string) error {
+func (o *describeOptions) describeCmpv(name string) error {
 	// get component version
 	cmpv := &kbappsv1.ComponentVersion{}
 	if err := util.GetK8SClientObject(o.dynamic, cmpv, types.ComponentVersionsGVR(), "", name); err != nil {

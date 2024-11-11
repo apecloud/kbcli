@@ -79,7 +79,7 @@ func (o *describeOptions) complete(args []string) error {
 	var err error
 
 	if len(args) == 0 {
-		return fmt.Errorf("compinent definition name should be specified")
+		return fmt.Errorf("component definition name should be specified")
 	}
 	o.names = args
 
