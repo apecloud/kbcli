@@ -20,10 +20,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	corev1 "k8s.io/api/core/v1"
 	"strings"
 
 	"github.com/spf13/cobra"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	"k8s.io/client-go/dynamic"
 	clientset "k8s.io/client-go/kubernetes"
@@ -97,35 +97,28 @@ func (o *describeOptions) complete(args []string) error {
 
 func (o *describeOptions) run() error {
 	for _, name := range o.names {
-		if err := o.describeOpsDef(name); err != nil {
-			return err
+		if err := o.describeOpsDefinition(name); err != nil {
+			return fmt.Errorf("error describing OpsDefinition '%s': %w", name, err)
 		}
 	}
 	return nil
 }
 
-func (o *describeOptions) describeOpsDef(name string) error {
-	// get ops definition
+func (o *describeOptions) describeOpsDefinition(name string) error {
 	opsDef := &v1alpha1.OpsDefinition{}
-	if err := util.GetK8SClientObject(o.dynamic, opsDef, types.OpsDefinitionGVR(), "", name); err != nil {
-		return err
+	if err := util.GetK8SClientObject(o.dynamic, opsDef, types.OpsDefinitionGVR(), o.namespace, name); err != nil {
+		return fmt.Errorf("failed to get OpsDefinition '%s': %w", name, err)
 	}
-
-	if err := o.showOpsDef(opsDef); err != nil {
-		return err
-	}
-	return nil
+	return o.showOpsDefinition(opsDef)
 }
 
-func (o *describeOptions) showOpsDef(opsDef *v1alpha1.OpsDefinition) error {
+func (o *describeOptions) showOpsDefinition(opsDef *v1alpha1.OpsDefinition) error {
 	printer.PrintPairStringToLine("Name", opsDef.Name, 0)
-
 	showComponentInfos(&opsDef.Spec.ComponentInfos, o.Out)
 	showPreConditions(&opsDef.Spec.PreConditions, o.Out)
 	showActions(&opsDef.Spec.Actions, o.Out)
 	showParametersSchema(opsDef.Spec.ParametersSchema, o.Out)
 	showPodInfoExtractors(&opsDef.Spec.PodInfoExtractors, o.Out)
-
 	printer.PrintPairStringToLine("Status", string(opsDef.Status.Phase), 0)
 	if opsDef.Status.Message != "" {
 		printer.PrintPairStringToLine("Message", opsDef.Status.Message, 0)
