@@ -20,15 +20,23 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package kubeblocks
 
 import (
+	"bytes"
+	"context"
+	"fmt"
+	"io"
+
+	"github.com/apecloud/kubeblocks/pkg/constant"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
 	"github.com/spf13/cobra"
+	appsv1 "k8s.io/api/apps/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	clientfake "k8s.io/client-go/rest/fake"
 	cmdtesting "k8s.io/kubectl/pkg/cmd/testing"
 
 	"github.com/apecloud/kbcli/pkg/testing"
+	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
 	"github.com/apecloud/kbcli/pkg/util/helm"
 	"github.com/apecloud/kbcli/version"
@@ -41,10 +49,11 @@ var _ = Describe("kubeblocks install", func() {
 		cmd     *cobra.Command
 		streams genericiooptions.IOStreams
 		tf      *cmdtesting.TestFactory
+		in      *bytes.Buffer
 	)
 
 	BeforeEach(func() {
-		streams, _, _, _ = genericiooptions.NewTestIOStreams()
+		streams, in, _, _ = genericiooptions.NewTestIOStreams()
 		tf = cmdtesting.NewTestFactory().WithNamespace(namespace)
 		tf.Client = &clientfake.RESTClient{}
 	})
@@ -72,7 +81,6 @@ var _ = Describe("kubeblocks install", func() {
 		cmd.Flags().StringVar(&cfg, "context", "", "The name of the kubeconfig context to use.")
 		Expect(o.Complete(tf, cmd)).To(Succeed())
 		Expect(o.HelmCfg).ShouldNot(BeNil())
-		Expect(o.Namespace).To(Equal("test"))
 	})
 
 	It("run install", func() {
@@ -129,5 +137,54 @@ var _ = Describe("kubeblocks install", func() {
 		Expect(o.CompleteInstallOptions()).ShouldNot(HaveOccurred())
 		Expect(o.TolerationsRaw).Should(Equal([]string{defaultTolerationsForInstallation}))
 		Expect(o.ValueOpts.JSONValues).ShouldNot(BeNil())
+	})
+
+	It("do preCheck KB version", func() {
+		o := &InstallOptions{
+			Options: Options{
+				IOStreams: streams,
+				HelmCfg:   helm.NewFakeConfig(types.DefaultNamespace),
+				Client:    testing.FakeClientSet(),
+				Dynamic:   testing.FakeDynamicClient(),
+			},
+		}
+
+		By("Testing fresh installation")
+		err := o.PreCheckKBVersion()
+		Expect(err).Should(BeNil())
+		Expect(o.upgradeFrom09).Should(BeFalse())
+
+		By("Testing when KubeBlocks already exists")
+		deploy := &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      types.KubeBlocksChartName,
+				Namespace: types.DefaultNamespace,
+				Labels: map[string]string{
+					constant.AppNameLabelKey:      types.KubeBlocksChartName,
+					constant.AppComponentLabelKey: "apps",
+					constant.AppVersionLabelKey:   kb09Version,
+				},
+			},
+		}
+		_, err = o.Client.AppsV1().Deployments(types.DefaultNamespace).Create(context.TODO(), deploy, metav1.CreateOptions{})
+		Expect(err).Should(BeNil())
+		o.Version = "0.9.3"
+		err = o.PreCheckKBVersion()
+		Expect(err).Should(MatchError(fmt.Sprintf("KubeBlocks %s already exists, repeated installation is not supported", kb09Version)))
+
+		By("Testing installation in same namespace with 0.9")
+		o.Version = "1.0.0"
+		in.Write([]byte("yes\n"))
+		o.In = io.NopCloser(in)
+		err = o.PreCheckKBVersion()
+		Expect(err.Error()).Should(Equal(fmt.Sprintf(`cannot install KubeBlocks in the same namespace "%s" with KubeBlocks 0.9`, types.DefaultNamespace)))
+
+		By("Testing upgrade from 0.9 with diff namespace")
+		o.HelmCfg.SetNamespace(namespace)
+		in.Write([]byte("yes\n"))
+		o.In = io.NopCloser(in)
+		err = o.PreCheckKBVersion()
+		Expect(err).Should(BeNil())
+		Expect(o.upgradeFrom09).Should(BeTrue())
 	})
 })

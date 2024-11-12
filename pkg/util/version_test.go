@@ -22,6 +22,7 @@ package util
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/client-go/kubernetes"
 
@@ -68,12 +69,12 @@ var _ = Describe("version util", func() {
 
 	It("getKubeBlocksVersion", func() {
 		client := testing.FakeClientSet(testing.FakeKBDeploy(""))
-		v, err := getKubeBlocksVersion(client)
+		v, err := GetKubeBlocksVersion(client, metav1.NamespaceAll)
 		Expect(v).Should(BeEmpty())
 		Expect(err).Should(HaveOccurred())
 
 		client = testing.FakeClientSet(testing.FakeKBDeploy(kbVersion))
-		v, err = getKubeBlocksVersion(client)
+		v, err = GetKubeBlocksVersion(client, metav1.NamespaceAll)
 		Expect(v).Should(Equal(kbVersion))
 		Expect(err).Should(Succeed())
 	})

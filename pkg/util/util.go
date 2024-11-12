@@ -44,6 +44,7 @@ import (
 
 	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
 	opsv1alpha1 "github.com/apecloud/kubeblocks/apis/operations/v1alpha1"
+	intctrlutil "github.com/apecloud/kubeblocks/pkg/controllerutil"
 	"github.com/fatih/color"
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
@@ -834,13 +835,25 @@ func GetHelmChartRepoURL() string {
 }
 
 // GetKubeBlocksNamespace gets namespace of KubeBlocks installation, infer namespace from helm secrets
-func GetKubeBlocksNamespace(client kubernetes.Interface) (string, error) {
-	secrets, err := client.CoreV1().Secrets(metav1.NamespaceAll).List(context.TODO(), metav1.ListOptions{LabelSelector: types.KubeBlocksHelmLabel})
-	// if KubeBlocks is upgraded, there will be multiple secrets
-	if err == nil && len(secrets.Items) >= 1 {
-		return secrets.Items[0].Namespace, nil
+func GetKubeBlocksNamespace(client kubernetes.Interface, specifiedNamespace string) (string, error) {
+	secrets, err := client.CoreV1().Secrets(specifiedNamespace).List(context.TODO(), metav1.ListOptions{LabelSelector: types.KubeBlocksHelmLabel})
+	if err != nil {
+		return "", err
 	}
-	return "", errors.New("failed to get KubeBlocks installation namespace")
+	var kbNamespace string
+	for _, v := range secrets.Items {
+		if kbNamespace == "" {
+			kbNamespace = v.Namespace
+		}
+		if kbNamespace != v.Namespace {
+			return kbNamespace, intctrlutil.NewFatalError(fmt.Sprintf(`Existing multiple KubeBlocks installation namespace: "%s, %s", need to manually specify the namespace flag`, kbNamespace, v.Namespace))
+		}
+	}
+	// if KubeBlocks is upgraded, there will be multiple secrets
+	if kbNamespace == "" {
+		return kbNamespace, errors.New("failed to get KubeBlocks installation namespace")
+	}
+	return kbNamespace, nil
 }
 
 // GetKubeBlocksCRDsURL gets the crds url by IP region.
