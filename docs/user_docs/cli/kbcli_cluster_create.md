@@ -58,6 +58,7 @@ kbcli cluster create [NAME] [flags]
 * [kbcli cluster create elasticsearch](kbcli_cluster_create_elasticsearch.md)	 - Create a elasticsearch cluster.
 * [kbcli cluster create kafka](kbcli_cluster_create_kafka.md)	 - Create a kafka cluster.
 * [kbcli cluster create llm](kbcli_cluster_create_llm.md)	 - Create a llm cluster.
+* [kbcli cluster create minio](kbcli_cluster_create_minio.md)	 - Create a minio cluster.
 * [kbcli cluster create mongodb](kbcli_cluster_create_mongodb.md)	 - Create a mongodb cluster.
 * [kbcli cluster create mysql](kbcli_cluster_create_mysql.md)	 - Create a mysql cluster.
 * [kbcli cluster create postgresql](kbcli_cluster_create_postgresql.md)	 - Create a postgresql cluster.
