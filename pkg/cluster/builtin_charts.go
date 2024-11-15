@@ -78,7 +78,7 @@ var (
 	elasticsearchChart embed.FS
 	//go:embed charts/qdrant.tgz
 	qdrantChart embed.FS
-	//go:embed charts/etcd-cluster.tgz
+	//go:embed charts/etcd.tgz
 	etcdChart embed.FS
 )
 
@@ -152,7 +152,7 @@ func init() {
 
 		"etcd": {
 			chartFS: etcdChart,
-			name:    "etcd-cluster.tgz",
+			name:    "etcd.tgz",
 			alias:   "",
 		},
 	}

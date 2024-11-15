@@ -21,24 +21,21 @@ kbcli cluster create postgresql NAME [flags]
 ### Options
 
 ```
-      --availability-policy string     The availability policy of cluster. Legal values [none, node, zone]. (default "node")
       --cpu float                      CPU cores. Value range [0.5, 64]. (default 0.5)
       --disable-exporter               Enable or disable monitor. (default true)
       --dry-run string[="unchanged"]   Must be "client", or "server". If with client strategy, only print the object that would be sent, and no data is actually sent. If with server strategy, submit the server-side request, but no data is persistent. (default "none")
       --edit                           Edit the API resource before creating
   -h, --help                           help for postgresql
-      --host-network-accessible        Specify whether the cluster can be accessed from within the VPC.
       --memory float                   Memory, the unit is Gi. Value range [0.5, 1000]. (default 0.5)
       --mode string                    Cluster topology mode. Legal values [standalone, replication]. (default "standalone")
       --node-labels stringToString     Node label selector (default [])
   -o, --output format                  Prints the output in the specified format. Allowed values: JSON and YAML (default yaml)
       --pod-anti-affinity string       Pod anti-affinity type, one of: (Preferred, Required) (default "Preferred")
-      --publicly-accessible            Specify whether the cluster can be accessed from the public internet.
       --rbac-enabled                   Specify whether rbac resources will be created by client, otherwise KubeBlocks server will try to create rbac resources.
       --replicas int                   The number of replicas, for standalone mode, the replicas is 1, for replication mode, the default replicas is 2. Value range [1, 5]. (default 1)
       --storage float                  Storage size, the unit is Gi. Value range [1, 10000]. (default 20)
       --storage-class-name string      Storage class name of the data volume
-      --tenancy string                 The tenancy of cluster. Legal values [SharedNode, DedicatedNode]. (default "SharedNode")
+      --tenancy string                 Tenancy options, one of: (SharedNode, DedicatedNode) (default "SharedNode")
       --termination-policy string      The termination policy of cluster. Legal values [DoNotTerminate, Halt, Delete, WipeOut]. (default "Delete")
       --tolerations strings            Tolerations for cluster, such as "key=value:effect,key:effect", for example '"engineType=mongo:NoSchedule", "diskType:NoSchedule"'
       --topology-keys stringArray      Topology keys for affinity
