@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package kubeblocks
 
 import (
+	"fmt"
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -38,4 +39,5 @@ var _ = BeforeSuite(func() {
 	// use a fake URL to test
 	types.KubeBlocksChartName = clitesting.KubeBlocksChartName
 	types.KubeBlocksChartURL = clitesting.KubeBlocksChartURL
+	types.KubeBlocksHelmLabel = fmt.Sprintf("%s=%s,%s=%s", "name", clitesting.KubeBlocksChartName, "owner", "helm")
 })

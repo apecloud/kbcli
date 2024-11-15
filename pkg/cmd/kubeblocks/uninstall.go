@@ -27,6 +27,7 @@ import (
 	"strings"
 	"time"
 
+	intctrlutil "github.com/apecloud/kubeblocks/pkg/controllerutil"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/maps"
@@ -71,6 +72,7 @@ type UninstallOptions struct {
 	addons          []*extensionsv1alpha1.Addon
 	Quiet           bool
 	force           bool
+	existMultiKB    bool
 }
 
 func newUninstallCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
@@ -92,7 +94,7 @@ func newUninstallCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cob
 			util.CheckErr(o.Uninstall())
 		},
 	}
-
+	cmd.Flags().StringVarP(&o.Namespace, "namespace", "n", "", "KubeBlocks namespace")
 	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "Skip interactive approval before uninstalling KubeBlocks")
 	cmd.Flags().BoolVar(&o.removePVs, "remove-pvs", false, "Remove PersistentVolume or not")
 	cmd.Flags().BoolVar(&o.removePVCs, "remove-pvcs", false, "Remove PersistentVolumeClaim or not")
@@ -110,20 +112,39 @@ func (o *UninstallOptions) PreCheck() error {
 			return err
 		}
 	}
-
-	// check if there is any resource should be removed first, if so, return error
-	// and ask user to remove them manually
-	if err := checkResources(o.Dynamic); err != nil {
+	var err error
+	o.existMultiKB, err = util.ExistMultiKubeBlocks(o.Client)
+	if err != nil {
 		return err
+	}
+	if o.existMultiKB {
+		if o.Namespace != "" {
+			version, err := util.GetKubeBlocksVersion(o.Client, o.Namespace)
+			if err != nil {
+				return err
+			}
+			if strings.HasPrefix(version, "1") {
+				return errors.Errorf("only can uninstall KubeBlocks 0.9 when existing multi KubeBlocks")
+			}
+		}
+	} else {
+		// check if there is any resource should be removed first when only one KB installed, if so, return error
+		// and ask user to remove them manually
+		if err = checkResources(o.Dynamic); err != nil {
+			return err
+		}
 	}
 
 	// verify where kubeblocks is installed
-	kbNamespace, err := util.GetKubeBlocksNamespace(o.Client)
+	kbNamespace, err := util.GetKubeBlocksNamespace(o.Client, o.Namespace)
 	if err != nil {
 		printer.Warning(o.Out, "failed to locate KubeBlocks meta, will clean up all KubeBlocks resources.\n")
 		if !o.Quiet {
 			fmt.Fprintf(o.Out, "to find out the namespace where KubeBlocks is installed, please use:\n\t'kbcli kubeblocks status'\n")
 			fmt.Fprintf(o.Out, "to uninstall KubeBlocks completely, please use:\n\t`kbcli kubeblocks uninstall -n <namespace>`\n")
+		}
+		if intctrlutil.IsTargetError(err, intctrlutil.ErrorTypeFatal) {
+			return err
 		}
 	}
 
@@ -149,12 +170,6 @@ func (o *UninstallOptions) Uninstall() error {
 		return spinner.New(o.Out, spinner.WithMessage(fmt.Sprintf("%-50s", msg)))
 	}
 
-	// uninstall all KubeBlocks addons
-	if err := o.uninstallAddons(); err != nil {
-		fmt.Fprintf(o.Out, "Failed to uninstall addons, run \"kbcli kubeblocks uninstall\" to retry.\n")
-		return err
-	}
-
 	// uninstall helm release that will delete custom resources, but since finalizers is not empty,
 	// custom resources will not be deleted, so we will remove finalizers later.
 	v, _ := util.GetVersionInfo(o.Client)
@@ -166,43 +181,58 @@ func (o *UninstallOptions) Uninstall() error {
 		// and that webhook may fail, so we need to disable hooks.
 		DisableHooks: true,
 	}
-	printSpinner(newSpinner("Uninstall helm release "+types.KubeBlocksReleaseName+" "+v.KubeBlocks),
-		chart.Uninstall(o.HelmCfg))
+	if o.existMultiKB {
+		// TODO: remove the 0.9 addons.
+		// remove KB release
+		printSpinner(newSpinner("Uninstall helm release "+types.KubeBlocksReleaseName+" 0.9"),
+			chart.Uninstall(o.HelmCfg))
 
-	// remove repo
-	printSpinner(newSpinner("Remove helm repo "+types.KubeBlocksChartName),
-		helm.RemoveRepo(&repo.Entry{Name: types.KubeBlocksChartName}))
-
-	// get KubeBlocks objects, then try to remove them
-	objs, err := getKBObjects(o.Dynamic, o.Namespace, o.addons)
-	if err != nil {
-		fmt.Fprintf(o.ErrOut, "Failed to get KubeBlocks objects %s", err.Error())
-	}
-
-	// remove finalizers of custom resources, then that will be deleted
-	printSpinner(newSpinner("Remove built-in custom resources"), removeCustomResources(o.Dynamic, objs))
-
-	var gvrs []schema.GroupVersionResource
-	for k := range objs {
-		gvrs = append(gvrs, k)
-	}
-	sort.SliceStable(gvrs, func(i, j int) bool {
-		g1 := gvrs[i]
-		g2 := gvrs[j]
-		return strings.Compare(g1.Resource, g2.Resource) < 0
-	})
-
-	for _, gvr := range gvrs {
-		if gvr == types.PVCGVR() && !o.removePVCs {
-			continue
+	} else {
+		// uninstall all KubeBlocks addons
+		if err := o.uninstallAddons(); err != nil {
+			fmt.Fprintf(o.Out, "Failed to uninstall addons, run \"kbcli kubeblocks uninstall\" to retry.\n")
+			return err
 		}
-		if gvr == types.PVGVR() && !o.removePVs {
-			continue
+
+		// get KubeBlocks objects, then try to remove them
+		objs, err := getKBObjects(o.Dynamic, o.Namespace, o.addons)
+		if err != nil {
+			fmt.Fprintf(o.ErrOut, "Failed to get KubeBlocks objects %s", err.Error())
 		}
-		if v, ok := objs[gvr]; !ok || len(v.Items) == 0 {
-			continue
+
+		// remove finalizers of custom resources, then that will be deleted
+		printSpinner(newSpinner("Remove built-in custom resources"), removeCustomResources(o.Dynamic, objs))
+
+		var gvrs []schema.GroupVersionResource
+		for k := range objs {
+			gvrs = append(gvrs, k)
 		}
-		printSpinner(newSpinner("Remove "+gvr.Resource), deleteObjects(o.Dynamic, gvr, objs[gvr]))
+		sort.SliceStable(gvrs, func(i, j int) bool {
+			g1 := gvrs[i]
+			g2 := gvrs[j]
+			return strings.Compare(g1.Resource, g2.Resource) < 0
+		})
+
+		for _, gvr := range gvrs {
+			if gvr == types.PVCGVR() && !o.removePVCs {
+				continue
+			}
+			if gvr == types.PVGVR() && !o.removePVs {
+				continue
+			}
+			if v, ok := objs[gvr]; !ok || len(v.Items) == 0 {
+				continue
+			}
+			printSpinner(newSpinner("Remove "+gvr.Resource), deleteObjects(o.Dynamic, gvr, objs[gvr]))
+		}
+
+		// remove KB release
+		printSpinner(newSpinner("Uninstall helm release "+types.KubeBlocksReleaseName+" "+v.KubeBlocks),
+			chart.Uninstall(o.HelmCfg))
+
+		// remove repo
+		printSpinner(newSpinner("Remove helm repo "+types.KubeBlocksChartName),
+			helm.RemoveRepo(&repo.Entry{Name: types.KubeBlocksChartName}))
 	}
 
 	// delete namespace if it is default namespace

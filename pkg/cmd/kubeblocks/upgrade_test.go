@@ -103,7 +103,6 @@ var _ = Describe("kubeblocks upgrade", func() {
 			cmd.Flags().StringVar(&cfg, "context", "", "The name of the kubeconfig context to use.")
 			Expect(o.Complete(tf, cmd)).To(Succeed())
 			Expect(o.HelmCfg).ShouldNot(BeNil())
-			Expect(o.Namespace).To(Equal("test"))
 		})
 
 		It("double-check when version change", func() {

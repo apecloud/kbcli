@@ -216,7 +216,7 @@ func (o *reportOptions) addFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVar(&o.allContainers, "all-containers", o.allContainers, "Get all containers' logs in the pod(s). Byt default, only the main container (the first container) will have logs recorded.")
 	cmd.Flags().StringVar(&o.sinceTime, "since-time", o.sinceTime, i18n.T("Only return logs after a specific date (RFC3339). Defaults to all logs. Only one of since-time / since may be used."))
 	cmd.Flags().DurationVar(&o.sinceDuration, "since", o.sinceDuration, "Only return logs newer than a relative duration like 5s, 2m, or 3h. Defaults to all logs. Only one of since-time / since may be used.")
-
+	cmd.Flags().StringVarP(&o.namespace, "namespace", "n", "", "KubeBlocks namespace")
 	cmd.Flags().StringVarP(&o.outputFormat, "output", "o", "json", fmt.Sprintf("Output format. One of: %s.", strings.Join(o.JSONYamlPrintFlags.AllowedFormats(), "|")))
 	cmdutil.CheckErr(cmd.RegisterFlagCompletionFunc("output", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		return o.JSONYamlPrintFlags.AllowedFormats(), cobra.ShellCompDirectiveNoFileComp
@@ -283,7 +283,9 @@ func (o *reportKubeblocksOptions) complete(f cmdutil.Factory) error {
 	if err := o.reportOptions.complete(f); err != nil {
 		return err
 	}
-	o.namespace, _ = cliutil.GetKubeBlocksNamespace(o.genericClientSet.client)
+	if o.namespace == "" {
+		o.namespace, _ = cliutil.GetKubeBlocksNamespace(o.genericClientSet.client, "")
+	}
 	// complete file name
 	o.file = formatReportName(o.file, kubeBlocksReport)
 	if exists, _ := cliutil.FileExists(o.file); exists {

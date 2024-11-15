@@ -34,6 +34,7 @@ kbcli kubeblocks install [flags]
       --create-namespace             Create the namespace if not present
       --force                        If present, just print fail item and continue with the following steps
   -h, --help                         help for install
+  -n, --namespace string             KubeBlocks namespace (default "kb-system")
       --node-labels stringToString   Node label selector (default [])
       --pod-anti-affinity string     Pod anti-affinity type, one of: (Preferred, Required)
       --set stringArray              Set values on the command line (can specify multiple or separate values with commas: key1=val1,key2=val2)
@@ -65,7 +66,6 @@ kbcli kubeblocks install [flags]
       --insecure-skip-tls-verify       If true, the server's certificate will not be checked for validity. This will make your HTTPS connections insecure
       --kubeconfig string              Path to the kubeconfig file to use for CLI requests.
       --match-server-version           Require server version to match client version
-  -n, --namespace string               If present, the namespace scope for this CLI request
       --request-timeout string         The length of time to wait before giving up on a single server request. Non-zero values should contain a corresponding time unit (e.g. 1s, 2m, 3h). A value of zero means don't timeout requests. (default "0")
   -s, --server string                  The address and port of the Kubernetes API server
       --tls-server-name string         Server name to use for server certificate validation. If it is not provided, the hostname used to contact the server is used
