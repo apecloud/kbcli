@@ -28,6 +28,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -56,7 +57,6 @@ import (
 
 	"github.com/apecloud/kbcli/pkg/testing"
 	"github.com/apecloud/kbcli/pkg/types"
-	"github.com/apecloud/kbcli/pkg/util/breakingchange"
 )
 
 const defaultTimeout = time.Second * 600
@@ -75,7 +75,6 @@ type InstallOpts struct {
 	Atomic          bool
 	DisableHooks    bool
 	ForceUninstall  bool
-	Upgrader        breakingchange.Upgrader
 
 	// for helm template
 	DryRun     *bool
@@ -109,7 +108,7 @@ func AddRepo(r *repo.Entry) error {
 
 	if f.Has(r.Name) {
 		existing := f.Get(r.Name)
-		if *r != *existing && r.Name != types.KubeBlocksChartName {
+		if *r != *existing && r.Name != types.KubeBlocksRepoName && r.Name != types.ClusterChartsRepoName {
 			// The input Name is different from the existing one, return an error
 			return errors.Errorf("repository name (%s) already exists, please specify a different name", r.Name)
 		}
@@ -196,6 +195,23 @@ func (i *InstallOpts) Install(cfg *Config) (*release.Release, error) {
 	}
 
 	return rel, nil
+}
+
+func PullChart(repo string, chartName string, version string, destDir string) error {
+	actionCfg, err := NewActionConfig(NewConfig("", "", "", klog.V(1).Enabled()))
+	if err != nil {
+		return err
+	}
+	settings := cli.New()
+	client := action.NewPullWithOpts(action.WithConfig(actionCfg))
+	client.Settings = settings
+	client.RepoURL = ""
+	client.Version = version
+	client.DestDir = destDir
+	client.UntarDir = destDir
+	client.Untar = false
+	_, err = client.Run(repo + "/" + chartName)
+	return err
 }
 
 func (i *InstallOpts) tryInstall(cfg *action.Configuration) (*release.Release, error) {
@@ -440,23 +456,44 @@ func NewActionConfig(cfg *Config) (*action.Configuration, error) {
 	return actionCfg, nil
 }
 
+var (
+	singletonFakeCfg *action.Configuration
+	singletonFakeMu  sync.Mutex
+)
+
+// fakeActionConfig returns a singleton instance of action.Configuration
 func fakeActionConfig() *action.Configuration {
-	registryClient, err := registry.NewClient()
-	if err != nil {
-		return nil
+	if singletonFakeCfg != nil {
+		return singletonFakeCfg
 	}
 
-	res := &action.Configuration{
-		Releases:       storage.Init(driver.NewMemory()),
-		KubeClient:     &kubefake.FailingKubeClient{PrintingKubeClient: kubefake.PrintingKubeClient{Out: io.Discard}},
-		Capabilities:   chartutil.DefaultCapabilities,
-		RegistryClient: registryClient,
-		Log:            func(format string, v ...interface{}) {},
+	singletonFakeMu.Lock()
+	defer singletonFakeMu.Unlock()
+
+	if singletonFakeCfg == nil {
+		registryClient, err := registry.NewClient()
+		if err != nil {
+			return nil
+		}
+
+		singletonFakeCfg = &action.Configuration{
+			Releases:       storage.Init(driver.NewMemory()),
+			KubeClient:     &kubefake.FailingKubeClient{PrintingKubeClient: kubefake.PrintingKubeClient{Out: io.Discard}},
+			Capabilities:   chartutil.DefaultCapabilities,
+			RegistryClient: registryClient,
+			Log:            func(format string, v ...interface{}) {},
+		}
+		singletonFakeCfg.Capabilities.KubeVersion.Version = "v99.99.0"
 	}
-	// to template the kubeblocks manifest, dry-run install will check and valida the KubeVersion in Capabilities is bigger than
-	// the KubeVersion in Chart.yaml. Set a max KubeVersion to avoid the check fail.
-	res.Capabilities.KubeVersion.Version = "v99.99.0"
-	return res
+
+	return singletonFakeCfg
+}
+
+// ResetFakeActionConfig resets the singleton action.Configuration instance
+func ResetFakeActionConfig() {
+	singletonFakeMu.Lock()
+	defer singletonFakeMu.Unlock()
+	singletonFakeCfg = nil
 }
 
 // Upgrade will upgrade a Chart
@@ -572,11 +609,6 @@ func (i *InstallOpts) tryUpgrade(cfg *action.Configuration) (*release.Release, e
 		}
 	}
 
-	// transform old resources to new resources and clear the tmp dir which saved the old resources.
-	if err = i.Upgrader.TransformResourcesAndClear(); err != nil {
-		return nil, err
-	}
-
 	released, err := client.RunWithContext(ctx, i.Name, chartRequested, vals)
 	if err != nil {
 		return nil, err
@@ -689,4 +721,18 @@ func GetTemplateInstallOps(name, chart, version, namespace string) *InstallOpts 
 		IncludeCRD: true,
 		DryRun:     &dryrun,
 	}
+}
+
+// GetHelmRelease retrieves the Helm release within a specified namespace.
+func GetHelmRelease(cfg *Config, releaseName string) (*release.Release, error) {
+	actionCfg, err := NewActionConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+	client := action.NewGet(actionCfg)
+	rel, err := client.Run(releaseName)
+	if err != nil {
+		return nil, err
+	}
+	return rel, nil
 }

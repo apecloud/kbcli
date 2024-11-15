@@ -29,6 +29,8 @@ import (
 	"strings"
 	"text/template"
 
+	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
+	opsv1alpha1 "github.com/apecloud/kubeblocks/apis/operations/v1alpha1"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"github.com/robfig/cron/v3"
@@ -69,9 +71,6 @@ var clusterUpdateExample = templates.Examples(`
     # enable all logs
 	kbcli cluster update mycluster --enable-all-logs=true
 
-    # update cluster topology keys and affinity
-	kbcli cluster update mycluster --topology-keys=kubernetes.io/hostname --pod-anti-affinity=Required
-
 	# update cluster tolerations
 	kbcli cluster update mycluster --tolerations='"key=engineType,value=mongo,operator=Equal,effect=NoSchedule","key=diskType,value=ssd,operator=Equal,effect=NoSchedule"'
 
@@ -103,10 +102,38 @@ var clusterUpdateExample = templates.Examples(`
 	kbcli cluster update mycluster --pitr-enabled=true
 `)
 
+// UpdatableFlags is the flags that cat be updated by update command
+type UpdatableFlags struct {
+	// Options for cluster termination policy
+	TerminationPolicy string `json:"terminationPolicy"`
+
+	// Add-on switches for cluster observability
+	DisableExporter bool `json:"monitor"`
+	EnableAllLogs   bool `json:"enableAllLogs"`
+
+	// Configuration and options for cluster affinity and tolerations
+	PodAntiAffinity  string `json:"podAntiAffinity"`
+	RuntimeClassName string `json:"runtimeClassName,omitempty"`
+	// TopologyKeys if TopologyKeys is nil, add omitempty json tag, because CueLang can not covert null to list.
+	TopologyKeys   []string          `json:"topologyKeys,omitempty"`
+	NodeLabels     map[string]string `json:"nodeLabels,omitempty"`
+	Tenancy        string            `json:"tenancy"`
+	TolerationsRaw []string          `json:"-"`
+
+	// backup config
+	BackupEnabled                 bool   `json:"-"`
+	BackupRetentionPeriod         string `json:"-"`
+	BackupMethod                  string `json:"-"`
+	BackupCronExpression          string `json:"-"`
+	BackupStartingDeadlineMinutes int64  `json:"-"`
+	BackupRepoName                string `json:"-"`
+	BackupPITREnabled             bool   `json:"-"`
+}
+
 type UpdateOptions struct {
 	namespace string
 	dynamic   dynamic.Interface
-	cluster   *appsv1alpha1.Cluster
+	cluster   *kbappsv1.Cluster
 	ValMap    map[string]interface{}
 
 	UpdatableFlags
@@ -143,6 +170,31 @@ func NewUpdateCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.
 	o.PatchOptions.AddFlags(cmd)
 
 	return cmd
+}
+
+func (f *UpdatableFlags) addFlags(cmd *cobra.Command) {
+	cmd.Flags().BoolVar(&f.DisableExporter, "disable-exporter", true, "Enable or disable monitoring")
+	cmd.Flags().BoolVar(&f.EnableAllLogs, "enable-all-logs", false, "Enable advanced application all log extraction, set to true will ignore enabledLogs of component level, default is false")
+	cmd.Flags().StringVar(&f.TerminationPolicy, "termination-policy", "Delete", "Termination policy, one of: (DoNotTerminate, Halt, Delete, WipeOut)")
+	cmd.Flags().StringSliceVar(&f.TolerationsRaw, "tolerations", nil, `Tolerations for cluster, such as "key=value:effect, key:effect", for example '"engineType=mongo:NoSchedule", "diskType:NoSchedule"'`)
+	cmd.Flags().BoolVar(&f.BackupEnabled, "backup-enabled", false, "Specify whether enabled automated backup")
+	cmd.Flags().StringVar(&f.BackupRetentionPeriod, "backup-retention-period", "1d", "a time string ending with the 'd'|'D'|'h'|'H' character to describe how long the Backup should be retained")
+	cmd.Flags().StringVar(&f.BackupMethod, "backup-method", "", "the backup method, view it by \"kbcli cd describe <cluster-definition>\", if not specified, the default backup method will be to take snapshots of the volume")
+	cmd.Flags().StringVar(&f.BackupCronExpression, "backup-cron-expression", "", "the cron expression for schedule, the timezone is in UTC. see https://en.wikipedia.org/wiki/Cron.")
+	cmd.Flags().Int64Var(&f.BackupStartingDeadlineMinutes, "backup-starting-deadline-minutes", 0, "the deadline in minutes for starting the backup job if it misses its scheduled time for any reason")
+	cmd.Flags().StringVar(&f.BackupRepoName, "backup-repo-name", "", "the backup repository name")
+	cmd.Flags().BoolVar(&f.BackupPITREnabled, "pitr-enabled", false, "Specify whether enabled point in time recovery")
+	cmd.Flags().StringVar(&f.RuntimeClassName, "runtime-class-name", "", "Specifies runtimeClassName for all Pods managed by this Cluster.")
+	util.CheckErr(cmd.RegisterFlagCompletionFunc(
+		"termination-policy",
+		func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			return []string{
+				"DoNotTerminate\tblock delete operation",
+				"Halt\tdelete workload resources such as statefulset, deployment workloads but keep PVCs",
+				"Delete\tbased on Halt and deletes PVCs",
+				"WipeOut\tbased on Delete and wipe out all volume snapshots and snapshot data from backup storage location",
+			}, cobra.ShellCompDirectiveNoFileComp
+		}))
 }
 
 func (o *UpdateOptions) CmdComplete(cmd *cobra.Command, args []string) error {
@@ -266,7 +318,8 @@ func (o *UpdateOptions) buildPatch() error {
 	}
 
 	spec := map[string]interface{}{}
-	affinity := map[string]interface{}{}
+	// affinity := map[string]interface{}{}
+	schedulingPolicy := map[string]interface{}{}
 	type filedObj struct {
 		field string
 		obj   map[string]interface{}
@@ -275,13 +328,8 @@ func (o *UpdateOptions) buildPatch() error {
 
 	flagFieldMapping := map[string]*filedObj{
 		"termination-policy": {field: "terminationPolicy", obj: spec, fn: buildFlagObj},
-		"pod-anti-affinity":  {field: "podAntiAffinity", obj: affinity, fn: buildFlagObj},
-		"topology-keys":      {field: "topologyKeys", obj: affinity, fn: buildFlagObj},
-		"node-labels":        {field: "nodeLabels", obj: affinity, fn: buildFlagObj},
-		"tenancy":            {field: "tenancy", obj: affinity, fn: buildFlagObj},
-
 		// tolerations
-		"tolerations": {field: "tolerations", obj: spec, fn: buildTolObj},
+		"tolerations": {field: "tolerations", obj: schedulingPolicy, fn: buildTolObj},
 
 		// monitor and logs
 		"disable-exporter": {field: "disableExporter", obj: nil, fn: buildComps},
@@ -295,6 +343,7 @@ func (o *UpdateOptions) buildPatch() error {
 		"backup-starting-deadline-minutes": {field: "startingDeadlineMinutes", obj: nil, fn: buildBackup},
 		"backup-repo-name":                 {field: "repoName", obj: nil, fn: buildBackup},
 		"pitr-enabled":                     {field: "pitrEnabled", obj: nil, fn: buildBackup},
+		"runtime-class-name":               {field: "runtimeClassName", obj: spec, fn: buildFlagObj},
 	}
 
 	for name, val := range o.ValMap {
@@ -305,8 +354,8 @@ func (o *UpdateOptions) buildPatch() error {
 		}
 	}
 
-	if len(affinity) > 0 {
-		if err = unstructured.SetNestedField(spec, affinity, "affinity"); err != nil {
+	if len(schedulingPolicy) > 0 {
+		if err = unstructured.SetNestedField(spec, schedulingPolicy, "schedulingPolicy"); err != nil {
 			return err
 		}
 	}
@@ -333,7 +382,7 @@ func (o *UpdateOptions) buildPatch() error {
 				o.cluster.Spec.Backup.Method = defaultBackupMethod
 			}
 			if _, ok := backupMethodMap[o.cluster.Spec.Backup.Method]; !ok {
-				return fmt.Errorf("backup method %s is not supported, please view the supported backup methods by `kbcli cd describe %s`", o.cluster.Spec.Backup.Method, o.cluster.Spec.ClusterDefRef)
+				return fmt.Errorf("backup method %s is not supported, please view the supported backup methods by `kbcli cd describe %s`", o.cluster.Spec.Backup.Method, o.cluster.Spec.ClusterDef)
 			}
 		}
 
@@ -392,7 +441,7 @@ func (o *UpdateOptions) buildBackup(field string, val string) error {
 		o.cluster = c
 	}
 	if o.cluster.Spec.Backup == nil {
-		o.cluster.Spec.Backup = &appsv1alpha1.ClusterBackup{}
+		o.cluster.Spec.Backup = &kbappsv1.ClusterBackup{}
 	}
 
 	switch field {
@@ -423,19 +472,21 @@ func (o *UpdateOptions) updateEnabledLog(val string) error {
 
 	// update --enabled-all-logs=false for all components
 	if !boolVal {
-		for index := range o.cluster.Spec.ComponentSpecs {
+		// TODO: replace with new api
+		/*	for index := range o.cluster.Spec.ComponentSpecs {
 			o.cluster.Spec.ComponentSpecs[index].EnabledLogs = nil
-		}
+		}*/
 		return nil
 	}
 
 	// update --enabled-all-logs=true for all components
-	cd, err := cluster.GetClusterDefByName(o.dynamic, o.cluster.Spec.ClusterDefRef)
+	cd, err := cluster.GetClusterDefByName(o.dynamic, o.cluster.Spec.ClusterDef)
 	if err != nil {
 		return err
 	}
+	// TODO: replace with new api
 	// set --enabled-all-logs at cluster components
-	setEnableAllLogs(o.cluster, cd)
+	// setEnableAllLogs(o.cluster, cd)
 	if err = o.reconfigureLogVariables(o.cluster, cd); err != nil {
 		return errors.Wrap(err, "failed to reconfigure log variables of target cluster")
 	}
@@ -448,14 +499,14 @@ const topTPLLogsObject = "component"
 const defaultSectionName = "default"
 
 // reconfigureLogVariables reconfigures the log variables of cluster
-func (o *UpdateOptions) reconfigureLogVariables(c *appsv1alpha1.Cluster, cd *appsv1alpha1.ClusterDefinition) error {
+func (o *UpdateOptions) reconfigureLogVariables(c *kbappsv1.Cluster, cd *kbappsv1.ClusterDefinition) error {
 	var (
 		err        error
 		configSpec *appsv1alpha1.ComponentConfigSpec
 		logValue   *gotemplate.TplValues
 	)
 
-	createReconfigureOps := func(compSpec appsv1alpha1.ClusterComponentSpec, configSpec *appsv1alpha1.ComponentConfigSpec, logValue *gotemplate.TplValues) error {
+	createReconfigureOps := func(compSpec kbappsv1.ClusterComponentSpec, configSpec *appsv1alpha1.ComponentConfigSpec, logValue *gotemplate.TplValues) error {
 		var (
 			buf             bytes.Buffer
 			keyName         string
@@ -492,7 +543,7 @@ func (o *UpdateOptions) reconfigureLogVariables(c *appsv1alpha1.Cluster, cd *app
 	}
 
 	for _, compSpec := range c.Spec.ComponentSpecs {
-		if configSpec, err = findFirstConfigSpec(c.Spec.ComponentSpecs, cd.Spec.ComponentDefs, compSpec.Name); err != nil {
+		if configSpec, err = findFirstConfigSpec(o.dynamic, compSpec.Name, compSpec.ComponentDef); err != nil {
 			return err
 		}
 		if logValue, err = buildLogsTPLValues(&compSpec); err != nil {
@@ -506,10 +557,14 @@ func (o *UpdateOptions) reconfigureLogVariables(c *appsv1alpha1.Cluster, cd *app
 }
 
 func findFirstConfigSpec(
-	compSpecs []appsv1alpha1.ClusterComponentSpec,
-	cdCompSpecs []appsv1alpha1.ClusterComponentDefinition,
-	compName string) (*appsv1alpha1.ComponentConfigSpec, error) {
-	configSpecs, err := util.GetConfigTemplateListWithResource(compSpecs, cdCompSpecs, nil, compName, true)
+	cli dynamic.Interface,
+	compName string,
+	compDefName string) (*appsv1alpha1.ComponentConfigSpec, error) {
+	compDef, err := util.GetComponentDefByName(cli, compDefName)
+	if err != nil {
+		return nil, err
+	}
+	configSpecs, err := util.GetValidConfigSpecs(true, util.ToV1ComponentConfigSpecs(compDef.Spec.Configs))
 	if err != nil {
 		return nil, err
 	}
@@ -560,7 +615,7 @@ func findLogsBlockTPL(confData map[string]string) (string, *template.Template, e
 	return "", nil, nil
 }
 
-func buildLogsTPLValues(compSpec *appsv1alpha1.ClusterComponentSpec) (*gotemplate.TplValues, error) {
+func buildLogsTPLValues(compSpec *kbappsv1.ClusterComponentSpec) (*gotemplate.TplValues, error) {
 	compMap := map[string]interface{}{}
 	bytesData, err := json.Marshal(compSpec)
 	if err != nil {
@@ -576,28 +631,28 @@ func buildLogsTPLValues(compSpec *appsv1alpha1.ClusterComponentSpec) (*gotemplat
 	return &value, nil
 }
 
-func buildLogsReconfiguringOps(clusterName, namespace, compName, configName, keyName string, variables map[string]string) *appsv1alpha1.OpsRequest {
+func buildLogsReconfiguringOps(clusterName, namespace, compName, configName, keyName string, variables map[string]string) *opsv1alpha1.OpsRequest {
 	opsName := fmt.Sprintf("%s-%s", "logs-reconfigure", uuid.NewString())
 	opsRequest := util.NewOpsRequestForReconfiguring(opsName, namespace, clusterName)
-	parameterPairs := make([]appsv1alpha1.ParameterPair, 0, len(variables))
+	parameterPairs := make([]opsv1alpha1.ParameterPair, 0, len(variables))
 	for key, value := range variables {
 		v := value
-		parameterPairs = append(parameterPairs, appsv1alpha1.ParameterPair{
+		parameterPairs = append(parameterPairs, opsv1alpha1.ParameterPair{
 			Key:   key,
 			Value: &v,
 		})
 	}
-	var keys []appsv1alpha1.ParameterConfig
-	keys = append(keys, appsv1alpha1.ParameterConfig{
+	var keys []opsv1alpha1.ParameterConfig
+	keys = append(keys, opsv1alpha1.ParameterConfig{
 		Key:        keyName,
 		Parameters: parameterPairs,
 	})
-	var configurations []appsv1alpha1.ConfigurationItem
-	configurations = append(configurations, appsv1alpha1.ConfigurationItem{
+	var configurations []opsv1alpha1.ConfigurationItem
+	configurations = append(configurations, opsv1alpha1.ConfigurationItem{
 		Keys: keys,
 		Name: configName,
 	})
-	reconfigure := opsRequest.Spec.Reconfigure
+	reconfigure := opsRequest.Spec.Reconfigures[0]
 	reconfigure.ComponentName = compName
 	reconfigure.Configurations = append(reconfigure.Configurations, configurations...)
 	return opsRequest
@@ -611,6 +666,9 @@ func (o *UpdateOptions) updateMonitor(val string) error {
 
 	for i := range o.cluster.Spec.ComponentSpecs {
 		o.cluster.Spec.ComponentSpecs[i].DisableExporter = cfgutil.ToPointer(disableExporter)
+	}
+	for i := range o.cluster.Spec.Shardings {
+		o.cluster.Spec.Shardings[i].Template.DisableExporter = cfgutil.ToPointer(disableExporter)
 	}
 	return nil
 }

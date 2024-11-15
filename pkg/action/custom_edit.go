@@ -41,6 +41,11 @@ import (
 	"github.com/apecloud/kbcli/pkg/util/prompt"
 )
 
+const (
+	EditForCreate  = "create"
+	EditForPatched = "patched"
+)
+
 // CustomEditOptions is used to edit the resource manifest when creating or updating the resource,
 // instead of using -o yaml to output the yaml file before editing the manifest.
 type CustomEditOptions struct {
@@ -126,13 +131,13 @@ func (o *CustomEditOptions) Run(originalObj runtime.Object) error {
 		return fmt.Errorf("failed to decode edited object: %v", err)
 	}
 
-	if o.Method == "patched" {
+	if o.Method == EditForPatched {
 		diff, err := util.GetUnifiedDiffString(string(original), string(edited), "Original", "Current", 3)
 		if err != nil {
 			return fmt.Errorf("failed to get diff: %v", err)
 		}
 		util.DisplayDiffWithColor(o.IOStreams.Out, diff)
-	} else if o.Method == "create" {
+	} else if o.Method == EditForCreate {
 		err := editPrinter.PrintObj(originalObj, o.IOStreams.Out)
 		if err != nil {
 			return fmt.Errorf("failed to print object: %v", err)

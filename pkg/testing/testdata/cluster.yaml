@@ -1,19 +1,12 @@
-apiVersion: apps.kubeblocks.io/v1alpha1
+apiVersion: apps.kubeblocks.io/v1
 kind: Cluster
 metadata:
   annotations: {}
   name: test-mycluster
   namespace: default
 spec:
-  affinity:
-    nodeLabels: {}
-    podAntiAffinity: Preferred
-    tenancy: SharedNode
-    topologyKeys: []
-  clusterDefinitionRef: apecloud-mysql
-  clusterVersionRef: ac-mysql-8.0.30
   componentSpecs:
-    - componentDefRef: mysql
+    - componentDef: apecloud-mysql
       monitor: true
       name: mysql
       replicas: 3

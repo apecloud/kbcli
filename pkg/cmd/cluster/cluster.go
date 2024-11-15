@@ -60,7 +60,8 @@ func NewClusterCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 				NewUpgradeCmd(f, streams),
 				NewVolumeExpansionCmd(f, streams),
 				NewVerticalScalingCmd(f, streams),
-				NewHorizontalScalingCmd(f, streams),
+				NewScaleOutCmd(f, streams),
+				NewScaleInCmd(f, streams),
 				NewPromoteCmd(f, streams),
 				NewDescribeOpsCmd(f, streams),
 				NewListOpsCmd(f, streams),
@@ -91,6 +92,8 @@ func NewClusterCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 				NewDeleteBackupCmd(f, streams),
 				NewCreateRestoreCmd(f, streams),
 				NewDescribeBackupCmd(f, streams),
+				NewListRestoreCommand(f, streams),
+				NewRestoreDescribeCommand(f, streams),
 			},
 		},
 		{
@@ -98,18 +101,6 @@ func NewClusterCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 			Commands: []*cobra.Command{
 				NewLogsCmd(f, streams),
 				NewListLogsCmd(f, streams),
-			},
-		},
-
-		{
-			Message: "User Accounts Commands:",
-			Commands: []*cobra.Command{
-				NewCreateAccountCmd(f, streams),
-				NewDeleteAccountCmd(f, streams),
-				NewDescAccountCmd(f, streams),
-				NewListAccountsCmd(f, streams),
-				NewGrantOptions(f, streams),
-				NewRevokeOptions(f, streams),
 			},
 		},
 	}

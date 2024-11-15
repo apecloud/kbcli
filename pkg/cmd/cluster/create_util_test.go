@@ -52,7 +52,7 @@ var _ = Describe("cluster create util", func() {
 		})
 
 		It("add create flags for a nil schema", func() {
-			Expect(addCreateFlags(cmd, tf, nil)).Should(Succeed())
+			Expect(addCreateFlags(cmd, tf, nil, "")).Should(Succeed())
 		})
 
 		It("add create flags for a not-nil schema", func() {
@@ -61,7 +61,7 @@ var _ = Describe("cluster create util", func() {
 
 			Expect(err).Should(Succeed())
 			Expect(c.Schema).ShouldNot(BeNil())
-			Expect(addCreateFlags(cmd, tf, c)).Should(Succeed())
+			Expect(addCreateFlags(cmd, tf, c, "")).Should(Succeed())
 			Expect(cmd.Flags().Lookup("version")).ShouldNot(BeNil())
 		})
 
@@ -86,7 +86,7 @@ metadata:
   namespace: default`},
 				{
 					gvr: types.ClusterGVR(),
-					manifest: `apiVersion: apps.kubeblocks.io/v1alpha1
+					manifest: `apiVersion: apps.kubeblocks.io/v1
 kind: Cluster
 metadata:
   name: test-cluster

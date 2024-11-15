@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package cluster
 
 import (
+	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
@@ -27,9 +28,9 @@ import (
 )
 
 type ClusterObjects struct {
-	Cluster        *appsv1alpha1.Cluster
-	ClusterDef     *appsv1alpha1.ClusterDefinition
-	ClusterVersion *appsv1alpha1.ClusterVersion
+	Cluster    *kbappsv1.Cluster
+	ClusterDef *kbappsv1.ClusterDefinition
+	// ClusterVersion *appsv1alpha1.ClusterVersion
 
 	Pods       *corev1.PodList
 	Services   *corev1.ServiceList
@@ -62,16 +63,18 @@ type ClusterInfo struct {
 }
 
 type ComponentInfo struct {
-	Name      string `json:"name,omitempty"`
-	NameSpace string `json:"nameSpace,omitempty"`
-	Type      string `json:"type,omitempty"`
-	Cluster   string `json:"cluster,omitempty"`
-	Status    string `json:"status,omitempty"`
-	Replicas  string `json:"replicas,omitempty"`
-	CPU       string `json:"cpu,omitempty"`
-	Memory    string `json:"memory,omitempty"`
-	Image     string `json:"image,omitempty"`
-	Storage   []StorageInfo
+	// component name in cluster.spec
+	Name                 string `json:"name,omitempty"`
+	InstanceTemplateName string `json:"instanceTemplateName,omitempty"`
+	NameSpace            string `json:"nameSpace,omitempty"`
+	ComponentDef         string `json:"type,omitempty"`
+	Cluster              string `json:"cluster,omitempty"`
+	Status               string `json:"status,omitempty"`
+	Replicas             string `json:"replicas,omitempty"`
+	CPU                  string `json:"cpu,omitempty"`
+	Memory               string `json:"memory,omitempty"`
+	Image                string `json:"image,omitempty"`
+	Storage              []StorageInfo
 }
 
 type StorageInfo struct {
@@ -82,18 +85,19 @@ type StorageInfo struct {
 }
 
 type InstanceInfo struct {
-	Name        string `json:"name,omitempty"`
-	Namespace   string `json:"namespace,omitempty"`
-	Cluster     string `json:"cluster,omitempty"`
-	Component   string `json:"component,omitempty"`
-	Status      string `json:"status,omitempty"`
-	Role        string `json:"role,omitempty"`
-	AccessMode  string `json:"accessMode,omitempty"`
-	AZ          string `json:"az,omitempty"`
-	Region      string `json:"region,omitempty"`
-	CPU         string `json:"cpu,omitempty"`
-	Memory      string `json:"memory,omitempty"`
-	Storage     []StorageInfo
-	Node        string `json:"node,omitempty"`
-	CreatedTime string `json:"age,omitempty"`
+	Name           string `json:"name,omitempty"`
+	Namespace      string `json:"namespace,omitempty"`
+	Cluster        string `json:"cluster,omitempty"`
+	Component      string `json:"component,omitempty"`
+	Status         string `json:"status,omitempty"`
+	Role           string `json:"role,omitempty"`
+	AccessMode     string `json:"accessMode,omitempty"`
+	AZ             string `json:"az,omitempty"`
+	Region         string `json:"region,omitempty"`
+	CPU            string `json:"cpu,omitempty"`
+	Memory         string `json:"memory,omitempty"`
+	Storage        []StorageInfo
+	Node           string `json:"node,omitempty"`
+	CreatedTime    string `json:"age,omitempty"`
+	ServiceVersion string `json:"serviceVersion,omitempty"`
 }

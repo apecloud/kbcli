@@ -22,6 +22,7 @@ package cluster
 import (
 	"net/http"
 
+	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -37,8 +38,6 @@ import (
 	clientfake "k8s.io/client-go/rest/fake"
 	cmdtesting "k8s.io/kubectl/pkg/cmd/testing"
 
-	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
-
 	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/testing"
@@ -47,7 +46,9 @@ import (
 
 var _ = Describe("create cluster by cluster type", func() {
 	const (
-		clusterType = "apecloud-mysql"
+		clusterType    = "apecloud-mysql"
+		redisCluster   = "redis"
+		redisComponent = "redis-cluster-7"
 	)
 
 	var (
@@ -70,10 +71,10 @@ var _ = Describe("create cluster by cluster type", func() {
 	)
 
 	BeforeEach(func() {
-		_ = appsv1alpha1.AddToScheme(scheme.Scheme)
+		_ = kbappsv1.AddToScheme(scheme.Scheme)
 		_ = metav1.AddMetaToScheme(scheme.Scheme)
 		streams, _, _, _ = genericiooptions.NewTestIOStreams()
-		tf = mockClient(testing.FakeClusterVersion())
+		tf = mockClient(testing.FakeCompDef())
 		createOptions = &action.CreateOptions{
 			IOStreams: streams,
 			Factory:   tf,
@@ -110,14 +111,60 @@ var _ = Describe("create cluster by cluster type", func() {
 		o.Client = testing.FakeClientSet()
 		fakeDiscovery1, _ := o.Client.Discovery().(*fakediscovery.FakeDiscovery)
 		fakeDiscovery1.FakedServerVersion = &version.Info{Major: "1", Minor: "27", GitVersion: "v1.27.0"}
-		Expect(o.complete(mysqlCmd)).Should(Succeed())
+		Expect(o.Complete(mysqlCmd)).Should(Succeed())
 		Expect(o.Name).ShouldNot(BeEmpty())
 		Expect(o.Values).ShouldNot(BeNil())
 		Expect(o.ChartInfo.ClusterDef).Should(Equal(apeCloudMysql))
 
 		By("validate")
 		o.Dynamic = testing.FakeDynamicClient()
-		Expect(o.validate()).Should(Succeed())
+		Expect(o.Validate()).Should(Succeed())
+
+		By("run")
+		o.DryRun = "client"
+		o.Client = testing.FakeClientSet()
+		fakeDiscovery, _ := o.Client.Discovery().(*fakediscovery.FakeDiscovery)
+		fakeDiscovery.FakedServerVersion = &version.Info{Major: "1", Minor: "27", GitVersion: "v1.27.0"}
+		Expect(o.Run()).Should(Succeed())
+	})
+
+	It("create sharding cluster command", func() {
+		By("create commands")
+		cmds := buildCreateSubCmds(createOptions)
+		Expect(cmds).ShouldNot(BeNil())
+		Expect(cmds[0].HasFlags()).Should(BeTrue())
+
+		By("create command options")
+		o, err := NewSubCmdsOptions(createOptions, redisCluster)
+		Expect(err).Should(Succeed())
+		Expect(o).ShouldNot(BeNil())
+		Expect(o.ChartInfo).ShouldNot(BeNil())
+
+		By("complete")
+		var shardCmd *cobra.Command
+		for _, c := range cmds {
+			if c.Name() == redisCluster {
+				shardCmd = c
+				break
+			}
+		}
+
+		o.Format = printer.YAML
+		Expect(o.CreateOptions.Complete()).Should(Succeed())
+		o.DryRun = "client"
+		o.Client = testing.FakeClientSet()
+		fakeDiscovery1, _ := o.Client.Discovery().(*fakediscovery.FakeDiscovery)
+		fakeDiscovery1.FakedServerVersion = &version.Info{Major: "1", Minor: "27", GitVersion: "v1.27.0"}
+
+		Expect(shardCmd.Flags().Set("mode", "cluster")).Should(Succeed())
+		Expect(o.Complete(shardCmd)).Should(Succeed())
+		Expect(o.Name).ShouldNot(BeEmpty())
+		Expect(o.Values).ShouldNot(BeNil())
+		Expect(o.ChartInfo.ComponentDef[0]).Should(Equal(redisComponent))
+
+		By("validate")
+		o.Dynamic = testing.FakeDynamicClient()
+		Expect(o.Validate()).Should(Succeed())
 
 		By("run")
 		o.DryRun = "client"

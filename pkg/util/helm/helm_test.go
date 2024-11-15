@@ -68,6 +68,10 @@ var _ = Describe("helm util", func() {
 			Expect(actionCfg).ShouldNot(BeNil())
 		})
 
+		AfterEach(func() {
+			ResetFakeActionConfig()
+		})
+
 		It("Install", func() {
 			_, err := o.Install(cfg)
 			Expect(err).Should(HaveOccurred())
@@ -119,6 +123,10 @@ var _ = Describe("helm util", func() {
 			Expect(actionCfg).ShouldNot(BeNil())
 		})
 
+		AfterEach(func() {
+			ResetFakeActionConfig()
+		})
+
 		It("should fail when release is not found", func() {
 			Expect(ReleaseNotFound(o.Upgrade(cfg))).Should(BeTrue())
 			Expect(o.Uninstall(cfg)).Should(HaveOccurred()) // release not found
@@ -159,4 +167,36 @@ var _ = Describe("helm util", func() {
 		versions, _ := GetChartVersions(testing.KubeBlocksChartName)
 		Expect(versions).Should(BeNil())
 	})
+
+	It("get helm release status", func() {
+		var o *InstallOpts
+		var cfg *Config
+		var actionCfg *action.Configuration
+
+		o = &InstallOpts{
+			Name:      types.KubeBlocksChartName,
+			Chart:     "kubeblocks-test-chart",
+			Namespace: "default",
+			Version:   version.DefaultKubeBlocksVersion,
+		}
+		cfg = NewFakeConfig("default")
+		actionCfg, _ = NewActionConfig(cfg)
+		Expect(actionCfg).ShouldNot(BeNil())
+
+		err := actionCfg.Releases.Create(&release.Release{
+			Name:    o.Name,
+			Version: 1,
+			Info: &release.Info{
+				Status: release.StatusFailed,
+			},
+			Chart: &chart.Chart{},
+		})
+		Expect(err).Should(BeNil())
+		_, _ = GetValues("", cfg)
+		res, err := GetHelmRelease(cfg, o.Name)
+		Expect(res.Info.Status).Should(Equal(release.StatusFailed))
+		Expect(err).Should(BeNil())
+		ResetFakeActionConfig()
+	})
+
 })

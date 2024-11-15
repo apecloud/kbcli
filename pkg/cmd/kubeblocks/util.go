@@ -68,10 +68,10 @@ func getGVRByCRD(crd *unstructured.Unstructured) (*schema.GroupVersionResource, 
 func getVersionFromCRD(crd *unstructured.Unstructured) string {
 	versions, found, err := unstructured.NestedFieldNoCopy(crd.Object, "spec", "versions")
 	if err != nil || !found || versions == nil {
-		return types.AppsAPIVersion
+		return types.AppsV1APIVersion
 	}
 	if _, ok := versions.([]interface{}); !ok {
-		return types.AppsAPIVersion
+		return types.AppsV1APIVersion
 	}
 
 	isStorageVersion := func(version map[string]interface{}) bool {
@@ -93,7 +93,7 @@ func getVersionFromCRD(crd *unstructured.Unstructured) string {
 			return ver
 		}
 	}
-	return types.AppsAPIVersion
+	return types.AppsV1APIVersion
 }
 
 // check if KubeBlocks has been installed

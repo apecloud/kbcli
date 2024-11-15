@@ -37,12 +37,6 @@ var _ = Describe("test fake", func() {
 		Expect(clusterDef.Name).Should(Equal(ClusterDefName))
 	})
 
-	It("cluster definition", func() {
-		clusterVersion := FakeClusterVersion()
-		Expect(clusterVersion).ShouldNot(BeNil())
-		Expect(clusterVersion.Name).Should(Equal(ClusterVersionName))
-	})
-
 	It("pods", func() {
 		pods := FakePods(3, Namespace, ClusterName)
 		Expect(pods).ShouldNot(BeNil())

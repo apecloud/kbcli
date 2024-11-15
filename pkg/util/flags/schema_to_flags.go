@@ -71,12 +71,25 @@ func FlagsToValues(fs *pflag.FlagSet, explicit bool) map[string]pflag.Value {
 func BuildFlagsWithOpenAPISchema(cmd *cobra.Command,
 	args []string,
 	getOpenAPISchema func() (*apiextensionsv1.JSONSchemaProps, error)) error {
+	parsingFlags := func() error {
+		// Parse dynamic flags
+		cmd.DisableFlagParsing = false
+		err := cmd.ParseFlags(args)
+		if err != nil {
+			return err
+		}
+		helpFlag := cmd.Flags().Lookup("help")
+		if helpFlag != nil && helpFlag.Value.String() == "true" {
+			return pflag.ErrHelp
+		}
+		return cmd.ValidateRequiredFlags()
+	}
 	openAPIV3Schema, err := getOpenAPISchema()
 	if err != nil {
 		return fmt.Errorf("get openAPIV3Schema failed: %s", err.Error())
 	}
 	if openAPIV3Schema == nil {
-		return fmt.Errorf("can not found openAPIV3Schema")
+		return parsingFlags()
 	}
 	// Convert apiextensionsv1.JSONSchemaProps to spec.Schema
 	schemaData, err := json.Marshal(openAPIV3Schema)
@@ -90,15 +103,5 @@ func BuildFlagsWithOpenAPISchema(cmd *cobra.Command,
 	if err = BuildFlagsBySchema(cmd, schema); err != nil {
 		return err
 	}
-	// Parse dynamic flags
-	cmd.DisableFlagParsing = false
-	err = cmd.ParseFlags(args)
-	if err != nil {
-		return err
-	}
-	helpFlag := cmd.Flags().Lookup("help")
-	if helpFlag != nil && helpFlag.Value.String() == "true" {
-		return pflag.ErrHelp
-	}
-	return cmd.ValidateRequiredFlags()
+	return parsingFlags()
 }

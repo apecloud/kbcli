@@ -28,13 +28,12 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/slices"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
 
-	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
+	opsv1alpha1 "github.com/apecloud/kubeblocks/apis/operations/v1alpha1"
 
 	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/printer"
@@ -118,14 +117,14 @@ func (o *opsListOptions) printOpsList() error {
 		return nil
 	}
 	// sort the unstructured objects with the creationTimestamp in positive order
-	sort.Sort(unstructuredList(opsList.Items))
+	sort.Sort(action.UnstructuredList(opsList.Items))
 
 	// check if specified with "all" keyword for status.
 	isAllStatus := o.isAllStatus()
 	tblPrinter := printer.NewTablePrinter(o.Out)
 	tblPrinter.SetHeader("NAME", "NAMESPACE", "TYPE", "CLUSTER", "COMPONENT", "STATUS", "PROGRESS", "CREATED-TIME")
 	for _, obj := range opsList.Items {
-		ops := &appsv1alpha1.OpsRequest{}
+		ops := &opsv1alpha1.OpsRequest{}
 		if err = runtime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, ops); err != nil {
 			return err
 		}
@@ -159,30 +158,30 @@ func (o *opsListOptions) printOpsList() error {
 	return nil
 }
 
-func getComponentNameFromOps(ops *appsv1alpha1.OpsRequest) string {
+func getComponentNameFromOps(ops *opsv1alpha1.OpsRequest) string {
 	components := make([]string, 0)
 	opsSpec := ops.Spec
 	switch opsSpec.Type {
-	case appsv1alpha1.ReconfiguringType:
-		if opsSpec.Reconfigure != nil {
-			components = append(components, opsSpec.Reconfigure.ComponentName)
+	case opsv1alpha1.ReconfiguringType:
+		if opsSpec.Reconfigures != nil {
+			components = append(components, opsSpec.Reconfigures[0].ComponentName)
 		}
 		for _, item := range opsSpec.Reconfigures {
 			components = append(components, item.ComponentName)
 		}
-	case appsv1alpha1.HorizontalScalingType:
+	case opsv1alpha1.HorizontalScalingType:
 		for _, item := range opsSpec.HorizontalScalingList {
 			components = append(components, item.ComponentName)
 		}
-	case appsv1alpha1.VolumeExpansionType:
+	case opsv1alpha1.VolumeExpansionType:
 		for _, item := range opsSpec.VolumeExpansionList {
 			components = append(components, item.ComponentName)
 		}
-	case appsv1alpha1.RestartType:
+	case opsv1alpha1.RestartType:
 		for _, item := range opsSpec.RestartList {
 			components = append(components, item.ComponentName)
 		}
-	case appsv1alpha1.VerticalScalingType:
+	case opsv1alpha1.VerticalScalingType:
 		for _, item := range opsSpec.VerticalScalingList {
 			components = append(components, item.ComponentName)
 		}
@@ -195,36 +194,26 @@ func getComponentNameFromOps(ops *appsv1alpha1.OpsRequest) string {
 	return strings.Join(components, ",")
 }
 
-func getTemplateNameFromOps(ops appsv1alpha1.OpsRequestSpec) string {
-	if ops.Type != appsv1alpha1.ReconfiguringType {
+func getTemplateNameFromOps(ops opsv1alpha1.OpsRequestSpec) string {
+	if ops.Type != opsv1alpha1.ReconfiguringType {
 		return ""
 	}
 
 	tpls := make([]string, 0)
-	for _, config := range getValidConfigurations(ops) {
+	// TODO: support reconfigures
+	for _, config := range ops.Reconfigures[0].Configurations {
 		tpls = append(tpls, config.Name)
 	}
 	return strings.Join(tpls, ",")
 }
 
-func getValidConfigurations(ops appsv1alpha1.OpsRequestSpec) []appsv1alpha1.ConfigurationItem {
-	config := ops.Reconfigure
-	if config == nil && len(ops.Reconfigures) > 0 {
-		config = &ops.Reconfigures[0]
-	}
-	if config != nil {
-		return config.Configurations
-	}
-	return nil
-}
-
-func getKeyNameFromOps(ops appsv1alpha1.OpsRequestSpec) string {
-	if ops.Type != appsv1alpha1.ReconfiguringType {
+func getKeyNameFromOps(ops opsv1alpha1.OpsRequestSpec) string {
+	if ops.Type != opsv1alpha1.ReconfiguringType {
 		return ""
 	}
 
 	keys := make([]string, 0)
-	for _, config := range getValidConfigurations(ops) {
+	for _, config := range ops.Reconfigures[0].Configurations {
 		for _, key := range config.Keys {
 			keys = append(keys, key.Key)
 		}
@@ -244,18 +233,4 @@ func (o *opsListOptions) containsIgnoreCase(s []string, e string) bool {
 // isAllStatus checks if the status flag contains "all" keyword.
 func (o *opsListOptions) isAllStatus() bool {
 	return slices.Contains(o.status, "all")
-}
-
-type unstructuredList []unstructured.Unstructured
-
-func (us unstructuredList) Len() int {
-	return len(us)
-}
-func (us unstructuredList) Swap(i, j int) {
-	us[i], us[j] = us[j], us[i]
-}
-func (us unstructuredList) Less(i, j int) bool {
-	createTimeForJ := us[j].GetCreationTimestamp()
-	createTimeForI := us[i].GetCreationTimestamp()
-	return createTimeForI.Before(&createTimeForJ)
 }

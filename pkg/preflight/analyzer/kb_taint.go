@@ -101,12 +101,12 @@ func (a *AnalyzeTaintClassByKb) analyzeTaint(getFile GetCollectedFileContents, f
 func (a *AnalyzeTaintClassByKb) doAnalyzeTaint(nodes v1.NodeList) (*analyze.AnalyzeResult, error) {
 	taintFailResult := []string{}
 	for _, node := range nodes.Items {
-		if node.Spec.Taints == nil || len(node.Spec.Taints) == 0 {
+		if len(node.Spec.Taints) == 0 {
 			return newAnalyzeResult(a.Title(), PassType, a.analyzer.Outcomes), nil
 		}
 	}
 
-	if a.analyzer.TolerationsMap == nil || len(a.analyzer.TolerationsMap) == 0 {
+	if len(a.analyzer.TolerationsMap) == 0 {
 		return newAnalyzeResult(a.Title(), FailType, a.analyzer.Outcomes), nil
 	}
 

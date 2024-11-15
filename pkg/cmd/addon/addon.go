@@ -49,6 +49,7 @@ import (
 	viper "github.com/apecloud/kubeblocks/pkg/viperx"
 
 	"github.com/apecloud/kbcli/pkg/action"
+	clusterCmd "github.com/apecloud/kbcli/pkg/cmd/cluster"
 	"github.com/apecloud/kbcli/pkg/cmd/plugin"
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
@@ -111,7 +112,7 @@ func NewAddonCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.C
 		newEnableCmd(f, streams),
 		newDisableCmd(f, streams),
 		newIndexCmd(streams),
-		newSearchCmd(streams),
+		newSearchCmd(f, streams),
 		newInstallCmd(f, streams),
 		newUninstallCmd(f, streams),
 		newUpgradeCmd(f, streams),
@@ -224,6 +225,7 @@ func newEnableCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.
 				util.CheckErr(o.complete(o, cmd, []string{name}))
 				util.CheckErr(o.CmdComplete(cmd))
 				util.CheckErr(o.Run())
+				util.CheckErr(clusterCmd.RegisterClusterChart(f, streams, "", name, getAddonVersion(&o.addon), types.ClusterChartsRepoURL))
 			}
 		},
 	}

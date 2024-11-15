@@ -8,10 +8,24 @@ Search the addon from index
 kbcli addon search [flags]
 ```
 
+### Examples
+
+```
+  # search the addons of all index
+  kbcli addon search
+  
+  # search the addons from a specified local path
+  kbcli addon search --path /path/to/local/chart
+  
+  # search different versions and indexes of an addon
+  kbcli addon search apecloud-mysql
+```
+
 ### Options
 
 ```
-  -h, --help   help for search
+  -h, --help          help for search
+      --path string   the local directory contains addon CRs
 ```
 
 ### Options inherited from parent commands

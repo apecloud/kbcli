@@ -32,7 +32,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/replicatedhq/troubleshoot/pkg/preflight"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"golang.org/x/exp/maps"
 	"helm.sh/helm/v3/pkg/cli/values"
@@ -53,8 +52,8 @@ import (
 	"github.com/apecloud/kbcli/pkg/spinner"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
-	"github.com/apecloud/kbcli/pkg/util/breakingchange"
 	"github.com/apecloud/kbcli/pkg/util/helm"
+	"github.com/apecloud/kbcli/pkg/util/prompt"
 	"github.com/apecloud/kbcli/version"
 )
 
@@ -95,7 +94,8 @@ type InstallOptions struct {
 	TopologyKeys    []string
 	NodeLabels      map[string]string
 	TolerationsRaw  []string
-	upgrader        breakingchange.Upgrader
+	upgradeFrom09   bool
+	kb09Namespace   string
 }
 
 type addonStatus struct {
@@ -156,9 +156,10 @@ func newInstallCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 	}
 
 	cmd.Flags().StringVar(&o.Version, "version", version.DefaultKubeBlocksVersion, "KubeBlocks version")
+	cmd.Flags().StringVarP(&o.Namespace, "namespace", "n", types.DefaultNamespace, "KubeBlocks namespace")
 	cmd.Flags().BoolVar(&o.CreateNamespace, "create-namespace", false, "Create the namespace if not present")
 	cmd.Flags().BoolVar(&o.Check, "check", true, "Check kubernetes environment before installation")
-	cmd.Flags().DurationVar(&o.Timeout, "timeout", 600*time.Second, "Time to wait for installing KubeBlocks, such as --timeout=10m")
+	cmd.Flags().DurationVar(&o.Timeout, "timeout", 1800*time.Second, "Time to wait for installing KubeBlocks, such as --timeout=10m")
 	cmd.Flags().BoolVar(&o.Wait, "wait", true, "Wait for KubeBlocks to be ready, including all the auto installed add-ons. It will wait for a --timeout period")
 	cmd.Flags().BoolVar(&o.WaitAddons, "wait-addons", true, "Wait for auto installed add-ons. It will wait for a --timeout period")
 	cmd.Flags().BoolVar(&p.force, flagForce, p.force, "If present, just print fail item and continue with the following steps")
@@ -179,10 +180,6 @@ func (o *Options) Complete(f cmdutil.Factory, cmd *cobra.Command) error {
 		fmt.Fprintf(o.Out, "Failed to enable the log file %s", err.Error())
 	}
 
-	if o.Namespace, _, err = f.ToRawKubeConfigLoader().Namespace(); err != nil {
-		return err
-	}
-
 	config, err := cmd.Flags().GetString("kubeconfig")
 	if err != nil {
 		return err
@@ -193,16 +190,7 @@ func (o *Options) Complete(f cmdutil.Factory, cmd *cobra.Command) error {
 		return err
 	}
 
-	// check whether --namespace is specified, if not, KubeBlocks will be installed
-	// to the kb-system namespace
-	var targetNamespace string
-	cmd.Flags().Visit(func(flag *pflag.Flag) {
-		if flag.Name == "namespace" {
-			targetNamespace = o.Namespace
-		}
-	})
-
-	o.HelmCfg = helm.NewConfig(targetNamespace, config, ctx, klog.V(1).Enabled())
+	o.HelmCfg = helm.NewConfig(o.Namespace, config, ctx, klog.V(1).Enabled())
 	if o.Dynamic, err = f.DynamicClient(); err != nil {
 		return err
 	}
@@ -212,28 +200,48 @@ func (o *Options) Complete(f cmdutil.Factory, cmd *cobra.Command) error {
 }
 
 func (o *InstallOptions) PreCheck() error {
-	// check if KubeBlocks has been installed
+	// check whether the namespace exists
+	if err := o.checkNamespace(); err != nil {
+		return err
+	}
+	return o.PreCheckKBVersion()
+}
+
+func (o *InstallOptions) PreCheckKBVersion() error {
+	o.Version = util.TrimVersionPrefix(o.Version)
 	v, err := util.GetVersionInfo(o.Client)
 	if err != nil {
 		return err
 	}
+	o.upgradeFrom09 = o.checkUpgradeFrom09(v.KubeBlocks)
+	if o.upgradeFrom09 {
+		if o.upgradeFrom09 {
+			deploys, err := util.GetKubeBlocksDeploys(o.Client)
+			if err != nil {
+				return err
+			}
+			for _, deploy := range deploys {
+				if deploy.Namespace == o.HelmCfg.Namespace() {
+					return fmt.Errorf(`cannot install KubeBlocks in the same namespace "%s" with KubeBlocks 0.9`, o.HelmCfg.Namespace())
+				}
+			}
+		}
+		installWarn := fmt.Sprintf("You will Install KubeBlocks %s When existing KubeBlocks %s ", o.Version, v.KubeBlocks)
+		if err = prompt.Confirm(nil, o.In, installWarn, "Please type 'Yes/yes' to confirm your operation:"); err != nil {
+			return err
+		}
+	} else {
+		// check if KubeBlocks has been installed
+		if v.KubeBlocks != "" {
+			return fmt.Errorf("KubeBlocks %s already exists, repeated installation is not supported", v.KubeBlocks)
+		}
 
-	if v.KubeBlocks != "" {
-		return fmt.Errorf("KubeBlocks %s already exists, repeated installation is not supported", v.KubeBlocks)
+		// check whether there are remained resource left by previous KubeBlocks installation, if yes,
+		// output the resource name
+		if err = o.checkRemainedResource(); err != nil {
+			return err
+		}
 	}
-
-	// check whether the namespace exists
-	if err = o.checkNamespace(); err != nil {
-		return err
-	}
-
-	// check whether there are remained resource left by previous KubeBlocks installation, if yes,
-	// output the resource name
-	if err = o.checkRemainedResource(); err != nil {
-		return err
-	}
-
-	o.Version = util.TrimVersionPrefix(o.Version)
 	if err = o.checkVersion(v); err != nil {
 		return err
 	}
@@ -277,6 +285,11 @@ func (o *InstallOptions) CompleteInstallOptions() error {
 
 func (o *InstallOptions) Install() error {
 	var err error
+	if o.upgradeFrom09 {
+		if err = o.preInstallWhenUpgradeFrom09(); err != nil {
+			return err
+		}
+	}
 	// create or update crds
 	s := spinner.New(o.Out, spinnerMsg("Create CRDs"))
 	defer s.Fail()
@@ -371,6 +384,12 @@ You can check the KubeBlocks status by running "kbcli kubeblocks status"
 		}
 		fmt.Fprint(o.Out, msg)
 		o.printNotes()
+	}
+	if o.upgradeFrom09 {
+		fmt.Fprint(o.Out, "Start KubeBlocks 0.9\n")
+		if err = o.configKB09(); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -514,11 +533,10 @@ func (o *InstallOptions) checkVersion(v util.Version) error {
 func (o *InstallOptions) checkNamespace() error {
 	// target namespace is not specified, use default namespace
 	if o.HelmCfg.Namespace() == "" {
-		o.HelmCfg.SetNamespace(types.DefaultNamespace)
+		o.HelmCfg.SetNamespace(o.Namespace)
 		o.CreateNamespace = true
-		fmt.Fprintf(o.Out, "KubeBlocks will be installed to namespace \"%s\"\n", o.HelmCfg.Namespace())
 	}
-
+	fmt.Fprintf(o.Out, "KubeBlocks will be installed to namespace \"%s\"\n", o.HelmCfg.Namespace())
 	// check if namespace exists
 	if !o.CreateNamespace {
 		_, err := o.Client.CoreV1().Namespaces().Get(context.TODO(), o.Namespace, metav1.GetOptions{})
@@ -532,7 +550,7 @@ func (o *InstallOptions) checkRemainedResource() error {
 		return nil
 	}
 
-	ns, _ := util.GetKubeBlocksNamespace(o.Client)
+	ns, _ := util.GetKubeBlocksNamespace(o.Client, o.Namespace)
 	if ns == "" {
 		ns = o.Namespace
 	}
@@ -591,7 +609,6 @@ func (o *InstallOptions) buildChart() *helm.InstallOpts {
 		CreateNamespace: o.CreateNamespace,
 		Timeout:         o.Timeout,
 		Atomic:          false,
-		Upgrader:        o.upgrader,
 	}
 }
 

@@ -11,11 +11,17 @@ kbcli cluster rebuild-instance NAME [flags]
 ### Examples
 
 ```
-  # rebuild instance without backup
+  # rebuild instance by creating new instances and remove the specified instances after the new instances are ready.
   kbcli cluster rebuild-instance mycluster --instances pod1,pod2
   
-  # rebuild instance from backup
-  kbcli cluster rebuild-instance mycluster --instances pod1,pod2 --backupName <backup>
+  # rebuild instance to a new node.
+  kbcli cluster rebuild-instance mycluster --instances pod1 --node nodeName.
+  
+  # rebuild instance with the same pod name.
+  kbcli cluster rebuild-instance mycluster --instances pod1 --in-place
+  
+  # rebuild instance from backup and with the same pod name
+  kbcli cluster rebuild-instance mycluster --instances pod1,pod2 --backupName <backup> --in-place
 ```
 
 ### Options
@@ -24,13 +30,15 @@ kbcli cluster rebuild-instance NAME [flags]
       --auto-approve                   Skip interactive approval before rebuilding the instances.gi
       --backup string                  instances will be rebuild by the specified backup.
       --dry-run string[="unchanged"]   Must be "client", or "server". If with client strategy, only print the object that would be sent, and no data is actually sent. If with server strategy, submit the server-side request, but no data is persistent. (default "none")
-      --env stringArray                provide the necessary env for the 'Restore' operation from the backup. format: key1=value, key2=value
+      --edit                           Edit the API resource before creating
       --force                           skip the pre-checks of the opsRequest to run the opsRequest forcibly
   -h, --help                           help for rebuild-instance
-      --instance strings               instance which need to rebuild.
+      --in-place                       rebuild the instance with the same pod name. if not set, will create a new instance by horizontalScaling and remove the instance after the new instance is ready
+      --instances strings              instances which need to rebuild.
       --name string                    OpsRequest name. if not specified, it will be randomly generated
-      --node strings                   specified the target node which rebuilds the instance on the node otherwise will rebuild on a randon node. format: insName1=nodeName,insName2=nodeName
+      --node strings                   specified the target node which rebuilds the instance on the node otherwise will rebuild on a random node. format: insName1=nodeName,insName2=nodeName
   -o, --output format                  Prints the output in the specified format. Allowed values: JSON and YAML (default yaml)
+      --restore-env stringArray        provide the necessary env for the 'Restore' operation from the backup. format: key1=value, key2=value
       --ttlSecondsAfterSucceed int     Time to live after the OpsRequest succeed
 ```
 

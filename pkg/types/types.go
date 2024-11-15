@@ -30,7 +30,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
-	workloads "github.com/apecloud/kubeblocks/apis/workloads/v1alpha1"
 )
 
 const (
@@ -98,37 +97,39 @@ const (
 
 // Apps API group
 const (
-	AppsAPIGroup                        = "apps.kubeblocks.io"
-	AppsAPIVersion                      = "v1alpha1"
-	AppsAPIBetaVersion                  = "v1beta1"
-	ResourcePods                        = "pods"
-	ResourceClusters                    = "clusters"
-	ResourceClusterDefs                 = "clusterdefinitions"
-	ResourceClusterVersions             = "clusterversions"
-	ResourceComponentDefs               = "componentdefinitions"
-	ResourceComponents                  = "components"
-	ResourceOpsRequests                 = "opsrequests"
-	ResourceOpsDefinitions              = "opsdefinitions"
-	ResourceConfigConstraintVersions    = "configconstraints"
-	ResourceConfigurationVersions       = "configurations"
-	ResourceComponentResourceConstraint = "componentresourceconstraints"
-	ResourceComponentClassDefinition    = "componentclassdefinitions"
-	KindCluster                         = "Cluster"
-	KindComponentClassDefinition        = "ComponentClassDefinition"
-	KindClusterDef                      = "ClusterDefinition"
-	KindClusterVersion                  = "ClusterVersion"
-	KindConfigConstraint                = "ConfigConstraint"
-	KindConfiguration                   = "Configuration"
-	KindBackup                          = "Backup"
-	KindRestore                         = "Restore"
-	KindBackupPolicy                    = "BackupPolicy"
-	KindOps                             = "OpsRequest"
-	KindBackupSchedule                  = "BackupSchedule"
-	KindBackupPolicyTemplate            = "BackupPolicyTemplate"
-	KindStatefulSet                     = "StatefulSet"
-	KindDeployment                      = "Deployment"
-	KindRSM                             = "ReplicatedStateMachine"
-	KindConfigMap                       = "ConfigMap"
+	AppsAPIGroup                     = "apps.kubeblocks.io"
+	OpsAPIGroup                      = "operations.kubeblocks.io"
+	WorkloadsAPIGroup                = "workloads.kubeblocks.io"
+	WorkloadsAPIVersion              = "v1"
+	OpsAPIVersion                    = "v1alpha1"
+	AppsAPIVersion                   = "v1alpha1"
+	AppsV1APIVersion                 = "v1"
+	AppsAPIBetaVersion               = "v1beta1"
+	ResourcePods                     = "pods"
+	ResourceClusters                 = "clusters"
+	ResourceClusterDefs              = "clusterdefinitions"
+	ResourceComponentDefs            = "componentdefinitions"
+	ResourceComponentVersions        = "componentversions"
+	ResourceComponents               = "components"
+	ResourceOpsRequests              = "opsrequests"
+	ResourceInstanceSets             = "instancesets"
+	ResourceOpsDefinitions           = "opsdefinitions"
+	ResourceConfigConstraintVersions = "configconstraints"
+	ResourceConfigurationVersions    = "configurations"
+	KindCluster                      = "Cluster"
+	KindClusterDef                   = "ClusterDefinition"
+	KindConfigConstraint             = "ConfigConstraint"
+	KindConfiguration                = "Configuration"
+	KindBackup                       = "Backup"
+	KindRestore                      = "Restore"
+	KindBackupPolicy                 = "BackupPolicy"
+	KindOps                          = "OpsRequest"
+	KindBackupSchedule               = "BackupSchedule"
+	KindBackupPolicyTemplate         = "BackupPolicyTemplate"
+	KindStatefulSet                  = "StatefulSet"
+	KindDeployment                   = "Deployment"
+	KindConfigMap                    = "ConfigMap"
+	KindCronJob                      = "CronJob"
 )
 
 // K8S rbac API group
@@ -229,9 +230,6 @@ const (
 
 // Migrate some const from kubeblocks to kbcli
 const (
-	// KBDefaultClusterVersionAnnotationKey specifies the default cluster version.
-	KBDefaultClusterVersionAnnotationKey = "kubeblocks.io/is-default-cluster-version"
-
 	// KBAddonProviderLabelKey marks the addon provider
 	KBAddonProviderLabelKey = "kubeblocks.io/provider"
 )
@@ -263,6 +261,12 @@ var (
 
 	// AddonIndexDir is the default addon index dir
 	AddonIndexDir = filepath.Join("addon", "index")
+
+	// ClusterChartsRepoName helm chart repo for installing cluster chart
+	ClusterChartsRepoName = "kubeblocks-addons"
+
+	// ClusterChartsRepoURL the default helm chart repo for installing cluster chart
+	ClusterChartsRepoURL = "https://jihulab.com/api/v4/projects/150246/packages/helm/stable"
 )
 
 // Playground
@@ -282,31 +286,35 @@ func PodGVR() schema.GroupVersionResource {
 }
 
 func ClusterGVR() schema.GroupVersionResource {
-	return schema.GroupVersionResource{Group: AppsAPIGroup, Version: AppsAPIVersion, Resource: ResourceClusters}
+	return schema.GroupVersionResource{Group: AppsAPIGroup, Version: AppsV1APIVersion, Resource: ResourceClusters}
 }
 
 func ClusterDefGVR() schema.GroupVersionResource {
-	return schema.GroupVersionResource{Group: AppsAPIGroup, Version: AppsAPIVersion, Resource: ResourceClusterDefs}
-}
-
-func ClusterVersionGVR() schema.GroupVersionResource {
-	return schema.GroupVersionResource{Group: AppsAPIGroup, Version: AppsAPIVersion, Resource: ResourceClusterVersions}
+	return schema.GroupVersionResource{Group: AppsAPIGroup, Version: AppsV1APIVersion, Resource: ResourceClusterDefs}
 }
 
 func CompDefGVR() schema.GroupVersionResource {
-	return schema.GroupVersionResource{Group: AppsAPIGroup, Version: AppsAPIVersion, Resource: ResourceComponentDefs}
+	return schema.GroupVersionResource{Group: AppsAPIGroup, Version: AppsV1APIVersion, Resource: ResourceComponentDefs}
 }
 
 func ComponentGVR() schema.GroupVersionResource {
-	return schema.GroupVersionResource{Group: AppsAPIGroup, Version: AppsAPIVersion, Resource: ResourceComponents}
+	return schema.GroupVersionResource{Group: AppsAPIGroup, Version: AppsV1APIVersion, Resource: ResourceComponents}
+}
+
+func ComponentVersionsGVR() schema.GroupVersionResource {
+	return schema.GroupVersionResource{Group: AppsAPIGroup, Version: AppsV1APIVersion, Resource: ResourceComponentVersions}
 }
 
 func OpsDefinitionGVR() schema.GroupVersionResource {
-	return schema.GroupVersionResource{Group: AppsAPIGroup, Version: AppsAPIVersion, Resource: ResourceOpsDefinitions}
+	return schema.GroupVersionResource{Group: OpsAPIGroup, Version: OpsAPIVersion, Resource: ResourceOpsDefinitions}
 }
 
 func OpsGVR() schema.GroupVersionResource {
-	return schema.GroupVersionResource{Group: AppsAPIGroup, Version: AppsAPIVersion, Resource: ResourceOpsRequests}
+	return schema.GroupVersionResource{Group: OpsAPIGroup, Version: OpsAPIVersion, Resource: ResourceOpsRequests}
+}
+
+func InstanceSetGVR() schema.GroupVersionResource {
+	return schema.GroupVersionResource{Group: WorkloadsAPIGroup, Version: WorkloadsAPIVersion, Resource: ResourceInstanceSets}
 }
 
 func BackupGVR() schema.GroupVersionResource {
@@ -318,7 +326,7 @@ func BackupPolicyGVR() schema.GroupVersionResource {
 }
 
 func BackupPolicyTemplateGVR() schema.GroupVersionResource {
-	return schema.GroupVersionResource{Group: AppsAPIGroup, Version: DPAPIVersion, Resource: ResourceBackupTemplates}
+	return schema.GroupVersionResource{Group: DPAPIGroup, Version: DPAPIVersion, Resource: ResourceBackupTemplates}
 }
 
 func BackupScheduleGVR() schema.GroupVersionResource {
@@ -353,14 +361,6 @@ func LegacyStorageProviderGVR() schema.GroupVersionResource {
 	return schema.GroupVersionResource{Group: StorageAPIGroup, Version: StorageAPIVersion, Resource: ResourceStorageProviders}
 }
 
-func ComponentResourceConstraintGVR() schema.GroupVersionResource {
-	return schema.GroupVersionResource{Group: AppsAPIGroup, Version: AppsAPIVersion, Resource: ResourceComponentResourceConstraint}
-}
-
-func ComponentClassDefinitionGVR() schema.GroupVersionResource {
-	return schema.GroupVersionResource{Group: AppsAPIGroup, Version: AppsAPIVersion, Resource: ResourceComponentClassDefinition}
-}
-
 func CRDGVR() schema.GroupVersionResource {
 	return schema.GroupVersionResource{
 		Group:    "apiextensions.k8s.io",
@@ -379,10 +379,6 @@ func SecretGVR() schema.GroupVersionResource {
 
 func StatefulSetGVR() schema.GroupVersionResource {
 	return schema.GroupVersionResource{Group: appsv1.GroupName, Version: K8sCoreAPIVersion, Resource: ResourceStatefulSets}
-}
-
-func RSMGVR() schema.GroupVersionResource {
-	return schema.GroupVersionResource{Group: workloads.GroupVersion.Group, Version: workloads.GroupVersion.Version, Resource: ResourceRSM}
 }
 
 func DaemonSetGVR() schema.GroupVersionResource {
@@ -477,32 +473,4 @@ func JobGVR() schema.GroupVersionResource {
 }
 func CronJobGVR() schema.GroupVersionResource {
 	return schema.GroupVersionResource{Group: K8SBatchAPIGroup, Version: K8sBatchAPIVersion, Resource: ResourceCronJobs}
-}
-
-func PgBenchGVR() schema.GroupVersionResource {
-	return schema.GroupVersionResource{Group: KubebenchAPIGroup, Version: KubebenchAPIVersion, Resource: ResourcePgBench}
-}
-
-func SysbenchGVR() schema.GroupVersionResource {
-	return schema.GroupVersionResource{Group: KubebenchAPIGroup, Version: KubebenchAPIVersion, Resource: ResourceSysBench}
-}
-
-func YcsbGVR() schema.GroupVersionResource {
-	return schema.GroupVersionResource{Group: KubebenchAPIGroup, Version: KubebenchAPIVersion, Resource: ResourceYcsb}
-}
-
-func TpccGVR() schema.GroupVersionResource {
-	return schema.GroupVersionResource{Group: KubebenchAPIGroup, Version: KubebenchAPIVersion, Resource: ResourceTpcc}
-}
-
-func TpchGVR() schema.GroupVersionResource {
-	return schema.GroupVersionResource{Group: KubebenchAPIGroup, Version: KubebenchAPIVersion, Resource: ResourceTpch}
-}
-
-func TpcdsGVR() schema.GroupVersionResource {
-	return schema.GroupVersionResource{Group: KubebenchAPIGroup, Version: KubebenchAPIVersion, Resource: ResourceTpcds}
-}
-
-func RedisBenchGVR() schema.GroupVersionResource {
-	return schema.GroupVersionResource{Group: KubebenchAPIGroup, Version: KubebenchAPIVersion, Resource: ResourceRedisBench}
 }

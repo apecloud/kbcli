@@ -42,6 +42,9 @@ import (
 	"text/template"
 	"time"
 
+	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
+	opsv1alpha1 "github.com/apecloud/kubeblocks/apis/operations/v1alpha1"
+	intctrlutil "github.com/apecloud/kubeblocks/pkg/controllerutil"
 	"github.com/fatih/color"
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
@@ -70,8 +73,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 
-	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
-	appsv1beta1 "github.com/apecloud/kubeblocks/apis/apps/v1beta1"
+	kbappsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
+	kbappsv1beta1 "github.com/apecloud/kubeblocks/apis/apps/v1beta1"
 	"github.com/apecloud/kubeblocks/pkg/configuration/core"
 	"github.com/apecloud/kubeblocks/pkg/configuration/openapi"
 	cfgutil "github.com/apecloud/kubeblocks/pkg/configuration/util"
@@ -457,12 +460,11 @@ func GetEventObject(e *corev1.Event) string {
 	return fmt.Sprintf("%s/%s", kind, e.InvolvedObject.Name)
 }
 
-// GetConfigTemplateList returns ConfigTemplate list used by the component.
-func GetConfigTemplateList(clusterName string, namespace string, cli dynamic.Interface, componentName string, reloadTpl bool) ([]appsv1alpha1.ComponentConfigSpec, error) {
+// ComponentConfigSpecs returns configSpecs used by the component.
+func ComponentConfigSpecs(clusterName string, namespace string, cli dynamic.Interface, componentName string, reloadTpl bool) ([]kbappsv1alpha1.ComponentConfigSpec, error) {
 	var (
-		clusterObj        = appsv1alpha1.Cluster{}
-		clusterDefObj     = appsv1alpha1.ClusterDefinition{}
-		clusterVersionObj = appsv1alpha1.ClusterVersion{}
+		clusterObj    = kbappsv1.Cluster{}
+		clusterDefObj = kbappsv1.ClusterDefinition{}
 	)
 
 	clusterKey := client.ObjectKey{
@@ -474,42 +476,47 @@ func GetConfigTemplateList(clusterName string, namespace string, cli dynamic.Int
 	}
 	clusterDefKey := client.ObjectKey{
 		Namespace: "",
-		Name:      clusterObj.Spec.ClusterDefRef,
+		Name:      clusterObj.Spec.ClusterDef,
 	}
 	if err := GetResourceObjectFromGVR(types.ClusterDefGVR(), clusterDefKey, cli, &clusterDefObj); err != nil {
 		return nil, err
 	}
-	clusterVerKey := client.ObjectKey{
-		Namespace: "",
-		Name:      clusterObj.Spec.ClusterVersionRef,
-	}
-	if clusterVerKey.Name != "" {
-		if err := GetResourceObjectFromGVR(types.ClusterVersionGVR(), clusterVerKey, cli, &clusterVersionObj); err != nil {
-			return nil, err
-		}
-	}
-	return GetConfigTemplateListWithResource(clusterObj.Spec.ComponentSpecs, clusterDefObj.Spec.ComponentDefs, clusterVersionObj.Spec.ComponentVersions, componentName, reloadTpl)
-}
-
-func GetConfigTemplateListWithResource(cComponents []appsv1alpha1.ClusterComponentSpec,
-	dComponents []appsv1alpha1.ClusterComponentDefinition,
-	vComponents []appsv1alpha1.ClusterComponentVersion,
-	componentName string,
-	reloadTpl bool) ([]appsv1alpha1.ComponentConfigSpec, error) {
-
-	configSpecs, err := core.GetConfigTemplatesFromComponent(cComponents, dComponents, vComponents, componentName)
+	compDef, err := GetComponentDefByCompName(cli, &clusterObj, componentName)
 	if err != nil {
 		return nil, err
 	}
-	return getValidConfigSpecs(reloadTpl, configSpecs)
+	return GetValidConfigSpecs(reloadTpl, ToV1ComponentConfigSpecs(compDef.Spec.Configs))
 }
 
-func getValidConfigSpecs(reloadTpl bool, configSpecs []appsv1alpha1.ComponentConfigSpec) ([]appsv1alpha1.ComponentConfigSpec, error) {
+func GetComponentDefByName(dynamic dynamic.Interface, name string) (*kbappsv1.ComponentDefinition, error) {
+	componentDef := &kbappsv1.ComponentDefinition{}
+	if err := GetK8SClientObject(dynamic, componentDef, types.CompDefGVR(), "", name); err != nil {
+		return nil, err
+	}
+	return componentDef, nil
+}
+
+// GetComponentDefByCompName gets the ComponentDefinition object by the component name.
+func GetComponentDefByCompName(cli dynamic.Interface, clusterObj *kbappsv1.Cluster, compName string) (*kbappsv1.ComponentDefinition, error) {
+	var compDefName string
+	compSpec := clusterObj.Spec.GetComponentByName(compName)
+	if compSpec != nil {
+		compDefName = compSpec.ComponentDef
+	} else {
+		shardingSpec := clusterObj.Spec.GetShardingByName(compName)
+		if shardingSpec != nil {
+			compDefName = shardingSpec.Template.ComponentDef
+		}
+	}
+	return GetComponentDefByName(cli, compDefName)
+}
+
+func GetValidConfigSpecs(reloadTpl bool, configSpecs []kbappsv1alpha1.ComponentConfigSpec) ([]kbappsv1alpha1.ComponentConfigSpec, error) {
 	if !reloadTpl || len(configSpecs) == 1 {
 		return configSpecs, nil
 	}
 
-	validConfigSpecs := make([]appsv1alpha1.ComponentConfigSpec, 0, len(configSpecs))
+	validConfigSpecs := make([]kbappsv1alpha1.ComponentConfigSpec, 0, len(configSpecs))
 	for _, configSpec := range configSpecs {
 		if configSpec.ConfigConstraintRef != "" && configSpec.TemplateRef != "" {
 			validConfigSpecs = append(validConfigSpecs, configSpec)
@@ -518,12 +525,12 @@ func getValidConfigSpecs(reloadTpl bool, configSpecs []appsv1alpha1.ComponentCon
 	return validConfigSpecs, nil
 }
 
-func GetConfigSpecsFromComponentName(namespace, clusterName, componentName string, reloadTpl bool, cli dynamic.Interface) ([]appsv1alpha1.ComponentConfigSpec, error) {
+func GetConfigSpecsFromComponentName(cli dynamic.Interface, namespace, clusterName, componentName string, reloadTpl bool) ([]kbappsv1alpha1.ComponentConfigSpec, error) {
 	configKey := client.ObjectKey{
 		Namespace: namespace,
 		Name:      core.GenerateComponentConfigurationName(clusterName, componentName),
 	}
-	config := appsv1alpha1.Configuration{}
+	config := kbappsv1alpha1.Configuration{}
 	if err := GetResourceObjectFromGVR(types.ConfigurationGVR(), configKey, cli, &config); err != nil {
 		return nil, err
 	}
@@ -531,13 +538,41 @@ func GetConfigSpecsFromComponentName(namespace, clusterName, componentName strin
 		return nil, nil
 	}
 
-	configSpecs := make([]appsv1alpha1.ComponentConfigSpec, 0, len(config.Spec.ConfigItemDetails))
+	configSpecs := make([]kbappsv1alpha1.ComponentConfigSpec, 0, len(config.Spec.ConfigItemDetails))
 	for _, item := range config.Spec.ConfigItemDetails {
 		if item.ConfigSpec != nil {
 			configSpecs = append(configSpecs, *item.ConfigSpec)
 		}
 	}
-	return getValidConfigSpecs(reloadTpl, configSpecs)
+	return GetValidConfigSpecs(reloadTpl, configSpecs)
+}
+
+func ToV1ComponentConfigSpec(configSpec kbappsv1.ComponentConfigSpec) kbappsv1alpha1.ComponentConfigSpec {
+	config := kbappsv1alpha1.ComponentConfigSpec{
+		ComponentTemplateSpec: kbappsv1alpha1.ComponentTemplateSpec{
+			Name:        configSpec.Name,
+			TemplateRef: configSpec.TemplateRef,
+			Namespace:   configSpec.Namespace,
+			VolumeName:  configSpec.VolumeName,
+			DefaultMode: configSpec.DefaultMode,
+		},
+		Keys:                configSpec.Keys,
+		ConfigConstraintRef: configSpec.ConfigConstraintRef,
+		InjectEnvTo:         configSpec.InjectEnvTo,
+		AsSecret:            configSpec.AsSecret,
+	}
+	for i := range configSpec.ReRenderResourceTypes {
+		config.ReRenderResourceTypes = append(config.ReRenderResourceTypes, kbappsv1alpha1.RerenderResourceType(configSpec.ReRenderResourceTypes[i]))
+	}
+	return config
+}
+
+func ToV1ComponentConfigSpecs(configSpecs []kbappsv1.ComponentConfigSpec) []kbappsv1alpha1.ComponentConfigSpec {
+	var configs []kbappsv1alpha1.ComponentConfigSpec
+	for i := range configSpecs {
+		configs = append(configs, ToV1ComponentConfigSpec(configSpecs[i]))
+	}
+	return configs
 }
 
 // GetK8SClientObject gets the client object of k8s,
@@ -567,7 +602,7 @@ func GetResourceObjectFromGVR(gvr schema.GroupVersionResource, key client.Object
 }
 
 func GetDefaultRoleSelector(cli dynamic.Interface,
-	cluster *appsv1alpha1.Cluster,
+	cluster *kbappsv1.Cluster,
 	compDefName string,
 	clusterCompDefRefName string) (string, error) {
 	if len(compDefName) > 0 {
@@ -585,8 +620,8 @@ func GetDefaultRoleSelector(cli dynamic.Interface,
 		}
 		return "", nil
 	}
-	if cluster.Spec.ClusterDefRef != "" && clusterCompDefRefName != "" {
-		clusterDef, err := GetClusterDefByName(cli, cluster.Spec.ClusterDefRef)
+	/*if cluster.Spec.ClusterDef != "" && clusterCompDefRefName != "" {
+		clusterDef, err := GetClusterDefByName(cli, cluster.Spec.ClusterDef)
 		if err != nil {
 			return "", err
 		}
@@ -595,14 +630,14 @@ func GetDefaultRoleSelector(cli dynamic.Interface,
 			return "", fmt.Errorf("referenced cluster component definition is not defined: %s", clusterCompDefRefName)
 		}
 		switch clusterCompDef.WorkloadType {
-		case appsv1alpha1.Replication:
+		case kbappsv1alpha1.Replication:
 			return constant.Primary, nil
-		case appsv1alpha1.Consensus:
+		case kbappsv1alpha1.Consensus:
 			if clusterCompDef.ConsensusSpec != nil {
 				return clusterCompDef.ConsensusSpec.Leader.Name, nil
 			}
 			return constant.Leader, nil
-		case appsv1alpha1.Stateful:
+		case kbappsv1alpha1.Stateful:
 			if clusterCompDef.RSMSpec != nil {
 				for _, role := range clusterCompDef.RSMSpec.Roles {
 					if role.IsLeader {
@@ -611,13 +646,13 @@ func GetDefaultRoleSelector(cli dynamic.Interface,
 				}
 			}
 		}
-	}
+	}*/
 	return "", nil
 }
 
 // GetCompDefByName gets the ComponentDefinition object by the name.
-func GetCompDefByName(cli dynamic.Interface, compDefName string) (*appsv1alpha1.ComponentDefinition, error) {
-	compDef := &appsv1alpha1.ComponentDefinition{}
+func GetCompDefByName(cli dynamic.Interface, compDefName string) (*kbappsv1alpha1.ComponentDefinition, error) {
+	compDef := &kbappsv1alpha1.ComponentDefinition{}
 	compDefKey := client.ObjectKey{
 		Namespace: "",
 		Name:      compDefName,
@@ -629,8 +664,8 @@ func GetCompDefByName(cli dynamic.Interface, compDefName string) (*appsv1alpha1.
 }
 
 // GetClusterDefByName gets the ClusterDefinition object by the name.
-func GetClusterDefByName(cli dynamic.Interface, clusterDefName string) (*appsv1alpha1.ClusterDefinition, error) {
-	clusterDef := &appsv1alpha1.ClusterDefinition{}
+func GetClusterDefByName(cli dynamic.Interface, clusterDefName string) (*kbappsv1alpha1.ClusterDefinition, error) {
+	clusterDef := &kbappsv1alpha1.ClusterDefinition{}
 	clusterDefKey := client.ObjectKey{
 		Namespace: "",
 		Name:      clusterDefName,
@@ -642,14 +677,14 @@ func GetClusterDefByName(cli dynamic.Interface, clusterDefName string) (*appsv1a
 }
 
 // GetComponentsFromResource returns name of component.
-func GetComponentsFromResource(namespace, clusterName string, componentSpecs []appsv1alpha1.ClusterComponentSpec, cli dynamic.Interface) ([]string, error) {
+func GetComponentsFromResource(namespace, clusterName string, componentSpecs []kbappsv1.ClusterComponentSpec, cli dynamic.Interface) ([]string, error) {
 	componentNames := make([]string, 0, len(componentSpecs))
 	for _, component := range componentSpecs {
 		configKey := client.ObjectKey{
 			Namespace: namespace,
 			Name:      core.GenerateComponentConfigurationName(clusterName, component.Name),
 		}
-		config := appsv1alpha1.Configuration{}
+		config := kbappsv1alpha1.Configuration{}
 		if err := GetResourceObjectFromGVR(types.ConfigurationGVR(), configKey, cli, &config); err != nil {
 			return nil, err
 		}
@@ -664,7 +699,19 @@ func GetComponentsFromResource(namespace, clusterName string, componentSpecs []a
 	return componentNames, nil
 }
 
-func enableReconfiguring(component *appsv1alpha1.ConfigurationSpec) bool {
+func IsSupportConfigFileReconfigure(configTemplateSpec kbappsv1alpha1.ComponentConfigSpec, configFileKey string) bool {
+	if len(configTemplateSpec.Keys) == 0 {
+		return true
+	}
+	for _, keySelector := range configTemplateSpec.Keys {
+		if keySelector == configFileKey {
+			return true
+		}
+	}
+	return false
+}
+
+func enableReconfiguring(component *kbappsv1alpha1.ConfigurationSpec) bool {
 	if component == nil {
 		return false
 	}
@@ -681,10 +728,10 @@ func enableReconfiguring(component *appsv1alpha1.ConfigurationSpec) bool {
 }
 
 // IsSupportReconfigureParams checks whether all updated parameters belong to config template parameters.
-func IsSupportReconfigureParams(tpl appsv1alpha1.ComponentConfigSpec, values map[string]*string, cli dynamic.Interface) (bool, error) {
+func IsSupportReconfigureParams(tpl kbappsv1alpha1.ComponentConfigSpec, values map[string]*string, cli dynamic.Interface) (bool, error) {
 	var (
 		err              error
-		configConstraint = appsv1beta1.ConfigConstraint{}
+		configConstraint = kbappsv1beta1.ConfigConstraint{}
 	)
 
 	if err := GetResourceObjectFromGVR(types.ConfigConstraintGVR(), client.ObjectKey{
@@ -718,8 +765,8 @@ func IsSupportReconfigureParams(tpl appsv1alpha1.ComponentConfigSpec, values map
 	return true, nil
 }
 
-func ValidateParametersModified(tpl *appsv1alpha1.ComponentConfigSpec, parameters sets.Set[string], cli dynamic.Interface) (err error) {
-	cc := appsv1beta1.ConfigConstraint{}
+func ValidateParametersModified(tpl *kbappsv1alpha1.ComponentConfigSpec, parameters sets.Set[string], cli dynamic.Interface) (err error) {
+	cc := kbappsv1beta1.ConfigConstraint{}
 	ccKey := client.ObjectKey{
 		Namespace: "",
 		Name:      tpl.ConfigConstraintRef,
@@ -730,7 +777,7 @@ func ValidateParametersModified(tpl *appsv1alpha1.ComponentConfigSpec, parameter
 	return ValidateParametersModified2(parameters, cc.Spec)
 }
 
-func ValidateParametersModified2(parameters sets.Set[string], cc appsv1beta1.ConfigConstraintSpec) error {
+func ValidateParametersModified2(parameters sets.Set[string], cc kbappsv1beta1.ConfigConstraintSpec) error {
 	if len(cc.ImmutableParameters) == 0 {
 		return nil
 	}
@@ -788,13 +835,25 @@ func GetHelmChartRepoURL() string {
 }
 
 // GetKubeBlocksNamespace gets namespace of KubeBlocks installation, infer namespace from helm secrets
-func GetKubeBlocksNamespace(client kubernetes.Interface) (string, error) {
-	secrets, err := client.CoreV1().Secrets(metav1.NamespaceAll).List(context.TODO(), metav1.ListOptions{LabelSelector: types.KubeBlocksHelmLabel})
-	// if KubeBlocks is upgraded, there will be multiple secrets
-	if err == nil && len(secrets.Items) >= 1 {
-		return secrets.Items[0].Namespace, nil
+func GetKubeBlocksNamespace(client kubernetes.Interface, specifiedNamespace string) (string, error) {
+	secrets, err := client.CoreV1().Secrets(specifiedNamespace).List(context.TODO(), metav1.ListOptions{LabelSelector: types.KubeBlocksHelmLabel})
+	if err != nil {
+		return "", err
 	}
-	return "", errors.New("failed to get KubeBlocks installation namespace")
+	var kbNamespace string
+	for _, v := range secrets.Items {
+		if kbNamespace == "" {
+			kbNamespace = v.Namespace
+		}
+		if kbNamespace != v.Namespace {
+			return kbNamespace, intctrlutil.NewFatalError(fmt.Sprintf(`Existing multiple KubeBlocks installation namespace: "%s, %s", need to manually specify the namespace flag`, kbNamespace, v.Namespace))
+		}
+	}
+	// if KubeBlocks is upgraded, there will be multiple secrets
+	if kbNamespace == "" {
+		return kbNamespace, errors.New("failed to get KubeBlocks installation namespace")
+	}
+	return kbNamespace, nil
 }
 
 // GetKubeBlocksCRDsURL gets the crds url by IP region.
@@ -821,7 +880,7 @@ func GetKubeBlocksNamespaceByDynamic(dynamic dynamic.Interface) (string, error) 
 type ExposeType string
 
 const (
-	ExposeToVPC      ExposeType = "vpc"
+	ExposeToIntranet ExposeType = "intranet"
 	ExposeToInternet ExposeType = "internet"
 
 	NodePort     string = "NodePort"
@@ -833,7 +892,7 @@ const (
 
 var ProviderExposeAnnotations = map[K8sProvider]map[ExposeType]map[string]string{
 	EKSProvider: {
-		ExposeToVPC: map[string]string{
+		ExposeToIntranet: map[string]string{
 			"service.beta.kubernetes.io/aws-load-balancer-type":     "nlb",
 			"service.beta.kubernetes.io/aws-load-balancer-internal": "true",
 		},
@@ -843,13 +902,13 @@ var ProviderExposeAnnotations = map[K8sProvider]map[ExposeType]map[string]string
 		},
 	},
 	GKEProvider: {
-		ExposeToVPC: map[string]string{
+		ExposeToIntranet: map[string]string{
 			"networking.gke.io/load-balancer-type": "Internal",
 		},
 		ExposeToInternet: map[string]string{},
 	},
 	AKSProvider: {
-		ExposeToVPC: map[string]string{
+		ExposeToIntranet: map[string]string{
 			"service.beta.kubernetes.io/azure-load-balancer-internal": "true",
 		},
 		ExposeToInternet: map[string]string{
@@ -857,7 +916,7 @@ var ProviderExposeAnnotations = map[K8sProvider]map[ExposeType]map[string]string
 		},
 	},
 	ACKProvider: {
-		ExposeToVPC: map[string]string{
+		ExposeToIntranet: map[string]string{
 			"service.beta.kubernetes.io/alibaba-cloud-loadbalancer-address-type": "intranet",
 		},
 		ExposeToInternet: map[string]string{
@@ -870,13 +929,13 @@ var ProviderExposeAnnotations = map[K8sProvider]map[ExposeType]map[string]string
 		ExposeToInternet: map[string]string{},
 	},
 	KINDProvider: {
-		ExposeToVPC: map[string]string{},
+		ExposeToIntranet: map[string]string{},
 	},
 	K3SProvider: {
-		ExposeToVPC: map[string]string{},
+		ExposeToIntranet: map[string]string{},
 	},
 	UnknownProvider: {
-		ExposeToVPC:      map[string]string{},
+		ExposeToIntranet: map[string]string{},
 		ExposeToInternet: map[string]string{},
 	},
 }
@@ -931,8 +990,8 @@ func buildLabelSelectors(prefix string, key string, names []string) string {
 }
 
 // NewOpsRequestForReconfiguring returns a new common OpsRequest for Reconfiguring operation
-func NewOpsRequestForReconfiguring(opsName, namespace, clusterName string) *appsv1alpha1.OpsRequest {
-	return &appsv1alpha1.OpsRequest{
+func NewOpsRequestForReconfiguring(opsName, namespace, clusterName string) *opsv1alpha1.OpsRequest {
+	return &opsv1alpha1.OpsRequest{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: fmt.Sprintf("%s/%s", types.AppsAPIGroup, types.AppsAPIVersion),
 			Kind:       types.KindOps,
@@ -941,11 +1000,11 @@ func NewOpsRequestForReconfiguring(opsName, namespace, clusterName string) *apps
 			Name:      opsName,
 			Namespace: namespace,
 		},
-		Spec: appsv1alpha1.OpsRequestSpec{
+		Spec: opsv1alpha1.OpsRequestSpec{
 			ClusterName: clusterName,
-			Type:        appsv1alpha1.ReconfiguringType,
-			SpecificOpsRequest: appsv1alpha1.SpecificOpsRequest{
-				Reconfigure: &appsv1alpha1.Reconfigure{},
+			Type:        opsv1alpha1.ReconfiguringType,
+			SpecificOpsRequest: opsv1alpha1.SpecificOpsRequest{
+				Reconfigures: []opsv1alpha1.Reconfigure{},
 			},
 		},
 	}
@@ -1037,6 +1096,47 @@ func DisplayDiffWithColor(out io.Writer, diffText string) {
 	}
 }
 
+func BuildSchedulingPolicy(tenancy string, clusterName string, compName string, tolerations []corev1.Toleration, nodeLabels map[string]string, podAntiAffinity string, topologyKeys []string) (*kbappsv1.SchedulingPolicy, bool) {
+	if len(tolerations) == 0 && len(nodeLabels) == 0 && len(topologyKeys) == 0 {
+		return nil, false
+	}
+	affinity := &corev1.Affinity{}
+	if podAntiAffinity != "" || len(topologyKeys) > 0 {
+		affinity.PodAntiAffinity = BuildPodAntiAffinityForComponent(tenancy, clusterName, compName, podAntiAffinity, topologyKeys)
+	}
+
+	var topologySpreadConstraints []corev1.TopologySpreadConstraint
+
+	var whenUnsatisfiable corev1.UnsatisfiableConstraintAction
+	if kbappsv1alpha1.PodAntiAffinity(podAntiAffinity) == kbappsv1alpha1.Required {
+		whenUnsatisfiable = corev1.DoNotSchedule
+	} else {
+		whenUnsatisfiable = corev1.ScheduleAnyway
+	}
+	for _, topologyKey := range topologyKeys {
+		topologySpreadConstraints = append(topologySpreadConstraints, corev1.TopologySpreadConstraint{
+			MaxSkew:           1,
+			WhenUnsatisfiable: whenUnsatisfiable,
+			TopologyKey:       topologyKey,
+			LabelSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					constant.AppInstanceLabelKey:    clusterName,
+					constant.KBAppComponentLabelKey: compName,
+				},
+			},
+		})
+	}
+
+	schedulingPolicy := &kbappsv1.SchedulingPolicy{
+		Affinity:                  affinity,
+		NodeSelector:              nodeLabels,
+		Tolerations:               tolerations,
+		TopologySpreadConstraints: topologySpreadConstraints,
+	}
+
+	return schedulingPolicy, true
+}
+
 // BuildTolerations toleration format: key=value:effect or key:effect,
 func BuildTolerations(raw []string) ([]interface{}, error) {
 	tolerations := make([]interface{}, 0)
@@ -1105,7 +1205,7 @@ func BuildPodAntiAffinity(podAntiAffinityStrategy string, topologyKeys []string)
 			TopologyKey: topologyKey,
 		})
 	}
-	if podAntiAffinityStrategy == string(appsv1alpha1.Required) {
+	if podAntiAffinityStrategy == string(kbappsv1alpha1.Required) {
 		podAntiAffinity = &corev1.PodAntiAffinity{
 			RequiredDuringSchedulingIgnoredDuringExecution: podAffinityTerms,
 		}
@@ -1120,6 +1220,55 @@ func BuildPodAntiAffinity(podAntiAffinityStrategy string, topologyKeys []string)
 		podAntiAffinity = &corev1.PodAntiAffinity{
 			PreferredDuringSchedulingIgnoredDuringExecution: weightedPodAffinityTerms,
 		}
+	}
+
+	return podAntiAffinity
+}
+
+// BuildPodAntiAffinityForComponent build pod anti affinity from topology keys and tenancy for cluster
+func BuildPodAntiAffinityForComponent(tenancy string, clusterName string, compName string, podAntiAffinityStrategy string, topologyKeys []string) *corev1.PodAntiAffinity {
+	var podAntiAffinity *corev1.PodAntiAffinity
+	var podAffinityTerms []corev1.PodAffinityTerm
+	for _, topologyKey := range topologyKeys {
+		podAffinityTerms = append(podAffinityTerms, corev1.PodAffinityTerm{
+			TopologyKey: topologyKey,
+			LabelSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					constant.AppInstanceLabelKey:    clusterName,
+					constant.KBAppComponentLabelKey: compName,
+				},
+			},
+		})
+	}
+	if podAntiAffinityStrategy == string(kbappsv1alpha1.Required) {
+		podAntiAffinity = &corev1.PodAntiAffinity{
+			RequiredDuringSchedulingIgnoredDuringExecution: podAffinityTerms,
+		}
+	} else {
+		var weightedPodAffinityTerms []corev1.WeightedPodAffinityTerm
+		for _, podAffinityTerm := range podAffinityTerms {
+			weightedPodAffinityTerms = append(weightedPodAffinityTerms, corev1.WeightedPodAffinityTerm{
+				Weight:          100,
+				PodAffinityTerm: podAffinityTerm,
+			})
+		}
+		podAntiAffinity = &corev1.PodAntiAffinity{
+			PreferredDuringSchedulingIgnoredDuringExecution: weightedPodAffinityTerms,
+		}
+	}
+
+	// Add pod PodAffinityTerm for dedicated node
+	if kbappsv1alpha1.TenancyType(tenancy) == kbappsv1alpha1.DedicatedNode {
+		podAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution = append(
+			podAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution, corev1.PodAffinityTerm{
+				TopologyKey: corev1.LabelHostname,
+				LabelSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						constant.AppInstanceLabelKey:    clusterName,
+						constant.KBAppComponentLabelKey: compName,
+					},
+				},
+			})
 	}
 
 	return podAntiAffinity

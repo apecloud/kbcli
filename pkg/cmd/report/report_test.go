@@ -387,7 +387,6 @@ var _ = Describe("report", func() {
 
 			cluster := testing.FakeCluster(clusterName, namespace)
 			clusterDef := testing.FakeClusterDef()
-			clusterVersion := testing.FakeClusterVersion()
 
 			deploy := testing.FakeDeploy(deployName, namespace, clusterLabels)
 			deploymentList := &appsv1.DeploymentList{}
@@ -426,7 +425,7 @@ var _ = Describe("report", func() {
 
 			tf.Client = tf.UnstructuredClient
 			tf.FakeDynamicClient = testing.FakeDynamicClient(deploy, sts, event)
-			kbfakeclient = testing.FakeKBClientSet(cluster, clusterDef, clusterVersion)
+			kbfakeclient = testing.FakeKBClientSet(cluster, clusterDef, testing.FakeCompDef())
 			streams = genericiooptions.NewTestIOStreamsDiscard()
 		})
 

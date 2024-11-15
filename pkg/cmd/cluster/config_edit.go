@@ -26,6 +26,7 @@ import (
 	"os"
 	"strings"
 
+	opsv1alpha1 "github.com/apecloud/kubeblocks/apis/operations/v1alpha1"
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/slices"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -229,7 +230,7 @@ func NewEditConfigureCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) 
 	o := &editConfigOptions{
 		configOpsOptions: configOpsOptions{
 			editMode:          true,
-			OperationsOptions: newBaseOperationsOptions(f, streams, appsv1alpha1.ReconfiguringType, true),
+			OperationsOptions: newBaseOperationsOptions(f, streams, opsv1alpha1.ReconfiguringType, true),
 		}}
 
 	cmd := &cobra.Command{

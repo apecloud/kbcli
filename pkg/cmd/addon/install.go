@@ -22,6 +22,7 @@ package addon
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -39,6 +40,7 @@ import (
 
 	extensionsv1alpha1 "github.com/apecloud/kubeblocks/apis/extensions/v1alpha1"
 
+	clusterCmd "github.com/apecloud/kbcli/pkg/cmd/cluster"
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
@@ -56,6 +58,12 @@ var addonInstallExample = templates.Examples(`
 
 	# install an addon with a specified version default index
 	kbcli addon install apecloud-mysql --version 0.7.0
+
+	# install an addon with a specified version and cluster chart of different version.
+	kbcli addon install apecloud-mysql --version 0.7.0 --cluster-chart-version 0.7.1
+
+	# install an addon with a specified version and local path.
+	kbcli addon install apecloud-mysql --version 0.7.0 --path /path/to/local/chart
 `)
 
 type baseOption struct {
@@ -91,6 +99,12 @@ type installOption struct {
 	version string
 	// the index name, if not specified use `kubeblocks` default
 	index string
+	// the version of cluster chart to register, if not specified use the same version as the addon by default
+	clusterChartVersion string
+	// the repo url of cluster charts, if not specified use 'kubeblocks-addons' by default
+	clusterChartRepo string
+	// the local path contains addon CRs and needs to be specified when operating offline
+	path string
 
 	addon *extensionsv1alpha1.Addon
 }
@@ -121,37 +135,60 @@ func newInstallCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 			o.name = args[0]
 			util.CheckErr(o.Complete())
 			util.CheckErr(o.Validate())
-			util.CheckErr(o.Run())
+			util.CheckErr(o.Run(f, streams))
 			// avoid unnecessary messages for upgrade
 			fmt.Fprintf(o.Out, "addon %s installed successfully\n", o.name)
+			if err := clusterCmd.RegisterClusterChart(f, streams, "", o.name, o.clusterChartVersion, o.clusterChartRepo); err != nil {
+				util.CheckErr(err)
+			}
 		},
 	}
 	cmd.Flags().BoolVar(&o.force, "force", false, "force install the addon and ignore the version check")
-	cmd.Flags().StringVar(&o.version, "version", "", "specify the addon version")
-	cmd.Flags().StringVar(&o.index, "index", types.DefaultIndexName, "specify the addon index index, use 'kubeblocks' by default")
+	cmd.Flags().StringVar(&o.version, "version", "", "specify the addon version to install, run 'kbcli addon search <addon-name>' to get the available versions")
+	cmd.Flags().StringVar(&o.index, "index", types.DefaultIndexName, "specify the addon index, use 'kubeblocks' by default")
+	cmd.Flags().StringVar(&o.clusterChartVersion, "cluster-chart-version", "", "specify the cluster chart version, use the same version as the addon by default")
+	cmd.Flags().StringVar(&o.clusterChartRepo, "cluster-chart-repo", types.ClusterChartsRepoURL, "specify the repo of cluster chart, use the url of 'kubeblocks-addons' by default")
+	cmd.Flags().StringVar(&o.path, "path", "", "specify the local path contains addon CRs and needs to be specified when operating offline")
+
+	_ = cmd.MarkFlagRequired("version")
 
 	return cmd
 }
 
 // Complete will finalize the basic K8s client configuration and find the corresponding addon from the index
 func (o *installOption) Complete() error {
-	var err error
+	var (
+		err    error
+		addons []searchResult
+	)
+
 	if err = o.baseOption.complete(); err != nil {
 		return err
 	}
-	// search specified addon and match its index
 
+	if o.version == "" {
+		return fmt.Errorf("please specify the version, run 'kbcli addon search %s' to get the available versions", o.name)
+	}
+
+	// search specified addon and match its index
 	if _, err = semver.NewVersion(o.version); err != nil && o.version != "" {
 		return fmt.Errorf("the version %s does not comply with the standards", o.version)
 	}
 
-	dir, err := util.GetCliAddonDir()
-	if err != nil {
-		return err
-	}
-	addons, err := searchAddon(o.name, dir)
-	if err != nil {
-		return err
+	// If no local path is specified, we search all indexes in the default index directory.
+	// When a local path is specified, we assume the last part of the path is the index and search only that.
+	if o.path == "" {
+		dir, err := util.GetCliAddonDir()
+		if err != nil {
+			return err
+		}
+		if addons, err = searchAddon(o.name, dir, ""); err != nil {
+			return err
+		}
+	} else {
+		if addons, err = searchAddon(o.name, filepath.Dir(o.path), filepath.Base(o.path)); err != nil {
+			return err
+		}
 	}
 
 	sort.Slice(addons, func(i, j int) bool {
@@ -165,22 +202,22 @@ func (o *installOption) Complete() error {
 
 	// descending order of versions
 	for _, item := range addons {
-		if item.index.name == o.index {
-			// if the version not specified, use the latest version
-			if o.version == "" {
-				o.addon = item.addon
-				break
-			} else if o.version == getAddonVersion(item.addon) {
+		if o.path != "" || item.index.name == o.index {
+			if o.version == getAddonVersion(item.addon) {
 				o.addon = item.addon
 				break
 			}
 		}
 	}
+
+	// complete the version of the cluster chart
+	if o.clusterChartVersion == "" {
+		o.clusterChartVersion = o.version
+	}
+
 	if o.addon == nil {
 		var addonInfo = o.name
-		if o.version != "" {
-			addonInfo += "-" + o.version
-		}
+		addonInfo += "-" + o.version
 		return fmt.Errorf("addon '%s' not found in the index '%s'", addonInfo, o.index)
 	}
 	return nil
@@ -217,7 +254,7 @@ It will automatically skip version checks, which may result in the cluster not r
 }
 
 // Run will apply the addon.yaml to K8s
-func (o *installOption) Run() error {
+func (o *installOption) Run(f cmdutil.Factory, streams genericiooptions.IOStreams) error {
 	item, err := runtime.DefaultUnstructuredConverter.ToUnstructured(o.addon)
 	if err != nil {
 		return err
@@ -234,7 +271,7 @@ func (o *installOption) Run() error {
 // 1.0.0-alpha < 1.0.0-alpha.1 < 1.0.0-alpha.beta < 1.0.0-beta < 1.0.0-beta.2 < 1.0.0-beta.11 < 1.0.0-rc.1 < 1.0.0.
 // https://semver.org/
 func validateVersion(annotations, kbVersion string) (bool, error) {
-	// if kb version is a prerelease version, we will break the rules for developing
+	// if kb version is a pre-release version, we will break the rules for developing
 	if strings.Contains(kbVersion, "-") {
 		addPreReleaseInfo := func(constrain string) string {
 			constrain = strings.Trim(constrain, " ")

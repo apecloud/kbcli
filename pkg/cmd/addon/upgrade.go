@@ -53,6 +53,9 @@ var addonUpgradeExample = templates.Examples(`
 	# upgrade an addon with a specified version default index 
 	kbcli addon upgrade apecloud-mysql --version 0.7.0
 
+	# upgrade an addon with a specified version, default index and a different version of cluster chart
+	kbcli addon upgrade apecloud-mysql --version 0.7.0 --cluster-chart-version 0.7.1
+
 	# non-inplace upgrade an addon with a specified version
 	kbcli addon upgrade apecloud-mysql  --inplace=false --version 0.7.0
 
@@ -95,7 +98,7 @@ func newUpgradeCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 			o.name = args[0]
 			util.CheckErr(o.Complete())
 			util.CheckErr(o.Validate())
-			util.CheckErr(o.Run())
+			util.CheckErr(o.Run(f, streams))
 		},
 	}
 	cmd.Flags().BoolVar(&o.force, "force", false, "force upgrade the addon and ignore the version check")
@@ -103,6 +106,9 @@ func newUpgradeCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 	cmd.Flags().StringVar(&o.index, "index", types.DefaultIndexName, "specify the addon index index, use 'kubeblocks' by default")
 	cmd.Flags().BoolVar(&o.inplace, "inplace", true, "when inplace is false, it will retain the existing addon and reinstall the new version of the addon, otherwise the upgrade will be in-place. The default is true.")
 	cmd.Flags().StringVar(&o.rename, "name", "", "name is the new version addon name need to set by user when inplace is false, it also will be used as resourceNamePrefix of an addon with multiple version.")
+	cmd.Flags().StringVar(&o.clusterChartVersion, "cluster-chart-version", "", "specify the cluster chart version, use the same version as the addon by default")
+	cmd.Flags().StringVar(&o.clusterChartRepo, "cluster-chart-repo", types.ClusterChartsRepoURL, "specify the repo of cluster chart, use the url of 'kubeblocks-addons' by default")
+	cmd.Flags().StringVar(&o.path, "path", "", "specify the local path contains addon CRs and needs to be specified when operating offline")
 	return cmd
 }
 
@@ -142,14 +148,14 @@ func (o *upgradeOption) Validate() error {
 	return o.installOption.Validate()
 }
 
-func (o *upgradeOption) Run() error {
+func (o *upgradeOption) Run(f cmdutil.Factory, streams genericiooptions.IOStreams) error {
 	if !o.inplace {
 		if o.addon.Spec.Helm.InstallValues.SetValues != nil {
 			o.addon.Spec.Helm.InstallValues.SetValues = append(o.addon.Spec.Helm.InstallValues.SetValues, fmt.Sprintf("%s=%s", types.AddonResourceNamePrefix, o.rename))
 		}
 		o.addon.Spec.Helm.InstallValues.SetValues = []string{fmt.Sprintf("%s=%s", types.AddonResourceNamePrefix, o.rename)}
 		o.addon.Name = o.rename
-		err := o.installOption.Run()
+		err := o.installOption.Run(f, streams)
 		if err == nil {
 			fmt.Printf("Addon %s-%s upgrade successed.\n", o.rename, o.version)
 		}

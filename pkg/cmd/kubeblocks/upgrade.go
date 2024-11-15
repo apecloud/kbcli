@@ -23,11 +23,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/go-version"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"helm.sh/helm/v3/pkg/release"
 	appsv1 "k8s.io/api/apps/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -39,12 +42,12 @@ import (
 	"k8s.io/klog/v2"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
+	"sigs.k8s.io/yaml"
 
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/spinner"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
-	"github.com/apecloud/kbcli/pkg/util/breakingchange"
 	"github.com/apecloud/kbcli/pkg/util/conversion"
 	"github.com/apecloud/kbcli/pkg/util/helm"
 	"github.com/apecloud/kbcli/pkg/util/prompt"
@@ -59,7 +62,7 @@ var (
 	kbcli kubeblocks upgrade --set replicaCount=3`)
 )
 
-type getDeploymentFunc func(client kubernetes.Interface) (*appsv1.Deployment, error)
+type deploymentGetter func(client kubernetes.Interface) (*appsv1.Deployment, error)
 
 func newUpgradeCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
 	o := &InstallOptions{
@@ -80,8 +83,9 @@ func newUpgradeCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 	}
 
 	cmd.Flags().StringVar(&o.Version, "version", "", "Set KubeBlocks version")
+	cmd.Flags().StringVarP(&o.Namespace, "namespace", "n", "", "KubeBlocks namespace")
 	cmd.Flags().BoolVar(&o.Check, "check", true, "Check kubernetes environment before upgrade")
-	cmd.Flags().DurationVar(&o.Timeout, "timeout", 600*time.Second, "Time to wait for upgrading KubeBlocks, such as --timeout=10m")
+	cmd.Flags().DurationVar(&o.Timeout, "timeout", 1800*time.Second, "Time to wait for upgrading KubeBlocks, such as --timeout=10m")
 	cmd.Flags().BoolVar(&o.Wait, "wait", true, "Wait for KubeBlocks to be ready. It will wait for a --timeout period")
 	cmd.Flags().BoolVar(&o.autoApprove, "auto-approve", false, "Skip interactive approval before upgrading KubeBlocks")
 	helm.AddValueOptionsFlags(cmd.Flags(), &o.ValueOpts)
@@ -89,17 +93,43 @@ func newUpgradeCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 	return cmd
 }
 
-func (o *InstallOptions) Upgrade() error {
-	klog.V(1).Info("##### Start to upgrade KubeBlocks #####")
+func (o *InstallOptions) getKBRelease() (*release.Release, error) {
 	if o.HelmCfg.Namespace() == "" {
-		ns, err := util.GetKubeBlocksNamespace(o.Client)
+		ns, err := util.GetKubeBlocksNamespace(o.Client, o.Namespace)
 		if err != nil || ns == "" {
 			printer.Warning(o.Out, "Failed to find deployed KubeBlocks.\n\n")
 			fmt.Fprint(o.Out, "Use \"kbcli kubeblocks install\" to install KubeBlocks.\n")
 			fmt.Fprintf(o.Out, "Use \"kbcli kubeblocks status\" to get information in more details.\n")
-			return nil
+			return nil, err
 		}
 		o.HelmCfg.SetNamespace(ns)
+	}
+	// check helm release status
+	KBRelease, err := helm.GetHelmRelease(o.HelmCfg, types.KubeBlocksChartName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get Helm release: %v in namespace %s", err, o.Namespace)
+	}
+
+	// intercept status of pending, unknown, uninstalling and uninstalled.
+	var status release.Status
+	if KBRelease != nil && KBRelease.Info != nil {
+		status = KBRelease.Info.Status
+	} else {
+		return nil, fmt.Errorf("failed to get Helm release status: release or release info is nil")
+	}
+	if status.IsPending() {
+		return nil, fmt.Errorf("helm release status is %s. Please wait until the release status changes to ‘deployed’ before upgrading KubeBlocks", status.String())
+	} else if status != release.StatusDeployed && status != release.StatusFailed && status != release.StatusSuperseded {
+		return nil, fmt.Errorf("helm release status is %s. Please fix the release before upgrading KubeBlocks", status.String())
+	}
+	return KBRelease, nil
+}
+
+func (o *InstallOptions) Upgrade() error {
+	klog.V(1).Info("##### Start to upgrade KubeBlocks #####")
+	KBRelease, err := o.getKBRelease()
+	if err != nil {
+		return err
 	}
 
 	o.Version = util.TrimVersionPrefix(o.Version)
@@ -110,12 +140,10 @@ func (o *InstallOptions) Upgrade() error {
 	}
 
 	// check if KubeBlocks has been installed
-	v, err := util.GetVersionInfo(o.Client)
-	if err != nil {
-		return err
+	var kbVersion string
+	if KBRelease != nil && KBRelease.Chart != nil && KBRelease.Chart.Metadata != nil {
+		kbVersion = KBRelease.Chart.Metadata.Version
 	}
-
-	kbVersion := v.KubeBlocks
 	if kbVersion == "" {
 		return errors.New("KubeBlocks does not exist, try to run \"kbcli kubeblocks install\" to install")
 	}
@@ -124,13 +152,19 @@ func (o *InstallOptions) Upgrade() error {
 		fmt.Fprintf(o.Out, "Current version %s is same with the upgraded version, no need to upgrade.\n", o.Version)
 		return nil
 	}
-	fmt.Fprintf(o.Out, "Current KubeBlocks version %s.\n", v.KubeBlocks)
+	fmt.Fprintf(o.Out, "Current KubeBlocks version %s.\n", kbVersion)
 
 	// check installing version exists
+	v, err := util.GetVersionInfo(o.Client)
+	if err != nil {
+		return err
+	}
+	v.KubeBlocks = kbVersion
 	if err = o.checkVersion(v); err != nil {
 		return err
 	}
 	o.OldVersion = kbVersion
+
 	// double check when KubeBlocks version change
 	if !o.autoApprove && o.Version != "" {
 		oldVersion, err := version.NewVersion(kbVersion)
@@ -146,7 +180,7 @@ func (o *InstallOptions) Upgrade() error {
 		case oldVersion.GreaterThan(newVersion):
 			upgradeWarn = printer.BoldYellow(fmt.Sprintf("Warning: You're attempting to downgrade KubeBlocks version from %s to %s, this action may cause your clusters and some KubeBlocks feature unavailable.\nEnsure you proceed after reviewing detailed release notes at https://github.com/apecloud/kubeblocks/releases.", kbVersion, o.Version))
 		default:
-			if err = breakingchange.ValidateUpgradeVersion(kbVersion, o.Version); err != nil {
+			if err = o.validateUpgradeVersion(kbVersion, o.Version); err != nil {
 				return err
 			}
 			upgradeWarn = fmt.Sprintf("Upgrade KubeBlocks from %s to %s", kbVersion, o.Version)
@@ -181,7 +215,7 @@ func (o *InstallOptions) Upgrade() error {
 		// KubeBlocks after upgrade.
 		s = spinner.New(o.Out, spinnerMsg("Stop KubeBlocks "+kbVersion))
 		defer s.Fail()
-		if err = o.stopDeployment(util.GetKubeBlocksDeploy); err != nil {
+		if err = o.deleteDeployment(util.GetKubeBlocksDeploy); err != nil {
 			return err
 		}
 		s.Success()
@@ -189,22 +223,12 @@ func (o *InstallOptions) Upgrade() error {
 		// stop the data protection deployment
 		s = spinner.New(o.Out, spinnerMsg("Stop DataProtection"))
 		defer s.Fail()
-		if err = o.stopDeployment(util.GetDataProtectionDeploy); err != nil {
+		if err = o.deleteDeployment(util.GetDataProtectionDeploy); err != nil {
 			return err
 		}
 		s.Success()
 
 		msg = "to " + o.Version
-	}
-
-	// save resources of old version before upgrade the crds
-	o.upgrader = breakingchange.Upgrader{
-		FromVersion: o.OldVersion,
-		ToVersion:   o.Version,
-		Dynamic:     o.Dynamic,
-	}
-	if err = o.upgrader.SaveOldResources(); err != nil {
-		return err
 	}
 
 	// save old version crs
@@ -254,13 +278,38 @@ func (o *InstallOptions) Upgrade() error {
 	return nil
 }
 
+// ValidateUpgradeVersion verifies the legality of the upgraded version.
+func (o *InstallOptions) validateUpgradeVersion(fromVersion, toVersion string) error {
+	fromVersionSlice := strings.Split(fromVersion, ".")
+	toVersionSlice := strings.Split(toVersion, ".")
+	if len(fromVersionSlice) < 2 || len(toVersionSlice) < 2 {
+		panic("unreachable, incorrect version format")
+	}
+	// can not upgrade across major versions by default.
+	if fromVersionSlice[0] != toVersionSlice[0] {
+		return fmt.Errorf("cannot upgrade across major versions")
+	}
+	fromMinorVersion, err := strconv.Atoi(fromVersionSlice[1])
+	if err != nil {
+		return err
+	}
+	toMinorVersion, err := strconv.Atoi(toVersionSlice[1])
+	if err != nil {
+		return err
+	}
+	if (toMinorVersion - fromMinorVersion) > 1 {
+		return fmt.Errorf("cannot upgrade across 1 minor version, you can upgrade to %s.%d.0 first", fromVersionSlice[0], toMinorVersion-1)
+	}
+	return nil
+}
+
 func (o *InstallOptions) upgradeChart() error {
 	return o.buildChart().Upgrade(o.HelmCfg)
 }
 
-// stopDeployment stops the deployment by setting the replicas to 0
-func (o *InstallOptions) stopDeployment(getDeployFn getDeploymentFunc) error {
-	deploy, err := getDeployFn(o.Client)
+// deleteDeployment deletes deployment.
+func (o *InstallOptions) deleteDeployment(getter deploymentGetter) error {
+	deploy, err := getter(o.Client)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil
@@ -273,26 +322,43 @@ func (o *InstallOptions) stopDeployment(getDeployFn getDeploymentFunc) error {
 		return nil
 	}
 
-	if _, err = o.Client.AppsV1().Deployments(deploy.Namespace).Patch(
-		context.TODO(), deploy.Name, apitypes.JSONPatchType,
-		[]byte(`[{"op": "replace", "path": "/spec/replicas", "value": 0}]`),
-		metav1.PatchOptions{}); err != nil {
+	// before delete deployment, output the deployment yaml, if deployment was deleted
+	// by mistake, we can recover it by apply the yaml.
+	deploy.ManagedFields = nil
+	bytes, err := yaml.Marshal(deploy)
+	if err != nil {
+		return err
+	}
+	klog.Infof(`
+------------------- Deployment %s -------------------
+%s
+------------------ Deployment %s end ----------------`,
+		deploy.Name, string(bytes), deploy.Name)
+
+	if err = o.Client.AppsV1().Deployments(deploy.Namespace).Delete(context.TODO(),
+		deploy.Name,
+		metav1.DeleteOptions{
+			GracePeriodSeconds: func() *int64 {
+				seconds := int64(0)
+				return &seconds
+			}(),
+		}); err != nil {
 		return err
 	}
 
-	// wait for deployment to be stopped
-	return wait.PollUntilContextTimeout(context.Background(), 5*time.Second, o.Timeout, true,
+	// wait for deployment to be deleted
+	return wait.PollUntilContextTimeout(context.Background(), 5*time.Second, 1*time.Minute, true,
 		func(_ context.Context) (bool, error) {
-			deploy, err = util.GetKubeBlocksDeploy(o.Client)
+			deploy, err = getter(o.Client)
 			if err != nil {
+				if apierrors.IsNotFound(err) {
+					return true, nil
+				}
 				return false, err
-			}
-			if *deploy.Spec.Replicas == 0 &&
-				deploy.Status.Replicas == 0 &&
-				deploy.Status.AvailableReplicas == 0 {
+			} else if deploy == nil {
 				return true, nil
 			}
-			return false, nil
+			return false, err
 		})
 }
 

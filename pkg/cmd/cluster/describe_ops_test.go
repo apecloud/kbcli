@@ -25,9 +25,10 @@ import (
 	"net/http"
 	"time"
 
-	cfgutil "github.com/apecloud/kubeblocks/pkg/configuration/util"
+	appsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"k8s.io/utils/pointer"
 
 	corev1 "k8s.io/api/core/v1"
 	apiresource "k8s.io/apimachinery/pkg/api/resource"
@@ -40,7 +41,7 @@ import (
 	clientfake "k8s.io/client-go/rest/fake"
 	cmdtesting "k8s.io/kubectl/pkg/cmd/testing"
 
-	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
+	opsv1alpha1 "github.com/apecloud/kubeblocks/apis/operations/v1alpha1"
 
 	clitesting "github.com/apecloud/kbcli/pkg/testing"
 	"github.com/apecloud/kbcli/pkg/types"
@@ -48,11 +49,10 @@ import (
 
 var _ = Describe("Expose", func() {
 	const (
-		namespace          = "test"
-		opsName            = "test-ops"
-		componentName      = "test_stateful"
-		componentName1     = "test_stateless"
-		clusterVersionName = "test-cluster-0.1"
+		namespace      = "test"
+		opsName        = "test-ops"
+		componentName  = "test_stateful"
+		componentName1 = "test_stateless"
 	)
 
 	var (
@@ -105,20 +105,20 @@ var _ = Describe("Expose", func() {
 		Expect(o.namespace).Should(Equal(namespace))
 	})
 
-	generateOpsObject := func(opsName string, opsType appsv1alpha1.OpsType) *appsv1alpha1.OpsRequest {
-		return &appsv1alpha1.OpsRequest{
+	generateOpsObject := func(opsName string, opsType opsv1alpha1.OpsType) *opsv1alpha1.OpsRequest {
+		return &opsv1alpha1.OpsRequest{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      opsName,
 				Namespace: namespace,
 			},
-			Spec: appsv1alpha1.OpsRequestSpec{
+			Spec: opsv1alpha1.OpsRequestSpec{
 				ClusterName: "test-cluster",
 				Type:        opsType,
 			},
 		}
 	}
 
-	describeOps := func(opsType appsv1alpha1.OpsType, completeOps func(ops *appsv1alpha1.OpsRequest)) {
+	describeOps := func(opsType opsv1alpha1.OpsType, completeOps func(ops *opsv1alpha1.OpsRequest)) {
 		randomStr := clitesting.GetRandomStr()
 		ops := generateOpsObject(opsName+randomStr, opsType)
 		completeOps(ops)
@@ -128,28 +128,28 @@ var _ = Describe("Expose", func() {
 		Expect(o.run()).Should(Succeed())
 	}
 
-	fakeOpsStatusAndProgress := func() appsv1alpha1.OpsRequestStatus {
+	fakeOpsStatusAndProgress := func() opsv1alpha1.OpsRequestStatus {
 		objectKey := "Pod/test-pod-wessxd"
 		objectKey1 := "Pod/test-pod-xsdfwe"
-		return appsv1alpha1.OpsRequestStatus{
+		return opsv1alpha1.OpsRequestStatus{
 			StartTimestamp:      metav1.NewTime(time.Now().Add(-1 * time.Minute)),
 			CompletionTimestamp: metav1.NewTime(time.Now()),
 			Progress:            "1/2",
-			Phase:               appsv1alpha1.OpsFailedPhase,
-			Components: map[string]appsv1alpha1.OpsRequestComponentStatus{
+			Phase:               opsv1alpha1.OpsFailedPhase,
+			Components: map[string]opsv1alpha1.OpsRequestComponentStatus{
 				componentName: {
-					Phase: appsv1alpha1.FailedClusterCompPhase,
-					ProgressDetails: []appsv1alpha1.ProgressStatusDetail{
+					Phase: appsv1.FailedClusterCompPhase,
+					ProgressDetails: []opsv1alpha1.ProgressStatusDetail{
 						{
 							ObjectKey: objectKey,
-							Status:    appsv1alpha1.SucceedProgressStatus,
+							Status:    opsv1alpha1.SucceedProgressStatus,
 							StartTime: metav1.NewTime(time.Now().Add(-59 * time.Second)),
 							EndTime:   metav1.NewTime(time.Now().Add(-39 * time.Second)),
 							Message:   fmt.Sprintf("Successfully vertical scale Pod: %s in Component: %s", objectKey, componentName),
 						},
 						{
 							ObjectKey: objectKey1,
-							Status:    appsv1alpha1.FailedProgressStatus,
+							Status:    opsv1alpha1.FailedProgressStatus,
 							StartTime: metav1.NewTime(time.Now().Add(-39 * time.Second)),
 							EndTime:   metav1.NewTime(time.Now().Add(-1 * time.Second)),
 							Message:   fmt.Sprintf("Failed to vertical scale Pod: %s in Component: %s", objectKey1, componentName),
@@ -174,10 +174,10 @@ var _ = Describe("Expose", func() {
 		}
 	}
 
-	testPrintLastConfiguration := func(config appsv1alpha1.LastConfiguration,
-		opsType appsv1alpha1.OpsType, expectStrings ...string) {
+	testPrintLastConfiguration := func(config opsv1alpha1.LastConfiguration,
+		opsType opsv1alpha1.OpsType, expectStrings ...string) {
 		o := newDescribeOpsOptions(tf, streams)
-		if opsType == appsv1alpha1.UpgradeType {
+		if opsType == opsv1alpha1.UpgradeType {
 			// capture stdout
 			done := clitesting.Capture()
 			o.printLastConfiguration(config, opsType)
@@ -193,15 +193,22 @@ var _ = Describe("Expose", func() {
 
 	It("run", func() {
 		By("test describe Upgrade")
-		describeOps(appsv1alpha1.UpgradeType, func(ops *appsv1alpha1.OpsRequest) {
-			ops.Spec.Upgrade = &appsv1alpha1.Upgrade{
-				ClusterVersionRef: cfgutil.ToPointer(clusterVersionName),
+		describeOps(opsv1alpha1.UpgradeType, func(ops *opsv1alpha1.OpsRequest) {
+			ops.Spec.Upgrade = &opsv1alpha1.Upgrade{
+				Components: []opsv1alpha1.UpgradeComponent{
+					{
+						ComponentOps: opsv1alpha1.ComponentOps{
+							ComponentName: componentName,
+						},
+						ServiceVersion: pointer.String("14.8.0"),
+					},
+				},
 			}
 		})
 
 		By("test describe Restart")
-		describeOps(appsv1alpha1.RestartType, func(ops *appsv1alpha1.OpsRequest) {
-			ops.Spec.RestartList = []appsv1alpha1.ComponentOps{
+		describeOps(opsv1alpha1.RestartType, func(ops *opsv1alpha1.OpsRequest) {
+			ops.Spec.RestartList = []opsv1alpha1.ComponentOps{
 				{ComponentName: componentName},
 				{ComponentName: componentName1},
 			}
@@ -218,34 +225,36 @@ var _ = Describe("Expose", func() {
 				"memory": apiresource.MustParse("400Mi"),
 			},
 		}
-		fakeVerticalScalingSpec := func() []appsv1alpha1.VerticalScaling {
-			return []appsv1alpha1.VerticalScaling{
+		fakeVerticalScalingSpec := func() []opsv1alpha1.VerticalScaling {
+			return []opsv1alpha1.VerticalScaling{
 				{
-					ComponentOps: appsv1alpha1.ComponentOps{
+					ComponentOps: opsv1alpha1.ComponentOps{
 						ComponentName: componentName,
 					},
 					ResourceRequirements: resourceRequirements,
 				},
 			}
 		}
-		describeOps(appsv1alpha1.VerticalScalingType, func(ops *appsv1alpha1.OpsRequest) {
+		describeOps(opsv1alpha1.VerticalScalingType, func(ops *opsv1alpha1.OpsRequest) {
 			ops.Spec.VerticalScalingList = fakeVerticalScalingSpec()
 		})
 
 		By("test describe HorizontalScaling")
-		describeOps(appsv1alpha1.HorizontalScalingType, func(ops *appsv1alpha1.OpsRequest) {
-			ops.Spec.HorizontalScalingList = []appsv1alpha1.HorizontalScaling{
+		describeOps(opsv1alpha1.HorizontalScalingType, func(ops *opsv1alpha1.OpsRequest) {
+			ops.Spec.HorizontalScalingList = []opsv1alpha1.HorizontalScaling{
 				{
-					ComponentOps: appsv1alpha1.ComponentOps{
+					ComponentOps: opsv1alpha1.ComponentOps{
 						ComponentName: componentName,
 					},
-					Replicas: cfgutil.ToPointer[int32](1),
+					ScaleOut: &opsv1alpha1.ScaleOut{
+						ReplicaChanger: opsv1alpha1.ReplicaChanger{ReplicaChanges: pointer.Int32(1)},
+					},
 				},
 			}
 		})
 
 		By("test describe VolumeExpansion and print OpsRequest status")
-		volumeClaimTemplates := []appsv1alpha1.OpsRequestVolumeClaimTemplate{
+		volumeClaimTemplates := []opsv1alpha1.OpsRequestVolumeClaimTemplate{
 			{
 				Name:    "data",
 				Storage: apiresource.MustParse("2Gi"),
@@ -255,10 +264,10 @@ var _ = Describe("Expose", func() {
 				Storage: apiresource.MustParse("4Gi"),
 			},
 		}
-		describeOps(appsv1alpha1.VolumeExpansionType, func(ops *appsv1alpha1.OpsRequest) {
-			ops.Spec.VolumeExpansionList = []appsv1alpha1.VolumeExpansion{
+		describeOps(opsv1alpha1.VolumeExpansionType, func(ops *opsv1alpha1.OpsRequest) {
+			ops.Spec.VolumeExpansionList = []opsv1alpha1.VolumeExpansion{
 				{
-					ComponentOps: appsv1alpha1.ComponentOps{
+					ComponentOps: opsv1alpha1.ComponentOps{
 						ComponentName: componentName,
 					},
 					VolumeClaimTemplates: volumeClaimTemplates,
@@ -267,45 +276,39 @@ var _ = Describe("Expose", func() {
 		})
 
 		By("test printing OpsRequest status and conditions")
-		describeOps(appsv1alpha1.VerticalScalingType, func(ops *appsv1alpha1.OpsRequest) {
+		describeOps(opsv1alpha1.VerticalScalingType, func(ops *opsv1alpha1.OpsRequest) {
 			ops.Spec.VerticalScalingList = fakeVerticalScalingSpec()
 			ops.Status = fakeOpsStatusAndProgress()
 		})
 
-		By("test printing OpsRequest last configuration")
-		testPrintLastConfiguration(appsv1alpha1.LastConfiguration{
-			ClusterVersionRef: clusterVersionName,
-		}, appsv1alpha1.UpgradeType, "\nLast Configuration",
-			fmt.Sprintf("%-20s%s", "Cluster Version:", clusterVersionName+"\n"))
-
 		By("test verticalScaling last configuration")
-		testPrintLastConfiguration(appsv1alpha1.LastConfiguration{
-			Components: map[string]appsv1alpha1.LastComponentConfiguration{
+		testPrintLastConfiguration(opsv1alpha1.LastConfiguration{
+			Components: map[string]opsv1alpha1.LastComponentConfiguration{
 				componentName: {
 					ResourceRequirements: resourceRequirements,
 				},
 			},
-		}, appsv1alpha1.VerticalScalingType, "100m", "200Mi", "300m", "400Mi",
+		}, opsv1alpha1.VerticalScalingType, "100m", "200Mi", "300m", "400Mi",
 			"REQUEST-CPU", "REQUEST-MEMORY", "LIMIT-CPU", "LIMIT-MEMORY")
 
 		By("test HorizontalScaling last configuration")
 		replicas := int32(2)
-		testPrintLastConfiguration(appsv1alpha1.LastConfiguration{
-			Components: map[string]appsv1alpha1.LastComponentConfiguration{
+		testPrintLastConfiguration(opsv1alpha1.LastConfiguration{
+			Components: map[string]opsv1alpha1.LastComponentConfiguration{
 				componentName: {
 					Replicas: &replicas,
 				},
 			},
-		}, appsv1alpha1.HorizontalScalingType, "COMPONENT", "REPLICAS", componentName, "2")
+		}, opsv1alpha1.HorizontalScalingType, "COMPONENT", "REPLICAS", componentName, "2")
 
 		By("test VolumeExpansion last configuration")
-		testPrintLastConfiguration(appsv1alpha1.LastConfiguration{
-			Components: map[string]appsv1alpha1.LastComponentConfiguration{
+		testPrintLastConfiguration(opsv1alpha1.LastConfiguration{
+			Components: map[string]opsv1alpha1.LastComponentConfiguration{
 				componentName: {
 					VolumeClaimTemplates: volumeClaimTemplates,
 				},
 			},
-		}, appsv1alpha1.VolumeExpansionType, "VOLUME-CLAIM-TEMPLATE", "STORAGE", "data", "2Gi", "log")
+		}, opsv1alpha1.VolumeExpansionType, "VOLUME-CLAIM-TEMPLATE", "STORAGE", "data", "2Gi", "log")
 
 	})
 })

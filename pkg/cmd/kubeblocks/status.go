@@ -73,7 +73,6 @@ var (
 	kubeBlocksGlobalCustomResources = []schema.GroupVersionResource{
 		types.ActionSetGVR(),
 		types.ClusterDefGVR(),
-		types.ClusterVersionGVR(),
 		types.ConfigConstraintGVR(),
 	}
 
@@ -155,7 +154,7 @@ func (o *statusOptions) complete(f cmdutil.Factory) error {
 		return err
 	}
 
-	o.ns, _ = util.GetKubeBlocksNamespace(o.client)
+	o.ns, _ = util.GetKubeBlocksNamespace(o.client, "")
 	if o.ns == "" {
 		printer.Warning(o.Out, "Failed to find deployed KubeBlocks in any namespace\n")
 		printer.Warning(o.Out, "Will check all namespaces for KubeBlocks resources left behind\n")
@@ -328,7 +327,7 @@ func (o *statusOptions) showKubeBlocksStorage(ctx context.Context, allErrs *[]er
 	for _, resourceList := range unstructuredList {
 		for _, resource := range resourceList.Items {
 			switch resource.GetKind() {
-			case constant.PersistentVolumeClaimKind:
+			case "PersistentVolumeClaim":
 				renderPVC(&resource)
 			default:
 				err := fmt.Errorf("unsupported resources: %s", resource.GetKind())
@@ -457,8 +456,8 @@ func (o *statusOptions) showK8sClusterInfos(ctx context.Context, allErrs *[]erro
 		if labels == nil {
 			continue
 		}
-		region = labels[constant.RegionLabelKey]
-		availableZones[labels[constant.ZoneLabelKey]] = struct{}{}
+		region = labels[corev1.LabelTopologyRegion]
+		availableZones[labels[corev1.LabelTopologyZone]] = struct{}{}
 	}
 	allZones := maps.Keys(availableZones)
 	sort.Strings(allZones)
@@ -547,13 +546,13 @@ func computeMetricByWorkloads(ctx context.Context, ns string, workloads []*unstr
 		for _, resource := range workload.Items {
 			var err error
 			switch resource.GetKind() {
-			case constant.DeploymentKind, constant.StatefulSetKind:
+			case "Deployment", constant.StatefulSetKind:
 				err = computeWorkloadRunningMeta(&resource, readyReplicas, replicas, matchLabels)
-			case constant.DaemonSetKind:
+			case "DaemonSet":
 				err = computeWorkloadRunningMeta(&resource, daemonReady, daemonTotal, matchLabels)
 			case constant.JobKind:
 				err = computeWorkloadRunningMeta(&resource, jobReady, jobTotal, matchLabels)
-			case constant.CronJobKind:
+			case "CronJob":
 				err = computeWorkloadRunningMeta(&resource, nil, nil, nil)
 			default:
 				err = fmt.Errorf("unsupported workload kind: %s, name: %s", resource.GetKind(), resource.GetName())

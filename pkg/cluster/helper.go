@@ -24,15 +24,17 @@ import (
 	"fmt"
 	"strings"
 
+	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	appsv1beta1 "github.com/apecloud/kubeblocks/apis/apps/v1beta1"
 	"github.com/apecloud/kubeblocks/pkg/constant"
+	"github.com/apecloud/kubeblocks/pkg/controller/component"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
-	"k8s.io/klog/v2"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/apecloud/kbcli/pkg/testing"
 	"github.com/apecloud/kbcli/pkg/types"
@@ -89,9 +91,9 @@ func getInstanceInfoByList(dynamic dynamic.Interface, name, componentName, names
 }
 
 // FindClusterComp finds component in cluster object based on the component definition name
-func FindClusterComp(cluster *appsv1alpha1.Cluster, compDefName string) *appsv1alpha1.ClusterComponentSpec {
+func FindClusterComp(cluster *kbappsv1.Cluster, compDefName string) *kbappsv1.ClusterComponentSpec {
 	for i, c := range cluster.Spec.ComponentSpecs {
-		if c.ComponentDefRef == compDefName {
+		if c.ComponentDef == compDefName {
 			return &cluster.Spec.ComponentSpecs[i]
 		}
 	}
@@ -99,7 +101,7 @@ func FindClusterComp(cluster *appsv1alpha1.Cluster, compDefName string) *appsv1a
 }
 
 // GetComponentEndpoints gets component internal and external endpoints
-func GetComponentEndpoints(svcList *corev1.ServiceList, c *appsv1alpha1.ClusterComponentSpec) ([]string, []string) {
+func GetComponentEndpoints(nodes []*corev1.Node, svcList *corev1.ServiceList, compName string) ([]string, []string) {
 	var (
 		internalEndpoints []string
 		externalEndpoints []string
@@ -113,38 +115,57 @@ func GetComponentEndpoints(svcList *corev1.ServiceList, c *appsv1alpha1.ClusterC
 		return result
 	}
 
-	internalSvcs, externalSvcs := GetComponentServices(svcList, c)
+	getEndpointsWithNodePort := func(ip string, ports []corev1.ServicePort) []string {
+		var result []string
+		for _, port := range ports {
+			result = append(result, fmt.Sprintf("%s:%d", ip, port.NodePort))
+		}
+		return result
+	}
+
+	internalSvcs, externalSvcs := GetComponentServices(svcList, compName)
 	for _, svc := range internalSvcs {
 		dns := fmt.Sprintf("%s.%s.svc.cluster.local", svc.Name, svc.Namespace)
 		internalEndpoints = append(internalEndpoints, getEndpoints(dns, svc.Spec.Ports)...)
 	}
 
 	for _, svc := range externalSvcs {
-		externalEndpoints = append(externalEndpoints, getEndpoints(GetExternalAddr(svc), svc.Spec.Ports)...)
+		endpoints := getEndpoints(GetExternalAddr(svc), svc.Spec.Ports)
+		if svc.Spec.Type == corev1.ServiceTypeNodePort {
+			if len(nodes) == 0 {
+				continue
+			}
+			nodeInternal, nodeExternal := GetEndpointsFromNode(nodes[0])
+			if nodeExternal != "" {
+				endpoints = getEndpointsWithNodePort(nodeExternal, svc.Spec.Ports)
+			} else {
+				endpoints = getEndpointsWithNodePort(nodeInternal, svc.Spec.Ports)
+			}
+		}
+		externalEndpoints = append(externalEndpoints, endpoints...)
 	}
 	return internalEndpoints, externalEndpoints
 }
 
 // GetComponentServices gets component services
-func GetComponentServices(svcList *corev1.ServiceList, c *appsv1alpha1.ClusterComponentSpec) ([]*corev1.Service, []*corev1.Service) {
+func GetComponentServices(svcList *corev1.ServiceList, compName string) ([]*corev1.Service, []*corev1.Service) {
 	if svcList == nil {
 		return nil, nil
 	}
 
 	var internalSvcs, externalSvcs []*corev1.Service
 	for i, svc := range svcList.Items {
-		if svc.GetLabels()[constant.KBAppComponentLabelKey] != c.Name {
+		if svc.GetLabels()[constant.KBAppComponentLabelKey] != compName {
 			continue
 		}
-
 		var (
 			internalIP   = svc.Spec.ClusterIP
 			externalAddr = GetExternalAddr(&svc)
 		)
-		if svc.Spec.Type == corev1.ServiceTypeClusterIP && internalIP != "" && internalIP != "None" {
+		if internalIP != "" && internalIP != "None" {
 			internalSvcs = append(internalSvcs, &svcList.Items[i])
 		}
-		if externalAddr != "" {
+		if externalAddr != "" || svc.Spec.Type == corev1.ServiceTypeNodePort {
 			externalSvcs = append(externalSvcs, &svcList.Items[i])
 		}
 	}
@@ -168,20 +189,12 @@ func GetExternalAddr(svc *corev1.Service) string {
 	return svc.GetAnnotations()[types.ServiceFloatingIPAnnotationKey]
 }
 
-func GetClusterDefByName(dynamic dynamic.Interface, name string) (*appsv1alpha1.ClusterDefinition, error) {
-	clusterDef := &appsv1alpha1.ClusterDefinition{}
+func GetClusterDefByName(dynamic dynamic.Interface, name string) (*kbappsv1.ClusterDefinition, error) {
+	clusterDef := &kbappsv1.ClusterDefinition{}
 	if err := util.GetK8SClientObject(dynamic, clusterDef, types.ClusterDefGVR(), "", name); err != nil {
 		return nil, err
 	}
 	return clusterDef, nil
-}
-
-func GetComponentDefByName(dynamic dynamic.Interface, name string) (*appsv1alpha1.ComponentDefinition, error) {
-	componentDef := &appsv1alpha1.ComponentDefinition{}
-	if err := util.GetK8SClientObject(dynamic, componentDef, types.CompDefGVR(), "", name); err != nil {
-		return nil, err
-	}
-	return componentDef, nil
 }
 
 func GetDefaultCompName(cd *appsv1alpha1.ClusterDefinition) (string, error) {
@@ -191,29 +204,32 @@ func GetDefaultCompName(cd *appsv1alpha1.ClusterDefinition) (string, error) {
 	return "", fmt.Errorf("failed to get the default component definition name")
 }
 
-func GetClusterByName(dynamic dynamic.Interface, name string, namespace string) (*appsv1alpha1.Cluster, error) {
-	cluster := &appsv1alpha1.Cluster{}
+func IsShardingComponent(cluster *kbappsv1.Cluster, compName string) bool {
+	return cluster.Spec.GetShardingByName(compName) != nil
+}
+
+func ComponentNameLabelKey(cluster *kbappsv1.Cluster, compName string) string {
+	compLabelKey := constant.KBAppComponentLabelKey
+	if IsShardingComponent(cluster, compName) {
+		compLabelKey = constant.KBAppShardingNameLabelKey
+	}
+	return compLabelKey
+}
+
+func GetComponentSpec(cluster *kbappsv1.Cluster, compName string) *kbappsv1.ClusterComponentSpec {
+	shardingSpec := cluster.Spec.GetShardingByName(compName)
+	if shardingSpec != nil {
+		return &shardingSpec.Template
+	}
+	return cluster.Spec.GetComponentByName(compName)
+}
+
+func GetClusterByName(dynamic dynamic.Interface, name string, namespace string) (*kbappsv1.Cluster, error) {
+	cluster := &kbappsv1.Cluster{}
 	if err := util.GetK8SClientObject(dynamic, cluster, types.ClusterGVR(), namespace, name); err != nil {
 		return nil, err
 	}
 	return cluster, nil
-}
-
-func GetVersionByClusterDef(dynamic dynamic.Interface, clusterDef string) (*appsv1alpha1.ClusterVersionList, error) {
-	versionList := &appsv1alpha1.ClusterVersionList{}
-	obj, err := dynamic.Resource(types.ClusterVersionGVR()).List(context.TODO(), metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("%s=%s", constant.ClusterDefLabelKey, clusterDef),
-	})
-	if err != nil {
-		return nil, err
-	}
-	if obj == nil {
-		return nil, fmt.Errorf("failed to find component version referencing cluster definition %s", clusterDef)
-	}
-	if err = runtime.DefaultUnstructuredConverter.FromUnstructured(obj.UnstructuredContent(), versionList); err != nil {
-		return nil, err
-	}
-	return versionList, nil
 }
 
 func FakeClusterObjs() *ClusterObjects {
@@ -246,7 +262,7 @@ func BuildStorageClass(storages []StorageInfo) string {
 // GetDefaultVersion gets the default cluster version that referencing the cluster definition.
 // If only one version is found, it will be returned directly, otherwise the version with
 // constant.DefaultClusterVersionAnnotationKey label will be returned.
-func GetDefaultVersion(dynamic dynamic.Interface, clusterDef string) (string, error) {
+/*func GetDefaultVersion(dynamic dynamic.Interface, clusterDef string) (string, error) {
 	// if version already specified in the cluster definition, clusterVersion is not required
 	cd, err := GetClusterDefByName(dynamic, clusterDef)
 	if err != nil {
@@ -270,7 +286,7 @@ func GetDefaultVersion(dynamic dynamic.Interface, clusterDef string) (string, er
 
 	// check if all components have image
 	allCompsWithVersion := true
-	for _, compDef := range cd.Spec.ComponentDefs {
+	/*for _, compDef := range cd.Spec.ComponentDefs {
 		if !podSpecWithImage(compDef.PodSpec) {
 			allCompsWithVersion = false
 			break
@@ -281,35 +297,12 @@ func GetDefaultVersion(dynamic dynamic.Interface, clusterDef string) (string, er
 		return "", nil
 	}
 
-	versionList, err := GetVersionByClusterDef(dynamic, clusterDef)
-	if err != nil {
-		return "", err
-	}
-
-	if len(versionList.Items) == 1 {
-		return versionList.Items[0].Name, nil
-	}
-
-	defaultVersion := ""
-	for _, item := range versionList.Items {
-		if k, ok := item.Annotations[types.KBDefaultClusterVersionAnnotationKey]; !ok || k != "true" {
-			continue
-		}
-		if defaultVersion != "" {
-			return "", fmt.Errorf("found more than one default cluster version referencing cluster definition %s", clusterDef)
-		}
-		defaultVersion = item.Name
-	}
-
-	if defaultVersion == "" {
-		return "", fmt.Errorf("failed to find default cluster version referencing cluster definition %s", clusterDef)
-	}
-	return defaultVersion, nil
-}
+	return "", nil
+}*/
 
 type CompInfo struct {
-	Component       *appsv1alpha1.ClusterComponentSpec
-	ComponentStatus *appsv1alpha1.ClusterComponentStatus
+	Component       *kbappsv1.ClusterComponentSpec
+	ComponentStatus *kbappsv1.ClusterComponentStatus
 	ComponentDef    *appsv1alpha1.ClusterComponentDefinition
 }
 
@@ -318,7 +311,7 @@ func FillCompInfoByName(dynamic dynamic.Interface, namespace, clusterName, compo
 	if err != nil {
 		return nil, err
 	}
-	if cluster.Status.Phase != appsv1alpha1.RunningClusterPhase {
+	if cluster.Status.Phase != kbappsv1.RunningClusterPhase {
 		return nil, fmt.Errorf("cluster %s is not running, please try again later", clusterName)
 	}
 
@@ -345,13 +338,13 @@ func FillCompInfoByName(dynamic dynamic.Interface, namespace, clusterName, compo
 	}
 
 	// find cluster def
-	clusterDef, err := GetClusterDefByName(dynamic, cluster.Spec.ClusterDefRef)
+	clusterDef, err := GetClusterDefByName(dynamic, cluster.Spec.ClusterDef)
 	if err != nil {
 		return nil, err
 	}
 	// find component def by reference
-	for _, compDef := range clusterDef.Spec.ComponentDefs {
-		compRefName := compInfo.Component.ComponentDefRef
+	/*for _, compDef := range clusterDef.Spec.ComponentDefs {
+		compRefName := compInfo.Component.ComponentDef
 		if len(compRefName) == 0 {
 			compRefName = compInfo.Component.ComponentDef
 		}
@@ -359,9 +352,9 @@ func FillCompInfoByName(dynamic dynamic.Interface, namespace, clusterName, compo
 			compInfo.ComponentDef = &compDef
 			break
 		}
-	}
+	}*/
 	if compInfo.ComponentDef == nil {
-		return nil, fmt.Errorf("componentDef %s not found in clusterDef %s", compInfo.Component.ComponentDefRef, clusterDef.Name)
+		return nil, fmt.Errorf("componentDef %s not found in clusterDef %s", compInfo.Component.ComponentDef, clusterDef.Name)
 	}
 	return compInfo, nil
 }
@@ -376,6 +369,9 @@ func GetPodClusterName(pod *corev1.Pod) string {
 func GetPodComponentName(pod *corev1.Pod) string {
 	if pod.Labels == nil {
 		return ""
+	}
+	if compName, ok := pod.Labels[constant.KBAppShardingNameLabelKey]; ok {
+		return compName
 	}
 	return pod.Labels[constant.KBAppComponentLabelKey]
 }
@@ -419,25 +415,71 @@ func GetDefaultServiceRef(cd *appsv1alpha1.ClusterDefinition) (string, error) {
 	return serviceRefs[0], nil
 }
 
-func GetDefaultVersionByCompDefs(dynamic dynamic.Interface, compDefs []string) (string, error) {
-	cv := ""
-	if compDefs == nil {
-		return "", fmt.Errorf("failed to find default cluster version referencing the nil compDefs")
+func GetReadyNodeForNodePort(client *kubernetes.Clientset) (*corev1.Node, error) {
+	nodes, err := client.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{
+		Limit: 20,
+	})
+	if err != nil {
+		return nil, err
 	}
-	for _, compDef := range compDefs {
-		comp, err := dynamic.Resource(types.CompDefGVR()).Get(context.Background(), compDef, metav1.GetOptions{})
+	var readyNode *corev1.Node
+	for _, node := range nodes.Items {
+		var nodeIsReady bool
+		for _, con := range node.Status.Conditions {
+			if con.Type == corev1.NodeReady {
+				nodeIsReady = con.Status == corev1.ConditionTrue
+				break
+			}
+		}
+		if nodeIsReady {
+			readyNode = &node
+			break
+		}
+	}
+	return readyNode, nil
+}
+
+func GetEndpointsFromNode(node *corev1.Node) (string, string) {
+	var (
+		internal string
+		external string
+	)
+	if node == nil {
+		return internal, external
+	}
+	for _, add := range node.Status.Addresses {
+		if add.Type == corev1.NodeInternalDNS || add.Type == corev1.NodeInternalIP {
+			internal = add.Address
+		}
+		if add.Type == corev1.NodeExternalDNS || add.Type == corev1.NodeExternalIP {
+			external = add.Address
+		}
+	}
+	return internal, external
+}
+
+func GenerateClusterName(dynamic dynamic.Interface, namespace string) (string, error) {
+	var name string
+	// retry 10 times
+	for i := 0; i < 10; i++ {
+		name = GenerateName()
+		// check whether the cluster exists, if not found, return it
+		_, err := dynamic.Resource(types.ClusterGVR()).Namespace(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+		if errors.IsNotFound(err) {
+			return name, nil
+		}
 		if err != nil {
-			return "", fmt.Errorf("fail to get cluster version due to: %s", err.Error())
-		}
-		labels := comp.GetLabels()
-		kind := labels[constant.AppNameLabelKey]
-		version := labels[constant.AppVersionLabelKey]
-		// todo: fix cv like:  mongodb-sharding-5.0, ac-mysql-8.0.30-auditlog
-		if cv == "" {
-			cv = fmt.Sprintf("%s-%s", kind, version)
-		} else if cv != fmt.Sprintf("%s-%s", kind, version) {
-			return "", fmt.Errorf("can't get the same cluster version by component definition:[%s]", strings.Join(compDefs, ","))
+			return "", err
 		}
 	}
-	return cv, nil
+	return "", fmt.Errorf("failed to generate cluster name")
+}
+
+func CompatibleComponentDefs(compDefs []string, compDef string) bool {
+	for _, v := range compDefs {
+		if component.PrefixOrRegexMatched(compDef, v) {
+			return true
+		}
+	}
+	return false
 }

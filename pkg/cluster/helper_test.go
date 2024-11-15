@@ -23,11 +23,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
-	"github.com/apecloud/kubeblocks/pkg/constant"
-
 	"github.com/apecloud/kbcli/pkg/testing"
-	"github.com/apecloud/kbcli/pkg/types"
 )
 
 var _ = Describe("helper", func() {
@@ -44,14 +40,14 @@ var _ = Describe("helper", func() {
 		component := FindClusterComp(cluster, "test")
 		Expect(component).Should(BeNil())
 
-		component = FindClusterComp(cluster, testing.ComponentDefName)
+		component = FindClusterComp(cluster, testing.CompDefName)
 		Expect(component).ShouldNot(BeNil())
 	})
 
 	It("get cluster endpoints", func() {
 		cluster := testing.FakeCluster("test", "test")
 		svcs := testing.FakeServices()
-		internalEPs, externalEPs := GetComponentEndpoints(svcs, &cluster.Spec.ComponentSpecs[0])
+		internalEPs, externalEPs := GetComponentEndpoints(nil, svcs, cluster.Spec.ComponentSpecs[0].Name)
 		Expect(len(internalEPs)).Should(Equal(3))
 		Expect(len(externalEPs)).Should(Equal(1))
 	})
@@ -75,17 +71,17 @@ var _ = Describe("helper", func() {
 		Expect(clusterDef).ShouldNot(BeNil())
 	})
 
-	It("get version by cluster def", func() {
+	/*	It("get version by cluster def", func() {
 		dynamic := testing.FakeDynamicClient(testing.FakeClusterVersion())
 		version, err := GetVersionByClusterDef(dynamic, testing.ClusterDefName)
 		Expect(err).Should(Succeed())
 		Expect(version).ShouldNot(BeNil())
 		Expect(version.Items).Should(HaveLen(1))
-	})
+	})*/
 
-	It("get default version", func() {
+	/*It("get default version", func() {
 		const clusterDefName = testing.ClusterDefName
-		genVersion := func(name string) *appsv1alpha1.ClusterVersion {
+		genVersion := func(name string) *kbappsv1.ClusterVersion {
 			v := &appsv1alpha1.ClusterVersion{}
 			v.Name = name
 			v.SetLabels(map[string]string{constant.ClusterDefLabelKey: clusterDefName})
@@ -107,7 +103,7 @@ var _ = Describe("helper", func() {
 		defaultVer, err = GetDefaultVersion(dynamic, clusterDefName)
 		Expect(err).Should(Succeed())
 		Expect(defaultVer).Should(Equal(cv1.Name))
-	})
+	})*/
 
 	It("get configmap by name", func() {
 		cmName := "test-cm"
@@ -129,7 +125,7 @@ var _ = Describe("helper", func() {
 		Expect(cm).ShouldNot(BeNil())
 	})
 
-	It("get all ServiceRefs from cluster-definition", func() {
+	/*It("get all ServiceRefs from cluster-definition", func() {
 		Expect(GetServiceRefs(testing.FakeClusterDef())).Should(Equal([]string{testing.ServiceRefName}))
 	})
 
@@ -148,5 +144,5 @@ var _ = Describe("helper", func() {
 		deepCopyCD.Spec.ComponentDefs[0].ServiceRefDeclarations = nil
 		_, err = GetDefaultServiceRef(deepCopyCD)
 		Expect(err).Should(HaveOccurred())
-	})
+	})*/
 })

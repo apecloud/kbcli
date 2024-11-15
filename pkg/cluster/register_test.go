@@ -32,12 +32,12 @@ var _ = Describe("cluster register", func() {
 	It("test builtin chart", func() {
 		mysql := &embedConfig{
 			chartFS: apecloudmysqlChart,
-			name:    "apecloud-mysql-cluster.tgz",
+			name:    "apecloud-mysql.tgz",
 			alias:   "",
 		}
 		Expect(mysql.register("mysql")).Should(HaveOccurred())
 		Expect(mysql.register("mysql-other")).Should(Succeed())
-		Expect(mysql.getChartFileName()).Should(Equal("apecloud-mysql-cluster.tgz"))
+		Expect(mysql.getChartFileName()).Should(Equal("apecloud-mysql.tgz"))
 		Expect(mysql.getAlias()).Should(Equal(""))
 		chart, err := mysql.loadChart()
 		Expect(err).Should(Succeed())
@@ -46,7 +46,7 @@ var _ = Describe("cluster register", func() {
 		Expect(err).Should(Succeed())
 	})
 
-	It("test external chart", func() {
+	It("test fake chart", func() {
 		fakeChart := &TypeInstance{
 			Name:      "fake",
 			URL:       "www.fake-chart-hub/fake.tgz",
@@ -58,6 +58,9 @@ var _ = Describe("cluster register", func() {
 		_, err := fakeChart.loadChart()
 		Expect(err).Should(HaveOccurred())
 		Expect(fakeChart.register("fake")).Should(HaveOccurred())
+		Expect(fakeChart.PatchNewClusterType()).Should(HaveOccurred())
+		_, err = fakeChart.ValidateChartSchema()
+		Expect(err).Should(HaveOccurred())
 	})
 
 	Context("test Config reader", func() {

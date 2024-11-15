@@ -58,25 +58,25 @@ func (e *embedConfig) getChartFileName() string {
 
 var (
 	// run `make generate` to generate this embed file
-	//go:embed charts/apecloud-mysql-cluster.tgz
+	//go:embed charts/apecloud-mysql.tgz
 	apecloudmysqlChart embed.FS
-	//go:embed charts/mysql-cluster.tgz
+	//go:embed charts/mysql.tgz
 	mysqlChart embed.FS
-	//go:embed charts/postgresql-cluster.tgz
+	//go:embed charts/postgresql.tgz
 	postgresqlChart embed.FS
-	//go:embed charts/kafka-cluster.tgz
+	//go:embed charts/kafka.tgz
 	kafkaChart embed.FS
-	//go:embed charts/redis-cluster.tgz
+	//go:embed charts/redis.tgz
 	redisChart embed.FS
-	//go:embed charts/mongodb-cluster.tgz
+	//go:embed charts/mongodb.tgz
 	mongodbChart embed.FS
-	//go:embed charts/llm-cluster.tgz
+	//go:embed charts/llm.tgz
 	llmChart embed.FS
-	//go:embed charts/xinference-cluster.tgz
+	//go:embed charts/xinference.tgz
 	xinferenceChart embed.FS
-	//go:embed charts/elasticsearch-cluster.tgz
+	//go:embed charts/elasticsearch.tgz
 	elasticsearchChart embed.FS
-	//go:embed charts/qdrant-cluster.tgz
+	//go:embed charts/qdrant.tgz
 	qdrantChart embed.FS
 	//go:embed charts/etcd-cluster.tgz
 	etcdChart embed.FS
@@ -94,59 +94,59 @@ func init() {
 	embedChartConfigs := map[string]*embedConfig{
 		"apecloud-mysql": {
 			chartFS: apecloudmysqlChart,
-			name:    "apecloud-mysql-cluster.tgz",
+			name:    "apecloud-mysql.tgz",
 			alias:   "",
 		},
 		"mysql": {
 			chartFS: mysqlChart,
-			name:    "mysql-cluster.tgz",
+			name:    "mysql.tgz",
 			alias:   "",
 		},
 		"postgresql": {
 			chartFS: postgresqlChart,
-			name:    "postgresql-cluster.tgz",
+			name:    "postgresql.tgz",
 			alias:   "",
 		},
 
 		"kafka": {
 			chartFS: kafkaChart,
-			name:    "kafka-cluster.tgz",
+			name:    "kafka.tgz",
 			alias:   "",
 		},
 
 		"redis": {
 			chartFS: redisChart,
-			name:    "redis-cluster.tgz",
+			name:    "redis.tgz",
 			alias:   "",
 		},
 
 		"mongodb": {
 			chartFS: mongodbChart,
-			name:    "mongodb-cluster.tgz",
+			name:    "mongodb.tgz",
 			alias:   "",
 		},
 
 		"llm": {
 			chartFS: llmChart,
-			name:    "llm-cluster.tgz",
+			name:    "llm.tgz",
 			alias:   "",
 		},
 
 		"xinference": {
 			chartFS: xinferenceChart,
-			name:    "xinference-cluster.tgz",
+			name:    "xinference.tgz",
 			alias:   "",
 		},
 
 		"elasticsearch": {
 			chartFS: elasticsearchChart,
-			name:    "elasticsearch-cluster.tgz",
+			name:    "elasticsearch.tgz",
 			alias:   "",
 		},
 
 		"qdrant": {
 			chartFS: qdrantChart,
-			name:    "qdrant-cluster.tgz",
+			name:    "qdrant.tgz",
 			alias:   "",
 		},
 

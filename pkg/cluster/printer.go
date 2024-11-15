@@ -147,7 +147,7 @@ func AddLabelRow(tbl *printer.TablePrinter, objs *ClusterObjects, opt *PrinterOp
 func AddComponentRow(tbl *printer.TablePrinter, objs *ClusterObjects, opt *PrinterOptions) {
 	components := objs.GetComponentInfo()
 	for _, c := range components {
-		tbl.AddRow(c.Name, c.NameSpace, c.Cluster, c.Type, c.Image)
+		tbl.AddRow(c.Name, c.NameSpace, c.Cluster, c.ComponentDef, c.Image)
 	}
 }
 

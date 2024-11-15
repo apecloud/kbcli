@@ -25,6 +25,7 @@ import (
 	"strings"
 	"time"
 
+	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -41,7 +42,6 @@ import (
 	"k8s.io/kubectl/pkg/util/templates"
 	"k8s.io/utils/strings/slices"
 
-	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	"github.com/apecloud/kubeblocks/pkg/constant"
 
 	clischeme "github.com/apecloud/kbcli/pkg/scheme"
@@ -128,6 +128,8 @@ type reportOptions struct {
 	namespace string
 	// include withLogs or not
 	withLogs bool
+	// include secrets
+	withSecret bool
 	// followings flags are for logs
 	// all containers or main container only
 	allContainers bool
@@ -160,7 +162,7 @@ type reportClusterOptions struct {
 	reportOptions
 	clusterName     string
 	clusterSelector metav1.ListOptions
-	cluster         *appsv1alpha1.Cluster
+	cluster         *kbappsv1.Cluster
 }
 
 func newReportOptions(f genericiooptions.IOStreams) reportOptions {
@@ -210,10 +212,11 @@ func (o *reportOptions) addFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVarP(&o.file, "file", "f", "", "zip file for output")
 	cmd.Flags().BoolVar(&o.mask, "mask", true, "mask sensitive info for secrets and configmaps")
 	cmd.Flags().BoolVar(&o.withLogs, "with-logs", false, "include pod logs")
+	cmd.Flags().BoolVar(&o.withSecret, "with-secrets", false, "include secrets")
 	cmd.Flags().BoolVar(&o.allContainers, "all-containers", o.allContainers, "Get all containers' logs in the pod(s). Byt default, only the main container (the first container) will have logs recorded.")
 	cmd.Flags().StringVar(&o.sinceTime, "since-time", o.sinceTime, i18n.T("Only return logs after a specific date (RFC3339). Defaults to all logs. Only one of since-time / since may be used."))
 	cmd.Flags().DurationVar(&o.sinceDuration, "since", o.sinceDuration, "Only return logs newer than a relative duration like 5s, 2m, or 3h. Defaults to all logs. Only one of since-time / since may be used.")
-
+	cmd.Flags().StringVarP(&o.namespace, "namespace", "n", "", "KubeBlocks namespace")
 	cmd.Flags().StringVarP(&o.outputFormat, "output", "o", "json", fmt.Sprintf("Output format. One of: %s.", strings.Join(o.JSONYamlPrintFlags.AllowedFormats(), "|")))
 	cmdutil.CheckErr(cmd.RegisterFlagCompletionFunc("output", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		return o.JSONYamlPrintFlags.AllowedFormats(), cobra.ShellCompDirectiveNoFileComp
@@ -280,7 +283,9 @@ func (o *reportKubeblocksOptions) complete(f cmdutil.Factory) error {
 	if err := o.reportOptions.complete(f); err != nil {
 		return err
 	}
-	o.namespace, _ = cliutil.GetKubeBlocksNamespace(o.genericClientSet.client)
+	if o.namespace == "" {
+		o.namespace, _ = cliutil.GetKubeBlocksNamespace(o.genericClientSet.client, "")
+	}
 	// complete file name
 	o.file = formatReportName(o.file, kubeBlocksReport)
 	if exists, _ := cliutil.FileExists(o.file); exists {
@@ -328,7 +333,6 @@ func (o *reportKubeblocksOptions) handleManifests(ctx context.Context) error {
 			types.DeployGVR(),
 			types.StatefulSetGVR(),
 			types.ConfigmapGVR(),
-			types.SecretGVR(),
 			types.ServiceGVR(),
 			types.RoleGVR(),
 			types.RoleBindingGVR(),
@@ -341,6 +345,9 @@ func (o *reportKubeblocksOptions) handleManifests(ctx context.Context) error {
 			types.ClusterRoleBindingGVR(),
 		}
 	)
+	if o.withSecret {
+		scopedgvrs = append(scopedgvrs, types.SecretGVR())
+	}
 	// write manifest
 	s := spinner.New(o.Out, spinnerMsg("processing manifests"))
 	defer s.Fail()
@@ -452,7 +459,7 @@ func (o *reportClusterOptions) run(f cmdutil.Factory, streams genericiooptions.I
 	defer cancel()
 	var err error
 	// make cluster exists before processing
-	if _, err = o.genericClientSet.kbClientSet.AppsV1alpha1().Clusters(o.namespace).Get(ctx, o.clusterName, metav1.GetOptions{}); err != nil {
+	if _, err = o.genericClientSet.kbClientSet.AppsV1().Clusters(o.namespace).Get(ctx, o.clusterName, metav1.GetOptions{}); err != nil {
 		return err
 	}
 
@@ -485,10 +492,7 @@ func (o *reportClusterOptions) run(f cmdutil.Factory, streams genericiooptions.I
 func (o *reportClusterOptions) handleManifests(ctx context.Context) error {
 	var (
 		scopedgvrs = []schema.GroupVersionResource{
-			types.DeployGVR(),
-			types.StatefulSetGVR(),
 			types.ConfigmapGVR(),
-			types.SecretGVR(),
 			types.ServiceGVR(),
 			types.RoleGVR(),
 			types.RoleBindingGVR(),
@@ -497,17 +501,22 @@ func (o *reportClusterOptions) handleManifests(ctx context.Context) error {
 			types.BackupScheduleGVR(),
 			types.ActionSetGVR(),
 			types.RestoreGVR(),
+			types.InstanceSetGVR(),
 			types.ConfigurationGVR(),
 			types.OpsGVR(),
 			types.PVCGVR(),
+			types.ComponentGVR(),
+			// TODO: add new configuration API
 		}
 		globalGvrs = []schema.GroupVersionResource{
 			types.PVGVR(),
 		}
 	)
-
+	if o.withSecret {
+		scopedgvrs = append(scopedgvrs, types.SecretGVR())
+	}
 	var err error
-	if o.cluster, err = o.genericClientSet.kbClientSet.AppsV1alpha1().Clusters(o.namespace).Get(ctx, o.clusterName, metav1.GetOptions{}); err != nil {
+	if o.cluster, err = o.genericClientSet.kbClientSet.AppsV1().Clusters(o.namespace).Get(ctx, o.clusterName, metav1.GetOptions{}); err != nil {
 		return err
 	}
 
@@ -530,21 +539,35 @@ func (o *reportClusterOptions) handleManifests(ctx context.Context) error {
 	}
 
 	// get cluster definition
-	clusterDefName := o.cluster.Spec.ClusterDefRef
-	if clusterDef, err := o.genericClientSet.kbClientSet.AppsV1alpha1().ClusterDefinitions().Get(ctx, clusterDefName, metav1.GetOptions{}); err != nil {
-		return err
-	} else if err = o.reportWritter.WriteSingleObject(manifestsFolder, types.KindClusterDef, clusterDef.Name, clusterDef, o.outputFormat); err != nil {
-		return err
+	clusterDefName := o.cluster.Spec.ClusterDef
+	if clusterDefName != "" {
+		clusterDef, err := o.genericClientSet.kbClientSet.AppsV1().ClusterDefinitions().Get(ctx, clusterDefName, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		if err = o.reportWritter.WriteSingleObject(manifestsFolder, types.KindClusterDef, clusterDef.Name, clusterDef, o.outputFormat); err != nil {
+			return err
+		}
 	}
 
-	// get cluster version
-	clusterVersionName := o.cluster.Spec.ClusterVersionRef
-	if clusterVersion, err := o.genericClientSet.kbClientSet.AppsV1alpha1().ClusterVersions().Get(ctx, clusterVersionName, metav1.GetOptions{}); err != nil {
-		return err
-	} else if err = o.reportWritter.WriteSingleObject(manifestsFolder, types.KindClusterVersion, clusterVersion.Name, clusterVersion, o.outputFormat); err != nil {
-		return err
+	// get component definition
+	reportCompDef := func(compDefName string) error {
+		compDef, err := o.genericClientSet.kbClientSet.AppsV1().ComponentDefinitions().Get(ctx, compDefName, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		return o.reportWritter.WriteSingleObject(manifestsFolder, types.KindClusterDef, compDef.Name, compDef, o.outputFormat)
 	}
-
+	for _, v := range o.cluster.Spec.ComponentSpecs {
+		if err = reportCompDef(v.ComponentDef); err != nil {
+			return err
+		}
+	}
+	for _, v := range o.cluster.Spec.Shardings {
+		if err = reportCompDef(v.Template.ComponentDef); err != nil {
+			return err
+		}
+	}
 	s.Success()
 	return nil
 }

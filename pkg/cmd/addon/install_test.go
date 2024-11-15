@@ -22,7 +22,6 @@ package addon
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	clientfake "k8s.io/client-go/rest/fake"
@@ -34,10 +33,13 @@ import (
 	"github.com/apecloud/kbcli/pkg/types"
 )
 
-var _ = Describe("index test", func() {
-	var streams genericiooptions.IOStreams
-	var tf *cmdtesting.TestFactory
-	var addonName = "apecloud-mysql"
+var _ = Describe("install test", func() {
+	var (
+		streams   genericiooptions.IOStreams
+		tf        *cmdtesting.TestFactory
+		addonName = "apecloud-mysql"
+	)
+
 	BeforeEach(func() {
 		streams, _, _, _ = genericiooptions.NewTestIOStreams()
 		tf = cmdtesting.NewTestFactory().WithNamespace(testNamespace)
@@ -141,4 +143,28 @@ var _ = Describe("index test", func() {
 		option.force = true
 		Expect(option.Validate()).Should(Succeed())
 	})
+
+	It("test install with path specified", func() {
+		var (
+			testAddonName = "apecloud-mysql"
+			testVersion   = "0.7.0"
+			testLocalPath = "./testdata/kubeblocks"
+		)
+
+		o := &installOption{
+			baseOption: baseOption{
+				Factory:   tf,
+				IOStreams: streams,
+				GVR:       types.AddonGVR(),
+			},
+			name:    testAddonName,
+			version: testVersion,
+			path:    testLocalPath,
+		}
+
+		Expect(o.Complete()).Should(Succeed())
+		Expect(o.addon).ShouldNot(BeNil())
+		Expect(o.addon.Labels["app.kubernetes.io/version"]).Should(Equal(testVersion))
+	})
+
 })

@@ -21,17 +21,22 @@ package cluster
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
+	"regexp"
 
 	"github.com/spf13/cobra"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 
 	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/cluster"
+	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
 )
@@ -52,14 +57,27 @@ type CreateSubCmdsOptions struct {
 	// and validate the values.
 	ChartInfo *cluster.ChartInfo
 
+	// Configuration and options for cluster affinity and tolerations
+	PodAntiAffinity string `json:"podAntiAffinity"`
+	// TopologyKeys if TopologyKeys is nil, add omitempty json tag, because CueLang can not covert null to list.
+	TopologyKeys   []string          `json:"topologyKeys,omitempty"`
+	NodeLabels     map[string]string `json:"nodeLabels,omitempty"`
+	Tenancy        string            `json:"tenancy"`
+	TolerationsRaw []string          `json:"-"`
+	Tolerations    []corev1.Toleration
+
+	// SkipSchemaValidation is used to skip the schema validation of the helm chart.
+	SkipSchemaValidation bool `json:"-"`
+
 	*action.CreateOptions
 }
 
 func NewSubCmdsOptions(createOptions *action.CreateOptions, t cluster.ClusterType) (*CreateSubCmdsOptions, error) {
 	var err error
 	o := &CreateSubCmdsOptions{
-		CreateOptions: createOptions,
-		ClusterType:   t,
+		CreateOptions:        createOptions,
+		ClusterType:          t,
+		SkipSchemaValidation: false,
 	}
 
 	if o.ChartInfo, err = cluster.BuildChartInfo(t); err != nil {
@@ -86,8 +104,8 @@ func buildCreateSubCmds(createOptions *action.CreateOptions) []*cobra.Command {
 			Run: func(cmd *cobra.Command, args []string) {
 				o.Args = args
 				cmdutil.CheckErr(o.CreateOptions.Complete())
-				cmdutil.CheckErr(o.complete(cmd))
-				cmdutil.CheckErr(o.validate())
+				cmdutil.CheckErr(o.Complete(cmd))
+				cmdutil.CheckErr(o.Validate())
 				cmdutil.CheckErr(o.Run())
 			},
 		}
@@ -96,25 +114,46 @@ func buildCreateSubCmds(createOptions *action.CreateOptions) []*cobra.Command {
 			cmd.Aliases = []string{o.ChartInfo.Alias}
 		}
 
-		util.CheckErr(addCreateFlags(cmd, o.Factory, o.ChartInfo))
+		// common flags
+		cmd.Flags().BoolVar(&o.EditBeforeCreate, "edit", o.EditBeforeCreate, "Edit the API resource before creating")
+		cmd.Flags().StringVar(&o.DryRun, "dry-run", "none", `Must be "client", or "server". If with client strategy, only print the object that would be sent, and no data is actually sent. If with server strategy, submit the server-side request, but no data is persistent.`)
+		cmd.Flags().Lookup("dry-run").NoOptDefVal = "unchanged"
+		printer.AddOutputFlagForCreate(cmd, &o.Format, false)
+
+		// TODO: support enable logs when the api is ready.
+		// TODO: support set backup config?
+
+		// add flags from chart values.schema.json
+		util.CheckErr(addCreateFlags(cmd, o.Factory, o.ChartInfo, t.String()))
+
+		// Schedule policy
+		cmd.Flags().StringVar(&o.PodAntiAffinity, "pod-anti-affinity", "Preferred", "Pod anti-affinity type, one of: (Preferred, Required)")
+		cmd.Flags().StringArrayVar(&o.TopologyKeys, "topology-keys", nil, "Topology keys for affinity")
+		cmd.Flags().StringToStringVar(&o.NodeLabels, "node-labels", nil, "Node label selector")
+		cmd.Flags().StringSliceVar(&o.TolerationsRaw, "tolerations", nil, `Tolerations for cluster, such as "key=value:effect,key:effect", for example '"engineType=mongo:NoSchedule", "diskType:NoSchedule"'`)
+		if cmd.Flag("tenancy") == nil {
+			cmd.Flags().StringVar(&o.Tenancy, "tenancy", "SharedNode", "Tenancy options, one of: (SharedNode, DedicatedNode)")
+		}
 		cmds = append(cmds, cmd)
 	}
 	return cmds
 }
 
-func (o *CreateSubCmdsOptions) complete(cmd *cobra.Command) error {
+func (o *CreateSubCmdsOptions) Complete(cmd *cobra.Command) error {
 	var err error
 
 	// if name is not specified, generate a random cluster name
 	if o.Name == "" {
-		o.Name, err = generateClusterName(o.Dynamic, o.Namespace)
+		o.Name, err = cluster.GenerateClusterName(o.Dynamic, o.Namespace)
 		if err != nil {
 			return err
 		}
 	}
 
 	// get values from flags
-	o.Values = getValuesFromFlags(cmd.LocalNonPersistentFlags())
+	if cmd != nil {
+		o.Values = getValuesFromFlags(cmd.LocalNonPersistentFlags())
+	}
 
 	// get all the rendered objects
 	objs, err := o.getObjectsInfo()
@@ -133,10 +172,10 @@ func (o *CreateSubCmdsOptions) complete(cmd *cobra.Command) error {
 	if !ok {
 		return fmt.Errorf("cannot find spec in cluster object")
 	}
+	if o.ChartInfo.ComponentDef == nil {
+		o.ChartInfo.ComponentDef = []string{}
+	}
 	if compSpec, ok := spec["componentSpecs"].([]interface{}); ok {
-		if o.ChartInfo.ComponentDef == nil {
-			o.ChartInfo.ComponentDef = []string{}
-		}
 		for i := range compSpec {
 			comp := compSpec[i].(map[string]interface{})
 			if compDef, ok := comp["componentDef"]; ok {
@@ -144,17 +183,49 @@ func (o *CreateSubCmdsOptions) complete(cmd *cobra.Command) error {
 			}
 		}
 	}
-	if clusterDef, ok := spec["clusterDefinitionRef"].(string); ok {
+	if shardingSpec, ok := spec["shardings"].([]interface{}); ok {
+		for i := range shardingSpec {
+			shard := shardingSpec[i].(map[string]interface{})
+			if compSpec, ok := shard["template"].(map[string]interface{}); ok {
+				if compDef, ok := compSpec["componentDef"]; ok {
+					o.ChartInfo.ComponentDef = append(o.ChartInfo.ComponentDef, compDef.(string))
+				}
+			}
+		}
+	}
+	if clusterDef, ok := spec["clusterDef"].(string); ok {
 		o.ChartInfo.ClusterDef = clusterDef
 	}
 	if o.ChartInfo.ClusterDef == "" && len(o.ChartInfo.ComponentDef) == 0 {
-		return fmt.Errorf("cannot find clusterDefinitionRef in cluster spec or componentDef in componentSpecs")
+		return fmt.Errorf("cannot find clusterDef in cluster spec or componentDef in componentSpecs or shardingSpecs")
 	}
 
+	// Build tolerations if raw toleration rules are configured
+	if o.TolerationsRaw != nil {
+		tolerationsResult, err := util.BuildTolerations(o.TolerationsRaw)
+		if err != nil {
+			return err
+		}
+		jsonData, err := json.Marshal(tolerationsResult)
+		if err != nil {
+			return err
+		}
+		err = json.Unmarshal(jsonData, &o.Tolerations)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
-func (o *CreateSubCmdsOptions) validate() error {
+func (o *CreateSubCmdsOptions) Validate() error {
+	matched, _ := regexp.MatchString(`^[a-z]([-a-z0-9]*[a-z0-9])?$`, o.Name)
+	if !matched {
+		return fmt.Errorf("cluster name must begin with a letter and can only contain lowercase letters, numbers, and '-'")
+	}
+	if len(o.Name) > 16 {
+		return fmt.Errorf("cluster name should be less than 16 characters")
+	}
 	return cluster.ValidateValues(o.ChartInfo, o.Values)
 }
 
@@ -174,12 +245,36 @@ func (o *CreateSubCmdsOptions) Run() error {
 		return nil, fmt.Errorf("failed to find cluster object from manifests rendered from %s chart", o.ClusterType)
 	}
 
+	clusterObj, err := getClusterObj()
+	if err != nil {
+		return err
+	}
+
+	spec, _ := clusterObj.Object["spec"].(map[string]interface{})
+	if compSpec, ok := spec["componentSpecs"].([]interface{}); ok {
+		for i := range compSpec {
+			comp := compSpec[i].(map[string]interface{})
+			if err := o.applySchedulingPolicyToComponent(comp); err != nil {
+				return err
+			}
+			compSpec[i] = comp
+		}
+	}
+
+	if shardingSpec, ok := spec["shardings"].([]interface{}); ok {
+		for i := range shardingSpec {
+			shard := shardingSpec[i].(map[string]interface{})
+			if compSpec, ok := shard["template"].(map[string]interface{}); ok {
+				if err := o.applySchedulingPolicyToComponent(compSpec); err != nil {
+					return err
+				}
+				shard["template"] = compSpec
+			}
+		}
+	}
+
 	// only edits the cluster object, other dependency objects are created directly
 	if o.EditBeforeCreate {
-		clusterObj, err := getClusterObj()
-		if err != nil {
-			return err
-		}
 		customEdit := action.NewCustomEditOptions(o.Factory, o.IOStreams, "create")
 		if err = customEdit.Run(clusterObj); err != nil {
 			return err
@@ -249,7 +344,7 @@ func (o *CreateSubCmdsOptions) getObjectsInfo() ([]*objectInfo, error) {
 	}
 
 	// get cluster manifests
-	manifests, err := cluster.GetManifests(o.ChartInfo.Chart, o.Namespace, o.Name, kubeVersion, values)
+	manifests, err := cluster.GetManifests(o.ChartInfo.Chart, o.SkipSchemaValidation, o.Namespace, o.Name, kubeVersion, values)
 	if err != nil {
 		return nil, err
 	}
@@ -260,9 +355,24 @@ func (o *CreateSubCmdsOptions) getObjectsInfo() ([]*objectInfo, error) {
 
 func (o *CreateSubCmdsOptions) getClusterObj(objs []*objectInfo) (*unstructured.Unstructured, error) {
 	for _, obj := range objs {
+		fmt.Println(obj.gvr.String())
 		if obj.gvr == types.ClusterGVR() {
 			return obj.obj, nil
 		}
 	}
 	return nil, fmt.Errorf("failed to find cluster object from manifests rendered from %s chart", o.ClusterType)
+}
+
+func (o *CreateSubCmdsOptions) applySchedulingPolicyToComponent(item map[string]interface{}) error {
+	if compName, ok := item["name"]; ok {
+		schedulingPolicy, needSet := util.BuildSchedulingPolicy(o.Tenancy, o.Name, compName.(string), o.Tolerations, o.NodeLabels, o.PodAntiAffinity, o.TopologyKeys)
+		if needSet {
+			converted, err := runtime.DefaultUnstructuredConverter.ToUnstructured(schedulingPolicy)
+			if err != nil {
+				return err
+			}
+			_ = unstructured.SetNestedField(item, converted, "schedulingPolicy")
+		}
+	}
+	return nil
 }

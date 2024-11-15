@@ -79,7 +79,7 @@ var _ = Describe("Preflight API Test", func() {
 		}
 
 		tf.Client = tf.UnstructuredClient
-		tf.FakeDynamicClient = testing.FakeDynamicClient(cluster, testing.FakeClusterDef(), testing.FakeClusterVersion())
+		tf.FakeDynamicClient = testing.FakeDynamicClient(cluster, testing.FakeClusterDef())
 	})
 
 	AfterEach(func() {

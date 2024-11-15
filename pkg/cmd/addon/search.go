@@ -32,62 +32,118 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	"k8s.io/klog/v2"
+	cmdutil "k8s.io/kubectl/pkg/cmd/util"
+	"k8s.io/kubectl/pkg/util/templates"
 
 	extensionsv1alpha1 "github.com/apecloud/kubeblocks/apis/extensions/v1alpha1"
 
+	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/printer"
+	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
 )
 
+var addonSearchExample = templates.Examples(`
+	# search the addons of all index
+	kbcli addon search
+
+	# search the addons from a specified local path 
+	kbcli addon search --path /path/to/local/chart
+
+	# search different versions and indexes of an addon
+	kbcli addon search apecloud-mysql
+`)
+
 type searchResult struct {
-	index index
-	addon *extensionsv1alpha1.Addon
+	index       index
+	addon       *extensionsv1alpha1.Addon
+	isInstalled bool
 }
 
-func newSearchCmd(streams genericiooptions.IOStreams) *cobra.Command {
+type searchOpts struct {
+	// the name of addon to search, if not specified returns all the addons in the indexes
+	name string
+	// the local path contains addon CRs and needs to be specified when operating offline
+	path string
+}
+
+func newSearchCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
+	o := &searchOpts{}
 	cmd := &cobra.Command{
-		Use:   "search",
-		Short: "Search the addon from index",
-		Args:  cobra.ExactArgs(1),
+		Use:     "search",
+		Short:   "Search the addon from index",
+		Example: addonSearchExample,
 		PersistentPreRun: func(cmd *cobra.Command, _ []string) {
 			util.CheckErr(util.EnableLogToFile(cmd.Flags()))
 			util.CheckErr(addDefaultIndex())
 		},
 		Run: func(_ *cobra.Command, args []string) {
-			util.CheckErr(search(args, streams.Out))
+			if len(args) == 0 {
+				o.name = ""
+			} else {
+				o.name = args[0]
+			}
+			util.CheckErr(o.search(streams.Out, &addonListOpts{
+				ListOptions: action.NewListOptions(f, streams, types.AddonGVR()),
+			}))
 		},
 	}
+	cmd.Flags().StringVar(&o.path, "path", "", "the local directory contains addon CRs")
 	return cmd
 }
 
-func search(args []string, out io.Writer) error {
+func (o *searchOpts) search(out io.Writer, addonListOpts *addonListOpts) error {
+	var (
+		err     error
+		results []searchResult
+	)
+	if o.path == "" {
+		dir, err := util.GetCliAddonDir()
+		if err != nil {
+			return err
+		}
+		if results, err = searchAddon(o.name, dir, ""); err != nil {
+			return err
+		}
+	} else {
+		if results, err = searchAddon(o.name, filepath.Dir(o.path), filepath.Base(o.path)); err != nil {
+			return err
+		}
+	}
+
 	tbl := printer.NewTablePrinter(out)
-	tbl.AddRow("ADDON", "VERSION", "INDEX")
-	dir, err := util.GetCliAddonDir()
-	if err != nil {
-		return err
-	}
-	results, err := searchAddon(args[0], dir)
-	if err != nil {
-		return err
-	}
-	if len(results) == 0 {
-		fmt.Fprintf(out, "%s addon not found. Please update your index or check the addon name\n", args[0])
-		return nil
-	}
-	for _, res := range results {
-		tbl.AddRow(res.addon.Name, getAddonVersion(res.addon), res.index.name)
+	if o.name == "" {
+		tbl.AddRow("ADDON", "STATUS")
+		statusMap := map[bool]string{
+			true:  "installed",
+			false: "uninstalled",
+		}
+		results = uniqueByName(results)
+		err := checkAddonInstalled(&results, addonListOpts)
+		if err != nil {
+			return err
+		}
+		for _, res := range results {
+			tbl.AddRow(res.addon.Name, statusMap[res.isInstalled])
+		}
+	} else {
+		tbl.AddRow("ADDON", "VERSION", "INDEX")
+		if len(results) == 0 {
+			fmt.Fprintf(out, "%s addon not found. Please update your index or check the addon name.\n"+
+				"You can use the command 'kbcli addon index update --all=true' to update all indexes,\n"+
+				"or specify a local path containing addons with the command 'kbcli addon search --path=/path/to/local/chart'", o.name)
+			return nil
+		}
+		for _, res := range results {
+			tbl.AddRow(res.addon.Name, getAddonVersion(res.addon), res.index.name)
+		}
 	}
 	tbl.Print()
 	return nil
 }
 
 // searchAddon function will search for the addons with the specified name in the index of the specified directory and return them.
-func searchAddon(name string, indexDir string) ([]searchResult, error) {
-	indexes, err := getAllIndexes(indexDir)
-	if err != nil {
-		return nil, err
-	}
+func searchAddon(name string, indexDir string, theIndex string) ([]searchResult, error) {
 	var res []searchResult
 	searchInDir := func(i index) error {
 		return filepath.WalkDir(filepath.Join(indexDir, i.name), func(path string, d fs.DirEntry, err error) error {
@@ -113,11 +169,27 @@ func searchAddon(name string, indexDir string) ([]searchResult, error) {
 				if addon.Kind != "Addon" {
 					return filepath.SkipDir
 				}
-				if addon.Name == name {
-					res = append(res, searchResult{i, addon})
+				if name == "" || addon.Name == name {
+					res = append(res, searchResult{i, addon, false})
 				}
 			}
 			return nil
+		})
+	}
+
+	var indexes []index
+	var err error
+	if theIndex == "" {
+		// search all the indexes from the dir
+		indexes, err = getAllIndexes(indexDir)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// add the specified index
+		indexes = append(indexes, index{
+			name: theIndex,
+			url:  "",
 		})
 	}
 

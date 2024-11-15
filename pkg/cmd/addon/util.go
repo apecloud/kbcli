@@ -23,10 +23,12 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 
 	"golang.org/x/exp/maps"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
 
@@ -53,6 +55,77 @@ func getAddonVersion(addon *extensionsv1alpha1.Addon) string {
 		return version
 	}
 	return ""
+}
+
+func uniqueByName(objects []searchResult) []searchResult {
+	seen := make(map[string]bool)
+	var unique []searchResult
+	for _, obj := range objects {
+		if _, ok := seen[obj.addon.Name]; !ok {
+			seen[obj.addon.Name] = true
+			unique = append(unique, obj)
+		}
+	}
+	return unique
+}
+
+func checkAddonInstalled(objects *[]searchResult, o *addonListOpts) error {
+	// list installed addons
+	var installedAddons []string
+	o.Print = false
+	// get and output the result
+	o.Print = false
+	r, _ := o.Run()
+	if r == nil {
+		return nil
+	}
+	infos, err := r.Infos()
+	if err != nil {
+		return err
+	}
+	if len(infos) == 0 {
+		fmt.Fprintln(o.IOStreams.Out, "No installed addon found")
+		return nil
+	}
+	for _, info := range infos {
+		listItem := &extensionsv1alpha1.Addon{}
+		obj := info.Object.(*unstructured.Unstructured)
+		err := runtime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, listItem)
+		if err != nil {
+			return err
+		}
+		installedAddons = append(installedAddons, listItem.Name)
+	}
+
+	// mark installed on addons from the list result
+	sort.Strings(installedAddons)
+	sort.Slice(*objects, func(i, j int) bool {
+		return (*objects)[i].addon.Name < (*objects)[j].addon.Name
+	})
+	for i, j := 0, 0; i < len(installedAddons) && j < len(*objects); {
+		switch {
+		case installedAddons[i] == (*objects)[j].addon.Name:
+			{
+				(*objects)[j].isInstalled = true
+				i++
+				j++
+			}
+		case installedAddons[i] < (*objects)[j].addon.Name:
+			{
+				i++
+			}
+		case installedAddons[i] > (*objects)[j].addon.Name:
+			{
+				j++
+			}
+		}
+	}
+
+	// sort by the priority of 'uninstalled < installed'
+	sort.Slice(*objects, func(i, j int) bool {
+		return (*objects)[j].isInstalled
+	})
+	return nil
 }
 
 func CheckAddonUsedByCluster(dynamic dynamic.Interface, addons []string, in io.Reader) error {
