@@ -135,7 +135,7 @@ func newBaseOperationsOptions(f cmdutil.Factory, streams genericiooptions.IOStre
 		HasComponentNamesFlag: hasComponentNamesFlag,
 		AutoApprove:           false,
 		CreateOptions: action.CreateOptions{
-			Factory:         getFactory(f),
+			Factory:         f,
 			IOStreams:       streams,
 			CueTemplateName: "cluster_operations_template.cue",
 			GVR:             types.OpsGVR(),
@@ -146,18 +146,6 @@ func newBaseOperationsOptions(f cmdutil.Factory, streams genericiooptions.IOStre
 	o.OpsTypeLower = strings.ToLower(string(o.OpsType))
 	o.CreateOptions.Options = o
 	return o
-}
-
-// getFactory get a new factory when given factory isn't a TestFactory.
-func getFactory(f cmdutil.Factory) cmdutil.Factory {
-	if factory, ok := f.(*testing.TestFactory); ok {
-		return factory
-	} else {
-		kubeConfigFlags := genericclioptions.NewConfigFlags(true)
-		matchVersionKubeConfigFlags := cmdutil.NewMatchVersionFlags(kubeConfigFlags)
-		newFactory := cmdutil.NewFactory(matchVersionKubeConfigFlags)
-		return newFactory
-	}
 }
 
 // addCommonFlags adds common flags for operations command
@@ -1083,8 +1071,20 @@ func buildCustomOpsExamples(t unstructured.Unstructured) string {
 	return templates.Examples(baseCommand)
 }
 
+// getTempFactory get a new factory when given factory isn't a TestFactory.
+func getTempFactory(f cmdutil.Factory) cmdutil.Factory {
+	if factory, ok := f.(*testing.TestFactory); ok {
+		return factory
+	} else {
+		kubeConfigFlags := genericclioptions.NewConfigFlags(true)
+		matchVersionKubeConfigFlags := cmdutil.NewMatchVersionFlags(kubeConfigFlags)
+		newFactory := cmdutil.NewFactory(matchVersionKubeConfigFlags)
+		return newFactory
+	}
+}
+
 func buildCustomOpsCmds(option *OperationsOptions) []*cobra.Command {
-	dynamic, _ := option.Factory.DynamicClient()
+	dynamic, _ := getTempFactory(option.Factory).DynamicClient()
 	opsDefs, _ := dynamic.Resource(types.OpsDefinitionGVR()).List(context.TODO(), metav1.ListOptions{})
 	if opsDefs == nil {
 		return nil
