@@ -22,8 +22,6 @@ package cluster
 import (
 	"context"
 	"fmt"
-	"k8s.io/cli-runtime/pkg/genericclioptions"
-	"k8s.io/kubectl/pkg/cmd/testing"
 	"strings"
 
 	appsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
@@ -40,8 +38,10 @@ import (
 	apiruntime "k8s.io/apimachinery/pkg/runtime"
 	apitypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/json"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	"k8s.io/kube-openapi/pkg/validation/spec"
+	"k8s.io/kubectl/pkg/cmd/testing"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
 	"sigs.k8s.io/controller-runtime/pkg/client"
