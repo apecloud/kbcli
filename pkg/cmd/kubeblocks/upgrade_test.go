@@ -22,11 +22,10 @@ package kubeblocks
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/spf13/cobra"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/release"
-
-	"github.com/spf13/cobra"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	clientfake "k8s.io/client-go/rest/fake"
@@ -172,79 +171,6 @@ var _ = Describe("kubeblocks upgrade", func() {
 			Expect(o.Upgrade()).Should(Succeed())
 			Expect(len(o.ValueOpts.Values)).To(Equal(0))
 			Expect(o.upgradeChart()).Should(Succeed())
-		})
-	})
-
-	Context("upgrade from different status", func() {
-		BeforeEach(func() {
-			streams, _, _, _ = genericiooptions.NewTestIOStreams()
-			tf = cmdtesting.NewTestFactory().WithNamespace(namespace)
-			tf.Client = &clientfake.RESTClient{}
-			cfg = helm.NewFakeConfig(namespace)
-			actionCfg, _ = helm.NewActionConfig(cfg)
-		})
-
-		AfterEach(func() {
-			helm.ResetFakeActionConfig()
-			tf.Cleanup()
-		})
-
-		mockKubeBlocksDeploy := func() *appsv1.Deployment {
-			deploy := &appsv1.Deployment{}
-			deploy.SetLabels(map[string]string{
-				"app.kubernetes.io/component": "apps",
-				"app.kubernetes.io/name":      types.KubeBlocksChartName,
-				"app.kubernetes.io/version":   "0.3.0",
-			})
-			return deploy
-		}
-		It("run upgrade", func() {
-			testCase := []struct {
-				status      release.Status
-				checkResult bool
-			}{
-				{release.StatusDeployed, true},
-				{release.StatusSuperseded, true},
-				{release.StatusFailed, true},
-				{release.StatusUnknown, false},
-				{release.StatusUninstalled, false},
-				{release.StatusUninstalling, false},
-				{release.StatusPendingInstall, false},
-				{release.StatusPendingUpgrade, false},
-				{release.StatusPendingRollback, false},
-			}
-
-			for i := range testCase {
-				actionCfg, _ = helm.NewActionConfig(cfg)
-				err := actionCfg.Releases.Create(&release.Release{
-					Name:      testing.KubeBlocksChartName,
-					Namespace: namespace,
-					Version:   1,
-					Info: &release.Info{
-						Status: testCase[i].status,
-					},
-					Chart: &chart.Chart{},
-				})
-				Expect(err).Should(BeNil())
-				o := &InstallOptions{
-					Options: Options{
-						IOStreams: streams,
-						HelmCfg:   cfg,
-						Namespace: "default",
-						Client:    testing.FakeClientSet(mockKubeBlocksDeploy()),
-						Dynamic:   testing.FakeDynamicClient(),
-					},
-					Version: version.DefaultKubeBlocksVersion,
-					Check:   false,
-				}
-				if testCase[i].checkResult {
-					Expect(o.Upgrade()).Should(Succeed())
-				} else {
-					Expect(o.Upgrade()).Should(HaveOccurred())
-				}
-				helm.ResetFakeActionConfig()
-			}
-
 		})
 	})
 

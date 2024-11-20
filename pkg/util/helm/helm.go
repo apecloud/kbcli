@@ -154,6 +154,30 @@ func RemoveRepo(r *repo.Entry) error {
 	return nil
 }
 
+// GetInstalledForUpgrade gets helm package release info and check the status.
+func (i *InstallOpts) GetInstalledForUpgrade(cfg *action.Configuration) (*release.Release, error) {
+	res, err := action.NewGet(cfg).Run(i.Name)
+	if err != nil {
+		return nil, err
+	}
+	if res == nil {
+		return nil, driver.ErrReleaseNotFound
+	}
+	// intercept status of pending, unknown, uninstalling and uninstalled.
+	var status release.Status
+	if res.Info != nil {
+		status = res.Info.Status
+	} else {
+		return nil, fmt.Errorf("failed to get Helm release status: release or release info is nil")
+	}
+	if status.IsPending() {
+		return nil, errors.Wrapf(ErrReleaseNotReadyForUpgrade, "helm release status is %s. Please wait until the release status changes to ‘deployed’ before upgrading KubeBlocks", status.String())
+	} else if status != release.StatusDeployed && status != release.StatusFailed && status != release.StatusSuperseded {
+		return nil, errors.Wrapf(ErrReleaseNotReadyForUpgrade, "helm release status is %s. Please fix the release before upgrading KubeBlocks,uninstall and install kubeblocks could be a way to fix error", status.String())
+	}
+	return res, nil
+}
+
 // GetInstalled gets helm package release info if installed.
 func (i *InstallOpts) GetInstalled(cfg *action.Configuration) (*release.Release, error) {
 	res, err := action.NewGet(cfg).Run(i.Name)
@@ -525,7 +549,7 @@ func (i *InstallOpts) Upgrade(cfg *Config) error {
 }
 
 func (i *InstallOpts) tryUpgrade(cfg *action.Configuration) (*release.Release, error) {
-	installed, err := i.GetInstalled(cfg)
+	installed, err := i.GetInstalledForUpgrade(cfg)
 	if err != nil {
 		return nil, err
 	}
