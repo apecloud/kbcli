@@ -132,37 +132,24 @@ var _ = Describe("helm util", func() {
 			Expect(o.Uninstall(cfg)).Should(HaveOccurred()) // release not found
 		})
 
-		It("should fail when release is not one of deployed, failed and superseded", func() {
-			err := actionCfg.Releases.Create(&release.Release{
-				Name:    o.Name,
-				Version: 1,
-				Info: &release.Info{
-					Status: release.StatusDeployed,
-				},
-				Chart: &chart.Chart{},
-			})
-			Expect(err).Should(BeNil())
-			_, err = o.tryUpgrade(actionCfg)
-			Expect(err).Should(HaveOccurred())                // failed at fetching charts
-			Expect(o.tryUninstall(actionCfg)).Should(BeNil()) // release exists
-		})
-
-		testCase := []struct {
-			status      release.Status
-			checkResult bool
-		}{
-			{release.StatusDeployed, true},
-			{release.StatusSuperseded, true},
-			{release.StatusFailed, true},
-			{release.StatusUnknown, false},
-			{release.StatusUninstalled, false},
-			{release.StatusUninstalling, false},
-			{release.StatusPendingInstall, false},
-			{release.StatusPendingUpgrade, false},
-			{release.StatusPendingRollback, false},
-		}
-
 		It("should fail when status is not one of deployed, failed and superseded.", func() {
+			testCase := []struct {
+				status      release.Status
+				checkResult bool
+			}{
+				// deployed, failed and superseded
+				{release.StatusDeployed, true},
+				{release.StatusSuperseded, true},
+				{release.StatusFailed, true},
+				// others
+				{release.StatusUnknown, false},
+				{release.StatusUninstalled, false},
+				{release.StatusUninstalling, false},
+				{release.StatusPendingInstall, false},
+				{release.StatusPendingUpgrade, false},
+				{release.StatusPendingRollback, false},
+			}
+
 			for i := range testCase {
 				err := actionCfg.Releases.Create(&release.Release{
 					Name:    o.Name,
