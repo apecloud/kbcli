@@ -132,7 +132,7 @@ var _ = Describe("helm util", func() {
 			Expect(o.Uninstall(cfg)).Should(HaveOccurred()) // release not found
 		})
 
-		It("should fail at fetching charts when release is already deployed", func() {
+		It("should fail when release is not one of deployed, failed and superseded", func() {
 			err := actionCfg.Releases.Create(&release.Release{
 				Name:    o.Name,
 				Version: 1,
@@ -147,19 +147,40 @@ var _ = Describe("helm util", func() {
 			Expect(o.tryUninstall(actionCfg)).Should(BeNil()) // release exists
 		})
 
-		It("should fail when chart is already deployed", func() {
-			err := actionCfg.Releases.Create(&release.Release{
-				Name:    o.Name,
-				Version: 1,
-				Info: &release.Info{
-					Status: release.StatusFailed,
-				},
-				Chart: &chart.Chart{},
-			})
-			Expect(err).Should(BeNil())
-			_, err = o.tryUpgrade(actionCfg)
-			Expect(errors.Is(err, ErrReleaseNotDeployed)).Should(BeTrue())
-			Expect(o.tryUninstall(actionCfg)).Should(BeNil()) // release exists
+		testCase := []struct {
+			status      release.Status
+			checkResult bool
+		}{
+			{release.StatusDeployed, true},
+			{release.StatusSuperseded, true},
+			{release.StatusFailed, true},
+			{release.StatusUnknown, false},
+			{release.StatusUninstalled, false},
+			{release.StatusUninstalling, false},
+			{release.StatusPendingInstall, false},
+			{release.StatusPendingUpgrade, false},
+			{release.StatusPendingRollback, false},
+		}
+
+		It("should fail when status is not one of deployed, failed and superseded.", func() {
+			for i := range testCase {
+				err := actionCfg.Releases.Create(&release.Release{
+					Name:    o.Name,
+					Version: 1,
+					Info: &release.Info{
+						Status: testCase[i].status,
+					},
+					Chart: &chart.Chart{},
+				})
+				Expect(err).Should(BeNil())
+				_, err = o.tryUpgrade(actionCfg)
+				if testCase[i].checkResult {
+					Expect(errors.Is(err, ErrReleaseNotReadyForUpgrade)).Should(BeFalse())
+				} else {
+					Expect(errors.Is(err, ErrReleaseNotReadyForUpgrade)).Should(BeTrue())
+				}
+				Expect(o.tryUninstall(actionCfg)).Should(BeNil()) // release exists
+			}
 		})
 	})
 
