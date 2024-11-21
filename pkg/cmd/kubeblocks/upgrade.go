@@ -104,24 +104,12 @@ func (o *InstallOptions) getKBRelease() (*release.Release, error) {
 		}
 		o.HelmCfg.SetNamespace(ns)
 	}
-	// check helm release status
+	// get helm release
 	KBRelease, err := helm.GetHelmRelease(o.HelmCfg, types.KubeBlocksChartName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Helm release: %v in namespace %s", err, o.Namespace)
 	}
 
-	// intercept status of pending, unknown, uninstalling and uninstalled.
-	var status release.Status
-	if KBRelease != nil && KBRelease.Info != nil {
-		status = KBRelease.Info.Status
-	} else {
-		return nil, fmt.Errorf("failed to get Helm release status: release or release info is nil")
-	}
-	if status.IsPending() {
-		return nil, fmt.Errorf("helm release status is %s. Please wait until the release status changes to ‘deployed’ before upgrading KubeBlocks", status.String())
-	} else if status != release.StatusDeployed && status != release.StatusFailed && status != release.StatusSuperseded {
-		return nil, fmt.Errorf("helm release status is %s. Please fix the release before upgrading KubeBlocks", status.String())
-	}
 	return KBRelease, nil
 }
 
