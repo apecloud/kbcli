@@ -1351,9 +1351,9 @@ func GetClusterNameFromArgsOrFlag(cmd *cobra.Command, args []string) string {
 	return ""
 }
 
-func SetHelmOwner(dynamicClient dynamic.Interface, gvr schema.GroupVersionResource, namespace string, names []string) error {
+func SetHelmOwner(dynamicClient dynamic.Interface, gvr schema.GroupVersionResource, releaseName, namespace string, names []string) error {
 	patchOP := fmt.Sprintf(`[{"op": "replace", "path": "/metadata/annotations/meta.helm.sh~1release-name", "value": "%s"}`+
-		`,{"op": "replace", "path": "/metadata/annotations/meta.helm.sh~1release-namespace", "value": "%s"}]`, types.KubeBlocksChartName, namespace)
+		`,{"op": "replace", "path": "/metadata/annotations/meta.helm.sh~1release-namespace", "value": "%s"}]`, releaseName, namespace)
 	for _, name := range names {
 		if _, err := dynamicClient.Resource(gvr).Namespace("").Patch(context.TODO(), name,
 			k8sapitypes.JSONPatchType, []byte(patchOP), metav1.PatchOptions{}); client.IgnoreNotFound(err) != nil {

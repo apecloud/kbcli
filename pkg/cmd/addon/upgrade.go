@@ -139,7 +139,7 @@ func (o *upgradeOption) takeOver09AddonGlobalResources() error {
 			return err
 		}
 		for _, v := range cdList.Items {
-			if err = util.SetHelmOwner(o.Dynamic, gvr, newKBNamespace, []string{v.GetName()}); err != nil {
+			if err = util.SetHelmOwner(o.Dynamic, gvr, "kb-addon-"+o.name, newKBNamespace, []string{v.GetName()}); err != nil {
 				return err
 			}
 		}

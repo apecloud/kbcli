@@ -167,7 +167,7 @@ func (o *InstallOptions) setGlobalResourcesHelmOwner() error {
 	fmt.Fprintf(o.Out, "Change the release owner for the global resources\n")
 
 	// update ClusterRoles
-	if err := util.SetHelmOwner(o.Dynamic, types.ClusterRoleGVR(), o.HelmCfg.Namespace(), []string{
+	if err := util.SetHelmOwner(o.Dynamic, types.ClusterRoleGVR(), types.KubeBlocksChartName, o.HelmCfg.Namespace(), []string{
 		"kubeblocks-cluster-pod-role",
 		types.KubeBlocksChartName,
 		fmt.Sprintf("%s-cluster-editor-role", types.KubeBlocksChartName),
@@ -192,7 +192,7 @@ func (o *InstallOptions) setGlobalResourcesHelmOwner() error {
 		return err
 	}
 	// update Addons
-	if err := util.SetHelmOwner(o.Dynamic, types.AddonGVR(), o.HelmCfg.Namespace(), []string{
+	if err := util.SetHelmOwner(o.Dynamic, types.AddonGVR(), types.KubeBlocksChartName, o.HelmCfg.Namespace(), []string{
 		"apecloud-mysql", "etcd", "kafka", "llm",
 		"mongodb", "mysql", "postgresql", "pulsar",
 		"qdrant", "redis", "alertmanager-webhook-adaptor",
@@ -203,12 +203,12 @@ func (o *InstallOptions) setGlobalResourcesHelmOwner() error {
 		return err
 	}
 	// update StorageProviders
-	if err := util.SetHelmOwner(o.Dynamic, types.StorageProviderGVR(), o.HelmCfg.Namespace(), []string{
+	if err := util.SetHelmOwner(o.Dynamic, types.StorageProviderGVR(), types.KubeBlocksChartName, o.HelmCfg.Namespace(), []string{
 		"cos", "ftp", "gcs-s3comp", "minio", "nfs",
 		"obs", "oss", "pvc", "s3",
 	}); err != nil {
 		return err
 	}
 	// update BackupRepo
-	return util.SetHelmOwner(o.Dynamic, types.BackupRepoGVR(), o.HelmCfg.Namespace(), []string{fmt.Sprintf("%s-backuprepo", types.KubeBlocksChartName)})
+	return util.SetHelmOwner(o.Dynamic, types.BackupRepoGVR(), types.KubeBlocksChartName, o.HelmCfg.Namespace(), []string{fmt.Sprintf("%s-backuprepo", types.KubeBlocksChartName)})
 }
