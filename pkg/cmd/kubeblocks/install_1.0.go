@@ -30,11 +30,9 @@ import (
 	"helm.sh/helm/v3/pkg/cli/values"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/apecloud/kbcli/pkg/spinner"
 	"github.com/apecloud/kbcli/pkg/types"
@@ -167,20 +165,9 @@ func (o *InstallOptions) stopDeployment(s spinner.Interface, deploy *appsv1.Depl
 
 func (o *InstallOptions) setGlobalResourcesHelmOwner() error {
 	fmt.Fprintf(o.Out, "Change the release owner for the global resources\n")
-	setHelmOwner := func(gvr schema.GroupVersionResource, names []string) error {
-		patchOP := fmt.Sprintf(`[{"op": "replace", "path": "/metadata/annotations/meta.helm.sh~1release-name", "value": "%s"}`+
-			`,{"op": "replace", "path": "/metadata/annotations/meta.helm.sh~1release-namespace", "value": "%s"}]`, types.KubeBlocksChartName, o.HelmCfg.Namespace())
-		for _, name := range names {
-			if _, err := o.Dynamic.Resource(gvr).Namespace("").Patch(context.TODO(), name,
-				k8stypes.JSONPatchType, []byte(patchOP), metav1.PatchOptions{}); client.IgnoreNotFound(err) != nil {
-				return err
-			}
-		}
-		return nil
-	}
 
 	// update ClusterRoles
-	if err := setHelmOwner(types.ClusterRoleGVR(), []string{
+	if err := util.SetHelmOwner(o.Dynamic, types.ClusterRoleGVR(), types.KubeBlocksChartName, o.HelmCfg.Namespace(), []string{
 		"kubeblocks-cluster-pod-role",
 		types.KubeBlocksChartName,
 		fmt.Sprintf("%s-cluster-editor-role", types.KubeBlocksChartName),
@@ -205,7 +192,7 @@ func (o *InstallOptions) setGlobalResourcesHelmOwner() error {
 		return err
 	}
 	// update Addons
-	if err := setHelmOwner(types.AddonGVR(), []string{
+	if err := util.SetHelmOwner(o.Dynamic, types.AddonGVR(), types.KubeBlocksChartName, o.HelmCfg.Namespace(), []string{
 		"apecloud-mysql", "etcd", "kafka", "llm",
 		"mongodb", "mysql", "postgresql", "pulsar",
 		"qdrant", "redis", "alertmanager-webhook-adaptor",
@@ -216,12 +203,12 @@ func (o *InstallOptions) setGlobalResourcesHelmOwner() error {
 		return err
 	}
 	// update StorageProviders
-	if err := setHelmOwner(types.StorageProviderGVR(), []string{
+	if err := util.SetHelmOwner(o.Dynamic, types.StorageProviderGVR(), types.KubeBlocksChartName, o.HelmCfg.Namespace(), []string{
 		"cos", "ftp", "gcs-s3comp", "minio", "nfs",
 		"obs", "oss", "pvc", "s3",
 	}); err != nil {
 		return err
 	}
 	// update BackupRepo
-	return setHelmOwner(types.BackupRepoGVR(), []string{fmt.Sprintf("%s-backuprepo", types.KubeBlocksChartName)})
+	return util.SetHelmOwner(o.Dynamic, types.BackupRepoGVR(), types.KubeBlocksChartName, o.HelmCfg.Namespace(), []string{fmt.Sprintf("%s-backuprepo", types.KubeBlocksChartName)})
 }
