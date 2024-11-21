@@ -241,15 +241,18 @@ func (o *installOption) Validate() error {
 		fmt.Fprint(o.Out, printer.BoldYellow("Warning: --force flag will skip version checks, which may result in the cluster not running correctly.\n"))
 		return nil
 	}
-
 	if o.addon.Annotations == nil || len(o.addon.Annotations[types.KBVersionValidateAnnotationKey]) == 0 {
 		fmt.Fprint(o.Out, printer.BoldYellow(fmt.Sprintf(`Warning: The addon %s is missing annotations to validate KubeBlocks versions.
 It will automatically skip version checks, which may result in the cluster not running correctly.
 `, o.name)))
-	} else if ok, err = validateVersion(o.addon.Annotations[types.KBVersionValidateAnnotationKey], v.KubeBlocks); err == nil && !ok {
-		return fmt.Errorf("KubeBlocks version %s does not meet the requirements \"%s\" for addon installation\nUse --force option to skip this check", v.KubeBlocks, o.addon.Annotations[types.KBVersionValidateAnnotationKey])
+	} else {
+		kbVersions := strings.Split(v.KubeBlocks, ",")
+		for _, kbVersion := range kbVersions {
+			if ok, err = validateVersion(o.addon.Annotations[types.KBVersionValidateAnnotationKey], kbVersion); err == nil && !ok {
+				return fmt.Errorf("KubeBlocks version %s does not meet the requirements \"%s\" for addon installation\nUse --force option to skip this check", v.KubeBlocks, o.addon.Annotations[types.KBVersionValidateAnnotationKey])
+			}
+		}
 	}
-
 	return err
 }
 
