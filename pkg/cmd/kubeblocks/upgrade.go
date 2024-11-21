@@ -28,7 +28,6 @@ import (
 	"github.com/hashicorp/go-version"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"helm.sh/helm/v3/pkg/release"
 	appsv1 "k8s.io/api/apps/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -103,24 +102,10 @@ func (o *InstallOptions) Upgrade() error {
 		}
 		o.HelmCfg.SetNamespace(ns)
 	}
-
-	// check helm release status
+	// get helm release
 	KBRelease, err := helm.GetHelmRelease(o.HelmCfg, types.KubeBlocksChartName)
 	if err != nil {
 		return fmt.Errorf("failed to get Helm release: %v", err)
-	}
-
-	// intercept status of pending, unknown, uninstalling and uninstalled.
-	var status release.Status
-	if KBRelease != nil && KBRelease.Info != nil {
-		status = KBRelease.Info.Status
-	} else {
-		return fmt.Errorf("failed to get Helm release status: release or release info is nil")
-	}
-	if status.IsPending() {
-		return fmt.Errorf("helm release status is %s. Please wait until the release status changes to ‘deployed’ before upgrading KubeBlocks", status.String())
-	} else if status != release.StatusDeployed && status != release.StatusFailed && status != release.StatusSuperseded {
-		return fmt.Errorf("helm release status is %s. Please fix the release before upgrading KubeBlocks", status.String())
 	}
 
 	o.Version = util.TrimVersionPrefix(o.Version)
