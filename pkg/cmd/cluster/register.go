@@ -241,5 +241,5 @@ Use "kbcli cluster create {{ .ClusterType }}" to create a {{ .ClusterType }} clu
 	_ = util.PrintGoTemplate(&builder, exampleTpl, map[string]interface{}{
 		"ClusterType": t.String(),
 	})
-	return templates.Examples(builder.String())
+	return templates.Examples(builder.String()) + "\n"
 }
