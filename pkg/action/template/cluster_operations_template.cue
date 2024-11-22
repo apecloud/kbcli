@@ -123,10 +123,14 @@ content: {
 		ttlSecondsAfterSucceed: options.ttlSecondsAfterSucceed
 		force:                  options.force
 		if options.type == "Stop" {
-			stop: options.componentNames
+			stop: [ for _, cName in options.componentNames {
+				componentName: cName
+			}]
 		}
 		if options.type == "Start" {
-			start: options.componentNames
+			start: [ for _, cName in options.componentNames {
+				componentName: cName
+			}]
 		}
 		if options.type == "Upgrade" {
 			upgrade: #upgrade
