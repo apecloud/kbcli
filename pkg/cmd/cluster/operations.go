@@ -116,6 +116,9 @@ type OperationsOptions struct {
 	Nodes               []string                      `json:"-"`
 	RebuildInstanceFrom []opsv1alpha1.RebuildInstance `json:"rebuildInstanceFrom,omitempty"`
 	Env                 []string                      `json:"-"`
+
+	// Stop and Start options
+	isComponentsFlagOptional bool
 }
 
 func newBaseOperationsOptions(f cmdutil.Factory, streams genericiooptions.IOStreams,
@@ -141,6 +144,7 @@ func newBaseOperationsOptions(f cmdutil.Factory, streams genericiooptions.IOStre
 			GVR:             types.OpsGVR(),
 			CustomOutPut:    customOutPut,
 		},
+		isComponentsFlagOptional: opsType == opsv1alpha1.StopType || opsType == opsv1alpha1.StartType,
 	}
 
 	o.OpsTypeLower = strings.ToLower(string(o.OpsType))
@@ -339,7 +343,7 @@ func (o *OperationsOptions) Validate() error {
 	}
 
 	// common validate for componentOps
-	if o.HasComponentNamesFlag && len(o.ComponentNames) == 0 {
+	if o.HasComponentNamesFlag && !o.isComponentsFlagOptional && len(o.ComponentNames) == 0 {
 		return fmt.Errorf(`missing components, please specify the "--components" flag for the cluster`)
 	}
 	if err = o.validateComponents(cluster); err != nil {
@@ -861,11 +865,14 @@ func NewExposeCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.
 var stopExample = templates.Examples(`
 		# stop the cluster and release all the pods of the cluster
 		kbcli cluster stop mycluster
+
+		# stop the component of the cluster and release all the pods of the component
+		kbcli cluster stop mycluster --components=mysql
 `)
 
 // NewStopCmd creates a stop command
 func NewStopCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := newBaseOperationsOptions(f, streams, opsv1alpha1.StopType, false)
+	o := newBaseOperationsOptions(f, streams, opsv1alpha1.StopType, true)
 	cmd := &cobra.Command{
 		Use:               "stop NAME",
 		Short:             "Stop the cluster and release all the pods of the cluster.",
@@ -887,11 +894,14 @@ func NewStopCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Co
 var startExample = templates.Examples(`
 		# start the cluster when cluster is stopped
 		kbcli cluster start mycluster
+
+		# start the component of the cluster when cluster is stopped
+		kbcli cluster start mycluster --components=mysql
 `)
 
 // NewStartCmd creates a start command
 func NewStartCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := newBaseOperationsOptions(f, streams, opsv1alpha1.StartType, false)
+	o := newBaseOperationsOptions(f, streams, opsv1alpha1.StartType, true)
 	o.AutoApprove = true
 	cmd := &cobra.Command{
 		Use:               "start NAME",
