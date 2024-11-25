@@ -1,30 +1,40 @@
 ---
-title: kbcli cluster create
+title: kbcli cluster scale-out
 ---
 
-Create a cluster.
+scale out replicas of the specified components in the cluster.
 
 ```
-kbcli cluster create [NAME] [flags]
+kbcli cluster scale-out Replicas [flags]
 ```
 
 ### Examples
 
 ```
-  # Create a postgresql
-  kbcli cluster create postgresql my-cluster
+  # scale out 2 replicas
+  kbcli cluster scale-out mycluster --components=mysql --replicas=2
   
-  # Get the cluster yaml by dry-run
-  kbcli cluster create postgresql my-cluster --dry-run
+  # to bring the offline instances specified in compSpec.offlineInstances online.
+  kbcli cluster scale-out mycluster --components=mysql --online-instances pod1
   
-  # Edit cluster yaml before creation.
-  kbcli cluster create mycluster --edit
+  # scale out 2 replicas, one of which is an instance that has already been taken offline.
+  kbcli cluster scale-out mycluster --components=mysql --replicas=2 --online-instances pod1
 ```
 
 ### Options
 
 ```
-  -h, --help   help for create
+      --auto-approve                   Skip interactive approval before horizontally scaling the cluster
+      --components strings             Component names to this operations
+      --dry-run string[="unchanged"]   Must be "client", or "server". If with client strategy, only print the object that would be sent, and no data is actually sent. If with server strategy, submit the server-side request, but no data is persistent. (default "none")
+      --edit                           Edit the API resource before creating
+      --force                           skip the pre-checks of the opsRequest to run the opsRequest forcibly
+  -h, --help                           help for scale-out
+      --name string                    OpsRequest name. if not specified, it will be randomly generated
+      --online-instances strings       online the specified instances which have been offline
+  -o, --output format                  Prints the output in the specified format. Allowed values: JSON and YAML (default yaml)
+      --replicas string                Replica changes with the specified components
+      --ttlSecondsAfterSucceed int     Time to live after the OpsRequest succeed
 ```
 
 ### Options inherited from parent commands
@@ -54,17 +64,6 @@ kbcli cluster create [NAME] [flags]
 ### SEE ALSO
 
 * [kbcli cluster](kbcli_cluster.md)	 - Cluster command.
-* [kbcli cluster create apecloud-mysql](kbcli_cluster_create_apecloud-mysql.md)	 - Create a apecloud-mysql cluster.
-* [kbcli cluster create elasticsearch](kbcli_cluster_create_elasticsearch.md)	 - Create a elasticsearch cluster.
-* [kbcli cluster create kafka](kbcli_cluster_create_kafka.md)	 - Create a kafka cluster.
-* [kbcli cluster create llm](kbcli_cluster_create_llm.md)	 - Create a llm cluster.
-* [kbcli cluster create minio](kbcli_cluster_create_minio.md)	 - Create a minio cluster.
-* [kbcli cluster create mongodb](kbcli_cluster_create_mongodb.md)	 - Create a mongodb cluster.
-* [kbcli cluster create mysql](kbcli_cluster_create_mysql.md)	 - Create a mysql cluster.
-* [kbcli cluster create postgresql](kbcli_cluster_create_postgresql.md)	 - Create a postgresql cluster.
-* [kbcli cluster create qdrant](kbcli_cluster_create_qdrant.md)	 - Create a qdrant cluster.
-* [kbcli cluster create redis](kbcli_cluster_create_redis.md)	 - Create a redis cluster.
-* [kbcli cluster create xinference](kbcli_cluster_create_xinference.md)	 - Create a xinference cluster.
 
 #### Go Back to [CLI Overview](cli.md) Homepage.
 

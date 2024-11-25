@@ -1,30 +1,27 @@
 ---
-title: kbcli cluster create
+title: kbcli backuprepo list-storage-provider
 ---
 
-Create a cluster.
+List storage providers.
 
 ```
-kbcli cluster create [NAME] [flags]
+kbcli backuprepo list-storage-provider [flags]
 ```
 
 ### Examples
 
 ```
-  # Create a postgresql
-  kbcli cluster create postgresql my-cluster
-  
-  # Get the cluster yaml by dry-run
-  kbcli cluster create postgresql my-cluster --dry-run
-  
-  # Edit cluster yaml before creation.
-  kbcli cluster create mycluster --edit
+  # List all storage provider
+  kbcli backuprepo list-sp
 ```
 
 ### Options
 
 ```
-  -h, --help   help for create
+  -h, --help              help for list-storage-provider
+  -o, --output format     prints the output in the specified format. Allowed values: table, json, yaml, wide (default table)
+  -l, --selector string   Selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2). Matching objects must satisfy all of the specified label constraints.
+      --show-labels       When printing, show all labels as the last column (default hide labels column)
 ```
 
 ### Options inherited from parent commands
@@ -53,18 +50,7 @@ kbcli cluster create [NAME] [flags]
 
 ### SEE ALSO
 
-* [kbcli cluster](kbcli_cluster.md)	 - Cluster command.
-* [kbcli cluster create apecloud-mysql](kbcli_cluster_create_apecloud-mysql.md)	 - Create a apecloud-mysql cluster.
-* [kbcli cluster create elasticsearch](kbcli_cluster_create_elasticsearch.md)	 - Create a elasticsearch cluster.
-* [kbcli cluster create kafka](kbcli_cluster_create_kafka.md)	 - Create a kafka cluster.
-* [kbcli cluster create llm](kbcli_cluster_create_llm.md)	 - Create a llm cluster.
-* [kbcli cluster create minio](kbcli_cluster_create_minio.md)	 - Create a minio cluster.
-* [kbcli cluster create mongodb](kbcli_cluster_create_mongodb.md)	 - Create a mongodb cluster.
-* [kbcli cluster create mysql](kbcli_cluster_create_mysql.md)	 - Create a mysql cluster.
-* [kbcli cluster create postgresql](kbcli_cluster_create_postgresql.md)	 - Create a postgresql cluster.
-* [kbcli cluster create qdrant](kbcli_cluster_create_qdrant.md)	 - Create a qdrant cluster.
-* [kbcli cluster create redis](kbcli_cluster_create_redis.md)	 - Create a redis cluster.
-* [kbcli cluster create xinference](kbcli_cluster_create_xinference.md)	 - Create a xinference cluster.
+* [kbcli backuprepo](kbcli_backuprepo.md)	 - BackupRepo command.
 
 #### Go Back to [CLI Overview](cli.md) Homepage.
 
