@@ -36,7 +36,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	apitypes "k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
@@ -202,19 +201,15 @@ func (o *InstallOptions) Upgrade() error {
 		// new version resources, which may be not compatible. helm will start the new version
 		// KubeBlocks after upgrade.
 		s = spinner.New(o.Out, spinnerMsg("Stop KubeBlocks "+kbVersion))
-		defer s.Fail()
-		if err = o.deleteDeployment(util.GetKubeBlocksDeploy); err != nil {
+		if err = o.stopDeployment(s, util.GetKubeBlocksDeploy); err != nil {
 			return err
 		}
-		s.Success()
 
 		// stop the data protection deployment
 		s = spinner.New(o.Out, spinnerMsg("Stop DataProtection"))
-		defer s.Fail()
-		if err = o.deleteDeployment(util.GetDataProtectionDeploy); err != nil {
+		if err = o.stopDeployment(s, util.GetDataProtectionDeploy); err != nil {
 			return err
 		}
-		s.Success()
 
 		msg = "to " + o.Version
 	}
@@ -296,7 +291,7 @@ func (o *InstallOptions) upgradeChart() error {
 }
 
 // deleteDeployment deletes deployment.
-func (o *InstallOptions) deleteDeployment(getter deploymentGetter) error {
+func (o *InstallOptions) stopDeployment(s spinner.Interface, getter deploymentGetter) error {
 	deploy, err := getter(o.Client)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -323,31 +318,7 @@ func (o *InstallOptions) deleteDeployment(getter deploymentGetter) error {
 ------------------ Deployment %s end ----------------`,
 		deploy.Name, string(bytes), deploy.Name)
 
-	if err = o.Client.AppsV1().Deployments(deploy.Namespace).Delete(context.TODO(),
-		deploy.Name,
-		metav1.DeleteOptions{
-			GracePeriodSeconds: func() *int64 {
-				seconds := int64(0)
-				return &seconds
-			}(),
-		}); err != nil {
-		return err
-	}
-
-	// wait for deployment to be deleted
-	return wait.PollUntilContextTimeout(context.Background(), 5*time.Second, 1*time.Minute, true,
-		func(_ context.Context) (bool, error) {
-			deploy, err = getter(o.Client)
-			if err != nil {
-				if apierrors.IsNotFound(err) {
-					return true, nil
-				}
-				return false, err
-			} else if deploy == nil {
-				return true, nil
-			}
-			return false, err
-		})
+	return o.stopDeploymentObject(s, deploy)
 }
 
 // keepAddons set the addons to keep when upgrade KubeBlocks avoid the addons been deleted
