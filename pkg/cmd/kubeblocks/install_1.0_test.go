@@ -120,7 +120,7 @@ func TestStopDeployment(t *testing.T) {
 	}
 
 	s := spinner.New(o.Out, spinnerMsg("Stop KubeBlocks Deployment"))
-	err := o.stopDeployment(s, deploy)
+	err := o.stopDeploymentObject(s, deploy)
 	assert.NoError(t, err)
 
 	updatedDeploy, err := client.AppsV1().Deployments(namespace).Get(context.TODO(), "test-deploy", metav1.GetOptions{})
