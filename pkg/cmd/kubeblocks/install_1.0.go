@@ -131,7 +131,7 @@ func (o *InstallOptions) configKB09() error {
 func (o *InstallOptions) stopDeploymentObject(s spinner.Interface, deploy *appsv1.Deployment) error {
 	defer s.Fail()
 	ctx := context.TODO()
-	if *deploy.Spec.Replicas != 0 {
+	if deploy.Spec.Replicas != nil && *deploy.Spec.Replicas != 0 {
 		patch := []byte(fmt.Sprintf(`{"spec":{"replicas":%d}}`, 0))
 		_, err := o.Client.AppsV1().Deployments(deploy.Namespace).Patch(
 			ctx,
