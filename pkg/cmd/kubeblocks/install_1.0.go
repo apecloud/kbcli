@@ -83,7 +83,7 @@ func (o *InstallOptions) preInstallWhenUpgradeFrom09() error {
 			kbVersion := deploy.Labels[constant.AppVersionLabelKey]
 			o.kb09Namespace = deploy.Namespace
 			s := spinner.New(o.Out, spinnerMsg(fmt.Sprintf("Stop %s %s", msgKey, kbVersion)))
-			if err = o.stopDeployment(s, deploy); err != nil {
+			if err = o.stopDeploymentObject(s, deploy); err != nil {
 				return err
 			}
 		}
@@ -128,10 +128,10 @@ func (o *InstallOptions) configKB09() error {
 	return configKBRelease(configOpt)
 }
 
-func (o *InstallOptions) stopDeployment(s spinner.Interface, deploy *appsv1.Deployment) error {
+func (o *InstallOptions) stopDeploymentObject(s spinner.Interface, deploy *appsv1.Deployment) error {
 	defer s.Fail()
 	ctx := context.TODO()
-	if *deploy.Spec.Replicas != 0 {
+	if deploy.Spec.Replicas != nil && *deploy.Spec.Replicas != 0 {
 		patch := []byte(fmt.Sprintf(`{"spec":{"replicas":%d}}`, 0))
 		_, err := o.Client.AppsV1().Deployments(deploy.Namespace).Patch(
 			ctx,
