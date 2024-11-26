@@ -30,7 +30,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
-	workloads "github.com/apecloud/kubeblocks/apis/workloads/v1alpha1"
 )
 
 const (
@@ -100,6 +99,8 @@ const (
 const (
 	AppsAPIGroup                     = "apps.kubeblocks.io"
 	OpsAPIGroup                      = "operations.kubeblocks.io"
+	WorkloadsAPIGroup                = "workloads.kubeblocks.io"
+	WorkloadsAPIVersion              = "v1"
 	OpsAPIVersion                    = "v1alpha1"
 	AppsAPIVersion                   = "v1alpha1"
 	AppsV1APIVersion                 = "v1"
@@ -107,10 +108,11 @@ const (
 	ResourcePods                     = "pods"
 	ResourceClusters                 = "clusters"
 	ResourceClusterDefs              = "clusterdefinitions"
-	ResourceClusterVersions          = "clusterversions"
 	ResourceComponentDefs            = "componentdefinitions"
+	ResourceComponentVersions        = "componentversions"
 	ResourceComponents               = "components"
 	ResourceOpsRequests              = "opsrequests"
+	ResourceInstanceSets             = "instancesets"
 	ResourceOpsDefinitions           = "opsdefinitions"
 	ResourceConfigConstraintVersions = "configconstraints"
 	ResourceConfigurationVersions    = "configurations"
@@ -235,9 +237,6 @@ const (
 
 // Migrate some const from kubeblocks to kbcli
 const (
-	// KBDefaultClusterVersionAnnotationKey specifies the default cluster version.
-	KBDefaultClusterVersionAnnotationKey = "kubeblocks.io/is-default-cluster-version"
-
 	// KBAddonProviderLabelKey marks the addon provider
 	KBAddonProviderLabelKey = "kubeblocks.io/provider"
 )
@@ -309,12 +308,20 @@ func ComponentGVR() schema.GroupVersionResource {
 	return schema.GroupVersionResource{Group: AppsAPIGroup, Version: AppsV1APIVersion, Resource: ResourceComponents}
 }
 
+func ComponentVersionsGVR() schema.GroupVersionResource {
+	return schema.GroupVersionResource{Group: AppsAPIGroup, Version: AppsV1APIVersion, Resource: ResourceComponentVersions}
+}
+
 func OpsDefinitionGVR() schema.GroupVersionResource {
 	return schema.GroupVersionResource{Group: OpsAPIGroup, Version: OpsAPIVersion, Resource: ResourceOpsDefinitions}
 }
 
 func OpsGVR() schema.GroupVersionResource {
 	return schema.GroupVersionResource{Group: OpsAPIGroup, Version: OpsAPIVersion, Resource: ResourceOpsRequests}
+}
+
+func InstanceSetGVR() schema.GroupVersionResource {
+	return schema.GroupVersionResource{Group: WorkloadsAPIGroup, Version: WorkloadsAPIVersion, Resource: ResourceInstanceSets}
 }
 
 func BackupGVR() schema.GroupVersionResource {
@@ -326,7 +333,7 @@ func BackupPolicyGVR() schema.GroupVersionResource {
 }
 
 func BackupPolicyTemplateGVR() schema.GroupVersionResource {
-	return schema.GroupVersionResource{Group: AppsAPIGroup, Version: DPAPIVersion, Resource: ResourceBackupTemplates}
+	return schema.GroupVersionResource{Group: DPAPIGroup, Version: DPAPIVersion, Resource: ResourceBackupTemplates}
 }
 
 func BackupScheduleGVR() schema.GroupVersionResource {
@@ -379,10 +386,6 @@ func SecretGVR() schema.GroupVersionResource {
 
 func StatefulSetGVR() schema.GroupVersionResource {
 	return schema.GroupVersionResource{Group: appsv1.GroupName, Version: K8sCoreAPIVersion, Resource: ResourceStatefulSets}
-}
-
-func RSMGVR() schema.GroupVersionResource {
-	return schema.GroupVersionResource{Group: workloads.GroupVersion.Group, Version: workloads.GroupVersion.Version, Resource: ResourceRSM}
 }
 
 func DaemonSetGVR() schema.GroupVersionResource {

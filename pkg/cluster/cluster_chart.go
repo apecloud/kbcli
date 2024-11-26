@@ -89,7 +89,7 @@ func BuildChartInfo(t ClusterType) (*ChartInfo, error) {
 }
 
 // GetManifests gets the cluster manifests
-func GetManifests(c *chart.Chart, namespace, name, kubeVersion string, values map[string]interface{}) (map[string]string, error) {
+func GetManifests(c *chart.Chart, skipSchemaValidation bool, namespace, name, kubeVersion string, values map[string]interface{}) (map[string]string, error) {
 	// get the helm chart manifest
 	actionCfg, err := helm.NewActionConfig(helm.NewConfig(namespace, "", "", false))
 	if err != nil {
@@ -116,6 +116,7 @@ func GetManifests(c *chart.Chart, namespace, name, kubeVersion string, values ma
 	client.ReleaseName = name
 	client.Namespace = namespace
 	client.KubeVersion = v
+	client.SkipSchemaValidation = skipSchemaValidation
 
 	rel, err := client.Run(c, values)
 	if err != nil {
@@ -129,6 +130,9 @@ func (c *ChartInfo) BuildClusterSchema() error {
 	var err error
 	cht := c.Chart
 	buildSchema := func(bs []byte) (*spec.Schema, error) {
+		if len(bs) == 0 {
+			return nil, nil
+		}
 		schema := &spec.Schema{}
 		if err = json.Unmarshal(bs, schema); err != nil {
 			return nil, errors.Wrapf(err, "failed to build schema for engine %s", cht.Name())

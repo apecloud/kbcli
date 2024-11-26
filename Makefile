@@ -235,10 +235,9 @@ build-kbcli-embed-chart: helmtool fetch-addons create-kbcli-embed-charts-dir \
 	build-single-kbcli-embed-chart.postgresql \
 	build-single-kbcli-embed-chart.kafka \
 	build-single-kbcli-embed-chart.mongodb \
-	build-single-kbcli-embed-chart.llm \
-	build-single-kbcli-embed-chart.xinference \
 	build-single-kbcli-embed-chart.elasticsearch \
-	build-single-kbcli-embed-chart.qdrant
+	build-single-kbcli-embed-chart.qdrant \
+	build-single-kbcli-embed-chart.etcd
 
 .PHONY: kbcli
 kbcli: build-checks kbcli-fast ## Build bin/kbcli.

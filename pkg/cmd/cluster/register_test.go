@@ -91,16 +91,14 @@ var _ = Describe("cluster register", func() {
 
 	Context("test register cluster chart", func() {
 		var (
-			source              = "https://github.com/apecloud/helm-charts/releases/download/mysql-cluster-1.0.0-alpha.0/mysql-cluster-1.0.0-alpha.0.tgz"
-			engine              = "mysql"
-			apecloudMysqlEngine = "apecloud-mysql"
-			version             = "1.0.0-alpha.0"
-			repo                = types.ClusterChartsRepoURL
+			source  = "https://github.com/apecloud/helm-charts/releases/download/apecloud-mysql-cluster-1.0.0-alpha.0/apecloud-mysql-cluster-1.0.0-alpha.0.tgz"
+			engine  = "apecloud-mysql"
+			version = "1.0.0-alpha.0"
+			repo    = types.ClusterChartsRepoURL
 		)
 
 		AfterEach(func() {
 			cluster.ClearCharts(cluster.ClusterType(engine))
-			cluster.ClearCharts(cluster.ClusterType(apecloudMysqlEngine))
 		})
 
 		It("test register chart by source", func() {
@@ -112,9 +110,9 @@ var _ = Describe("cluster register", func() {
 		})
 
 		It("test register built-in chart and test validate", func() {
-			Expect(RegisterClusterChart(tf, streams, "", apecloudMysqlEngine, version, repo)).Should(Succeed())
+			Expect(RegisterClusterChart(tf, streams, "", engine, version, repo)).Should(Succeed())
 			validatedChart := &cluster.TypeInstance{
-				Name:      cluster.ClusterType(apecloudMysqlEngine),
+				Name:      cluster.ClusterType(engine),
 				URL:       "",
 				Alias:     "",
 				ChartName: filepath.Base(source),

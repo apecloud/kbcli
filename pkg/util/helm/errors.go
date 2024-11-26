@@ -33,6 +33,7 @@ import (
 // Implementing errors should be more friendly to downstream handlers
 
 var ErrReleaseNotDeployed = fmt.Errorf("release: not in deployed status")
+var ErrReleaseNotReadyForUpgrade = fmt.Errorf("release: not in deployed, failed or superseded status")
 
 func ReleaseNotFound(err error) bool {
 	if err == nil {

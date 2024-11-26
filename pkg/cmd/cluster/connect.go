@@ -220,7 +220,7 @@ func (o *ConnectOptions) getConnectionInfo() error {
 			return fmt.Errorf(`cannot found the component "%s" in the cluster "%s"`, o.clusterComponentName, o.clusterName)
 		}
 		if isSharding {
-			if componentPairs, err = cluster.GetShardingComponentPairs(o.Dynamic, o.targetCluster, kbappsv1.ShardingSpec{
+			if componentPairs, err = cluster.GetShardingComponentPairs(o.Dynamic, o.targetCluster, kbappsv1.ClusterSharding{
 				Name:     o.clusterComponentName,
 				Template: *compSpec,
 			}); err != nil {

@@ -60,7 +60,8 @@ func NewClusterCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 				NewUpgradeCmd(f, streams),
 				NewVolumeExpansionCmd(f, streams),
 				NewVerticalScalingCmd(f, streams),
-				NewHorizontalScalingCmd(f, streams),
+				NewScaleOutCmd(f, streams),
+				NewScaleInCmd(f, streams),
 				NewPromoteCmd(f, streams),
 				NewDescribeOpsCmd(f, streams),
 				NewListOpsCmd(f, streams),
@@ -91,6 +92,8 @@ func NewClusterCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 				NewDeleteBackupCmd(f, streams),
 				NewCreateRestoreCmd(f, streams),
 				NewDescribeBackupCmd(f, streams),
+				NewListRestoreCommand(f, streams),
+				NewRestoreDescribeCommand(f, streams),
 			},
 		},
 		{

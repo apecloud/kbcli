@@ -21,15 +21,17 @@ package cluster
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
+	"regexp"
 
 	"github.com/spf13/cobra"
-	"k8s.io/apimachinery/pkg/api/errors"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/dynamic"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 
 	"github.com/apecloud/kbcli/pkg/action"
@@ -62,6 +64,10 @@ type CreateSubCmdsOptions struct {
 	NodeLabels     map[string]string `json:"nodeLabels,omitempty"`
 	Tenancy        string            `json:"tenancy"`
 	TolerationsRaw []string          `json:"-"`
+	Tolerations    []corev1.Toleration
+
+	// SkipSchemaValidation is used to skip the schema validation of the helm chart.
+	SkipSchemaValidation bool `json:"-"`
 
 	*action.CreateOptions
 }
@@ -69,8 +75,9 @@ type CreateSubCmdsOptions struct {
 func NewSubCmdsOptions(createOptions *action.CreateOptions, t cluster.ClusterType) (*CreateSubCmdsOptions, error) {
 	var err error
 	o := &CreateSubCmdsOptions{
-		CreateOptions: createOptions,
-		ClusterType:   t,
+		CreateOptions:        createOptions,
+		ClusterType:          t,
+		SkipSchemaValidation: false,
 	}
 
 	if o.ChartInfo, err = cluster.BuildChartInfo(t); err != nil {
@@ -97,8 +104,8 @@ func buildCreateSubCmds(createOptions *action.CreateOptions) []*cobra.Command {
 			Run: func(cmd *cobra.Command, args []string) {
 				o.Args = args
 				cmdutil.CheckErr(o.CreateOptions.Complete())
-				cmdutil.CheckErr(o.complete(cmd))
-				cmdutil.CheckErr(o.validate())
+				cmdutil.CheckErr(o.Complete(cmd))
+				cmdutil.CheckErr(o.Validate())
 				cmdutil.CheckErr(o.Run())
 			},
 		}
@@ -120,11 +127,10 @@ func buildCreateSubCmds(createOptions *action.CreateOptions) []*cobra.Command {
 		util.CheckErr(addCreateFlags(cmd, o.Factory, o.ChartInfo, t.String()))
 
 		// Schedule policy
-		// TODO: implement them, and check whether the flag has been defined
 		cmd.Flags().StringVar(&o.PodAntiAffinity, "pod-anti-affinity", "Preferred", "Pod anti-affinity type, one of: (Preferred, Required)")
 		cmd.Flags().StringArrayVar(&o.TopologyKeys, "topology-keys", nil, "Topology keys for affinity")
 		cmd.Flags().StringToStringVar(&o.NodeLabels, "node-labels", nil, "Node label selector")
-		cmd.Flags().StringSliceVar(&o.TolerationsRaw, "tolerations", nil, `Tolerations for cluster, such as "key=value:effect, key:effect", for example '"engineType=mongo:NoSchedule", "diskType:NoSchedule"'`)
+		cmd.Flags().StringSliceVar(&o.TolerationsRaw, "tolerations", nil, `Tolerations for cluster, such as "key=value:effect,key:effect", for example '"engineType=mongo:NoSchedule", "diskType:NoSchedule"'`)
 		if cmd.Flag("tenancy") == nil {
 			cmd.Flags().StringVar(&o.Tenancy, "tenancy", "SharedNode", "Tenancy options, one of: (SharedNode, DedicatedNode)")
 		}
@@ -133,36 +139,21 @@ func buildCreateSubCmds(createOptions *action.CreateOptions) []*cobra.Command {
 	return cmds
 }
 
-func generateClusterName(dynamic dynamic.Interface, namespace string) (string, error) {
-	var name string
-	// retry 10 times
-	for i := 0; i < 10; i++ {
-		name = cluster.GenerateName()
-		// check whether the cluster exists, if not found, return it
-		_, err := dynamic.Resource(types.ClusterGVR()).Namespace(namespace).Get(context.TODO(), name, metav1.GetOptions{})
-		if errors.IsNotFound(err) {
-			return name, nil
-		}
-		if err != nil {
-			return "", err
-		}
-	}
-	return "", fmt.Errorf("failed to generate cluster name")
-}
-
-func (o *CreateSubCmdsOptions) complete(cmd *cobra.Command) error {
+func (o *CreateSubCmdsOptions) Complete(cmd *cobra.Command) error {
 	var err error
 
 	// if name is not specified, generate a random cluster name
 	if o.Name == "" {
-		o.Name, err = generateClusterName(o.Dynamic, o.Namespace)
+		o.Name, err = cluster.GenerateClusterName(o.Dynamic, o.Namespace)
 		if err != nil {
 			return err
 		}
 	}
 
 	// get values from flags
-	o.Values = getValuesFromFlags(cmd.LocalNonPersistentFlags())
+	if cmd != nil {
+		o.Values = getValuesFromFlags(cmd.LocalNonPersistentFlags())
+	}
 
 	// get all the rendered objects
 	objs, err := o.getObjectsInfo()
@@ -192,7 +183,7 @@ func (o *CreateSubCmdsOptions) complete(cmd *cobra.Command) error {
 			}
 		}
 	}
-	if shardingSpec, ok := spec["shardingSpecs"].([]interface{}); ok {
+	if shardingSpec, ok := spec["shardings"].([]interface{}); ok {
 		for i := range shardingSpec {
 			shard := shardingSpec[i].(map[string]interface{})
 			if compSpec, ok := shard["template"].(map[string]interface{}); ok {
@@ -208,10 +199,33 @@ func (o *CreateSubCmdsOptions) complete(cmd *cobra.Command) error {
 	if o.ChartInfo.ClusterDef == "" && len(o.ChartInfo.ComponentDef) == 0 {
 		return fmt.Errorf("cannot find clusterDef in cluster spec or componentDef in componentSpecs or shardingSpecs")
 	}
+
+	// Build tolerations if raw toleration rules are configured
+	if o.TolerationsRaw != nil {
+		tolerationsResult, err := util.BuildTolerations(o.TolerationsRaw)
+		if err != nil {
+			return err
+		}
+		jsonData, err := json.Marshal(tolerationsResult)
+		if err != nil {
+			return err
+		}
+		err = json.Unmarshal(jsonData, &o.Tolerations)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
-func (o *CreateSubCmdsOptions) validate() error {
+func (o *CreateSubCmdsOptions) Validate() error {
+	matched, _ := regexp.MatchString(`^[a-z]([-a-z0-9]*[a-z0-9])?$`, o.Name)
+	if !matched {
+		return fmt.Errorf("cluster name must begin with a letter and can only contain lowercase letters, numbers, and '-'")
+	}
+	if len(o.Name) > 16 {
+		return fmt.Errorf("cluster name should be less than 16 characters")
+	}
 	return cluster.ValidateValues(o.ChartInfo, o.Values)
 }
 
@@ -231,12 +245,36 @@ func (o *CreateSubCmdsOptions) Run() error {
 		return nil, fmt.Errorf("failed to find cluster object from manifests rendered from %s chart", o.ClusterType)
 	}
 
+	clusterObj, err := getClusterObj()
+	if err != nil {
+		return err
+	}
+
+	spec, _ := clusterObj.Object["spec"].(map[string]interface{})
+	if compSpec, ok := spec["componentSpecs"].([]interface{}); ok {
+		for i := range compSpec {
+			comp := compSpec[i].(map[string]interface{})
+			if err := o.applySchedulingPolicyToComponent(comp); err != nil {
+				return err
+			}
+			compSpec[i] = comp
+		}
+	}
+
+	if shardingSpec, ok := spec["shardings"].([]interface{}); ok {
+		for i := range shardingSpec {
+			shard := shardingSpec[i].(map[string]interface{})
+			if compSpec, ok := shard["template"].(map[string]interface{}); ok {
+				if err := o.applySchedulingPolicyToComponent(compSpec); err != nil {
+					return err
+				}
+				shard["template"] = compSpec
+			}
+		}
+	}
+
 	// only edits the cluster object, other dependency objects are created directly
 	if o.EditBeforeCreate {
-		clusterObj, err := getClusterObj()
-		if err != nil {
-			return err
-		}
 		customEdit := action.NewCustomEditOptions(o.Factory, o.IOStreams, "create")
 		if err = customEdit.Run(clusterObj); err != nil {
 			return err
@@ -306,7 +344,7 @@ func (o *CreateSubCmdsOptions) getObjectsInfo() ([]*objectInfo, error) {
 	}
 
 	// get cluster manifests
-	manifests, err := cluster.GetManifests(o.ChartInfo.Chart, o.Namespace, o.Name, kubeVersion, values)
+	manifests, err := cluster.GetManifests(o.ChartInfo.Chart, o.SkipSchemaValidation, o.Namespace, o.Name, kubeVersion, values)
 	if err != nil {
 		return nil, err
 	}
@@ -323,4 +361,18 @@ func (o *CreateSubCmdsOptions) getClusterObj(objs []*objectInfo) (*unstructured.
 		}
 	}
 	return nil, fmt.Errorf("failed to find cluster object from manifests rendered from %s chart", o.ClusterType)
+}
+
+func (o *CreateSubCmdsOptions) applySchedulingPolicyToComponent(item map[string]interface{}) error {
+	if compName, ok := item["name"]; ok {
+		schedulingPolicy, needSet := util.BuildSchedulingPolicy(o.Tenancy, o.Name, compName.(string), o.Tolerations, o.NodeLabels, o.PodAntiAffinity, o.TopologyKeys)
+		if needSet {
+			converted, err := runtime.DefaultUnstructuredConverter.ToUnstructured(schedulingPolicy)
+			if err != nil {
+				return err
+			}
+			_ = unstructured.SetNestedField(item, converted, "schedulingPolicy")
+		}
+	}
+	return nil
 }

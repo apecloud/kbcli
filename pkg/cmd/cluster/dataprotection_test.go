@@ -22,7 +22,6 @@ package cluster
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -31,7 +30,6 @@ import (
 	opsv1alpha1 "github.com/apecloud/kubeblocks/apis/operations/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -48,6 +46,7 @@ import (
 	dptypes "github.com/apecloud/kubeblocks/pkg/dataprotection/types"
 
 	"github.com/apecloud/kbcli/pkg/action"
+	dp "github.com/apecloud/kbcli/pkg/cmd/dataprotection"
 	"github.com/apecloud/kbcli/pkg/testing"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
@@ -71,20 +70,8 @@ var _ = Describe("DataProtection", func() {
 			NegotiatedSerializer: resource.UnstructuredPlusDefaultContentConfig().NegotiatedSerializer,
 			Client: clientfake.CreateHTTPClient(func(req *http.Request) (*http.Response, error) {
 				urlPrefix := "/api/v1/namespaces/" + testing.Namespace
-				if req.URL.Path == urlPrefix+"/secrets" && req.Method == http.MethodPost {
-					dec := json.NewDecoder(req.Body)
-					secret := &corev1.Secret{}
-					_ = dec.Decode(secret)
-					if secret.Name == "" && secret.GenerateName != "" {
-						secret.Name = secret.GenerateName + "123456"
-					}
-					return httpResp(secret), nil
-				}
-				if strings.HasPrefix(req.URL.Path, urlPrefix+"/secrets") && req.Method == http.MethodPatch {
-					return httpResp(&corev1.Secret{}), nil
-				}
 				mapping := map[string]*http.Response{
-					"/api/v1/secrets": httpResp(&corev1.SecretList{}),
+					urlPrefix + "/events": httpResp(&corev1.EventList{}),
 				}
 				return mapping[req.URL.Path], nil
 			}),
@@ -137,57 +124,9 @@ var _ = Describe("DataProtection", func() {
 			Expect(len(strings.Split(strings.Trim(out.String(), "\n"), "\n"))).Should(Equal(4))
 		})
 
-		It("edit-backup-policy", func() {
-			By("fake client")
-			defaultBackupPolicy := testing.FakeBackupPolicy(policyName, testing.ClusterName)
-			repo := testing.FakeBackupRepo(repoName, false)
-			tf.FakeDynamicClient = testing.FakeDynamicClient(defaultBackupPolicy, repo)
-
-			By("test edit backup policy function")
-			o := editBackupPolicyOptions{Factory: tf, IOStreams: streams, GVR: types.BackupPolicyGVR()}
-			Expect(o.complete([]string{policyName})).Should(Succeed())
-
-			By("test update encryption algorithm")
-			o.values = []string{"encryption.algorithm=AES-256-CFB"}
-			Expect(o.runEditBackupPolicy()).Should(Succeed())
-
-			By("test update encryption pass phrase")
-			o.values = []string{"encryption.passPhrase=THISISSECRET"}
-			Expect(o.runEditBackupPolicy()).Should(Succeed())
-
-			By("test update encryption pass phrase with the same value")
-			o.values = []string{"encryption.passPhrase=THISISSECRET"}
-			Expect(o.runEditBackupPolicy()).Should(Succeed())
-
-			By("test update encryption pass phrase with a different value")
-			o.values = []string{"encryption.passPhrase=CHANGED"}
-			Expect(o.runEditBackupPolicy()).Should(Succeed())
-
-			By("test set empty encryption pass phrase")
-			o.values = []string{"encryption.passPhrase="}
-			Expect(o.runEditBackupPolicy()).Should(MatchError(ContainSubstring("encryption.passPhrase can't be empty")))
-
-			By("test disable encryption")
-			o.values = []string{"encryption.disabled=true"}
-			Expect(o.runEditBackupPolicy()).Should(Succeed())
-
-			By("test update backup repo")
-			o.values = []string{"backupRepoName=repo"}
-			Expect(o.runEditBackupPolicy()).Should(Succeed())
-
-			By("test backup repo not exists")
-			o.values = []string{"backupRepoName=repo1"}
-			Expect(o.runEditBackupPolicy()).Should(MatchError(ContainSubstring(`"repo1" not found`)))
-
-			By("test with vim editor")
-			o.values = []string{}
-			o.isTest = true
-			Expect(o.runEditBackupPolicy()).Should(Succeed())
-		})
-
 		It("validate create backup", func() {
 			By("without cluster name")
-			o := &CreateBackupOptions{
+			o := &dp.CreateBackupOptions{
 				CreateOptions: action.CreateOptions{
 					Dynamic:   testing.FakeDynamicClient(),
 					IOStreams: streams,
@@ -250,7 +189,7 @@ var _ = Describe("DataProtection", func() {
 			cmd.Run(cmd, []string{testing.ClusterName})
 
 			By("test with specified backupMethod and backupPolicy")
-			o := &CreateBackupOptions{
+			o := &dp.CreateBackupOptions{
 				CreateOptions: action.CreateOptions{
 					IOStreams:       streams,
 					Factory:         tf,
@@ -299,8 +238,8 @@ var _ = Describe("DataProtection", func() {
 		Expect(cmd).ShouldNot(BeNil())
 		By("test list-backup cmd with no backup")
 		tf.FakeDynamicClient = testing.FakeDynamicClient()
-		o := ListBackupOptions{ListOptions: action.NewListOptions(tf, streams, types.BackupGVR())}
-		Expect(PrintBackupList(o)).Should(Succeed())
+		o := action.NewListOptions(tf, streams, types.BackupGVR())
+		Expect(dp.PrintBackupList(o)).Should(Succeed())
 		Expect(o.ErrOut.(*bytes.Buffer).String()).Should(ContainSubstring("No backups found"))
 
 		By("test list-backup")
@@ -312,14 +251,14 @@ var _ = Describe("DataProtection", func() {
 		backup2 := testing.FakeBackup("test1")
 		backup2.Namespace = "backup"
 		tf.FakeDynamicClient = testing.FakeDynamicClient(backup1, backup2)
-		Expect(PrintBackupList(o)).Should(Succeed())
+		Expect(dp.PrintBackupList(o)).Should(Succeed())
 		Expect(o.Out.(*bytes.Buffer).String()).Should(ContainSubstring("test1"))
 		Expect(o.Out.(*bytes.Buffer).String()).Should(ContainSubstring("apecloud-mysql"))
 
 		By("test list all namespace")
 		o.Out.(*bytes.Buffer).Reset()
 		o.AllNamespaces = true
-		Expect(PrintBackupList(o)).Should(Succeed())
+		Expect(dp.PrintBackupList(o)).Should(Succeed())
 		Expect(len(strings.Split(strings.Trim(o.Out.(*bytes.Buffer).String(), "\n"), "\n"))).Should(Equal(3))
 	})
 
@@ -358,95 +297,10 @@ var _ = Describe("DataProtection", func() {
 		Expect(clusterObj.Spec.ComponentSpecs[0].Replicas).Should(Equal(int32(1)))
 	})
 
-	// It("restore-to-time", func() {
-	//	timestamp := time.Now().Format("20060102150405")
-	//	backupName := "backup-test-" + timestamp
-	//	backupName1 := backupName + "1"
-	//	clusterName := "source-cluster-" + timestamp
-	//	secrets := testing.FakeSecrets(testing.Namespace, clusterName)
-	//	clusterDef := testing.FakeClusterDef()
-	//	cluster := testing.FakeCluster(clusterName, testing.Namespace)
-	//	clusterDefLabel := map[string]string{
-	//		constant.ClusterDefLabelKey: clusterDef.Name,
-	//	}
-	//	cluster.SetLabels(clusterDefLabel)
-	//	backupPolicy := testing.FakeBackupPolicy("backPolicy", cluster.Name)
-	//	backupTypeMeta := testing.FakeBackup("backup-none").TypeMeta
-	//	backupLabels := map[string]string{
-	//		constant.AppInstanceLabelKey:             clusterName,
-	//		constant.KBAppComponentLabelKey:          "test",
-	//		dptypes.DataProtectionLabelClusterUIDKey: string(cluster.UID),
-	//	}
-	//	now := metav1.Now()
-	//	baseBackup := testapps.NewBackupFactory(testing.Namespace, "backup-base").
-	//		SetBackupMethod(dpv1alpha1.BackupTypeSnapshot).
-	//		SetBackupTimeRange(now.Add(-time.Minute), now.Add(-time.Second)).
-	//		SetLabels(backupLabels).GetObject()
-	//	baseBackup.TypeMeta = backupTypeMeta
-	//	baseBackup.Status.Phase = dpv1alpha1.BackupPhaseCompleted
-	//	logfileBackup := testapps.NewBackupFactory(testing.Namespace, backupName).
-	//		SetBackupMethod(dpv1alpha1.BackupTypeLogFile).
-	//		SetBackupTimeRange(now.Add(-time.Minute), now.Add(time.Minute)).
-	//		SetLabels(backupLabels).GetObject()
-	//	logfileBackup.TypeMeta = backupTypeMeta
-	//
-	//	logfileBackup1 := testapps.NewBackupFactory(testing.Namespace, backupName1).
-	//		SetBackupMethod(dpv1alpha1.BackupTypeLogFile).
-	//		SetBackupTimeRange(now.Add(-time.Minute), now.Add(2*time.Minute)).GetObject()
-	//	uid := string(cluster.UID)
-	//	logfileBackup1.Labels = map[string]string{
-	//		constant.AppInstanceLabelKey:              clusterName,
-	//		constant.KBAppComponentLabelKey:           "test",
-	//		constant.DataProtectionLabelClusterUIDKey: uid[:30] + "00",
-	//	}
-	//	logfileBackup1.TypeMeta = backupTypeMeta
-	//
-	//	pods := testing.FakePods(1, testing.Namespace, clusterName)
-	//	tf.FakeDynamicClient = fake.NewSimpleDynamicClient(
-	//		scheme.Scheme, &secrets.Items[0], &pods.Items[0], cluster, backupPolicy, baseBackup, logfileBackup, logfileBackup1)
-	//	tf.Client = &clientfake.RESTClient{}
-	//
-	//	By("restore new cluster from source cluster which is not deleted")
-	//	cmdRestore := NewCreateRestoreCmd(tf, streams)
-	//	Expect(cmdRestore != nil).To(BeTrue())
-	//	_ = cmdRestore.Flags().Set("restore-to-time", util.TimeFormatWithDuration(&now, time.Second))
-	//	_ = cmdRestore.Flags().Set("source-cluster", clusterName)
-	//	cmdRestore.Run(nil, []string{})
-	//
-	//	// test with RFC3339 format
-	//	_ = cmdRestore.Flags().Set("restore-to-time", now.Format(time.RFC3339))
-	//	_ = cmdRestore.Flags().Set("source-cluster", clusterName)
-	//	cmdRestore.Run(nil, []string{"new-cluster"})
-	//
-	//	By("restore should be failed when backups belong to different source clusters")
-	//	o := &CreateRestoreOptions{CreateOptions: create.CreateOptions{
-	//		IOStreams: streams,
-	//		Factory:   tf,
-	//	}}
-	//	restoreTime := time.Now().Add(90 * time.Second)
-	//	o.RestoreTimeStr = util.TimeFormatWithDuration(&metav1.Time{Time: restoreTime}, time.Second)
-	//	o.SourceCluster = clusterName
-	//	Expect(o.Complete()).Should(Succeed())
-	//	Expect(o.validateRestoreTime().Error()).Should(ContainSubstring("restore-to-time is out of time range"))
-	// })
-
 	It("describe-backup", func() {
-		cmd := NewDescribeBackupCmd(tf, streams)
-		Expect(cmd).ShouldNot(BeNil())
-		By("test describe-backup cmd with no backup")
-		tf.FakeDynamicClient = testing.FakeDynamicClient()
-		o := DescribeBackupOptions{
-			Factory:   tf,
-			IOStreams: streams,
-			Gvr:       types.BackupGVR(),
-		}
-		args := []string{}
-		Expect(o.Complete(args)).Should(HaveOccurred())
-
-		By("test describe-backup")
+		By("init backup")
 		backupName := "test1"
 		backup1 := testing.FakeBackup(backupName)
-		args = append(args, backupName)
 		backup1.Status.Phase = dpv1alpha1.BackupPhaseCompleted
 		logNow := metav1.Now()
 		backup1.Status.StartTimestamp = &logNow
@@ -454,43 +308,32 @@ var _ = Describe("DataProtection", func() {
 		backup1.Status.Expiration = &logNow
 		backup1.Status.Duration = &metav1.Duration{Duration: logNow.Sub(logNow.Time)}
 		tf.FakeDynamicClient = testing.FakeDynamicClient(backup1)
-		Expect(o.Complete(args)).Should(Succeed())
-		o.client = testing.FakeClientSet()
-		Expect(o.Run()).Should(Succeed())
+
+		By("test describe-backup")
+		cmd := NewDescribeBackupCmd(tf, streams)
+		Expect(cmd).ShouldNot(BeNil())
+		done := testing.Capture()
+		_ = cmd.Flags().Set("names", backupName)
+		cmd.Run(cmd, []string{})
+		capturedOutput, _ := done()
+		Expect(capturedOutput).Should(ContainSubstring(backupName))
 	})
 
 	It("describe-backup-policy", func() {
 		cmd := NewDescribeBackupPolicyCmd(tf, streams)
 		Expect(cmd).ShouldNot(BeNil())
-		By("test describe-backup-policy cmd with cluster and backupPolicy")
-		tf.FakeDynamicClient = testing.FakeDynamicClient()
-		o := DescribeBackupPolicyOptions{
-			Factory:   tf,
-			IOStreams: streams,
-		}
-		Expect(o.Complete()).Should(Succeed())
-		Expect(o.Validate()).Should(HaveOccurred())
 
 		By("test describe-backup-policy with cluster")
 		policyName := "test1"
 		policy1 := testing.FakeBackupPolicy(policyName, testing.ClusterName)
 		tf.FakeDynamicClient = testing.FakeDynamicClient(policy1)
-		o.client = testing.FakeClientSet()
-		o.ClusterNames = []string{testing.ClusterName}
-		Expect(o.Complete()).Should(Succeed())
-		Expect(o.Validate()).Should(Succeed())
-		Expect(o.Run()).Should(Succeed())
+		cmd.Run(cmd, []string{testing.ClusterName})
+		Expect(out.String()).Should(ContainSubstring(testing.BackupMethodName))
 
 		By("test describe-backup-policy with backupPolicy")
-		o = DescribeBackupPolicyOptions{
-			Factory:   tf,
-			IOStreams: streams,
-		}
-		o.Names = []string{policyName}
-		o.client = testing.FakeClientSet()
-		Expect(o.Complete()).Should(Succeed())
-		Expect(o.Validate()).Should(Succeed())
-		Expect(o.Run()).Should(Succeed())
+		_ = cmd.Flags().Set("names", policyName)
+		cmd.Run(cmd, []string{})
+		Expect(out.String()).Should(ContainSubstring(testing.BackupMethodName))
 	})
 
 })

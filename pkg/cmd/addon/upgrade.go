@@ -23,10 +23,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/apecloud/dbctl/constant"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	ktypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
@@ -98,6 +101,7 @@ func newUpgradeCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 			o.name = args[0]
 			util.CheckErr(o.Complete())
 			util.CheckErr(o.Validate())
+			util.CheckErr(o.takeOver09AddonGlobalResources())
 			util.CheckErr(o.Run(f, streams))
 		},
 	}
@@ -110,6 +114,41 @@ func newUpgradeCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 	cmd.Flags().StringVar(&o.clusterChartRepo, "cluster-chart-repo", types.ClusterChartsRepoURL, "specify the repo of cluster chart, use the url of 'kubeblocks-addons' by default")
 	cmd.Flags().StringVar(&o.path, "path", "", "specify the local path contains addon CRs and needs to be specified when operating offline")
 	return cmd
+}
+func (o *upgradeOption) takeOver09AddonGlobalResources() error {
+	kbDeploys, err := util.GetKBDeploys(o.Client, util.KubeblocksAppComponent, metav1.NamespaceAll)
+	if err != nil || len(kbDeploys) < 2 {
+		return err
+	}
+	if !strings.HasPrefix(o.version, "1.0") {
+		return nil
+	}
+	var newKBNamespace string
+	for _, v := range kbDeploys {
+		if strings.HasPrefix(v.Labels[constant.AppVersionLabelKey], "1.0") {
+			newKBNamespace = v.Namespace
+			break
+		}
+	}
+	selector := metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("%s=%s", constant.AppNameLabelKey, o.name),
+	}
+	takeOverRelease := func(gvr schema.GroupVersionResource) error {
+		cdList, err := o.Dynamic.Resource(gvr).Namespace("").List(context.TODO(), selector)
+		if err != nil {
+			return err
+		}
+		for _, v := range cdList.Items {
+			if err = util.SetHelmOwner(o.Dynamic, gvr, "kb-addon-"+o.name, newKBNamespace, []string{v.GetName()}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	if err := takeOverRelease(types.ClusterDefGVR()); err != nil {
+		return err
+	}
+	return takeOverRelease(types.ComponentVersionsGVR())
 }
 
 func (o *upgradeOption) Complete() error {

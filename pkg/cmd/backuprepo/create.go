@@ -346,8 +346,9 @@ func (o *createOptions) validate(cmd *cobra.Command) error {
 func (o *createOptions) createCredentialSecret() (*corev1.Secret, error) {
 	// if failed to get the namespace of KubeBlocks,
 	// then create the secret in the current namespace
-	namespace, err := util.GetKubeBlocksNamespace(o.client)
-	if err != nil {
+	var err error
+	namespace, _ := util.GetKubeBlocksNamespace(o.client, "")
+	if namespace == "" {
 		namespace, _, err = o.factory.ToRawKubeConfigLoader().Namespace()
 		if err != nil {
 			return nil, err

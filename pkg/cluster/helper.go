@@ -28,7 +28,9 @@ import (
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	appsv1beta1 "github.com/apecloud/kubeblocks/apis/apps/v1beta1"
 	"github.com/apecloud/kubeblocks/pkg/constant"
+	"github.com/apecloud/kubeblocks/pkg/controller/component"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
@@ -200,6 +202,26 @@ func GetDefaultCompName(cd *appsv1alpha1.ClusterDefinition) (string, error) {
 		return cd.Spec.ComponentDefs[0].Name, nil
 	}
 	return "", fmt.Errorf("failed to get the default component definition name")
+}
+
+func IsShardingComponent(cluster *kbappsv1.Cluster, compName string) bool {
+	return cluster.Spec.GetShardingByName(compName) != nil
+}
+
+func ComponentNameLabelKey(cluster *kbappsv1.Cluster, compName string) string {
+	compLabelKey := constant.KBAppComponentLabelKey
+	if IsShardingComponent(cluster, compName) {
+		compLabelKey = constant.KBAppShardingNameLabelKey
+	}
+	return compLabelKey
+}
+
+func GetComponentSpec(cluster *kbappsv1.Cluster, compName string) *kbappsv1.ClusterComponentSpec {
+	shardingSpec := cluster.Spec.GetShardingByName(compName)
+	if shardingSpec != nil {
+		return &shardingSpec.Template
+	}
+	return cluster.Spec.GetComponentByName(compName)
 }
 
 func GetClusterByName(dynamic dynamic.Interface, name string, namespace string) (*kbappsv1.Cluster, error) {
@@ -434,4 +456,30 @@ func GetEndpointsFromNode(node *corev1.Node) (string, string) {
 		}
 	}
 	return internal, external
+}
+
+func GenerateClusterName(dynamic dynamic.Interface, namespace string) (string, error) {
+	var name string
+	// retry 10 times
+	for i := 0; i < 10; i++ {
+		name = GenerateName()
+		// check whether the cluster exists, if not found, return it
+		_, err := dynamic.Resource(types.ClusterGVR()).Namespace(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+		if errors.IsNotFound(err) {
+			return name, nil
+		}
+		if err != nil {
+			return "", err
+		}
+	}
+	return "", fmt.Errorf("failed to generate cluster name")
+}
+
+func CompatibleComponentDefs(compDefs []string, compDef string) bool {
+	for _, v := range compDefs {
+		if component.PrefixOrRegexMatched(compDef, v) {
+			return true
+		}
+	}
+	return false
 }

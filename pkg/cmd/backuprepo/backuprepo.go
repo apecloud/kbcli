@@ -36,6 +36,7 @@ func NewBackupRepoCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *co
 		newListCommand(f, streams),
 		newDescribeCommand(f, streams),
 		newDeleteCommand(f, streams),
+		newListStorageProviderCommand(f, streams),
 	)
 	return cmd
 }

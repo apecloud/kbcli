@@ -41,27 +41,19 @@ const (
 )
 
 const (
-	Local        = "local"
-	AWS          = "aws"
-	AliCloud     = "alicloud"
-	Azure        = "azure"
-	GCP          = "gcp"
-	TencentCloud = "tencentcloud"
+	Local = "local"
+	AWS   = "aws"
 )
 
 var (
 	cloudProviderK8sServiceMap = map[string]string{
-		Local:        "k3s",
-		AWS:          "eks",
-		AliCloud:     "ack",
-		Azure:        "aks",
-		GCP:          "gke",
-		TencentCloud: "tke",
+		Local: "k3s",
+		AWS:   "eks",
 	}
 )
 
 func CloudProviders() []string {
-	return []string{Local, AWS, Azure, GCP, AliCloud, TencentCloud}
+	return []string{Local, AWS}
 }
 
 func K8sService(provider string) string {

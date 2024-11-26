@@ -44,6 +44,7 @@ import (
 
 	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
 	opsv1alpha1 "github.com/apecloud/kubeblocks/apis/operations/v1alpha1"
+	intctrlutil "github.com/apecloud/kubeblocks/pkg/controllerutil"
 	"github.com/fatih/color"
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
@@ -834,13 +835,25 @@ func GetHelmChartRepoURL() string {
 }
 
 // GetKubeBlocksNamespace gets namespace of KubeBlocks installation, infer namespace from helm secrets
-func GetKubeBlocksNamespace(client kubernetes.Interface) (string, error) {
-	secrets, err := client.CoreV1().Secrets(metav1.NamespaceAll).List(context.TODO(), metav1.ListOptions{LabelSelector: types.KubeBlocksHelmLabel})
-	// if KubeBlocks is upgraded, there will be multiple secrets
-	if err == nil && len(secrets.Items) >= 1 {
-		return secrets.Items[0].Namespace, nil
+func GetKubeBlocksNamespace(client kubernetes.Interface, specifiedNamespace string) (string, error) {
+	secrets, err := client.CoreV1().Secrets(specifiedNamespace).List(context.TODO(), metav1.ListOptions{LabelSelector: types.KubeBlocksHelmLabel})
+	if err != nil {
+		return "", err
 	}
-	return "", errors.New("failed to get KubeBlocks installation namespace")
+	var kbNamespace string
+	for _, v := range secrets.Items {
+		if kbNamespace == "" {
+			kbNamespace = v.Namespace
+		}
+		if kbNamespace != v.Namespace {
+			return kbNamespace, intctrlutil.NewFatalError(fmt.Sprintf(`Existing multiple KubeBlocks installation namespace: "%s, %s", need to manually specify the namespace flag`, kbNamespace, v.Namespace))
+		}
+	}
+	// if KubeBlocks is upgraded, there will be multiple secrets
+	if kbNamespace == "" {
+		return kbNamespace, errors.New("failed to get KubeBlocks installation namespace")
+	}
+	return kbNamespace, nil
 }
 
 // GetKubeBlocksCRDsURL gets the crds url by IP region.
@@ -867,7 +880,7 @@ func GetKubeBlocksNamespaceByDynamic(dynamic dynamic.Interface) (string, error) 
 type ExposeType string
 
 const (
-	ExposeToVPC      ExposeType = "vpc"
+	ExposeToIntranet ExposeType = "intranet"
 	ExposeToInternet ExposeType = "internet"
 
 	NodePort     string = "NodePort"
@@ -879,7 +892,7 @@ const (
 
 var ProviderExposeAnnotations = map[K8sProvider]map[ExposeType]map[string]string{
 	EKSProvider: {
-		ExposeToVPC: map[string]string{
+		ExposeToIntranet: map[string]string{
 			"service.beta.kubernetes.io/aws-load-balancer-type":     "nlb",
 			"service.beta.kubernetes.io/aws-load-balancer-internal": "true",
 		},
@@ -889,13 +902,13 @@ var ProviderExposeAnnotations = map[K8sProvider]map[ExposeType]map[string]string
 		},
 	},
 	GKEProvider: {
-		ExposeToVPC: map[string]string{
+		ExposeToIntranet: map[string]string{
 			"networking.gke.io/load-balancer-type": "Internal",
 		},
 		ExposeToInternet: map[string]string{},
 	},
 	AKSProvider: {
-		ExposeToVPC: map[string]string{
+		ExposeToIntranet: map[string]string{
 			"service.beta.kubernetes.io/azure-load-balancer-internal": "true",
 		},
 		ExposeToInternet: map[string]string{
@@ -903,7 +916,7 @@ var ProviderExposeAnnotations = map[K8sProvider]map[ExposeType]map[string]string
 		},
 	},
 	ACKProvider: {
-		ExposeToVPC: map[string]string{
+		ExposeToIntranet: map[string]string{
 			"service.beta.kubernetes.io/alibaba-cloud-loadbalancer-address-type": "intranet",
 		},
 		ExposeToInternet: map[string]string{
@@ -916,13 +929,13 @@ var ProviderExposeAnnotations = map[K8sProvider]map[ExposeType]map[string]string
 		ExposeToInternet: map[string]string{},
 	},
 	KINDProvider: {
-		ExposeToVPC: map[string]string{},
+		ExposeToIntranet: map[string]string{},
 	},
 	K3SProvider: {
-		ExposeToVPC: map[string]string{},
+		ExposeToIntranet: map[string]string{},
 	},
 	UnknownProvider: {
-		ExposeToVPC:      map[string]string{},
+		ExposeToIntranet: map[string]string{},
 		ExposeToInternet: map[string]string{},
 	},
 }
@@ -1083,6 +1096,47 @@ func DisplayDiffWithColor(out io.Writer, diffText string) {
 	}
 }
 
+func BuildSchedulingPolicy(tenancy string, clusterName string, compName string, tolerations []corev1.Toleration, nodeLabels map[string]string, podAntiAffinity string, topologyKeys []string) (*kbappsv1.SchedulingPolicy, bool) {
+	if len(tolerations) == 0 && len(nodeLabels) == 0 && len(topologyKeys) == 0 {
+		return nil, false
+	}
+	affinity := &corev1.Affinity{}
+	if podAntiAffinity != "" || len(topologyKeys) > 0 {
+		affinity.PodAntiAffinity = BuildPodAntiAffinityForComponent(tenancy, clusterName, compName, podAntiAffinity, topologyKeys)
+	}
+
+	var topologySpreadConstraints []corev1.TopologySpreadConstraint
+
+	var whenUnsatisfiable corev1.UnsatisfiableConstraintAction
+	if kbappsv1alpha1.PodAntiAffinity(podAntiAffinity) == kbappsv1alpha1.Required {
+		whenUnsatisfiable = corev1.DoNotSchedule
+	} else {
+		whenUnsatisfiable = corev1.ScheduleAnyway
+	}
+	for _, topologyKey := range topologyKeys {
+		topologySpreadConstraints = append(topologySpreadConstraints, corev1.TopologySpreadConstraint{
+			MaxSkew:           1,
+			WhenUnsatisfiable: whenUnsatisfiable,
+			TopologyKey:       topologyKey,
+			LabelSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					constant.AppInstanceLabelKey:    clusterName,
+					constant.KBAppComponentLabelKey: compName,
+				},
+			},
+		})
+	}
+
+	schedulingPolicy := &kbappsv1.SchedulingPolicy{
+		Affinity:                  affinity,
+		NodeSelector:              nodeLabels,
+		Tolerations:               tolerations,
+		TopologySpreadConstraints: topologySpreadConstraints,
+	}
+
+	return schedulingPolicy, true
+}
+
 // BuildTolerations toleration format: key=value:effect or key:effect,
 func BuildTolerations(raw []string) ([]interface{}, error) {
 	tolerations := make([]interface{}, 0)
@@ -1171,6 +1225,55 @@ func BuildPodAntiAffinity(podAntiAffinityStrategy string, topologyKeys []string)
 	return podAntiAffinity
 }
 
+// BuildPodAntiAffinityForComponent build pod anti affinity from topology keys and tenancy for cluster
+func BuildPodAntiAffinityForComponent(tenancy string, clusterName string, compName string, podAntiAffinityStrategy string, topologyKeys []string) *corev1.PodAntiAffinity {
+	var podAntiAffinity *corev1.PodAntiAffinity
+	var podAffinityTerms []corev1.PodAffinityTerm
+	for _, topologyKey := range topologyKeys {
+		podAffinityTerms = append(podAffinityTerms, corev1.PodAffinityTerm{
+			TopologyKey: topologyKey,
+			LabelSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					constant.AppInstanceLabelKey:    clusterName,
+					constant.KBAppComponentLabelKey: compName,
+				},
+			},
+		})
+	}
+	if podAntiAffinityStrategy == string(kbappsv1alpha1.Required) {
+		podAntiAffinity = &corev1.PodAntiAffinity{
+			RequiredDuringSchedulingIgnoredDuringExecution: podAffinityTerms,
+		}
+	} else {
+		var weightedPodAffinityTerms []corev1.WeightedPodAffinityTerm
+		for _, podAffinityTerm := range podAffinityTerms {
+			weightedPodAffinityTerms = append(weightedPodAffinityTerms, corev1.WeightedPodAffinityTerm{
+				Weight:          100,
+				PodAffinityTerm: podAffinityTerm,
+			})
+		}
+		podAntiAffinity = &corev1.PodAntiAffinity{
+			PreferredDuringSchedulingIgnoredDuringExecution: weightedPodAffinityTerms,
+		}
+	}
+
+	// Add pod PodAffinityTerm for dedicated node
+	if kbappsv1alpha1.TenancyType(tenancy) == kbappsv1alpha1.DedicatedNode {
+		podAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution = append(
+			podAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution, corev1.PodAffinityTerm{
+				TopologyKey: corev1.LabelHostname,
+				LabelSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						constant.AppInstanceLabelKey:    clusterName,
+						constant.KBAppComponentLabelKey: compName,
+					},
+				},
+			})
+	}
+
+	return podAntiAffinity
+}
+
 // AddDirToPath add a dir to the PATH environment variable
 func AddDirToPath(dir string) error {
 	if dir == "" {
@@ -1246,4 +1349,16 @@ func GetClusterNameFromArgsOrFlag(cmd *cobra.Command, args []string) string {
 		return args[0]
 	}
 	return ""
+}
+
+func SetHelmOwner(dynamicClient dynamic.Interface, gvr schema.GroupVersionResource, releaseName, namespace string, names []string) error {
+	patchOP := fmt.Sprintf(`[{"op": "replace", "path": "/metadata/annotations/meta.helm.sh~1release-name", "value": "%s"}`+
+		`,{"op": "replace", "path": "/metadata/annotations/meta.helm.sh~1release-namespace", "value": "%s"}]`, releaseName, namespace)
+	for _, name := range names {
+		if _, err := dynamicClient.Resource(gvr).Namespace("").Patch(context.TODO(), name,
+			k8sapitypes.JSONPatchType, []byte(patchOP), metav1.PatchOptions{}); client.IgnoreNotFound(err) != nil {
+			return err
+		}
+	}
+	return nil
 }

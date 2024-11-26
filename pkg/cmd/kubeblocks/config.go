@@ -21,6 +21,7 @@ package kubeblocks
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -32,6 +33,7 @@ import (
 	"k8s.io/kubectl/pkg/util/templates"
 
 	"github.com/apecloud/kbcli/pkg/printer"
+	"github.com/apecloud/kbcli/pkg/spinner"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
 	"github.com/apecloud/kbcli/pkg/util/helm"
@@ -83,12 +85,38 @@ func NewConfigCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.
 		Args:    cobra.NoArgs,
 		Run: func(cmd *cobra.Command, args []string) {
 			util.CheckErr(o.Complete(f, cmd))
-			util.CheckErr(o.Upgrade())
+			util.CheckErr(configKBRelease(o))
 			util.CheckErr(markKubeBlocksPodsToLoadConfigMap(o.Client))
 		},
 	}
 	helm.AddValueOptionsFlags(cmd.Flags(), &o.ValueOpts)
+	cmd.Flags().StringVarP(&o.Namespace, "namespace", "n", "", "KubeBlocks namespace")
 	return cmd
+}
+
+func configKBRelease(o *InstallOptions) error {
+	kbRelease, err := o.getKBRelease()
+	if err != nil {
+		return err
+	}
+	if helm.ValueOptsIsEmpty(&o.ValueOpts) {
+		fmt.Fprint(o.Out, "--set should be specified.\n")
+		return nil
+	}
+	var kbVersion string
+	if kbRelease != nil && kbRelease.Chart != nil && kbRelease.Chart.Metadata != nil {
+		kbVersion = kbRelease.Chart.Metadata.Version
+	}
+	s := spinner.New(o.Out, spinnerMsg("Config KubeBlocks "+kbVersion))
+	defer s.Fail()
+	o.disableHelmPreHookJob()
+	// upgrade KubeBlocks chart
+	if err = o.upgradeChart(); err != nil {
+		return err
+	}
+	// successfully upgraded
+	s.Success()
+	return nil
 }
 
 func NewDescribeConfigCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
@@ -109,6 +137,7 @@ func NewDescribeConfigCmd(f cmdutil.Factory, streams genericiooptions.IOStreams)
 		},
 	}
 	printer.AddOutputFlag(cmd, &output)
+	cmd.Flags().StringVarP(&o.Namespace, "namespace", "n", "", "KubeBlocks namespace")
 	cmd.Flags().BoolVarP(&showAllConfig, "all", "A", false, "show all kubeblocks configs value")
 	cmd.Flags().StringVar(&filterConfig, "filter", "", "filter the desired kubeblocks configs, multiple filtered strings are comma separated")
 	return cmd
@@ -117,7 +146,7 @@ func NewDescribeConfigCmd(f cmdutil.Factory, streams genericiooptions.IOStreams)
 // getHelmValues gets all kubeblocks values by helm and filter the addons values
 func getHelmValues(release string, opt *Options) (map[string]interface{}, error) {
 	if len(opt.HelmCfg.Namespace()) == 0 {
-		namespace, err := util.GetKubeBlocksNamespace(opt.Client)
+		namespace, err := util.GetKubeBlocksNamespace(opt.Client, opt.Namespace)
 		if err != nil {
 			return nil, err
 		}

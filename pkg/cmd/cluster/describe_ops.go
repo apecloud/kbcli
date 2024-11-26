@@ -63,10 +63,6 @@ type describeOpsOptions struct {
 	genericiooptions.IOStreams
 }
 
-type opsObject interface {
-	opsv1alpha1.VerticalScaling | opsv1alpha1.HorizontalScaling | opsv1alpha1.OpsRequestVolumeClaimTemplate | opsv1alpha1.VolumeExpansion
-}
-
 func newDescribeOpsOptions(f cmdutil.Factory, streams genericiooptions.IOStreams) *describeOpsOptions {
 	return &describeOpsOptions{
 		factory:   f,
@@ -89,33 +85,6 @@ func NewDescribeOpsCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *c
 		},
 	}
 	return cmd
-}
-
-// getCommandFlagsSlice returns the targetName slice by getName function and opsObject slice, their lengths are equal.
-func getCommandFlagsSlice[T opsObject](opsSt []T,
-	convertObject func(t T) any,
-	getName func(t T) string) ([][]string, []any) {
-	// returns the index of the first occurrence of v in s,s or -1 if not present.
-	indexFromAnySlice := func(s []any, v any) int {
-		for i := range s {
-			if reflect.DeepEqual(s[i], v) {
-				return i
-			}
-		}
-		return -1
-	}
-	opsObjectSlice := make([]any, 0, len(opsSt))
-	targetNameSlice := make([][]string, 0, len(opsSt))
-	for _, v := range opsSt {
-		index := indexFromAnySlice(opsObjectSlice, convertObject(v))
-		if index == -1 {
-			opsObjectSlice = append(opsObjectSlice, convertObject(v))
-			targetNameSlice = append(targetNameSlice, []string{getName(v)})
-			continue
-		}
-		targetNameSlice[index] = append(targetNameSlice[index], getName(v))
-	}
-	return targetNameSlice, opsObjectSlice
 }
 
 func (o *describeOpsOptions) complete(args []string) error {
@@ -208,10 +177,10 @@ func (o *describeOpsOptions) printOpsCommand(opsRequest *opsv1alpha1.OpsRequest)
 		commands = o.getHorizontalScalingCommand(opsRequest.Spec)
 	case opsv1alpha1.VerticalScalingType:
 		commands = o.getVerticalScalingCommand(opsRequest.Spec)
-	case opsv1alpha1.VolumeExpansionType:
-		commands = o.getVolumeExpansionCommand(opsRequest.Spec)
 	case opsv1alpha1.ReconfiguringType:
 		commands = o.getReconfiguringCommand(opsRequest.Spec)
+	case opsv1alpha1.StopType, opsv1alpha1.StartType:
+		commands = []string{fmt.Sprintf("kbcli cluster %s %s", strings.ToLower(string(opsRequest.Spec.Type)), opsRequest.Spec.ClusterName)}
 	}
 	if len(commands) == 0 {
 		printer.PrintLine("\nCommand: " + printer.NoneString)
@@ -241,84 +210,145 @@ func (o *describeOpsOptions) getRestartCommand(spec opsv1alpha1.OpsRequestSpec) 
 
 // getUpgradeCommand gets the command of the Upgrade OpsRequest.
 func (o *describeOpsOptions) getUpgradeCommand(spec opsv1alpha1.OpsRequestSpec) []string {
-	return []string{
-		fmt.Sprintf("kbcli cluster upgrade %s --cluster-version=%v", spec.GetClusterName(),
-			""),
+	var (
+		commands       []string
+		componentNames []string
+		mergeCommand   bool
+	)
+	for _, v := range spec.Upgrade.Components {
+		componentNames = append(componentNames, v.ComponentName)
+		command := o.buildOpsBaseCommand("upgrade", spec)
+		command += o.getStringPFlag("service-version", v.ServiceVersion)
+		command += o.getStringPFlag("component-def", v.ComponentDefinitionName)
+		commands = append(commands, command)
+		if command != commands[0] {
+			mergeCommand = false
+		}
 	}
+	return o.buildComponentsCommand(commands, componentNames, mergeCommand)
 }
 
-// addResourceFlag adds resource flag for VerticalScaling OpsRequest.
-func (o *describeOpsOptions) addResourceFlag(key string, value *resource.Quantity) string {
-	if !value.IsZero() {
-		return fmt.Sprintf(" --%s=%s", key, value)
+func (o *describeOpsOptions) buildComponentsCommand(commands []string, componentNames []string, mergeCommand bool) []string {
+	if len(commands) == 0 {
+		return nil
+	}
+	if mergeCommand {
+		return []string{fmt.Sprintf("%s --components %s", commands[0], strings.Join(componentNames, ","))}
+	}
+	for i := range commands {
+		commands[i] += o.getStringFlag("components", componentNames[i])
+	}
+	return commands
+}
+
+func (o *describeOpsOptions) baseStringFlag(key string, value any, condition bool, covert func(value any) any) string {
+	if condition {
+		if covert != nil {
+			value = covert(value)
+		}
+		return fmt.Sprintf(" --%s=%v", key, value)
 	}
 	return ""
 }
 
+// addResourceFlag adds resource flag for VerticalScaling OpsRequest.
+func (o *describeOpsOptions) getStringPFlag(key string, value *string) string {
+	return o.baseStringFlag(key, value, value != nil && *value != "", func(value any) any {
+		return *value.(*string)
+	})
+}
+
+func (o *describeOpsOptions) getStringFlag(key string, value string) string {
+	return o.baseStringFlag(key, value, len(value) > 0, nil)
+}
+
+func (o *describeOpsOptions) getSliceFlag(key string, value []string) string {
+	return o.baseStringFlag(key, strings.Join(value, ","), len(value) > 0, nil)
+}
+
+func (o *describeOpsOptions) getInt32PFlag(key string, value *int32) string {
+	return o.baseStringFlag(key, value, value != nil, func(value any) any {
+		return *value.(*int32)
+	})
+}
+
+// addResourceFlag adds resource flag for VerticalScaling OpsRequest.
+func (o *describeOpsOptions) getResourceFlag(key string, value *resource.Quantity) string {
+	return o.baseStringFlag(key, value, !value.IsZero(), nil)
+}
+
 // getVerticalScalingCommand gets the command of the VerticalScaling OpsRequest
 func (o *describeOpsOptions) getVerticalScalingCommand(spec opsv1alpha1.OpsRequestSpec) []string {
-	if len(spec.VerticalScalingList) == 0 {
-		return nil
+	var (
+		commands       []string
+		componentNames []string
+		mergeCommand   bool
+	)
+	canBuildCommand := func(resource corev1.ResourceRequirements) bool {
+		if resource.Requests.Cpu().Value() != resource.Limits.Cpu().Value() {
+			return false
+		}
+		if resource.Requests.Memory().Value() != resource.Limits.Memory().Value() {
+			return false
+		}
+		return !resource.Limits.Cpu().IsZero() || !resource.Limits.Memory().IsZero()
 	}
-	convertObject := func(h opsv1alpha1.VerticalScaling) any {
-		return h.ResourceRequirements
+	for _, v := range spec.VerticalScalingList {
+		if !canBuildCommand(v.ResourceRequirements) {
+			return nil
+		}
+		if len(v.Instances) > 0 {
+			return nil
+		}
+		componentNames = append(componentNames, v.ComponentName)
+		command := o.buildOpsBaseCommand("vscale", spec)
+		command += o.getResourceFlag("cpu", v.ResourceRequirements.Limits.Cpu())
+		command += o.getResourceFlag("memory", v.ResourceRequirements.Limits.Memory())
+		commands = append(commands, command)
+		if command != commands[0] {
+			mergeCommand = false
+		}
 	}
-	getCompName := func(h opsv1alpha1.VerticalScaling) string {
-		return h.ComponentName
-	}
-	componentNameSlice, resourceSlice := getCommandFlagsSlice[opsv1alpha1.VerticalScaling](
-		spec.VerticalScalingList, convertObject, getCompName)
-	commands := make([]string, len(componentNameSlice))
-	for i := range componentNameSlice {
-		commands[i] = fmt.Sprintf("kbcli cluster vscale %s --components=%s",
-			spec.GetClusterName(), strings.Join(componentNameSlice[i], ","))
-		resource := resourceSlice[i].(corev1.ResourceRequirements)
-		commands[i] += o.addResourceFlag("cpu", resource.Limits.Cpu())
-		commands[i] += o.addResourceFlag("memory", resource.Limits.Memory())
-	}
-	return commands
+	return o.buildComponentsCommand(commands, componentNames, mergeCommand)
+}
+
+func (o *describeOpsOptions) buildOpsBaseCommand(cmd string, spec opsv1alpha1.OpsRequestSpec) string {
+	return fmt.Sprintf("kbcli cluster %s %s", cmd, spec.ClusterName)
 }
 
 // getHorizontalScalingCommand gets the command of the HorizontalScaling OpsRequest.
 func (o *describeOpsOptions) getHorizontalScalingCommand(spec opsv1alpha1.OpsRequestSpec) []string {
-	if len(spec.HorizontalScalingList) == 0 {
-		return nil
-	}
-	convertObject := func(h opsv1alpha1.HorizontalScaling) any {
-		return 0
-	}
-	getCompName := func(h opsv1alpha1.HorizontalScaling) string {
-		return h.ComponentName
-	}
-	componentNameSlice, replicasSlice := getCommandFlagsSlice[opsv1alpha1.HorizontalScaling](
-		spec.HorizontalScalingList, convertObject, getCompName)
-	commands := make([]string, len(componentNameSlice))
-	for i := range componentNameSlice {
-		commands[i] = fmt.Sprintf("kbcli cluster hscale %s --components=%s --replicas=%d",
-			spec.GetClusterName(), strings.Join(componentNameSlice[i], ","), replicasSlice[i].(int))
-	}
-	return commands
-}
-
-// getVolumeExpansionCommand gets the command of the VolumeExpansion command.
-func (o *describeOpsOptions) getVolumeExpansionCommand(spec opsv1alpha1.OpsRequestSpec) []string {
-	convertObject := func(v opsv1alpha1.OpsRequestVolumeClaimTemplate) any {
-		return v.Storage
-	}
-	getVCTName := func(v opsv1alpha1.OpsRequestVolumeClaimTemplate) string {
-		return v.Name
-	}
-	commands := make([]string, 0)
-	for _, v := range spec.VolumeExpansionList {
-		vctNameSlice, storageSlice := getCommandFlagsSlice[opsv1alpha1.OpsRequestVolumeClaimTemplate](
-			v.VolumeClaimTemplates, convertObject, getVCTName)
-		for i := range vctNameSlice {
-			storage := storageSlice[i].(resource.Quantity)
-			commands = append(commands, fmt.Sprintf("kbcli cluster volume-expand %s --components=%s --volume-claim-template-names=%s --storage=%s",
-				spec.GetClusterName(), v.ComponentName, strings.Join(vctNameSlice[i], ","), storage.String()))
+	var (
+		commands       []string
+		componentNames []string
+		mergeCommand   bool
+	)
+	for _, v := range spec.HorizontalScalingList {
+		if v.ScaleOut != nil && v.ScaleIn != nil {
+			return nil
+		}
+		componentNames = append(componentNames, v.ComponentName)
+		command := o.buildOpsBaseCommand("scale-in", spec)
+		if v.ScaleOut != nil {
+			if len(v.ScaleOut.Instances) > 0 || len(v.ScaleOut.NewInstances) > 0 {
+				return nil
+			}
+			command = o.buildOpsBaseCommand("scale-out", spec)
+			command += o.getInt32PFlag("replicas", v.ScaleOut.ReplicaChanges)
+			command += o.getSliceFlag("online-instances", v.ScaleOut.OfflineInstancesToOnline)
+		} else if v.ScaleIn != nil {
+			if len(v.ScaleIn.Instances) > 0 {
+				return nil
+			}
+			command += o.getInt32PFlag("replicas", v.ScaleIn.ReplicaChanges)
+			command += o.getSliceFlag("offline-instances", v.ScaleIn.OnlineInstancesToOffline)
+		}
+		commands = append(commands, command)
+		if command != commands[0] {
+			mergeCommand = false
 		}
 	}
-	return commands
+	return o.buildComponentsCommand(commands, componentNames, mergeCommand)
 }
 
 // getReconfiguringCommand gets the command of the VolumeExpansion command.

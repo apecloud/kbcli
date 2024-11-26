@@ -28,7 +28,6 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/slices"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
@@ -118,7 +117,7 @@ func (o *opsListOptions) printOpsList() error {
 		return nil
 	}
 	// sort the unstructured objects with the creationTimestamp in positive order
-	sort.Sort(unstructuredList(opsList.Items))
+	sort.Sort(action.UnstructuredList(opsList.Items))
 
 	// check if specified with "all" keyword for status.
 	isAllStatus := o.isAllStatus()
@@ -234,18 +233,4 @@ func (o *opsListOptions) containsIgnoreCase(s []string, e string) bool {
 // isAllStatus checks if the status flag contains "all" keyword.
 func (o *opsListOptions) isAllStatus() bool {
 	return slices.Contains(o.status, "all")
-}
-
-type unstructuredList []unstructured.Unstructured
-
-func (us unstructuredList) Len() int {
-	return len(us)
-}
-func (us unstructuredList) Swap(i, j int) {
-	us[i], us[j] = us[j], us[i]
-}
-func (us unstructuredList) Less(i, j int) bool {
-	createTimeForJ := us[j].GetCreationTimestamp()
-	createTimeForI := us[i].GetCreationTimestamp()
-	return createTimeForI.Before(&createTimeForJ)
 }

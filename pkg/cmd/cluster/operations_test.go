@@ -22,6 +22,7 @@ package cluster
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/spf13/cobra"
 
 	"bytes"
 	"fmt"
@@ -149,25 +150,26 @@ var _ = Describe("operations", func() {
 		o.Namespace = testing.Namespace
 		o.Name = clusterName
 		o.OpsType = opsv1alpha1.UpgradeType
-		Expect(o.Validate()).To(MatchError("missing cluster-version or components"))
+		o.ComponentDefinitionName = "nil"
+		o.ServiceVersion = "nil"
+		Expect(o.Validate()).To(MatchError("missing component-def or service-version"))
 
 		By("expect to validate success")
-		o.ClusterVersionRef = "test-cluster-version"
+		o.ComponentDefinitionName = "fake-comp-def-1"
 		in.Write([]byte(o.Name + "\n"))
 		Expect(o.Validate()).Should(Succeed())
 	})
 
 	It("VolumeExpand Ops", func() {
-		compName := "replicasets"
 		vctName := "data"
 		persistentVolumeClaim := &corev1.PersistentVolumeClaim{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s-%s-%s-%d", vctName, clusterName, compName, 0),
+				Name:      fmt.Sprintf("%s-%s-%s-%d", vctName, clusterName, testing.ComponentName, 0),
 				Namespace: testing.Namespace,
 				Labels: map[string]string{
 					constant.AppInstanceLabelKey:             clusterName,
 					constant.VolumeClaimTemplateNameLabelKey: vctName,
-					constant.KBAppComponentLabelKey:          compName,
+					constant.KBAppComponentLabelKey:          testing.ComponentName,
 				},
 			},
 			Spec: corev1.PersistentVolumeClaimSpec{
@@ -191,7 +193,7 @@ var _ = Describe("operations", func() {
 		Expect(o.Validate()).To(MatchError(`missing components, please specify the "--components" flag for the cluster`))
 
 		By("validate volumeExpansion when vct-names is null")
-		o.ComponentNames = []string{compName}
+		o.ComponentNames = []string{testing.ComponentName}
 		Expect(o.Validate()).To(MatchError("missing volume-claim-templates"))
 
 		By("validate volumeExpansion when storage is null")
@@ -230,7 +232,7 @@ var _ = Describe("operations", func() {
 		Expect(o.Validate()).Should(HaveOccurred())
 	})
 
-	It("Hscale Ops", func() {
+	It("HScale Ops", func() {
 		o := initCommonOperationOps(opsv1alpha1.HorizontalScalingType, clusterName1, true)
 		By("test CompleteComponentsFlag function")
 		o.ComponentNames = nil
@@ -238,8 +240,19 @@ var _ = Describe("operations", func() {
 		Expect(o.CompleteComponentsFlag()).Should(Succeed())
 		Expect(o.ComponentNames[0]).Should(Equal(testing.ComponentName))
 
+		By("expect to Validate failed")
+		in.Write([]byte(o.Name + "\n"))
+		Expect(o.Validate()).Should(MatchError("at least one of --replicas or --offline-instances is required"))
+
+		By("expect to Validate failed when scaling out replicas")
+		o.ScaleOut = true
+		o.OfflineInstancesToOnline = []string{"no-exist-pod"}
+		in.Write([]byte(o.Name + "\n"))
+		Expect(o.Validate()).Should(MatchError(fmt.Sprintf(`pod "%s" not in the offlineInstances of the component "%s"`, o.OfflineInstancesToOnline[0], testing.ComponentName)))
+
 		By("expect to Validate success")
-		o.Replicas = 1
+		o.Replicas = "1"
+		o.OfflineInstancesToOnline = nil
 		in.Write([]byte(o.Name + "\n"))
 		Expect(o.Validate()).Should(Succeed())
 
@@ -326,8 +339,7 @@ var _ = Describe("operations", func() {
 		}
 	})
 
-	// TODO: update with new API
-	/*It("Switchover ops base on cluster component definition", func() {
+	It("Switchover ops base on cluster component definition", func() {
 		o := initCommonOperationOps(opsv1alpha1.SwitchoverType, clusterName1, false)
 		By("expect to auto complete components when cluster has only one component")
 		Expect(o.CompleteComponentsFlag()).Should(Succeed())
@@ -341,8 +353,8 @@ var _ = Describe("operations", func() {
 
 		By("validate failed because there are multi-components in cluster and not specify the component")
 		Expect(o.CompleteComponentsFlag()).Should(Succeed())
-		Expect(o.CompletePromoteOps()).ShouldNot(Succeed())
-		Expect(testing.ContainExpectStrings(o.CompletePromoteOps().Error(), "there are multiple components in cluster, please use --component to specify the component for promote")).Should(BeTrue())
+		Expect(o.CompleteSwitchoverOps()).ShouldNot(Succeed())
+		Expect(testing.ContainExpectStrings(o.CompleteSwitchoverOps().Error(), "there are multiple components in cluster, please use --component to specify the component for promote")).Should(BeTrue())
 
 		By("validate failed because o.Instance is illegal ")
 		o.Name = clusterName1
@@ -360,9 +372,9 @@ var _ = Describe("operations", func() {
 		o.Instance = fmt.Sprintf("%s-%s-%d", clusterName, testing.ComponentName, 1)
 		Expect(o.Validate()).ShouldNot(Succeed())
 		Expect(testing.ContainExpectStrings(o.Validate().Error(), "does not belong to the current component")).Should(BeTrue())
-	})*/
+	})
 
-	/*It("Switchover ops base on component definition", func() {
+	It("Switchover ops base on component definition", func() {
 		o := initCommonOperationOps(opsv1alpha1.SwitchoverType, clusterNameWithCompDef, false)
 		By("expect to auto complete components when cluster has only one component")
 		Expect(o.CompleteComponentsFlag()).Should(Succeed())
@@ -376,8 +388,8 @@ var _ = Describe("operations", func() {
 
 		By("validate failed because there are multi-components in cluster and not specify the component")
 		Expect(o.CompleteComponentsFlag()).Should(Succeed())
-		Expect(o.CompletePromoteOps()).ShouldNot(Succeed())
-		Expect(testing.ContainExpectStrings(o.CompletePromoteOps().Error(), "there are multiple components in cluster, please use --component to specify the component for promote")).Should(BeTrue())
+		Expect(o.CompleteSwitchoverOps()).ShouldNot(Succeed())
+		Expect(testing.ContainExpectStrings(o.CompleteSwitchoverOps().Error(), "there are multiple components in cluster, please use --component to specify the component for promote")).Should(BeTrue())
 
 		By("validate failed because o.Instance is illegal ")
 		o.Name = clusterNameWithCompDef
@@ -396,39 +408,25 @@ var _ = Describe("operations", func() {
 		Expect(o.Validate()).ShouldNot(Succeed())
 		Expect(testing.ContainExpectStrings(o.Validate().Error(), "does not belong to the current component")).Should(BeTrue())
 
-	})*/
+	})
 
 	It("Custom ops base on component definition", func() {
 		o := initCommonOperationOps(opsv1alpha1.CustomType, clusterNameWithCompDef, false)
-		customOperations := &CustomOperations{
-			OperationsOptions: o,
-		}
-		cmd := NewCustomOpsCmd(tf, streams)
+		_ = NewCustomOpsCmd(tf, streams)
+		cmds := buildCustomOpsCmds(o)
+		Expect(cmds).Should(HaveLen(1))
 
-		By("expect an error if opsDefinition is not found")
-		err := customOperations.parseOpsDefinitionAndParams(cmd, []string{clusterNameWithCompDef})
-		Expect(err).Should(HaveOccurred())
-		Expect(err.Error()).Should(ContainSubstring(fmt.Sprintf(`OpsDefintion "%s" is not found`, clusterNameWithCompDef)))
-
-		By("test clusterName and p1 of opsDefinition params are required")
-		err = customOperations.parseOpsDefinitionAndParams(cmd, []string{opsDefName})
-		Expect(err).Should(HaveOccurred())
-		Expect(err.Error()).Should(ContainSubstring(`required flag(s) "cluster", "p1" not set`))
-
-		By("test auto-complete the component name flag")
-		cmd1 := NewCustomOpsCmd(tf, streams)
-		validArgs := []string{opsDefName, "--cluster", clusterNameWithCompDef, "--p1", "test"}
-		err = customOperations.parseOpsDefinitionAndParams(cmd1, validArgs)
-		Expect(err).Should(Succeed())
-		Expect(customOperations.validateAndCompleteComponentName()).Should(Succeed())
-		Expect(customOperations.Component).Should(Equal(testing.ComponentName))
+		By("expect required flags")
+		cmd := cmds[0]
+		Expect(cmd.Flag("p1")).ShouldNot(BeNil())
+		Expect(cmd.Flag("p2")).ShouldNot(BeNil())
+		Expect(cmd.Flag("p1").Annotations[cobra.BashCompOneRequiredFlag]).ShouldNot(BeEmpty())
 
 		By("expect to create custom ops successfully")
-		cmd2 := NewCustomOpsCmd(tf, streams)
 		done := testing.Capture()
-		_ = cmd1.RunE(cmd2, validArgs)
+		_ = cmd.Flags().Set("p1", "test")
+		cmd.Run(cmd, []string{clusterNameWithCompDef})
 		capturedOutput, _ := done()
 		Expect(testing.ContainExpectStrings(capturedOutput, "kbcli cluster describe-ops")).Should(BeTrue())
-
 	})
 })

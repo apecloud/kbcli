@@ -30,6 +30,7 @@ import (
 	"cuelang.org/go/cue/cuecontext"
 	cuejson "cuelang.org/go/encoding/json"
 	"github.com/leaanthony/debme"
+	"github.com/spf13/cobra"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -104,6 +105,14 @@ type CreateOptions struct {
 	genericiooptions.IOStreams
 }
 
+func (o *CreateOptions) AddCommonFlags(cmd *cobra.Command) {
+	cmd.Flags().StringVar(&o.DryRun, "dry-run", "none", `Must be "client", or "server". If with client strategy, only print the object that would be sent, and no data is actually sent. If with server strategy, submit the server-side request, but no data is persistent.`)
+	cmd.Flags().Lookup("dry-run").NoOptDefVal = "unchanged"
+	cmd.Flags().BoolVar(&o.EditBeforeCreate, "edit", o.EditBeforeCreate, "Edit the API resource before creating")
+	// add print flags
+	printer.AddOutputFlagForCreate(cmd, &o.Format, false)
+}
+
 func (o *CreateOptions) Complete() error {
 	var err error
 	if o.Namespace == "" {
@@ -159,7 +168,7 @@ func (o *CreateOptions) Run() error {
 	}
 
 	if o.EditBeforeCreate {
-		customEdit := NewCustomEditOptions(o.Factory, o.IOStreams, "create")
+		customEdit := NewCustomEditOptions(o.Factory, o.IOStreams, EditForCreate)
 		if err := customEdit.Run(resObj); err != nil {
 			return err
 		}

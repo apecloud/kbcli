@@ -28,6 +28,7 @@ import (
 	appsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"k8s.io/utils/pointer"
 
 	corev1 "k8s.io/api/core/v1"
 	apiresource "k8s.io/apimachinery/pkg/api/resource"
@@ -192,10 +193,16 @@ var _ = Describe("Expose", func() {
 
 	It("run", func() {
 		By("test describe Upgrade")
-		// TODO: update with new API
 		describeOps(opsv1alpha1.UpgradeType, func(ops *opsv1alpha1.OpsRequest) {
 			ops.Spec.Upgrade = &opsv1alpha1.Upgrade{
-				// ClusterVersionRef: cfgutil.ToPointer(clusterVersionName),
+				Components: []opsv1alpha1.UpgradeComponent{
+					{
+						ComponentOps: opsv1alpha1.ComponentOps{
+							ComponentName: componentName,
+						},
+						ServiceVersion: pointer.String("14.8.0"),
+					},
+				},
 			}
 		})
 
@@ -239,7 +246,9 @@ var _ = Describe("Expose", func() {
 					ComponentOps: opsv1alpha1.ComponentOps{
 						ComponentName: componentName,
 					},
-					// Replicas: cfgutil.ToPointer[int32](1),
+					ScaleOut: &opsv1alpha1.ScaleOut{
+						ReplicaChanger: opsv1alpha1.ReplicaChanger{ReplicaChanges: pointer.Int32(1)},
+					},
 				},
 			}
 		})

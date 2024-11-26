@@ -57,7 +57,6 @@ import (
 
 	"github.com/apecloud/kbcli/pkg/testing"
 	"github.com/apecloud/kbcli/pkg/types"
-	"github.com/apecloud/kbcli/pkg/util/breakingchange"
 )
 
 const defaultTimeout = time.Second * 600
@@ -76,7 +75,6 @@ type InstallOpts struct {
 	Atomic          bool
 	DisableHooks    bool
 	ForceUninstall  bool
-	Upgrader        breakingchange.Upgrader
 
 	// for helm template
 	DryRun     *bool
@@ -154,6 +152,30 @@ func RemoveRepo(r *repo.Entry) error {
 		}
 	}
 	return nil
+}
+
+// GetInstalledForUpgrade gets helm package release info and check the status.
+func (i *InstallOpts) GetInstalledForUpgrade(cfg *action.Configuration) (*release.Release, error) {
+	res, err := action.NewGet(cfg).Run(i.Name)
+	if err != nil {
+		return nil, err
+	}
+	if res == nil {
+		return nil, driver.ErrReleaseNotFound
+	}
+	// intercept status of pending, unknown, uninstalling and uninstalled.
+	var status release.Status
+	if res.Info != nil {
+		status = res.Info.Status
+	} else {
+		return nil, fmt.Errorf("failed to get Helm release status: release or release info is nil")
+	}
+	if status.IsPending() {
+		return nil, errors.Wrapf(ErrReleaseNotReadyForUpgrade, "helm release status is %s. Please wait until the release status changes to ‘deployed’ before upgrading KubeBlocks", status.String())
+	} else if status != release.StatusDeployed && status != release.StatusFailed && status != release.StatusSuperseded {
+		return nil, errors.Wrapf(ErrReleaseNotReadyForUpgrade, "helm release status is %s. Please fix the release before upgrading KubeBlocks,uninstall and install kubeblocks could be a way to fix error", status.String())
+	}
+	return res, nil
 }
 
 // GetInstalled gets helm package release info if installed.
@@ -527,7 +549,7 @@ func (i *InstallOpts) Upgrade(cfg *Config) error {
 }
 
 func (i *InstallOpts) tryUpgrade(cfg *action.Configuration) (*release.Release, error) {
-	installed, err := i.GetInstalled(cfg)
+	installed, err := i.GetInstalledForUpgrade(cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -609,11 +631,6 @@ func (i *InstallOpts) tryUpgrade(cfg *action.Configuration) (*release.Release, e
 		if _, err := cfg.KubeClient.Update(original, target, false); err != nil {
 			return nil, errors.Wrapf(err, "failed to update CRD %s", obj.Name)
 		}
-	}
-
-	// transform old resources to new resources and clear the tmp dir which saved the old resources.
-	if err = i.Upgrader.TransformResourcesAndClear(); err != nil {
-		return nil, err
 	}
 
 	released, err := client.RunWithContext(ctx, i.Name, chartRequested, vals)

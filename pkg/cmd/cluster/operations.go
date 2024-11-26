@@ -21,7 +21,6 @@ package cluster
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -29,18 +28,20 @@ import (
 	"github.com/apecloud/kubeblocks/pkg/common"
 	jsonpatch "github.com/evanphx/json-patch"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 	"github.com/stoewer/go-strcase"
 	"golang.org/x/exp/slices"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	apiruntime "k8s.io/apimachinery/pkg/runtime"
 	apitypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/json"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
+	"k8s.io/kube-openapi/pkg/validation/spec"
+	"k8s.io/kubectl/pkg/cmd/testing"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -57,8 +58,6 @@ import (
 	"github.com/apecloud/kbcli/pkg/util/prompt"
 )
 
-const oceanbase = "oceanbase"
-
 type OperationsOptions struct {
 	action.CreateOptions  `json:"-"`
 	HasComponentNamesFlag bool `json:"-"`
@@ -66,6 +65,7 @@ type OperationsOptions struct {
 	AutoApprove            bool     `json:"-"`
 	ComponentNames         []string `json:"componentNames,omitempty"`
 	OpsRequestName         string   `json:"opsRequestName"`
+	InstanceTPLNames       []string `json:"instanceTPLNames,omitempty"`
 	TTLSecondsAfterSucceed int      `json:"ttlSecondsAfterSucceed"`
 	Force                  bool     `json:"force"`
 
@@ -75,8 +75,6 @@ type OperationsOptions struct {
 	// OpsTypeLower lower OpsType
 	OpsTypeLower string `json:"typeLower"`
 
-	// Upgrade options
-	ClusterVersionRef       string `json:"clusterVersionRef"`
 	ComponentDefinitionName string `json:"componentDefinitionName"`
 	ServiceVersion          string `json:"serviceVersion"`
 
@@ -85,7 +83,10 @@ type OperationsOptions struct {
 	Memory string `json:"memory"`
 
 	// HorizontalScaling options
-	Replicas int `json:"replicas"`
+	Replicas                 string   `json:"replicas"`
+	ScaleOut                 bool     `json:"scaleOut"`
+	OfflineInstancesToOnline []string `json:"offlineInstancesToOnline,omitempty"`
+	OnlineInstancesToOffline []string `json:"onlineInstancesToOffline,omitempty"`
 
 	// Reconfiguring options
 	KeyValues       map[string]*string `json:"keyValues"`
@@ -109,15 +110,15 @@ type OperationsOptions struct {
 	// Switchover options
 	Component           string                        `json:"component"`
 	Instance            string                        `json:"instance"`
-	Primary             string                        `json:"-"`
-	CharacterType       string                        `json:"-"`
-	LorryHAEnabled      bool                          `json:"-"`
-	ExecPod             *corev1.Pod                   `json:"-"`
 	BackupName          string                        `json:"-"`
+	Inplace             bool                          `json:"-"`
 	InstanceNames       []string                      `json:"-"`
 	Nodes               []string                      `json:"-"`
 	RebuildInstanceFrom []opsv1alpha1.RebuildInstance `json:"rebuildInstanceFrom,omitempty"`
 	Env                 []string                      `json:"-"`
+
+	// Stop and Start options
+	isComponentsFlagOptional bool
 }
 
 func newBaseOperationsOptions(f cmdutil.Factory, streams genericiooptions.IOStreams,
@@ -143,6 +144,7 @@ func newBaseOperationsOptions(f cmdutil.Factory, streams genericiooptions.IOStre
 			GVR:             types.OpsGVR(),
 			CustomOutPut:    customOutPut,
 		},
+		isComponentsFlagOptional: opsType == opsv1alpha1.StopType || opsType == opsv1alpha1.StartType,
 	}
 
 	o.OpsTypeLower = strings.ToLower(string(o.OpsType))
@@ -152,13 +154,10 @@ func newBaseOperationsOptions(f cmdutil.Factory, streams genericiooptions.IOStre
 
 // addCommonFlags adds common flags for operations command
 func (o *OperationsOptions) addCommonFlags(cmd *cobra.Command, f cmdutil.Factory) {
-	// add print flags
-	printer.AddOutputFlagForCreate(cmd, &o.Format, false)
+	o.AddCommonFlags(cmd)
 	cmd.Flags().BoolVar(&o.Force, "force", false, " skip the pre-checks of the opsRequest to run the opsRequest forcibly")
 	cmd.Flags().StringVar(&o.OpsRequestName, "name", "", "OpsRequest name. if not specified, it will be randomly generated")
 	cmd.Flags().IntVar(&o.TTLSecondsAfterSucceed, "ttlSecondsAfterSucceed", 0, "Time to live after the OpsRequest succeed")
-	cmd.Flags().StringVar(&o.DryRun, "dry-run", "none", `Must be "client", or "server". If with client strategy, only print the object that would be sent, and no data is actually sent. If with server strategy, submit the server-side request, but no data is persistent.`)
-	cmd.Flags().Lookup("dry-run").NoOptDefVal = "unchanged"
 	if o.HasComponentNamesFlag {
 		flags.AddComponentsFlag(f, cmd, &o.ComponentNames, "Component names to this operations")
 	}
@@ -182,8 +181,8 @@ func (o *OperationsOptions) CompleteRestartOps() error {
 	for i := range componentSpecs {
 		o.ComponentNames = append(o.ComponentNames, componentSpecs[i].Name)
 	}
-	for i := range clusterObj.Spec.ShardingSpecs {
-		o.ComponentNames = append(o.ComponentNames, clusterObj.Spec.ShardingSpecs[i].Name)
+	for i := range clusterObj.Spec.Shardings {
+		o.ComponentNames = append(o.ComponentNames, clusterObj.Spec.Shardings[i].Name)
 	}
 	return nil
 }
@@ -206,7 +205,7 @@ func (o *OperationsOptions) CompleteComponentsFlag() error {
 	return nil
 }
 
-func (o *OperationsOptions) CompletePromoteOps() error {
+func (o *OperationsOptions) CompleteSwitchoverOps() error {
 	clusterObj, err := cluster.GetClusterByName(o.Dynamic, o.Name, o.Namespace)
 	if err != nil {
 		return err
@@ -218,155 +217,81 @@ func (o *OperationsOptions) CompletePromoteOps() error {
 		}
 		o.Component = clusterObj.Spec.ComponentSpecs[0].Name
 	}
-	o.CompleteHaEnabled()
-	return o.CompleteCharacterType(clusterObj)
-}
-
-// CompleteCharacterType will get the cluster character type compatible with 0.7
-// If both componentDefRef and componentDef are provided, the componentDef will take precedence over componentDefRef.
-func (o *OperationsOptions) CompleteCharacterType(clusterObj *appsv1.Cluster) error {
-	var primaryRoles []string
-	var componentSpec appsv1.ClusterComponentSpec
-	for _, compSpec := range clusterObj.Spec.ComponentSpecs {
-		if compSpec.Name == o.Component {
-			componentSpec = compSpec
-			break
-		}
-	}
-
-	if componentSpec.ComponentDef != "" {
-		componentDefV2 := &appsv1.ComponentDefinition{}
-		if err := util.GetK8SClientObject(o.Dynamic, componentDefV2, types.CompDefGVR(), "", componentSpec.ComponentDef); err != nil {
-			return err
-		}
-		o.CharacterType = componentDefV2.Spec.ServiceKind
-
-		primaryRole, _ := func(roles []appsv1.ReplicaRole) (string, error) {
-			targetRole := ""
-			if len(roles) == 0 {
-				return targetRole, fmt.Errorf("component has no roles definition, does not support switchover")
-			}
-			for _, role := range roles {
-				if role.Serviceable && role.Writable {
-					if targetRole != "" {
-						return targetRole, fmt.Errorf("componentDefinition has more than role is serviceable and writable, does not support switchover")
-					}
-					targetRole = role.Name
-				}
-			}
-			return targetRole, nil
-		}(componentDefV2.Spec.Roles)
-		primaryRoles = append(primaryRoles, primaryRole)
-	} else {
-		clusterDefObj := appsv1.ClusterDefinition{}
-		clusterDefKey := client.ObjectKey{
-			Namespace: "",
-			Name:      clusterObj.Spec.ClusterDef,
-		}
-		if err := util.GetResourceObjectFromGVR(types.ClusterDefGVR(), clusterDefKey, o.Dynamic, &clusterDefObj); err != nil {
-			return err
-		}
-
-		/*	componentDef := clusterDefObj.GetComponentDefByName(componentSpec.ComponentDefRef)
-			if componentDef == nil {
-				return fmt.Errorf("failed to get component def :%s", componentSpec.ComponentDefRef)
-			}
-			o.CharacterType = componentDef.CharacterType*/
-		primaryRoles = []string{constant.Primary, constant.Leader}
-	}
-
-	if o.Instance != "" && o.CharacterType != oceanbase {
-		pod, err := o.Client.CoreV1().Pods(o.Namespace).Get(context.Background(), o.Instance, metav1.GetOptions{})
-		if err != nil {
-			return err
-		}
-		o.ExecPod = pod
-		return nil
-	}
-
-	if len(primaryRoles) == 0 {
-		return nil
-	}
-
-	labelsMap := map[string]string{
-		constant.AppInstanceLabelKey:    o.Name,
-		constant.AppManagedByLabelKey:   "kubeblocks",
-		constant.KBAppComponentLabelKey: o.Component,
-	}
-	selector := labels.SelectorFromSet(labelsMap)
-	podList, err := o.Client.CoreV1().Pods(o.Namespace).List(context.Background(), metav1.ListOptions{LabelSelector: selector.String()})
-	if err != nil {
-		return err
-	}
-	for _, pod := range podList.Items {
-		podRole, ok := pod.Labels[constant.RoleLabelKey]
-		for _, role := range primaryRoles {
-			if ok && podRole == role {
-				o.ExecPod = pod.DeepCopy()
-				o.Primary = pod.Name
-				break
-			}
-		}
-	}
-	if o.ExecPod == nil {
-		return fmt.Errorf("component %s has no primary", o.Component)
-	}
-
 	return nil
 }
 
-func (o *OperationsOptions) CompleteHaEnabled() {
-	cmName := fmt.Sprintf("%s-%s-haconfig", o.Name, o.Component)
-
-	cm, err := o.Client.CoreV1().ConfigMaps(o.Namespace).Get(context.Background(), cmName, metav1.GetOptions{})
-	if err != nil {
-		return
+func (o *OperationsOptions) validateUpgrade(cluster *appsv1.Cluster) error {
+	if o.ComponentDefinitionName == "nil" && o.ServiceVersion == "nil" {
+		return fmt.Errorf("missing component-def or service-version")
 	}
-	enable, ok := cm.Annotations["enable"]
-	if ok && strings.EqualFold(enable, "true") {
-		o.LorryHAEnabled = true
-	}
-}
-
-func (o *OperationsOptions) validateUpgrade() error {
-	if len(o.ClusterVersionRef) > 0 {
+	validateCompSpec := func(comSpec appsv1.ClusterComponentSpec, compName string) error {
+		if (o.ComponentDefinitionName == "nil" || o.ComponentDefinitionName == comSpec.ComponentDef) &&
+			(o.ServiceVersion == "nil" || o.ServiceVersion == comSpec.ServiceVersion) {
+			return fmt.Errorf(`no any changes of the componentDef and serviceVersion for component "%s"`, compName)
+		}
 		return nil
 	}
-	if len(o.ComponentNames) > 0 {
-		return nil
-	}
-	return fmt.Errorf("missing cluster-version or components")
+	return o.handleComponentOps(cluster, validateCompSpec)
 }
 
-func (o *OperationsOptions) validateVolumeExpansion() error {
+func (o *OperationsOptions) handleComponentOps(cluster *appsv1.Cluster, handleF func(compSpec appsv1.ClusterComponentSpec, compName string) error) error {
+	for _, v := range cluster.Spec.ComponentSpecs {
+		if !slices.Contains(o.ComponentNames, v.Name) {
+			continue
+		}
+		if err := handleF(v, v.Name); err != nil {
+			return err
+		}
+	}
+	for _, v := range cluster.Spec.Shardings {
+		if !slices.Contains(o.ComponentNames, v.Name) {
+			continue
+		}
+		if err := handleF(v.Template, v.Name); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (o *OperationsOptions) validateVolumeExpansion(clusterObj *appsv1.Cluster) error {
 	if len(o.VCTNames) == 0 {
 		return fmt.Errorf("missing volume-claim-templates")
 	}
 	if len(o.Storage) == 0 {
 		return fmt.Errorf("missing storage")
 	}
-
 	for _, cName := range o.ComponentNames {
 		for _, vctName := range o.VCTNames {
 			labels := fmt.Sprintf("%s=%s,%s=%s,%s=%s",
 				constant.AppInstanceLabelKey, o.Name,
-				constant.KBAppComponentLabelKey, cName,
+				cluster.ComponentNameLabelKey(clusterObj, cName), cName,
 				constant.VolumeClaimTemplateNameLabelKey, vctName,
 			)
 			pvcs, err := o.Client.CoreV1().PersistentVolumeClaims(o.Namespace).List(context.Background(),
-				metav1.ListOptions{LabelSelector: labels, Limit: 1})
+				metav1.ListOptions{LabelSelector: labels, Limit: 20})
 			if err != nil {
 				return err
 			}
-			if len(pvcs.Items) == 0 {
-				continue
+			var pvc *corev1.PersistentVolumeClaim
+			for _, pvcItem := range pvcs.Items {
+				if pvcItem.Labels[constant.KBAppComponentInstanceTemplateLabelKey] == "" {
+					pvc = &pvcItem
+					break
+				}
 			}
-			pvc := pvcs.Items[0]
+			if pvc == nil {
+				return nil
+			}
 			specStorage := pvc.Spec.Resources.Requests.Storage()
 			statusStorage := pvc.Status.Capacity.Storage()
 			targetStorage, err := resource.ParseQuantity(o.Storage)
 			if err != nil {
 				return fmt.Errorf("cannot parse '%v', %v", o.Storage, err)
+			}
+			if targetStorage.Cmp(*statusStorage) < 0 {
+				return fmt.Errorf(`requested storage size of volumeClaimTemplate "%s" can not less than status.capacity.storage "%s" `,
+					vctName, statusStorage.String())
 			}
 			// determine whether the opsRequest is a recovery action for volume expansion failure
 			if specStorage.Cmp(targetStorage) > 0 &&
@@ -385,7 +310,7 @@ func (o *OperationsOptions) validateVScale(cluster *appsv1.Cluster) error {
 		return fmt.Errorf("cpu or memory must be specified")
 	}
 
-	fillResource := func(comp *appsv1.ClusterComponentSpec) error {
+	fillResource := func(comp appsv1.ClusterComponentSpec, compName string) error {
 		requests := make(corev1.ResourceList)
 		if o.CPU != "" {
 			cpu, err := resource.ParseQuantity(o.CPU)
@@ -401,23 +326,9 @@ func (o *OperationsOptions) validateVScale(cluster *appsv1.Cluster) error {
 			}
 			requests[corev1.ResourceMemory] = memory
 		}
-		requests.DeepCopyInto(&comp.Resources.Requests)
-		requests.DeepCopyInto(&comp.Resources.Limits)
 		return nil
 	}
-
-	for _, name := range o.ComponentNames {
-		for _, comp := range cluster.Spec.ComponentSpecs {
-			if comp.Name != name {
-				continue
-			}
-			if err := fillResource(&comp); err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
+	return o.handleComponentOps(cluster, fillResource)
 }
 
 // Validate command flags or args is legal
@@ -432,17 +343,19 @@ func (o *OperationsOptions) Validate() error {
 	}
 
 	// common validate for componentOps
-	if o.HasComponentNamesFlag && len(o.ComponentNames) == 0 {
+	if o.HasComponentNamesFlag && !o.isComponentsFlagOptional && len(o.ComponentNames) == 0 {
 		return fmt.Errorf(`missing components, please specify the "--components" flag for the cluster`)
 	}
-
+	if err = o.validateComponents(cluster); err != nil {
+		return err
+	}
 	switch o.OpsType {
 	case opsv1alpha1.VolumeExpansionType:
-		if err = o.validateVolumeExpansion(); err != nil {
+		if err = o.validateVolumeExpansion(cluster); err != nil {
 			return err
 		}
 	case opsv1alpha1.UpgradeType:
-		if err = o.validateUpgrade(); err != nil {
+		if err = o.validateUpgrade(cluster); err != nil {
 			return err
 		}
 	case opsv1alpha1.VerticalScalingType:
@@ -457,6 +370,10 @@ func (o *OperationsOptions) Validate() error {
 		if err = o.validatePromote(cluster); err != nil {
 			return err
 		}
+	case opsv1alpha1.HorizontalScalingType:
+		if err = o.validateHScale(cluster); err != nil {
+			return err
+		}
 	}
 	if !o.AutoApprove && o.DryRun == "none" {
 		return prompt.Confirm([]string{o.Name}, o.In, "", "")
@@ -464,154 +381,138 @@ func (o *OperationsOptions) Validate() error {
 	return nil
 }
 
-// TODO: replace with new api
-func (o *OperationsOptions) validatePromote(cluster *appsv1.Cluster) error {
-	/*	var (
-			clusterDefObj = appsv1.ClusterDefinition{}
-			compDefObj    = appsv1.ComponentDefinition{}
-			podObj        = &corev1.Pod{}
-			componentName = o.Component
-		)
-
-		if len(cluster.Spec.ComponentSpecs) == 0 {
-			return fmt.Errorf("cluster.Spec.ComponentSpecs cannot be empty")
-		}
-
-		getAndValidatePod := func(targetRoles ...string) error {
-			// if the instance is not specified, do not need to check the validity of the instance
-			if o.Instance == "" || o.CharacterType == oceanbase {
-				return nil
-			}
-			// checks the validity of the instance whether it belongs to the current component and ensure it is not the primary or leader instance currently.
-			podKey := client.ObjectKey{
-				Namespace: cluster.Namespace,
-				Name:      o.Instance,
-			}
-			if err := util.GetResourceObjectFromGVR(types.PodGVR(), podKey, o.Dynamic, podObj); err != nil || podObj == nil {
-				return fmt.Errorf("instance %s not found, please check the validity of the instance using \"kbcli cluster list-instances\"", o.Instance)
-			}
-			v, ok := podObj.Labels[constant.RoleLabelKey]
-			if !ok || v == "" {
-				return fmt.Errorf("instance %s cannot be promoted because it had a invalid role label", o.Instance)
-			}
-			for _, targetRole := range targetRoles {
-				if v == targetRole {
-					return fmt.Errorf("instanceName %s cannot be promoted because it is already the targetRole %s instance", o.Instance, targetRole)
+func (o *OperationsOptions) validateComponents(clusterObj *appsv1.Cluster) error {
+	validateInstances := func(instances []appsv1.InstanceTemplate, componentName string) error {
+		for _, v := range o.InstanceTPLNames {
+			var exist bool
+			for _, ins := range instances {
+				if v == ins.Name {
+					exist = true
+					break
 				}
 			}
-			if !strings.HasPrefix(podObj.Name, fmt.Sprintf("%s-%s", cluster.Name, componentName)) {
-				return fmt.Errorf("instanceName %s does not belong to the current component, please check the validity of the instance using \"kbcli cluster list-instances\"", o.Instance)
+			if !exist {
+				return fmt.Errorf(`can not found the instance template "%s" in the component "%s"`, v, componentName)
+			}
+		}
+		return nil
+	}
+	for _, compName := range o.ComponentNames {
+		compSpec := cluster.GetComponentSpec(clusterObj, compName)
+		if compSpec == nil {
+			return fmt.Errorf(`can not found the component "%s" in cluster "%s"`, compName, clusterObj.Name)
+		}
+		if err := validateInstances(compSpec.Instances, compName); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (o *OperationsOptions) validateHScale(cluster *appsv1.Cluster) error {
+	if o.ScaleOut {
+		if o.Replicas == "" && len(o.OfflineInstancesToOnline) == 0 {
+			return fmt.Errorf("at least one of --replicas or --online-instances is required")
+		}
+		return o.handleComponentOps(cluster, func(compSpec appsv1.ClusterComponentSpec, compName string) error {
+			for _, podName := range o.OfflineInstancesToOnline {
+				if !slices.Contains(compSpec.OfflineInstances, podName) {
+					return fmt.Errorf(`pod "%s" not in the offlineInstances of the component "%s"`, podName, compName)
+				}
 			}
 			return nil
-		}*/
+		})
+	}
+	if o.Replicas == "" && len(o.OnlineInstancesToOffline) == 0 {
+		return fmt.Errorf("at least one of --replicas or --offline-instances is required")
+	}
+	return nil
+}
 
-	// TODO(xingran): this will be removed in the future.
-	/*validateBaseOnClusterCompDef := func() error {
-		// check clusterDefinition exist
-		clusterDefKey := client.ObjectKey{
-			Namespace: "",
-			Name:      cluster.Spec.ClusterDef,
-		}
-		if err := util.GetResourceObjectFromGVR(types.ClusterDefGVR(), clusterDefKey, o.Dynamic, &clusterDefObj); err != nil {
-			return err
-		}
+func (o *OperationsOptions) validatePromote(clusterObj *appsv1.Cluster) error {
+	var (
+		compDefObj = appsv1.ComponentDefinition{}
+		podObj     = &corev1.Pod{}
+	)
 
-		var clusterCompDefObj *opsv1alpha1.ClusterComponentDefinition
-		for _, clusterCompDef := range clusterDefObj.Spec.ComponentDefs {
-			if clusterCompDef.Name == cluster.Spec.GetComponentDefRefName(componentName) {
-				clusterCompDefObj = &clusterCompDef
-				break
+	if o.Component == "" && o.Instance == "" {
+		return fmt.Errorf("at least one of --component or --instance is required")
+	}
+	// if the instance is not specified, do not need to check the validity of the instance
+	if o.Instance != "" {
+		// checks the validity of the instance whether it belongs to the current component and ensure it is not the primary or leader instance currently.
+		podKey := client.ObjectKey{
+			Namespace: clusterObj.Namespace,
+			Name:      o.Instance,
+		}
+		if err := util.GetResourceObjectFromGVR(types.PodGVR(), podKey, o.Dynamic, podObj); err != nil || podObj == nil {
+			return fmt.Errorf("instance %s not found, please check the validity of the instance using \"kbcli cluster list-instances\"", o.Instance)
+		}
+		if o.Component == "" {
+			o.Component = cluster.GetPodComponentName(podObj)
+		}
+	}
+
+	getAndValidatePod := func(targetRoles ...string) error {
+		// if the instance is not specified, do not need to check the validity of the instance
+		if o.Instance == "" {
+			return nil
+		}
+		v, ok := podObj.Labels[constant.RoleLabelKey]
+		if !ok || v == "" {
+			return fmt.Errorf("instance %s cannot be promoted because it had a invalid role label", o.Instance)
+		}
+		for _, targetRole := range targetRoles {
+			if v == targetRole {
+				return fmt.Errorf("instanceName %s cannot be promoted because it is already the targetRole %s instance", o.Instance, targetRole)
 			}
 		}
-		if clusterCompDefObj == nil {
-			return fmt.Errorf("cluster component %s is invalid", componentName)
-		}
-		if !o.LorryHAEnabled && o.CharacterType != oceanbase {
-			if clusterCompDefObj.SwitchoverSpec == nil {
-				return fmt.Errorf("cluster component %s does not support switchover", componentName)
-			}
-			switch o.Instance {
-			case "":
-				if clusterCompDefObj.SwitchoverSpec.WithoutCandidate == nil {
-					return fmt.Errorf("cluster component %s does not support promote without specifying an instance. Please specify a specific instance for the promotion", componentName)
-				}
-			default:
-				if clusterCompDefObj.SwitchoverSpec.WithCandidate == nil {
-					return fmt.Errorf("cluster component %s does not support specifying an instance for promote. If you want to perform a promote operation, please do not specify an instance", componentName)
-				}
-			}
-		}
-		targetRoles := []string{constant.Primary, constant.Leader}
-		if err := getAndValidatePod(targetRoles...); err != nil {
-			return err
+		if cluster.GetPodComponentName(podObj) != o.Component || podObj.Labels[constant.AppInstanceLabelKey] != clusterObj.Name {
+			return fmt.Errorf("instanceName %s does not belong to the current component, please check the validity of the instance using \"kbcli cluster list-instances\"", o.Instance)
 		}
 		return nil
 	}
 
-	validateBaseOnCompDef := func(compDef string) error {
-		getTargetRole := func(roles []opsv1alpha1.ReplicaRole) (string, error) {
-			targetRole := ""
-			if len(roles) == 0 {
-				return targetRole, fmt.Errorf("component has no roles definition, does not support switchover")
-			}
-			for _, role := range roles {
-				if role.Serviceable && role.Writable {
-					if targetRole != "" {
-						return targetRole, fmt.Errorf("componentDefinition has more than role is serviceable and writable, does not support switchover")
-					}
-					targetRole = role.Name
-				}
-			}
-			return targetRole, nil
+	getTargetRole := func(roles []appsv1.ReplicaRole) (string, error) {
+		targetRole := ""
+		if len(roles) == 0 {
+			return targetRole, fmt.Errorf("component has no roles definition, does not support switchover")
 		}
+		for _, role := range roles {
+			if role.Serviceable && role.Writable {
+				if targetRole != "" {
+					return targetRole, fmt.Errorf("componentDefinition has more than role is serviceable and writable, does not support switchover")
+				}
+				targetRole = role.Name
+			}
+		}
+		return targetRole, nil
+	}
 
-		// check componentDefinition exist
-		compDefKey := client.ObjectKey{
-			Namespace: "",
-			Name:      compDef,
-		}
-		if err := util.GetResourceObjectFromGVR(types.CompDefGVR(), compDefKey, o.Dynamic, &compDefObj); err != nil {
-			return err
-		}
-		if !o.LorryHAEnabled && o.CharacterType != oceanbase {
-			if compDefObj.Spec.LifecycleActions == nil || compDefObj.Spec.LifecycleActions.Switchover == nil {
-				return fmt.Errorf("this cluster component %s does not support switchover", componentName)
-			}
-			switch o.Instance {
-			case "":
-				if compDefObj.Spec.LifecycleActions.Switchover.WithoutCandidate == nil {
-					return fmt.Errorf("this cluster component %s does not support promote without specifying an instance. Please specify a specific instance for the promotion", componentName)
-				}
-			default:
-				if compDefObj.Spec.LifecycleActions.Switchover.WithCandidate == nil {
-					return fmt.Errorf("this cluster component %s does not support specifying an instance for promote. If you want to perform a promote operation, please do not specify an instance", componentName)
-				}
-			}
-		}
-		targetRole, err := getTargetRole(compDefObj.Spec.Roles)
-		if err != nil {
-			return err
-		}
-		if targetRole == "" {
-			return fmt.Errorf("componentDefinition has no role is serviceable and writable, does not support switchover")
-		}
-		if err := getAndValidatePod(targetRole); err != nil {
-			return err
-		}
-		return nil
-	}*/
-
-	/*if cluster.Spec.ComponentSpecs[0].ComponentDef != "" {
-		return validateBaseOnCompDef(cluster.Spec.ComponentSpecs[0].ComponentDef)
-	} else {
-		return validateBaseOnClusterCompDef()
-	}*/
-	return nil
+	// check componentDefinition exist
+	compDefKey := client.ObjectKey{
+		Namespace: "",
+		Name:      cluster.GetComponentSpec(clusterObj, o.Component).ComponentDef,
+	}
+	if err := util.GetResourceObjectFromGVR(types.CompDefGVR(), compDefKey, o.Dynamic, &compDefObj); err != nil {
+		return err
+	}
+	if compDefObj.Spec.LifecycleActions == nil || compDefObj.Spec.LifecycleActions.Switchover == nil {
+		return fmt.Errorf(`this component "%s does not support switchover, you can define the switchover action in the componentDef "%s"`, o.Component, compDefKey.Name)
+	}
+	targetRole, err := getTargetRole(compDefObj.Spec.Roles)
+	if err != nil {
+		return err
+	}
+	if targetRole == "" {
+		return fmt.Errorf("componentDefinition has no role is serviceable and writable, does not support switchover")
+	}
+	return getAndValidatePod(targetRole)
 }
 
 func (o *OperationsOptions) validateExpose() error {
 	switch util.ExposeType(o.ExposeType) {
-	case "", util.ExposeToVPC, util.ExposeToInternet:
+	case "", util.ExposeToIntranet, util.ExposeToInternet:
 	default:
 		return fmt.Errorf("invalid expose type %q", o.ExposeType)
 	}
@@ -681,7 +582,7 @@ func (o *OperationsOptions) fillExpose() error {
 		Name:        string(exposeType),
 		Annotations: annotations,
 	}
-	if exposeType == util.ExposeToVPC {
+	if exposeType == util.ExposeToIntranet {
 		if o.ExposeSubType == "" {
 			svc.ServiceType = corev1.ServiceTypeLoadBalancer
 		} else {
@@ -733,18 +634,24 @@ func NewRestartCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 }
 
 var upgradeExample = templates.Examples(`
-		# upgrade the cluster to the target version
-		kbcli cluster upgrade mycluster --cluster-version=ac-mysql-8.0.30
+		# upgrade the component to the target version
+		kbcli cluster upgrade mycluster --service-version=8.0.30 --components my-comp
+
+		# upgrade the component with new component definition
+		kbcli cluster upgrade mycluster --component-def=8.0.30 --components my-comp
+
+		# upgrade the component with new component definition and specified service version
+		kbcli cluster upgrade mycluster --component-def=8.0.30 --service-version=8.0.30  --components my-comp
 `)
 
 // NewUpgradeCmd creates an upgrade command
 func NewUpgradeCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := newBaseOperationsOptions(f, streams, opsv1alpha1.UpgradeType, false)
-	compDefFlag := "component-definition"
+	o := newBaseOperationsOptions(f, streams, opsv1alpha1.UpgradeType, true)
+	compDefFlag := "component-def"
 	serviceVersionFlag := "service-version"
 	cmd := &cobra.Command{
 		Use:               "upgrade NAME",
-		Short:             "Upgrade the cluster version.",
+		Short:             "Upgrade the service version(only support to upgrade minor version).",
 		Example:           upgradeExample,
 		ValidArgsFunction: util.ResourceNameCompletionFunc(f, types.ClusterGVR()),
 		Run: func(cmd *cobra.Command, args []string) {
@@ -756,17 +663,18 @@ func NewUpgradeCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 		},
 	}
 	o.addCommonFlags(cmd, f)
-	cmd.Flags().StringVar(&o.ClusterVersionRef, "cluster-version", "", "Referring to the ClusterVersion CR(deprecated)")
 	cmd.Flags().StringVar(&o.ComponentDefinitionName, compDefFlag, "nil", "Referring to the ComponentDefinition")
 	cmd.Flags().StringVar(&o.ServiceVersion, serviceVersionFlag, "nil", "Referring to the serviceVersion that is provided by ComponentDefinition and ComponentVersion")
 	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "Skip interactive approval before upgrading the cluster")
-	flags.AddComponentsFlag(f, cmd, &o.ComponentNames, "Component names to this operations")
 	return cmd
 }
 
 var verticalScalingExample = templates.Examples(`
 		# scale the computing resources of specified components, separate with commas for multiple components
 		kbcli cluster vscale mycluster --components=mysql --cpu=500m --memory=500Mi
+
+        # scale the computing resources of instance template, separate with commas for multiple components
+		kbcli cluster vscale mycluster --components=mysql --cpu=500m --memory=500Mi --instance-tpl default
 `)
 
 // NewVerticalScalingCmd creates a vertical scaling command
@@ -787,6 +695,8 @@ func NewVerticalScalingCmd(f cmdutil.Factory, streams genericiooptions.IOStreams
 		},
 	}
 	o.addCommonFlags(cmd, f)
+	cmd.Flags().StringSliceVar(&o.InstanceTPLNames, "instance-tpl", nil, "vertically scaling the specified instance template in the specified component")
+	util.CheckErr(flags.CompletedInstanceTemplatesFlag(cmd, f, "instance-tpl"))
 	cmd.Flags().StringVar(&o.CPU, "cpu", "", "Request and limit size of component cpu")
 	cmd.Flags().StringVar(&o.Memory, "memory", "", "Request and limit size of component memory")
 	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "Skip interactive approval before vertically scaling the cluster")
@@ -794,18 +704,24 @@ func NewVerticalScalingCmd(f cmdutil.Factory, streams genericiooptions.IOStreams
 	return cmd
 }
 
-var horizontalScalingExample = templates.Examples(`
-		# expand storage resources of specified components, separate with commas for multiple components
-		kbcli cluster hscale mycluster --components=mysql --replicas=3
+var scaleInExample = templates.Examples(`
+		# scale in 2 replicas
+		kbcli cluster scale-in mycluster --components=mysql --replicas=2
+
+		# offline specified instances
+		kbcli cluster scale-in mycluster --components=mysql --offline-instances pod1
+
+        # scale in 2 replicas, one of them is specified by "--offline-instances".
+		kbcli cluster scale-out mycluster --components=mysql --replicas=2 --offline-instances pod1
 `)
 
-// NewHorizontalScalingCmd creates a horizontal scaling command
-func NewHorizontalScalingCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
+// NewScaleInCmd creates a scale in command
+func NewScaleInCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
 	o := newBaseOperationsOptions(f, streams, opsv1alpha1.HorizontalScalingType, true)
 	cmd := &cobra.Command{
-		Use:               "hscale NAME",
-		Short:             "Horizontally scale the specified components in the cluster.",
-		Example:           horizontalScalingExample,
+		Use:               "scale-in Replicas",
+		Short:             "scale in replicas of the specified components in the cluster.",
+		Example:           scaleInExample,
 		ValidArgsFunction: util.ResourceNameCompletionFunc(f, types.ClusterGVR()),
 		Run: func(cmd *cobra.Command, args []string) {
 			o.Args = args
@@ -816,11 +732,48 @@ func NewHorizontalScalingCmd(f cmdutil.Factory, streams genericiooptions.IOStrea
 			cmdutil.CheckErr(o.Run())
 		},
 	}
-
+	// TODO: supports to scale out replicas of the instance templates?
 	o.addCommonFlags(cmd, f)
-	cmd.Flags().IntVar(&o.Replicas, "replicas", 0, "Replicas with the specified components")
+	cmd.Flags().StringVar(&o.Replicas, "replicas", "", "Replicas with the specified components")
+	cmd.Flags().StringSliceVar(&o.OnlineInstancesToOffline, "offline-instances", nil, "offline the specified instances")
 	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "Skip interactive approval before horizontally scaling the cluster")
-	_ = cmd.MarkFlagRequired("replicas")
+	_ = cmd.MarkFlagRequired("components")
+	return cmd
+}
+
+var scaleOutExample = templates.Examples(`
+		# scale out 2 replicas
+		kbcli cluster scale-out mycluster --components=mysql --replicas=2
+
+		# to bring the offline instances specified in compSpec.offlineInstances online.
+		kbcli cluster scale-out mycluster --components=mysql --online-instances pod1
+
+        # scale out 2 replicas, one of which is an instance that has already been taken offline.
+		kbcli cluster scale-out mycluster --components=mysql --replicas=2 --online-instances pod1
+`)
+
+func NewScaleOutCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
+	o := newBaseOperationsOptions(f, streams, opsv1alpha1.HorizontalScalingType, true)
+	o.ScaleOut = true
+	cmd := &cobra.Command{
+		Use:               "scale-out Replicas",
+		Short:             "scale out replicas of the specified components in the cluster.",
+		Example:           scaleOutExample,
+		ValidArgsFunction: util.ResourceNameCompletionFunc(f, types.ClusterGVR()),
+		Run: func(cmd *cobra.Command, args []string) {
+			o.Args = args
+			cmdutil.BehaviorOnFatal(printer.FatalWithRedColor)
+			cmdutil.CheckErr(o.Complete())
+			cmdutil.CheckErr(o.CompleteComponentsFlag())
+			cmdutil.CheckErr(o.Validate())
+			cmdutil.CheckErr(o.Run())
+		},
+	}
+	// TODO: supports to scale in replicas of the instance templates?
+	o.addCommonFlags(cmd, f)
+	cmd.Flags().StringVar(&o.Replicas, "replicas", "", "Replica changes with the specified components")
+	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "Skip interactive approval before horizontally scaling the cluster")
+	cmd.Flags().StringSliceVar(&o.OfflineInstancesToOnline, "online-instances", nil, "online the specified instances which have been offline")
 	_ = cmd.MarkFlagRequired("components")
 	return cmd
 }
@@ -847,6 +800,7 @@ func NewVolumeExpansionCmd(f cmdutil.Factory, streams genericiooptions.IOStreams
 			cmdutil.CheckErr(o.Run())
 		},
 	}
+	// TODO: supports to volume expand the vcts of the instance templates?
 	o.addCommonFlags(cmd, f)
 	cmd.Flags().StringSliceVarP(&o.VCTNames, "volume-claim-templates", "t", nil, "VolumeClaimTemplate names in components (required)")
 	cmd.Flags().StringVar(&o.Storage, "storage", "", "Volume storage size (required)")
@@ -859,14 +813,14 @@ func NewVolumeExpansionCmd(f cmdutil.Factory, streams genericiooptions.IOStreams
 
 var (
 	exposeExamples = templates.Examples(`
-		# Expose a cluster to vpc
-		kbcli cluster expose mycluster --type vpc --enable=true
+		# Expose a cluster to intranet
+		kbcli cluster expose mycluster --type intranet --enable=true
 
 		# Expose a cluster to public internet
 		kbcli cluster expose mycluster --type internet --enable=true
 
 		# Stop exposing a cluster
-		kbcli cluster expose mycluster --type vpc --enable=false
+		kbcli cluster expose mycluster --type intranet --enable=false
 	`)
 )
 
@@ -874,7 +828,7 @@ var (
 func NewExposeCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
 	o := newBaseOperationsOptions(f, streams, opsv1alpha1.ExposeType, true)
 	cmd := &cobra.Command{
-		Use:               "expose NAME --enable=[true|false] --type=[vpc|internet]",
+		Use:               "expose NAME --enable=[true|false] --type=[intranet|internet]",
 		Short:             "Expose a cluster with a new endpoint, the new endpoint can be found by executing 'kbcli cluster describe NAME'.",
 		Example:           exposeExamples,
 		ValidArgsFunction: util.ResourceNameCompletionFunc(f, types.ClusterGVR()),
@@ -889,13 +843,13 @@ func NewExposeCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.
 		},
 	}
 	o.addCommonFlags(cmd, f)
-	cmd.Flags().StringVar(&o.ExposeType, "type", "", "Expose type, currently supported types are 'vpc', 'internet'")
-	cmd.Flags().StringVar(&o.ExposeSubType, "sub-type", "LoadBalancer", "Expose sub type, currently supported types are 'NodePort', 'LoadBalancer', only available if type is vpc")
+	cmd.Flags().StringVar(&o.ExposeType, "type", "", "Expose type, currently supported types are 'intranet', 'internet'")
+	cmd.Flags().StringVar(&o.ExposeSubType, "sub-type", "LoadBalancer", "Expose sub type, currently supported types are 'NodePort', 'LoadBalancer', only available if type is intranet")
 	cmd.Flags().StringVar(&o.ExposeEnabled, "enable", "", "Enable or disable the expose, values can be true or false")
 	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "Skip interactive approval before exposing the cluster")
 
 	util.CheckErr(cmd.RegisterFlagCompletionFunc("type", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-		return []string{string(util.ExposeToVPC), string(util.ExposeToInternet)}, cobra.ShellCompDirectiveNoFileComp
+		return []string{string(util.ExposeToIntranet), string(util.ExposeToInternet)}, cobra.ShellCompDirectiveNoFileComp
 	}))
 	util.CheckErr(cmd.RegisterFlagCompletionFunc("sub-type", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		return []string{util.NodePort, util.LoadBalancer}, cobra.ShellCompDirectiveNoFileComp
@@ -911,11 +865,14 @@ func NewExposeCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.
 var stopExample = templates.Examples(`
 		# stop the cluster and release all the pods of the cluster
 		kbcli cluster stop mycluster
+
+		# stop the component of the cluster and release all the pods of the component
+		kbcli cluster stop mycluster --components=mysql
 `)
 
 // NewStopCmd creates a stop command
 func NewStopCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := newBaseOperationsOptions(f, streams, opsv1alpha1.StopType, false)
+	o := newBaseOperationsOptions(f, streams, opsv1alpha1.StopType, true)
 	cmd := &cobra.Command{
 		Use:               "stop NAME",
 		Short:             "Stop the cluster and release all the pods of the cluster.",
@@ -937,11 +894,14 @@ func NewStopCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Co
 var startExample = templates.Examples(`
 		# start the cluster when cluster is stopped
 		kbcli cluster start mycluster
+
+		# start the component of the cluster when cluster is stopped
+		kbcli cluster start mycluster --components=mysql
 `)
 
 // NewStartCmd creates a start command
 func NewStartCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := newBaseOperationsOptions(f, streams, opsv1alpha1.StartType, false)
+	o := newBaseOperationsOptions(f, streams, opsv1alpha1.StartType, true)
 	o.AutoApprove = true
 	cmd := &cobra.Command{
 		Use:               "start NAME",
@@ -1050,31 +1010,9 @@ func NewPromoteCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 			cmdutil.BehaviorOnFatal(printer.FatalWithRedColor)
 			cmdutil.CheckErr(o.Complete())
 			cmdutil.CheckErr(o.CompleteComponentsFlag())
-			cmdutil.CheckErr(o.CompletePromoteOps())
+			cmdutil.CheckErr(o.CompleteSwitchoverOps())
 			cmdutil.CheckErr(o.Validate())
-			if (o.LorryHAEnabled || o.CharacterType == oceanbase) && o.ExecPod != nil {
-				// lorryCli, err := lorryclient.NewK8sExecClientWithPod(nil, o.ExecPod)
-				// cmdutil.CheckErr(err)
-				// cmdutil.CheckErr(lorryCli.Switchover(context.Background(), o.Primary, o.Instance))
-				customOpr := &CustomOperations{OperationsOptions: o}
-				customOpr.OpsType = "Custom"
-				customOpr.OpsTypeLower = strings.ToLower(string(o.OpsType))
-				customOpr.OpsDefinitionName = "switchover"
-				customOpr.Params = []opsv1alpha1.Parameter{
-					{
-						Name:  "primary",
-						Value: o.Primary,
-					},
-					{
-						Name:  "candidate",
-						Value: o.Instance,
-					},
-				}
-				customOpr.CreateOptions.Options = customOpr
-				cmdutil.CheckErr(customOpr.Run())
-			} else {
-				cmdutil.CheckErr(o.Run())
-			}
+			cmdutil.CheckErr(o.Run())
 		},
 	}
 	flags.AddComponentFlag(f, cmd, &o.Component, "Specify the component name of the cluster, if the cluster has multiple components, you need to specify a component")
@@ -1106,54 +1044,120 @@ type CustomOperations struct {
 }
 
 func NewCustomOpsCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := &CustomOperations{
-		OperationsOptions: newBaseOperationsOptions(f, streams, "Custom", false),
-	}
-	// set options to build cue struct
-	o.CreateOptions.Options = o
+	o := newBaseOperationsOptions(f, streams, opsv1alpha1.CustomType, false)
 	cmd := &cobra.Command{
-		Use:                "custom-ops OpsDef --cluster <clusterName> <your custom params>",
-		Example:            customOpsExample,
-		ValidArgsFunction:  util.ResourceNameCompletionFunc(f, types.OpsDefinitionGVR()),
-		DisableFlagParsing: true,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			o.Args = args
-			cmdutil.BehaviorOnFatal(printer.FatalWithRedColor)
-			cmdutil.CheckErr(o.init())
-			err := o.parseOpsDefinitionAndParams(cmd, args)
-			if errors.Is(err, pflag.ErrHelp) {
-				return err
-			} else {
-				util.CheckErr(err)
-			}
-			cmdutil.CheckErr(o.validateAndCompleteComponentName())
-			cmdutil.CheckErr(o.completeCustomSpec(cmd))
-			cmdutil.CheckErr(o.Run())
-			return nil
+		Use:     "custom-ops OpsDef --cluster <clusterName> <your custom params>",
+		Example: customOpsExample,
+		Run: func(cmd *cobra.Command, args []string) {
+			println(`execute "kbcli cluster custom-ops --help" to list the supported command`)
 		},
 	}
-	o.addCommonFlags(cmd, f)
-	flags.AddComponentFlag(f, cmd, &o.Component, "Specify the component name of the cluster. if not specified, using the first component which referenced the defined componentDefinition.")
-	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "Skip interactive approval before promote the instance")
-	cmd.Flags().StringVar(&o.Name, "cluster", "", "Specify the cluster name")
-	_ = cmd.MarkFlagRequired("cluster")
+	cmds := buildCustomOpsCmds(o)
+	if len(cmds) > 0 {
+		cmd.AddCommand(cmds...)
+	}
 	return cmd
 }
 
-func (o *CustomOperations) init() error {
-	var err error
-	if o.Namespace == "" {
-		if o.Namespace, _, err = o.Factory.ToRawKubeConfigLoader().Namespace(); err != nil {
-			return err
+func buildCustomOpsExamples(t unstructured.Unstructured) string {
+	opsDef := &opsv1alpha1.OpsDefinition{}
+	_ = apiruntime.DefaultUnstructuredConverter.FromUnstructured(t.UnstructuredContent(), opsDef)
+	parametersSchema := opsDef.Spec.ParametersSchema
+	commandName := strcase.KebabCase(t.GetName())
+	baseCommand := fmt.Sprintf(`
+	# Create a %s ops 
+	kbcli cluster custom-ops %s <clusterName> --component <componentName>`, commandName, commandName)
+	if parametersSchema == nil {
+		return templates.Examples(baseCommand)
+	}
+
+	for _, name := range parametersSchema.OpenAPIV3Schema.Required {
+		if name == "component" {
+			baseCommand += fmt.Sprintf(" --%s-fork=<%s>", name, name)
+		} else {
+			baseCommand += fmt.Sprintf(" --%s=<%s>", strcase.KebabCase(name), name)
 		}
 	}
-	if o.Dynamic, err = o.Factory.DynamicClient(); err != nil {
+	return templates.Examples(baseCommand)
+}
+
+// getTempFactory get a new factory when given factory isn't a TestFactory.
+func getTempFactory(f cmdutil.Factory) cmdutil.Factory {
+	if factory, ok := f.(*testing.TestFactory); ok {
+		return factory
+	} else {
+		kubeConfigFlags := genericclioptions.NewConfigFlags(true)
+		matchVersionKubeConfigFlags := cmdutil.NewMatchVersionFlags(kubeConfigFlags)
+		newFactory := cmdutil.NewFactory(matchVersionKubeConfigFlags)
+		return newFactory
+	}
+}
+
+func buildCustomOpsCmds(option *OperationsOptions) []*cobra.Command {
+	dynamic, _ := getTempFactory(option.Factory).DynamicClient()
+	opsDefs, _ := dynamic.Resource(types.OpsDefinitionGVR()).List(context.TODO(), metav1.ListOptions{})
+	if opsDefs == nil {
+		return nil
+	}
+	var cmds []*cobra.Command
+	for _, t := range opsDefs.Items {
+		o := &CustomOperations{
+			OperationsOptions: option,
+			OpsDefinitionName: t.GetName(),
+		}
+		// set options to build cue struct
+		o.CreateOptions.Options = o
+		cmd := &cobra.Command{
+			Use:               strcase.KebabCase(t.GetName()) + " <ClusterName>",
+			Short:             fmt.Sprintf("Create a custom ops with opsDef %s", t.GetName()),
+			Example:           buildCustomOpsExamples(t),
+			ValidArgsFunction: util.ResourceNameCompletionFunc(option.Factory, types.ClusterGVR()),
+			Run: func(cmd *cobra.Command, args []string) {
+				o.Args = args
+				cmdutil.BehaviorOnFatal(printer.FatalWithRedColor)
+				cmdutil.CheckErr(o.Complete())
+				cmdutil.CheckErr(o.validateAndCompleteComponentName())
+				cmdutil.CheckErr(o.completeCustomSpec(cmd))
+				cmdutil.CheckErr(o.Run())
+			},
+		}
+		o.addCommonFlags(cmd, option.Factory)
+		flags.AddComponentFlag(option.Factory, cmd, &o.Component, "Specify the component name of the cluster. if not specified, using the first component which referenced the defined componentDefinition.")
+		cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "Skip interactive approval before promote the instance")
+		// build opsDef flags
+		util.CheckErr(o.addOpsDefFlags(cmd, t))
+		cmds = append(cmds, cmd)
+	}
+	return cmds
+}
+
+func (o *CustomOperations) addOpsDefFlags(cmd *cobra.Command, t unstructured.Unstructured) error {
+	opsDef := &opsv1alpha1.OpsDefinition{}
+	_ = apiruntime.DefaultUnstructuredConverter.FromUnstructured(t.UnstructuredContent(), opsDef)
+	parametersSchema := opsDef.Spec.ParametersSchema
+	if parametersSchema == nil {
+		return nil
+	}
+	o.SchemaProperties = parametersSchema.OpenAPIV3Schema.DeepCopy()
+	newProperties := map[string]apiextensionsv1.JSONSchemaProps{}
+	for name := range parametersSchema.OpenAPIV3Schema.Properties {
+		value := parametersSchema.OpenAPIV3Schema.Properties[name]
+		if name == "component" {
+			name = fmt.Sprintf("%s-fork", name)
+		}
+		newProperties[name] = value
+	}
+	parametersSchema.OpenAPIV3Schema.Properties = newProperties
+	// Convert apiextensionsv1.JSONSchemaProps to spec.Schema
+	schemaData, err := json.Marshal(parametersSchema.OpenAPIV3Schema)
+	if err != nil {
 		return err
 	}
-	if o.Client, err = o.Factory.KubernetesClientSet(); err != nil {
+	schema := &spec.Schema{}
+	if err = json.Unmarshal(schemaData, schema); err != nil {
 		return err
 	}
-	return nil
+	return flags.BuildFlagsBySchema(cmd, schema)
 }
 
 func (o *CustomOperations) validateAndCompleteComponentName() error {
@@ -1200,34 +1204,9 @@ func (o *CustomOperations) validateAndCompleteComponentName() error {
 	return nil
 }
 
-func (o *CustomOperations) parseOpsDefinitionAndParams(cmd *cobra.Command, args []string) error {
-	fmt.Printf("args: %v\n", args)
-	if len(args) == 0 {
-		return fmt.Errorf("please specify the custom ops which you want to do")
-	}
-	_ = flags.NewTmpFlagSet()
-	return flags.BuildFlagsWithOpenAPISchema(cmd, args, func() (*apiextensionsv1.JSONSchemaProps, error) {
-		o.OpsDefinitionName = args[0]
-		// Get ops Definition from API server
-		opsDef := &opsv1alpha1.OpsDefinition{}
-		if err := util.GetK8SClientObject(o.Dynamic, opsDef, types.OpsDefinitionGVR(), "", o.OpsDefinitionName); err != nil {
-			if apierrors.IsNotFound(err) {
-				return nil, fmt.Errorf("OpsDefintion \"%s\" is not found", o.OpsDefinitionName)
-			}
-			return nil, err
-		}
-		parametersSchema := opsDef.Spec.ParametersSchema
-		if parametersSchema == nil {
-			return nil, nil
-		}
-		o.SchemaProperties = parametersSchema.OpenAPIV3Schema
-		return parametersSchema.OpenAPIV3Schema, nil
-	})
-}
-
 func (o *CustomOperations) completeCustomSpec(cmd *cobra.Command) error {
 	var (
-		params   []opsv1alpha1.Parameter
+		params   = make([]opsv1alpha1.Parameter, 0)
 		paramMap = map[string]string{}
 	)
 	// Construct config and credential map from flags
@@ -1235,6 +1214,9 @@ func (o *CustomOperations) completeCustomSpec(cmd *cobra.Command) error {
 		fromFlags := flags.FlagsToValues(cmd.LocalNonPersistentFlags(), true)
 		for name := range o.SchemaProperties.Properties {
 			flagName := strcase.KebabCase(name)
+			if name == "component" {
+				flagName = fmt.Sprintf("%s-fork", flagName)
+			}
 			if val, ok := fromFlags[flagName]; ok {
 				params = append(params, opsv1alpha1.Parameter{
 					Name:  name,
@@ -1257,11 +1239,17 @@ func (o *CustomOperations) completeCustomSpec(cmd *cobra.Command) error {
 }
 
 var rebuildExample = templates.Examples(`
-		# rebuild instance without backup
+		# rebuild instance by creating new instances and remove the specified instances after the new instances are ready.
 		kbcli cluster rebuild-instance mycluster --instances pod1,pod2
 
-		# rebuild instance from backup
-		kbcli cluster rebuild-instance mycluster --instances pod1,pod2 --backupName <backup>
+	   # rebuild instance to a new node.
+		kbcli cluster rebuild-instance mycluster --instances pod1 --node nodeName.
+
+	   # rebuild instance with the same pod name.
+		kbcli cluster rebuild-instance mycluster --instances pod1 --in-place
+
+		# rebuild instance from backup and with the same pod name
+		kbcli cluster rebuild-instance mycluster --instances pod1,pod2 --backupName <backup> --in-place
 `)
 
 // NewRebuildInstanceCmd creates a rebuildInstance command
@@ -1288,7 +1276,14 @@ func NewRebuildInstanceCmd(f cmdutil.Factory, streams genericiooptions.IOStreams
 			if clusterName != o.Name {
 				return fmt.Errorf(`the instance "%s" not belongs the cluster "%s"`, podName, o.Name)
 			}
-			insCompName := pod.Labels[constant.KBAppComponentLabelKey]
+			insCompName, ok := pod.Labels[constant.KBAppShardingNameLabelKey]
+			if ok {
+				if !o.Inplace {
+					return fmt.Errorf("sharding cluster only supports to rebuild instance in place")
+				}
+			} else {
+				insCompName = pod.Labels[constant.KBAppComponentLabelKey]
+			}
 			if compName != "" && compName != insCompName {
 				return fmt.Errorf("these instances do not belong to the same component")
 			}
@@ -1330,6 +1325,7 @@ func NewRebuildInstanceCmd(f cmdutil.Factory, streams genericiooptions.IOStreams
 					ComponentName: compName,
 				},
 				Instances:  instances,
+				InPlace:    o.Inplace,
 				BackupName: o.BackupName,
 				RestoreEnv: envVars,
 			},
@@ -1352,9 +1348,11 @@ func NewRebuildInstanceCmd(f cmdutil.Factory, streams genericiooptions.IOStreams
 	}
 	o.addCommonFlags(cmd, f)
 	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "Skip interactive approval before rebuilding the instances.gi")
+	cmd.Flags().BoolVar(&o.Inplace, "in-place", false, "rebuild the instance with the same pod name. if not set, will create a new instance by horizontalScaling and remove the instance after the new instance is ready")
 	cmd.Flags().StringVar(&o.BackupName, "backup", "", "instances will be rebuild by the specified backup.")
 	cmd.Flags().StringSliceVar(&o.InstanceNames, "instances", nil, "instances which need to rebuild.")
-	cmd.Flags().StringSliceVar(&o.Nodes, "node", nil, "specified the target node which rebuilds the instance on the node otherwise will rebuild on a randon node. format: insName1=nodeName,insName2=nodeName")
-	cmd.Flags().StringArrayVar(&o.Env, "env", []string{}, "provide the necessary env for the 'Restore' operation from the backup. format: key1=value, key2=value")
+	util.CheckErr(flags.CompletedInstanceFlag(cmd, f, "instances"))
+	cmd.Flags().StringSliceVar(&o.Nodes, "node", nil, `specified the target node which rebuilds the instance on the node otherwise will rebuild on a random node. format: insName1=nodeName,insName2=nodeName`)
+	cmd.Flags().StringArrayVar(&o.Env, "restore-env", []string{}, "provide the necessary env for the 'Restore' operation from the backup. format: key1=value, key2=value")
 	return cmd
 }
