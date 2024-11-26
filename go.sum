@@ -677,6 +677,7 @@ github.com/apecloud/dbctl v0.0.0-20240827084000-68a1980b1a46 h1:+Jcc7IjDGxPgIfIk
 github.com/apecloud/dbctl v0.0.0-20240827084000-68a1980b1a46/go.mod h1:eksJtZ7z1nVcVLqDzAdcN5EfpHwXllIAvHZEks2zWys=
 github.com/apecloud/kubeblocks v1.0.0-alpha.11 h1:LaOxEPJxM3wegH9j1Y2d27lXFy+XlKU8jnA+Y4OUNKU=
 github.com/apecloud/kubeblocks v1.0.0-alpha.11/go.mod h1:7CCfj7PP5hW0Fkl4ZNL3LspOdTMeBm++odUUt1H8o38=
+github.com/apecloud/kubeblocks v1.0.0-beta.7/go.mod h1:lEJGUC1Mw8jwVZsxvuifaGMtaJm12YyX0/NaJs5Vce8=
 github.com/apparentlymart/go-textseg v1.0.0/go.mod h1:z96Txxhf3xSFMPmb5X/1W05FF/Nj9VFpLOpjS5yuumk=
 github.com/apparentlymart/go-textseg/v13 v13.0.0/go.mod h1:ZK2fH7c4NqDTLtiYLvIkEghdlcqw7yxLeM89kiTRPUo=
 github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5 h1:0CwZNZbxp69SHPdPJAN/hZIm0C4OItdklCFmMRWYpio=

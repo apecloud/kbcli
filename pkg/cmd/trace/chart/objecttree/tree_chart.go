@@ -29,7 +29,7 @@ import (
 	zone "github.com/lrstanley/bubblezone"
 	corev1 "k8s.io/api/core/v1"
 
-	tracev1 "github.com/apecloud/kbcli/apis/trace/v1"
+	tracev1 "github.com/apecloud/kubeblocks/apis/trace/v1"
 )
 
 var (

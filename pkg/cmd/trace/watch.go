@@ -36,10 +36,10 @@ import (
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
 
-	tracev1 "github.com/apecloud/kbcli/apis/trace/v1"
 	"github.com/apecloud/kbcli/pkg/cmd/trace/chart"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
+	tracev1 "github.com/apecloud/kubeblocks/apis/trace/v1"
 )
 
 var (
