@@ -96,10 +96,14 @@ type initOptions struct {
 	region        string
 	autoApprove   bool
 	dockerVersion *gv.Version
+
+	k3dClusterOptions
+	baseOptions
+}
+
+type k3dClusterOptions struct {
 	k3sImage      string
 	k3dProxyImage string
-
-	baseOptions
 }
 
 func newInitCmd(streams genericiooptions.IOStreams) *cobra.Command {
