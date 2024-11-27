@@ -1096,14 +1096,9 @@ func getTempFactory(f cmdutil.Factory) cmdutil.Factory {
 func buildCustomOpsCmds(option *OperationsOptions) []*cobra.Command {
 	dynamic, _ := getTempFactory(option.Factory).DynamicClient()
 	if dynamic == nil {
-		println("Failed to list OpsDefinitions")
 		return nil
 	}
-	opsDefs, err := dynamic.Resource(types.OpsDefinitionGVR()).List(context.TODO(), metav1.ListOptions{})
-	if err != nil {
-		println("Failed to list OpsDefinitions: %v", err)
-		return nil
-	}
+	opsDefs, _ := dynamic.Resource(types.OpsDefinitionGVR()).List(context.TODO(), metav1.ListOptions{})
 	if opsDefs == nil {
 		return nil
 	}
