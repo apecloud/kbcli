@@ -31,13 +31,30 @@ var _ = Describe("playground", func() {
 	var (
 		provider    = newLocalCloudProvider(os.Stdout, os.Stderr)
 		clusterName = "k3d-kb-test"
+		image       = "test.com/k3d-proxy:5.4.4"
 	)
 
-	It("k3d util function", func() {
-		config, err := buildClusterRunConfig("test")
-		Expect(err).ShouldNot(HaveOccurred())
-		Expect(config.Name).Should(ContainSubstring("test"))
-		Expect(setUpK3d(context.Background(), nil)).Should(HaveOccurred())
-		Expect(provider.DeleteK8sCluster(&K8sClusterInfo{ClusterName: clusterName})).Should(HaveOccurred())
+	Context("k3d util function", func() {
+		It("with name", func() {
+			config, err := buildClusterRunConfig("test", "", "")
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(config.Name).Should(ContainSubstring("test"))
+			Expect(setUpK3d(context.Background(), nil)).Should(HaveOccurred())
+			Expect(provider.DeleteK8sCluster(&K8sClusterInfo{ClusterName: clusterName})).Should(HaveOccurred())
+		})
+
+		It("with name and k3s image", func() {
+			config, err := buildClusterRunConfig("test", image, "")
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(config.Cluster.Nodes[1].Image).Should(ContainSubstring("test.com"))
+		})
+
+		It("with name and k3d proxy image", func() {
+			config, err := buildClusterRunConfig("test", "", image)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(config.ServerLoadBalancer.Node.Image).Should(ContainSubstring("test.com"))
+		})
+
 	})
+
 })
