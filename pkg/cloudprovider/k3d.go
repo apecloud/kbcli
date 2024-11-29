@@ -52,11 +52,11 @@ var (
 	// all cluster will be created in this network, so they can communicate with each other
 	CliDockerNetwork = "k3d-kbcli-playground"
 
-	// K3sImage is k3s image repo
-	K3sImage = "rancher/k3s:" + version.K3sImageTag
+	// K3sImageDefault is k3s image repo
+	K3sImageDefault = "rancher/k3s:" + version.K3sImageTag
 
-	// K3dProxyImage is k3d proxy image repo
-	K3dProxyImage = "docker.io/apecloud/k3d-proxy:" + version.K3dVersion
+	// K3dProxyImageDefault is k3d proxy image repo
+	K3dProxyImageDefault = "docker.io/apecloud/k3d-proxy:" + version.K3dVersion
 
 	// K3dFixEnv
 	KBEnvFix fixes.K3DFixEnv = "KB_FIX_MOUNTS"
@@ -97,7 +97,7 @@ func (p *localCloudProvider) Name() string {
 func (p *localCloudProvider) CreateK8sCluster(clusterInfo *K8sClusterInfo) error {
 	var err error
 
-	if p.cfg, err = buildClusterRunConfig(clusterInfo.ClusterName); err != nil {
+	if p.cfg, err = buildClusterRunConfig(clusterInfo.ClusterName, clusterInfo.K3sImage, clusterInfo.K3dProxyImage); err != nil {
 		return err
 	}
 
@@ -209,9 +209,9 @@ func (p *localCloudProvider) GetClusterInfo() (*K8sClusterInfo, error) {
 }
 
 // buildClusterRunConfig returns the run-config for the k3d cluster
-func buildClusterRunConfig(clusterName string) (config.ClusterConfig, error) {
+func buildClusterRunConfig(clusterName string, k3sImage string, k3dProxyImage string) (config.ClusterConfig, error) {
 	createOpts := buildClusterCreateOpts()
-	cluster, err := buildClusterConfig(clusterName, createOpts)
+	cluster, err := buildClusterConfig(clusterName, createOpts, k3sImage, k3dProxyImage)
 	if err != nil {
 		return config.ClusterConfig{}, err
 	}
@@ -239,7 +239,7 @@ func buildClusterCreateOpts() k3d.ClusterCreateOpts {
 	return clusterCreateOpts
 }
 
-func buildClusterConfig(clusterName string, opts k3d.ClusterCreateOpts) (k3d.Cluster, error) {
+func buildClusterConfig(clusterName string, opts k3d.ClusterCreateOpts, k3sImage string, k3dProxyImage string) (k3d.Cluster, error) {
 	var network = k3d.ClusterNetwork{
 		Name:     CliDockerNetwork,
 		External: false,
@@ -273,14 +273,14 @@ func buildClusterConfig(clusterName string, opts k3d.ClusterCreateOpts) (k3d.Clu
 	var nodes []*k3d.Node
 
 	// build load balancer node
-	clusterConfig.ServerLoadBalancer = buildLoadbalancer(clusterConfig, opts)
+	clusterConfig.ServerLoadBalancer = buildLoadbalancer(clusterConfig, opts, k3dProxyImage)
 	nodes = append(nodes, clusterConfig.ServerLoadBalancer.Node)
 
 	// build k3d node
 	serverNode := k3d.Node{
 		Name:       k3dClient.GenerateNodeName(clusterConfig.Name, k3d.ServerRole, 0),
 		Role:       k3d.ServerRole,
-		Image:      K3sImage,
+		Image:      k3sImage,
 		ServerOpts: k3d.ServerOpts{},
 		Args:       []string{"--disable=metrics-server", "--disable=traefik", "--disable=local-storage"},
 	}
@@ -317,7 +317,7 @@ func findAvailablePort(start int) (string, error) {
 	return "", errors.New("can not find any available port")
 }
 
-func buildLoadbalancer(cluster k3d.Cluster, opts k3d.ClusterCreateOpts) *k3d.Loadbalancer {
+func buildLoadbalancer(cluster k3d.Cluster, opts k3d.ClusterCreateOpts, k3dProxyImage string) *k3d.Loadbalancer {
 	lb := k3d.NewLoadbalancer()
 
 	labels := map[string]string{}
@@ -326,7 +326,7 @@ func buildLoadbalancer(cluster k3d.Cluster, opts k3d.ClusterCreateOpts) *k3d.Loa
 	}
 
 	lb.Node.Name = fmt.Sprintf("%s-%s-serverlb", k3d.DefaultObjectNamePrefix, cluster.Name)
-	lb.Node.Image = K3dProxyImage
+	lb.Node.Image = k3dProxyImage
 	lb.Node.Ports = nat.PortMap{
 		k3d.DefaultAPIPort: []nat.PortBinding{cluster.KubeAPI.Binding},
 	}

@@ -21,7 +21,7 @@ import (
 
 	"k8s.io/client-go/dynamic"
 
-	"github.com/apecloud/kbcli/pkg/util/breakingchange"
+	"github.com/apecloud/kbcli/pkg/util"
 )
 
 type VersionConversionMeta struct {
@@ -40,7 +40,7 @@ func NewVersionConversion(dynamic dynamic.Interface, fromVersion, toVersion stri
 	return &VersionConversionMeta{
 		Ctx:         context.Background(),
 		Interface:   dynamic,
-		FromVersion: breakingchange.GetMajorMinorVersion(fromVersion),
-		ToVersion:   breakingchange.GetMajorMinorVersion(toVersion),
+		FromVersion: util.GetMajorMinorVersion(fromVersion),
+		ToVersion:   util.GetMajorMinorVersion(toVersion),
 	}
 }

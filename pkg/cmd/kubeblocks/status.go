@@ -154,7 +154,7 @@ func (o *statusOptions) complete(f cmdutil.Factory) error {
 		return err
 	}
 
-	o.ns, _ = util.GetKubeBlocksNamespace(o.client)
+	o.ns, _ = util.GetKubeBlocksNamespace(o.client, "")
 	if o.ns == "" {
 		printer.Warning(o.Out, "Failed to find deployed KubeBlocks in any namespace\n")
 		printer.Warning(o.Out, "Will check all namespaces for KubeBlocks resources left behind\n")

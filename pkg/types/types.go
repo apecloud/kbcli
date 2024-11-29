@@ -216,6 +216,13 @@ const (
 	ResourceRSM = "replicatedstatemachines"
 )
 
+// trace API group
+const (
+	TraceAPIGroup   = "trace.kubeblocks.io"
+	TraceAPIVersion = "v1"
+	ResourceTrace   = "reconciliationtraces"
+)
+
 const (
 	None = "<none>"
 
@@ -473,4 +480,8 @@ func JobGVR() schema.GroupVersionResource {
 }
 func CronJobGVR() schema.GroupVersionResource {
 	return schema.GroupVersionResource{Group: K8SBatchAPIGroup, Version: K8sBatchAPIVersion, Resource: ResourceCronJobs}
+}
+
+func TraceGVR() schema.GroupVersionResource {
+	return schema.GroupVersionResource{Group: TraceAPIGroup, Version: TraceAPIVersion, Resource: ResourceTrace}
 }

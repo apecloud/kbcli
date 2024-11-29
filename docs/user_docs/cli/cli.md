@@ -89,6 +89,22 @@ ClusterDefinition command.
 * [kbcli clusterdefinition list](kbcli_clusterdefinition_list.md)	 - List ClusterDefinitions.
 
 
+## [componentdefinition](kbcli_componentdefinition.md)
+
+ComponentDefinition command.
+
+* [kbcli componentdefinition describe](kbcli_componentdefinition_describe.md)	 - Describe ComponentDefinition.
+* [kbcli componentdefinition list](kbcli_componentdefinition_list.md)	 - List ComponentDefinition.
+
+
+## [componentversion](kbcli_componentversion.md)
+
+ComponentVersions command.
+
+* [kbcli componentversion describe](kbcli_componentversion_describe.md)	 - Describe ComponentVersion.
+* [kbcli componentversion list](kbcli_componentversion_list.md)	 - List ComponentVersion.
+
+
 ## [dashboard](kbcli_dashboard.md)
 
 List and open the KubeBlocks dashboards.
@@ -130,6 +146,14 @@ KubeBlocks operation commands.
 * [kbcli kubeblocks upgrade](kbcli_kubeblocks_upgrade.md)	 - Upgrade KubeBlocks.
 
 
+## [ops-definition](kbcli_ops-definition.md)
+
+ops-definitions command.
+
+* [kbcli ops-definition describe](kbcli_ops-definition_describe.md)	 - Describe OpsDefinition.
+* [kbcli ops-definition list](kbcli_ops-definition_list.md)	 - List OpsDefinition.
+
+
 ## [options](kbcli_options.md)
 
 Print the list of flags inherited by all commands.
@@ -165,6 +189,17 @@ Report kubeblocks or cluster info.
 
 * [kbcli report cluster](kbcli_report_cluster.md)	 - Report Cluster information
 * [kbcli report kubeblocks](kbcli_report_kubeblocks.md)	 - Report KubeBlocks information, including deployments, events, logs, etc.
+
+
+## [trace](kbcli_trace.md)
+
+trace management command
+
+* [kbcli trace create](kbcli_trace_create.md)	 - create a trace.
+* [kbcli trace delete](kbcli_trace_delete.md)	 - Delete a trace.
+* [kbcli trace list](kbcli_trace_list.md)	 - list all traces.
+* [kbcli trace update](kbcli_trace_update.md)	 - update a trace.
+* [kbcli trace watch](kbcli_trace_watch.md)	 - watch a trace.
 
 
 ## [version](kbcli_version.md)

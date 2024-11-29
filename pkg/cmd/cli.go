@@ -42,13 +42,17 @@ import (
 	"github.com/apecloud/kbcli/pkg/cmd/backuprepo"
 	"github.com/apecloud/kbcli/pkg/cmd/cluster"
 	"github.com/apecloud/kbcli/pkg/cmd/clusterdefinition"
+	"github.com/apecloud/kbcli/pkg/cmd/componentdefinition"
+	"github.com/apecloud/kbcli/pkg/cmd/componentversion"
 	"github.com/apecloud/kbcli/pkg/cmd/dashboard"
 	"github.com/apecloud/kbcli/pkg/cmd/dataprotection"
 	"github.com/apecloud/kbcli/pkg/cmd/kubeblocks"
+	"github.com/apecloud/kbcli/pkg/cmd/opsdefinition"
 	"github.com/apecloud/kbcli/pkg/cmd/options"
 	"github.com/apecloud/kbcli/pkg/cmd/playground"
 	"github.com/apecloud/kbcli/pkg/cmd/plugin"
 	"github.com/apecloud/kbcli/pkg/cmd/report"
+	"github.com/apecloud/kbcli/pkg/cmd/trace"
 	"github.com/apecloud/kbcli/pkg/cmd/version"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
@@ -169,13 +173,16 @@ A Command Line Interface for KubeBlocks`,
 		options.NewCmdOptions(ioStreams.Out),
 		version.NewVersionCmd(f),
 		dashboard.NewDashboardCmd(f, ioStreams),
-		// clusterversion.NewClusterVersionCmd(f, ioStreams),
 		clusterdefinition.NewClusterDefinitionCmd(f, ioStreams),
+		componentdefinition.NewComponentDefinitionCmd(f, ioStreams),
+		componentversion.NewComponentVersionCmd(f, ioStreams),
+		opsdefinition.NewOpsDefinitionCmd(f, ioStreams),
 		addon.NewAddonCmd(f, ioStreams),
 		plugin.NewPluginCmd(ioStreams),
 		report.NewReportCmd(f, ioStreams),
 		backuprepo.NewBackupRepoCmd(f, ioStreams),
 		dataprotection.NewDataProtectionCmd(f, ioStreams),
+		trace.NewTraceCmd(f, ioStreams),
 	)
 
 	filters := []string{"options"}

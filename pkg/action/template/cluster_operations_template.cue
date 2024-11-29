@@ -122,6 +122,16 @@ content: {
 		type:                   options.type
 		ttlSecondsAfterSucceed: options.ttlSecondsAfterSucceed
 		force:                  options.force
+		if options.type == "Stop" {
+			stop: [ for _, cName in options.componentNames {
+				componentName: cName
+			}]
+		}
+		if options.type == "Start" {
+			start: [ for _, cName in options.componentNames {
+				componentName: cName
+			}]
+		}
 		if options.type == "Upgrade" {
 			upgrade: #upgrade
 		}

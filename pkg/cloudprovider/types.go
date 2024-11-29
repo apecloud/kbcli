@@ -68,6 +68,13 @@ type K8sClusterInfo struct {
 	Region        string `json:"region,omitempty"`
 	KubeConfig    string `json:"kube_config,omitempty"`
 	KbcliVersion  string `json:"kbcli_version,omitempty"`
+	K3dClusterInfo
+}
+
+// K3dClusterInfo is the k3d cluster information for playground
+type K3dClusterInfo struct {
+	K3sImage      string `json:"k3s_image,omitempty"`
+	K3dProxyImage string `json:"k3d_proxy_image,omitempty"`
 }
 
 // IsValid checks if kubernetes cluster info is valid

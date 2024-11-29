@@ -42,7 +42,7 @@ kbcli cluster create llm NAME [flags]
       --replicas int                   The number of replicas, for standalone mode, the replicas is 1, for replication mode, the default replicas is 2. Value range [1, 5]. (default 1)
       --tenancy string                 The tenancy of cluster. Legal values [SharedNode, DedicatedNode]. (default "SharedNode")
       --termination-policy string      The termination policy of cluster. Legal values [DoNotTerminate, Halt, Delete, WipeOut]. (default "Delete")
-      --tolerations strings            Tolerations for cluster, such as "key=value:effect, key:effect", for example '"engineType=mongo:NoSchedule", "diskType:NoSchedule"'
+      --tolerations strings            Tolerations for cluster, such as "key=value:effect,key:effect", for example '"engineType=mongo:NoSchedule", "diskType:NoSchedule"'
       --topology-keys stringArray      Topology keys for affinity
       --url string                     Model URL, only work for CPU mode
       --version string                 Cluster version.
