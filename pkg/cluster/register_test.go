@@ -63,6 +63,24 @@ var _ = Describe("cluster register", func() {
 		Expect(err).Should(HaveOccurred())
 	})
 
+	It("test invalid chart", func() {
+		testPath := "./testdata"
+		chartName := "mock-chart-0.1.0.tgz"
+		fakeChart := &TypeInstance{
+			Name:      "mock-chart",
+			ChartName: chartName,
+		}
+		srcPath := filepath.Join(testPath, chartName)
+		destPath := filepath.Join(CliChartsCacheDir, chartName)
+
+		srcFile, _ := os.Open(srcPath)
+		destFile, _ := os.Create(destPath)
+		_, _ = io.Copy(destFile, srcFile)
+		_, err := fakeChart.ValidateChartSchema()
+		Expect(err).Should(HaveOccurred())
+		_ = os.Remove(destPath)
+	})
+
 	Context("test Config reader", func() {
 		var tempConfigPath string
 
