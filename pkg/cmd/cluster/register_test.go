@@ -98,7 +98,7 @@ var _ = Describe("cluster register", func() {
 		)
 
 		AfterEach(func() {
-			cluster.ClearCharts(cluster.ClusterType(engine))
+			os.Remove(filepath.Join(cluster.CliChartsCacheDir, filepath.Base(source)))
 		})
 
 		It("test register chart by source", func() {

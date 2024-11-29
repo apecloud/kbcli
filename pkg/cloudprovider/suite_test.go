@@ -33,6 +33,6 @@ func TestPlayground(t *testing.T) {
 
 var _ = BeforeSuite(func() {
 	// set fake image info
-	K3sImage = "fake-k3s-image"
-	K3dProxyImage = "fake-k3d-proxy-image"
+	K3sImageDefault = "fake-k3s-image"
+	K3dProxyImageDefault = "fake-k3d-proxy-image"
 })
