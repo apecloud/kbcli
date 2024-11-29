@@ -22,6 +22,7 @@ package kubeblocks
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -82,7 +83,9 @@ func getKBObjects(dynamic dynamic.Interface, namespace string, addons []*extensi
 	ctx := context.TODO()
 
 	// get CRDs
-	crds, err := dynamic.Resource(types.CRDGVR()).List(ctx, metav1.ListOptions{})
+	crds, err := dynamic.Resource(types.CRDGVR()).List(ctx, metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("%s=%s", constant.AppNameLabelKey, types.KubeBlocksChartName),
+	})
 	appendErr(err)
 	kbObjs[types.CRDGVR()] = &unstructured.UnstructuredList{}
 
