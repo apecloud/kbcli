@@ -97,7 +97,13 @@ type initOptions struct {
 	autoApprove   bool
 	dockerVersion *gv.Version
 
+	k3dClusterOptions
 	baseOptions
+}
+
+type k3dClusterOptions struct {
+	k3sImage      string
+	k3dProxyImage string
 }
 
 func newInitCmd(streams genericiooptions.IOStreams) *cobra.Command {
@@ -123,6 +129,8 @@ func newInitCmd(streams genericiooptions.IOStreams) *cobra.Command {
 	cmd.Flags().StringVar(&o.region, "region", "", "The region to create kubernetes cluster")
 	cmd.Flags().DurationVar(&o.Timeout, "timeout", 600*time.Second, "Time to wait for init playground, such as --timeout=10m")
 	cmd.Flags().BoolVar(&o.autoApprove, "auto-approve", false, "Skip interactive approval during the initialization of playground")
+	cmd.Flags().StringVar(&o.k3sImage, "k3s-image", cp.K3sImageDefault, "Specify k3s image that you want to use for the nodes if you want to init playground locally")
+	cmd.Flags().StringVar(&o.k3dProxyImage, "k3d-proxy-image", cp.K3dProxyImageDefault, "Specify k3d proxy image if you want to init playground locally")
 
 	util.CheckErr(cmd.RegisterFlagCompletionFunc(
 		"cloud-provider",
@@ -192,6 +200,10 @@ func (o *initOptions) local() error {
 		clusterInfo = &cp.K8sClusterInfo{
 			CloudProvider: provider.Name(),
 			ClusterName:   types.K3dClusterName,
+			K3dClusterInfo: cp.K3dClusterInfo{
+				K3sImage:      o.k3sImage,
+				K3dProxyImage: o.k3dProxyImage,
+			},
 		}
 	}
 
