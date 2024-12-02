@@ -155,13 +155,15 @@ func mockName() string {
 }
 
 func mockCRD() []runtime.Object {
+	label := map[string]string{constant.AppNameLabelKey: types.KubeBlocksChartName}
 	clusterCRD := v1.CustomResourceDefinition{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "CustomResourceDefinition",
 			APIVersion: "apiextensions.k8s.io/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "clusters.apps.kubeblocks.io",
+			Name:   "clusters.apps.kubeblocks.io",
+			Labels: label,
 		},
 		Spec: v1.CustomResourceDefinitionSpec{
 			Group: types.AppsAPIGroup,
@@ -174,7 +176,8 @@ func mockCRD() []runtime.Object {
 			APIVersion: "apiextensions.k8s.io/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "clusterdefinitions.apps.kubeblocks.io",
+			Name:   "clusterdefinitions.apps.kubeblocks.io",
+			Labels: label,
 		},
 		Spec: v1.CustomResourceDefinitionSpec{
 			Group: types.AppsAPIGroup,
@@ -188,7 +191,8 @@ func mockCRD() []runtime.Object {
 			APIVersion: "apiextensions.k8s.io/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "actionsets.dataprotection.kubeblocks.io",
+			Name:   "actionsets.dataprotection.kubeblocks.io",
+			Labels: label,
 		},
 		Spec: v1.CustomResourceDefinitionSpec{
 			Group: types.DPAPIGroup,
