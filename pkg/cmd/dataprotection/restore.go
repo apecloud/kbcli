@@ -23,18 +23,20 @@ import (
 	"fmt"
 	"strconv"
 
-	dpv1alpha1 "github.com/apecloud/kubeblocks/apis/dataprotection/v1alpha1"
-	opsv1alpha1 "github.com/apecloud/kubeblocks/apis/operations/v1alpha1"
-	"github.com/apecloud/kubeblocks/pkg/constant"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/duration"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes/scheme"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
+
+	dpv1alpha1 "github.com/apecloud/kubeblocks/apis/dataprotection/v1alpha1"
+	opsv1alpha1 "github.com/apecloud/kubeblocks/apis/operations/v1alpha1"
+	"github.com/apecloud/kubeblocks/pkg/constant"
 
 	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/cluster"
@@ -70,6 +72,10 @@ type CreateRestoreOptions struct {
 func (o *CreateRestoreOptions) Validate() error {
 	if o.RestoreSpec.BackupName == "" {
 		return fmt.Errorf("must be specified one of the --backup ")
+	}
+	backup, err := GetBackupByName(o.Dynamic, o.RestoreSpec.BackupName, o.Namespace)
+	if backup == nil || err != nil {
+		return fmt.Errorf("failed to find the backup, please confirm the specified name and namespace of backup. %s", err)
 	}
 
 	if o.Name == "" {
@@ -282,4 +288,12 @@ func PrintRestoreDescribe(o *DescribeDPOptions, obj *dpv1alpha1.Restore) error {
 	// print the warning events
 	printer.PrintAllWarningEvents(events, o.Out)
 	return nil
+}
+
+func GetBackupByName(dynamic dynamic.Interface, name string, namespace string) (*dpv1alpha1.Backup, error) {
+	backup := &dpv1alpha1.Backup{}
+	if err := util.GetK8SClientObject(dynamic, backup, types.BackupGVR(), namespace, name); err != nil {
+		return nil, err
+	}
+	return backup, nil
 }
