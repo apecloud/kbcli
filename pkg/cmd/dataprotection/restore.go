@@ -54,7 +54,7 @@ var (
 
 	listRestoreExample = templates.Examples(`
 		# list all restores
-		kbcli dp list-restore`)
+		kbcli dp list-restores`)
 )
 
 type CreateRestoreOptions struct {
@@ -155,7 +155,7 @@ func newListRestoreCommand(f cmdutil.Factory, streams genericiooptions.IOStreams
 	o := action.NewListOptions(f, streams, types.RestoreGVR())
 	clusterName := ""
 	cmd := &cobra.Command{
-		Use:               "list-restore",
+		Use:               "list-restores",
 		Short:             "List restores.",
 		Aliases:           []string{"ls-restores"},
 		Example:           listRestoreExample,

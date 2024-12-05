@@ -55,7 +55,7 @@ var (
 		# create a backup with a specified method, run "kbcli cluster desc-backup-policy mycluster" to show supported backup methods
 		kbcli dp backup mybackup --cluster mycluster --method mymethod
 
-		# create a backup with specified backup policy, run "kbcli cluster list-backup-policy mycluster" to show the cluster supported backup policies
+		# create a backup with specified backup policy, run "kbcli cluster list-backup-policies mycluster" to show the cluster supported backup policies
 		kbcli dp backup mybackup --cluster mycluster --policy mypolicy
 
 		# create a backup from a parent backup
@@ -74,10 +74,10 @@ var (
 
 	listBackupExample = templates.Examples(`
 		# list all backups
-		kbcli dp list-backup
+		kbcli dp list-backups
 
 		# list all backups of specified cluster
-		kbcli dp list-backup --cluster mycluster
+		kbcli dp list-backups --cluster mycluster
 	`)
 )
 
@@ -247,7 +247,7 @@ func newBackupCommand(f cmdutil.Factory, streams genericiooptions.IOStreams) *co
 	customOutPut := func(opt *action.CreateOptions) {
 		output := fmt.Sprintf("Backup %s created successfully, you can view the progress:", opt.Name)
 		printer.PrintLine(output)
-		nextLine := fmt.Sprintf("\tkbcli dp list-backup %s -n %s", opt.Name, opt.Namespace)
+		nextLine := fmt.Sprintf("\tkbcli dp list-backups %s -n %s", opt.Name, opt.Namespace)
 		printer.PrintLine(nextLine)
 	}
 
@@ -375,7 +375,7 @@ func newListBackupCommand(f cmdutil.Factory, streams genericiooptions.IOStreams)
 	o := action.NewListOptions(f, streams, types.BackupGVR())
 	clusterName := ""
 	cmd := &cobra.Command{
-		Use:               "list-backup",
+		Use:               "list-backups",
 		Short:             "List backups.",
 		Aliases:           []string{"ls-backups"},
 		Example:           listBackupExample,
