@@ -43,7 +43,7 @@ func newListActionSetCmd(f cmdutil.Factory, streams genericclioptions.IOStreams)
 	o := action.NewListOptions(f, streams, types.ActionSetGVR())
 	headers := []any{"NAME", "BACKUP-TYPE", "STATUS", "CREATED-TIME"}
 	cmd := &cobra.Command{
-		Use:               "list-action-set",
+		Use:               "list-action-sets",
 		Short:             "List actionsets",
 		Aliases:           []string{"list-as"},
 		Example:           listActionSetExample,
