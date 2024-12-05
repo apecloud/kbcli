@@ -21,8 +21,9 @@ kbcli addon uninstall [flags]
 ### Options
 
 ```
-      --auto-approve   Skip interactive approval before uninstalling addon
-  -h, --help           help for uninstall
+      --auto-approve                            Skip interactive approval before uninstalling addon
+      --clean-sub-resources-of-multi-versions   Clean the sub-resources of multiple versions of addon specified
+  -h, --help                                    help for uninstall
 ```
 
 ### Options inherited from parent commands
