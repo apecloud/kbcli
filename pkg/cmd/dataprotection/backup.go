@@ -247,7 +247,7 @@ func newBackupCommand(f cmdutil.Factory, streams genericiooptions.IOStreams) *co
 	customOutPut := func(opt *action.CreateOptions) {
 		output := fmt.Sprintf("Backup %s created successfully, you can view the progress:", opt.Name)
 		printer.PrintLine(output)
-		nextLine := fmt.Sprintf("\tkbcli dp list-backup %s -n %s", opt.Name, opt.Namespace)
+		nextLine := fmt.Sprintf("\tkbcli dp list-backups %s -n %s", opt.Name, opt.Namespace)
 		printer.PrintLine(nextLine)
 	}
 

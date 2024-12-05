@@ -100,7 +100,7 @@ var _ = Describe("DataProtection", func() {
 			tf.FakeDynamicClient = testing.FakeDynamicClient(objects...)
 		}
 
-		It("list-action-set", func() {
+		It("list-action-sets", func() {
 			By("fake client")
 			initClient()
 
@@ -124,7 +124,7 @@ var _ = Describe("DataProtection", func() {
 			Expect(len(strings.Split(strings.Trim(out.String(), "\n"), "\n"))).Should(Equal(2))
 		})
 
-		It("list-backup-policy", func() {
+		It("list-backup-policies", func() {
 			By("fake client")
 			defaultBackupPolicy := testing.FakeBackupPolicy(policyName, testing.ClusterName)
 			policy2 := testing.FakeBackupPolicy("policy1", testing.ClusterName)
@@ -132,7 +132,7 @@ var _ = Describe("DataProtection", func() {
 			policy3.Namespace = "policy"
 			initClient(defaultBackupPolicy, policy2, policy3)
 
-			By("test list-backup-policy cmd")
+			By("test list-backup-policies cmd")
 			cmd := newListBackupPolicyCmd(tf, streams)
 			Expect(cmd).ShouldNot(BeNil())
 			cmd.Run(cmd, nil)
@@ -261,16 +261,16 @@ var _ = Describe("DataProtection", func() {
 			Expect(completeForDeleteBackup(o, "")).Should(HaveOccurred())
 		})
 
-		It("list-backup", func() {
+		It("list-backups", func() {
 			cmd := newListBackupCommand(tf, streams)
 			Expect(cmd).ShouldNot(BeNil())
-			By("test list-backup cmd with no backup")
+			By("test list-backups cmd with no backup")
 			tf.FakeDynamicClient = testing.FakeDynamicClient()
 			o := action.NewListOptions(tf, streams, types.BackupGVR())
 			Expect(PrintBackupList(o)).Should(Succeed())
 			Expect(o.ErrOut.(*bytes.Buffer).String()).Should(ContainSubstring("No backups found"))
 
-			By("test list-backup")
+			By("test list-backups")
 			backup1 := testing.FakeBackup("test1")
 			backup1.Labels = map[string]string{
 				constant.AppInstanceLabelKey: "apecloud-mysql",
@@ -338,7 +338,7 @@ var _ = Describe("DataProtection", func() {
 			Expect(capturedOutput).Should(ContainSubstring(testing.BackupName))
 		})
 
-		It("list-restore", func() {
+		It("list-restores", func() {
 			By("fake client")
 			initClient(testing.FakeRestore(testing.BackupName))
 
