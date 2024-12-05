@@ -43,8 +43,8 @@ func newListBackupPolicyTemplateCmd(f cmdutil.Factory, streams genericclioptions
 	o := action.NewListOptions(f, streams, types.BackupPolicyTemplateGVR())
 	headers := []any{"NAME", "SERVICE-KIND", "STATUS", "CREATED-TIME"}
 	cmd := &cobra.Command{
-		Use:               "list-backup-policy-template",
-		Short:             "List backup policy template",
+		Use:               "list-backup-policy-templates",
+		Short:             "List backup policy templates",
 		Aliases:           []string{"list-bpt"},
 		Example:           listBPTExample,
 		ValidArgsFunction: util.ResourceNameCompletionFunc(f, o.GVR),

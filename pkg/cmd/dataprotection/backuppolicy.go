@@ -50,7 +50,7 @@ import (
 var (
 	listBackupPolicyExample = templates.Examples(`
 		# list all backup policies
-		kbcli dp list-backup-policy
+		kbcli dp list-backup-policies
 
 		# using short cmd to list backup policy of the specified cluster
         kbcli dp list-bp mycluster
@@ -143,7 +143,7 @@ func newListBackupPolicyCmd(f cmdutil.Factory, streams genericclioptions.IOStrea
 	o := action.NewListOptions(f, streams, types.BackupPolicyGVR())
 	clusterName := ""
 	cmd := &cobra.Command{
-		Use:               "list-backup-policy",
+		Use:               "list-backup-policies",
 		Short:             "List backup policies",
 		Aliases:           []string{"list-bp"},
 		Example:           listBackupPolicyExample,
