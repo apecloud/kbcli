@@ -94,7 +94,39 @@ func getValuesFromFlags(fs *flag.FlagSet) map[string]interface{} {
 		}
 		values[strcase.LowerCamelCase(f.Name)] = val
 	})
-	return values
+	// normalize the values
+	return flattenToNestedMap(values)
+}
+
+// flattenToNestedMap takes a flat map with keys that can contain dots to represent nesting,
+// and returns a nested map structure.
+func flattenToNestedMap(flatMap map[string]interface{}) map[string]interface{} {
+	nestedMap := make(map[string]interface{})
+	for key, value := range flatMap {
+		setNestedValue(nestedMap, strings.Split(key, "."), value)
+	}
+	return nestedMap
+}
+
+// setNestedValue sets the value in the nested map for the given key path.
+func setNestedValue(m map[string]interface{}, keys []string, value interface{}) {
+	if len(keys) == 0 {
+		return
+	}
+
+	currentKey := keys[0]
+	if len(keys) == 1 {
+		m[currentKey] = value
+		return
+	}
+
+	subMap, exists := m[currentKey].(map[string]interface{})
+	if !exists || subMap == nil {
+		subMap = make(map[string]interface{})
+		m[currentKey] = subMap
+	}
+
+	setNestedValue(subMap, keys[1:], value)
 }
 
 func resetEngineDefaultFlagsValue(fs *flag.FlagSet, engine string) {

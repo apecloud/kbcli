@@ -127,10 +127,18 @@ func buildCreateSubCmds(createOptions *action.CreateOptions) []*cobra.Command {
 		util.CheckErr(addCreateFlags(cmd, o.Factory, o.ChartInfo, t.String()))
 
 		// Schedule policy
-		cmd.Flags().StringVar(&o.PodAntiAffinity, "pod-anti-affinity", "Preferred", "Pod anti-affinity type, one of: (Preferred, Required)")
-		cmd.Flags().StringArrayVar(&o.TopologyKeys, "topology-keys", nil, "Topology keys for affinity")
-		cmd.Flags().StringToStringVar(&o.NodeLabels, "node-labels", nil, "Node label selector")
-		cmd.Flags().StringSliceVar(&o.TolerationsRaw, "tolerations", nil, `Tolerations for cluster, such as "key=value:effect,key:effect", for example '"engineType=mongo:NoSchedule", "diskType:NoSchedule"'`)
+		if cmd.Flag("pod-anti-affinity") == nil {
+			cmd.Flags().StringVar(&o.PodAntiAffinity, "pod-anti-affinity", "Preferred", "Pod anti-affinity type, one of: (Preferred, Required)")
+		}
+		if cmd.Flag("topology-keys") == nil {
+			cmd.Flags().StringArrayVar(&o.TopologyKeys, "topology-keys", nil, "Topology keys for affinity")
+		}
+		if cmd.Flag("node-labels") == nil {
+			cmd.Flags().StringToStringVar(&o.NodeLabels, "node-labels", nil, "Node label selector")
+		}
+		if cmd.Flag("tolerations") == nil {
+			cmd.Flags().StringSliceVar(&o.TolerationsRaw, "tolerations", nil, `Tolerations for cluster, such as "key=value:effect,key:effect", for example '"engineType=mongo:NoSchedule", "diskType:NoSchedule"'`)
+		}
 		if cmd.Flag("tenancy") == nil {
 			cmd.Flags().StringVar(&o.Tenancy, "tenancy", "SharedNode", "Tenancy options, one of: (SharedNode, DedicatedNode)")
 		}
