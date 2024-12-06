@@ -104,6 +104,9 @@ func castOrZero[T any](v any) T {
 
 func buildOneFlag(cmd *cobra.Command, k string, s *spec.Schema, isArray bool) error {
 	name := strcase.KebabCase(k)
+	if cmd.Flag(name) != nil {
+		return nil
+	}
 	tpe := typeString
 	if len(s.Type) > 0 {
 		tpe = s.Type[0]
