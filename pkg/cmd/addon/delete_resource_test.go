@@ -53,7 +53,7 @@ var _ = Describe("delete_resources_with_version test", func() {
 		testAddonGVR         = types.AddonGVR()
 		testCompDefGVR       = types.CompDefGVR()
 		testClusterGVR       = types.ClusterGVR()
-		testUnusedConfigGVR  = types.ConfigmapGVR() // 假设 ConfigMap 作为示例资源
+		testUnusedConfigGVR  = types.ConfigmapGVR()
 		testResourceAnnotKey = helmReleaseNameKey
 	)
 
@@ -63,7 +63,7 @@ var _ = Describe("delete_resources_with_version test", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name: name,
 				Labels: map[string]string{
-					types.AddonVersionLabelKey: version, // 添加版本标签
+					types.AddonVersionLabelKey: version,
 				},
 			},
 			Spec: v1alpha1.AddonSpec{
@@ -192,7 +192,7 @@ var _ = Describe("delete_resources_with_version test", func() {
 
 	It("test specifying a non-existent version", func() {
 		option := newDeleteResourcesOption(tf, streams)
-		option.versions = []string{"1.0.0"} // 不存在的版本
+		option.versions = []string{"1.0.0"}
 		option.Dynamic = tf.FakeDynamicClient
 		option.Factory = tf
 		err := option.Complete([]string{addonName})
@@ -218,7 +218,7 @@ var _ = Describe("delete_resources_with_version test", func() {
 
 	It("test specifying an in-use version", func() {
 		option := newDeleteResourcesOption(tf, streams)
-		option.versions = []string{inUseVersion} // 正在使用的版本
+		option.versions = []string{inUseVersion}
 		option.Dynamic = tf.FakeDynamicClient
 		option.Factory = tf
 		err := option.Complete([]string{addonName})
