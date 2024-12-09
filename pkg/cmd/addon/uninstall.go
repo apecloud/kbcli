@@ -109,7 +109,7 @@ func (o *uninstallOption) deleteAllMultiVersionsResources(name string) error {
 			IOStreams: o.IOStreams,
 			GVR:       types.AddonGVR(),
 		},
-		allUselessVersions:  true,
+		allUnusedVersions:   true,
 		deleteNewestVersion: true,
 	}
 	if err := dro.baseOption.complete(); err != nil {
