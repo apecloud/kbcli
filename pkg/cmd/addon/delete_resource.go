@@ -22,6 +22,8 @@ package addon
 import (
 	"context"
 	"fmt"
+	"regexp"
+
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -29,7 +31,6 @@ import (
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
-	"regexp"
 
 	kbv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	v1alpha1 "github.com/apecloud/kubeblocks/apis/extensions/v1alpha1"
@@ -158,7 +159,7 @@ func (o *deleteResourcesOption) Validate() error {
 			return fmt.Errorf("specified version %s does not exist for resource %s", v, o.name)
 		}
 		if !o.deleteNewestVersion && v == newestVersion {
-			return fmt.Errorf("specified version %s cannot be deleted as it is twhe newest version", v)
+			return fmt.Errorf("specified version %s cannot be deleted as it is the newest version", v)
 		}
 		if versionsInUse[v] {
 			return fmt.Errorf("specified version %s cannot be deleted as it is currently used", v)
@@ -280,7 +281,7 @@ func (o *deleteResourcesOption) cleanSubResources(addon string, versionsToDelete
 				if err != nil {
 					return fmt.Errorf("failed to delete resource %s/%s: %w", gvr.Resource, name, err)
 				}
-				fmt.Printf("Deleted resource: %s/%s\n", gvr.Resource, name)
+				fmt.Fprintf(o.Out, "Deleted resource: %s/%s\n", gvr.Resource, name)
 			}
 		}
 	}
