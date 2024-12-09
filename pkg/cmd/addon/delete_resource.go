@@ -46,21 +46,29 @@ const (
 	helmResourcePolicyKeep = "keep"
 )
 
+// Resource types to be processed for deletion
+var resourceToDelete = []schema.GroupVersionResource{
+	types.CompDefGVR(),
+	types.ConfigmapGVR(),
+	types.ConfigConstraintGVR(),
+	types.ConfigConstraintOldGVR(),
+}
+
 var addonDeleteResourcesExample = templates.Examples(`
-	# delete the resources with version 0.9.1 and 0.9.2 of addon redis, make sure they are not currently used and not the newest version. 
+	# Delete specific versions of redis addon resources
 	kbcli addon delete-resources-with-version redis --versions=0.9.1,0.9.2
 
-	# delete all the useless resources of addon redis 
-	kbcli addon delete-resources-with-version redis --all-useless-versions=true
+	# Delete all unused and outdated resources of redis addon
+	kbcli addon delete-resources-with-version redis --all-unused-versions=true
 `)
 
 type deleteResourcesOption struct {
 	*baseOption
-	name               string
-	versions           []string
-	allUselessVersions bool
+	name              string
+	versions          []string
+	allUnusedVersions bool
 
-	// if set to true, the newest resources will also be deleted, and this flag is not allowed to set by user, only used to delete all the resources while addon uninstalling.
+	// if set to true, the newest resources will also be deleted, and this flag is not open to user, only used to delete all the resources while addon uninstalling.
 	deleteNewestVersion bool
 }
 
@@ -71,7 +79,7 @@ func newDeleteResourcesOption(f cmdutil.Factory, streams genericiooptions.IOStre
 			IOStreams: streams,
 			GVR:       types.AddonGVR(),
 		},
-		allUselessVersions:  false,
+		allUnusedVersions:   false,
 		deleteNewestVersion: false,
 	}
 }
@@ -91,7 +99,7 @@ func newDeleteResourcesCmd(f cmdutil.Factory, streams genericiooptions.IOStreams
 		},
 	}
 	cmd.Flags().StringSliceVar(&o.versions, "versions", nil, "Specify the versions of resources to delete.")
-	cmd.Flags().BoolVar(&o.allUselessVersions, "all-useless-versions", false, "If set to true, all the resources "+
+	cmd.Flags().BoolVar(&o.allUnusedVersions, "all-unused-versions", false, "If set to true, all the resources "+
 		"which are not currently used and not with the newest version will be deleted.")
 	return cmd
 }
@@ -109,13 +117,13 @@ func (o *deleteResourcesOption) Complete(args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to retrieve version for resource %s: %v", o.name, err)
 	}
-	versionsToSave, err := o.getSavedVersions(o.name)
+	versionInUse, err := o.getInUseVersions(o.name)
 	if err != nil {
 		return fmt.Errorf("failed to retrieve versions for resource %s: %v", o.name, err)
 	}
-	if o.allUselessVersions {
+	if o.allUnusedVersions {
 		for k := range versions {
-			if !versionsToSave[k] && k != newestVersion {
+			if !versionInUse[k] && k != newestVersion {
 				o.versions = append(o.versions, k)
 			}
 		}
@@ -127,11 +135,11 @@ func (o *deleteResourcesOption) Complete(args []string) error {
 }
 
 func (o *deleteResourcesOption) Validate() error {
-	if o.allUselessVersions {
+	if o.allUnusedVersions {
 		return nil
 	}
 	if o.versions == nil {
-		return fmt.Errorf("no versions specified and --all-versions flag is not set; please specify versions or set --all-versions to true")
+		return fmt.Errorf("no versions specified and --all-versions flag is not set; please specify versions or set --all-unused-versions to true")
 	}
 	versions, err := o.getExistedVersions(o.name)
 	if err != nil {
@@ -141,7 +149,7 @@ func (o *deleteResourcesOption) Validate() error {
 	if err != nil {
 		return fmt.Errorf("failed to retrieve version for resource %s: %v", o.name, err)
 	}
-	versionsToSave, err := o.getSavedVersions(o.name)
+	versionsInUse, err := o.getInUseVersions(o.name)
 	if err != nil {
 		return fmt.Errorf("failed to retrieve versions for resource %s: %v", o.name, err)
 	}
@@ -150,9 +158,9 @@ func (o *deleteResourcesOption) Validate() error {
 			return fmt.Errorf("specified version %s does not exist for resource %s", v, o.name)
 		}
 		if !o.deleteNewestVersion && v == newestVersion {
-			return fmt.Errorf("specified version %s cannot be deleted as it is the newest version", v)
+			return fmt.Errorf("specified version %s cannot be deleted as it is twhe newest version", v)
 		}
-		if versionsToSave[v] {
+		if versionsInUse[v] {
 			return fmt.Errorf("specified version %s cannot be deleted as it is currently used", v)
 		}
 	}
@@ -169,7 +177,7 @@ func extractVersion(name string) string {
 	return versionRegex.FindString(name)
 }
 
-// getExistedVersions get the total existed versions by listing the componentDef.
+// getExistedVersions get all the existed versions of specified addon by listing the componentDef.
 func (o *deleteResourcesOption) getExistedVersions(addonName string) (map[string]bool, error) {
 	resources, err := o.Dynamic.Resource(types.CompDefGVR()).Namespace("").List(context.Background(), metav1.ListOptions{})
 	if err != nil {
@@ -194,7 +202,7 @@ func (o *deleteResourcesOption) getExistedVersions(addonName string) (map[string
 
 // getNewestVersion retrieves the newest version of the addon
 func (o *deleteResourcesOption) getNewestVersion(addonName string) (string, error) {
-	addonUnstructured, err := o.Dynamic.Resource(o.GVR).Get(context.Background(), addonName, metav1.GetOptions{})
+	addonUnstructured, err := o.Dynamic.Resource(types.AddonGVR()).Get(context.Background(), addonName, metav1.GetOptions{})
 	if err != nil {
 		return "", fmt.Errorf("failed to get addon: %w", err)
 	}
@@ -205,9 +213,9 @@ func (o *deleteResourcesOption) getNewestVersion(addonName string) (string, erro
 	return getAddonVersion(&addon), nil
 }
 
-// getSavedVersions retrieves the versions of resources that are currently in use.
-func (o *deleteResourcesOption) getSavedVersions(addonName string) (map[string]bool, error) {
-	usedVersions := map[string]bool{}
+// getInUseVersions retrieves the versions of resources that are currently in use.
+func (o *deleteResourcesOption) getInUseVersions(addonName string) (map[string]bool, error) {
+	InUseVersions := map[string]bool{}
 	labelSelector := util.BuildClusterLabel("", []string{addonName})
 	clusterList, err := o.Dynamic.Resource(types.ClusterGVR()).List(context.Background(), metav1.ListOptions{LabelSelector: labelSelector})
 	if err != nil {
@@ -219,28 +227,20 @@ func (o *deleteResourcesOption) getSavedVersions(addonName string) (map[string]b
 			if err = runtime.DefaultUnstructuredConverter.FromUnstructured(item.Object, &cluster); err != nil {
 				return nil, fmt.Errorf("failed to convert cluster to structured object: %w", err)
 			}
-
 			for _, spec := range cluster.Spec.ComponentSpecs {
 				version := extractVersion(spec.ComponentDef)
 				if version != "" {
-					usedVersions[version] = true
+					InUseVersions[version] = true
 				}
 			}
 		}
 	}
 
-	return usedVersions, nil
+	return InUseVersions, nil
 }
 
-// cleanSubResources delete the sub-resources which are kept by helm to support multi versions and not currently used.
+// cleanSubResources Cleans up specified addon resources.
 func (o *deleteResourcesOption) cleanSubResources(addon string, versionsToDelete []string) error {
-	// Define the list of resource types to process
-	resourceToDelete := []schema.GroupVersionResource{
-		types.CompDefGVR(),
-		types.ConfigmapGVR(),
-		types.ConfigConstraintGVR(),
-		types.ConfigConstraintOldGVR(),
-	}
 	versions := make(map[string]bool)
 	for _, v := range versionsToDelete {
 		versions[v] = true
@@ -256,13 +256,13 @@ func (o *deleteResourcesOption) cleanSubResources(addon string, versionsToDelete
 
 		// Process each resource in the list
 		for _, item := range resources.Items {
-			// Skip resources not belong to the specified addon
+			// Skip resources not belong to specified addon
 			annotations := item.GetAnnotations()
 			if !(annotations != nil && annotations[helmReleaseNameKey] == helmReleaseNamePrefix+addon) {
 				continue
 			}
 
-			// Skip resources whose names not in versionsToDelete
+			// Skip resources of other versions.
 			name := item.GetName()
 			extractedVersion := extractVersion(name)
 			if extractedVersion == "" || !versions[extractedVersion] {
@@ -274,8 +274,8 @@ func (o *deleteResourcesOption) cleanSubResources(addon string, versionsToDelete
 				continue
 			}
 
+			// Delete the resource if it passes all checks, and only print msg when user calling.
 			if !o.deleteNewestVersion {
-				// Delete the resource if it passes all checks, and only print msg when user calling.
 				err := o.Dynamic.Resource(gvr).Namespace(item.GetNamespace()).Delete(context.Background(), name, metav1.DeleteOptions{})
 				if err != nil {
 					return fmt.Errorf("failed to delete resource %s/%s: %w", gvr.Resource, name, err)
