@@ -21,19 +21,14 @@ package cluster
 
 import (
 	"bytes"
-	"github.com/spf13/cobra"
 	"net/http"
 	"strings"
 
-	"github.com/apecloud/kbcli/pkg/testing"
-	"github.com/apecloud/kbcli/pkg/types"
-	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
-	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
@@ -41,6 +36,13 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	clientfake "k8s.io/client-go/rest/fake"
 	cmdtesting "k8s.io/kubectl/pkg/cmd/testing"
+
+	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
+	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
+
+	"github.com/apecloud/kbcli/pkg/cluster"
+	"github.com/apecloud/kbcli/pkg/testing"
+	"github.com/apecloud/kbcli/pkg/types"
 )
 
 var _ = Describe("list", func() {
@@ -145,7 +147,7 @@ var _ = Describe("list", func() {
 		By("Checking output for expected clusters and statuses")
 		Expect(output).Should(ContainSubstring(clusterName))
 		Expect(output).Should(ContainSubstring(string(appsv1alpha1.UpdatingClusterPhase)))
-		Expect(output).Should(ContainSubstring("HorizontalScaleFailed"))
+		Expect(output).Should(ContainSubstring(cluster.ConditionsError))
 		Expect(output).Should(ContainSubstring(string(appsv1alpha1.AbnormalClusterPhase)))
 	})
 
