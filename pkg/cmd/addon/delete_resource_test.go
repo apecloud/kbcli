@@ -145,15 +145,15 @@ var _ = Describe("delete_resources_with_version test", func() {
 		_, _ = tf.FakeDynamicClient.Invokes(clienttesting.NewCreateAction(testAddonGVR, "", createAddon(addonName, newestVersion)), nil)
 
 		// ComponentDefs with different versions
-		_, _ = tf.FakeDynamicClient.Invokes(clienttesting.NewCreateAction(testCompDefGVR, "", createComponentDef("redis", addonName, newestVersion)), nil)
-		_, _ = tf.FakeDynamicClient.Invokes(clienttesting.NewCreateAction(testCompDefGVR, "", createComponentDef("redis", addonName, inUseVersion)), nil)
-		_, _ = tf.FakeDynamicClient.Invokes(clienttesting.NewCreateAction(testCompDefGVR, "", createComponentDef("redis", addonName, unusedVersion)), nil)
+		_, _ = tf.FakeDynamicClient.Invokes(clienttesting.NewCreateAction(testCompDefGVR, types.DefaultNamespace, createComponentDef("redis", addonName, newestVersion)), nil)
+		_, _ = tf.FakeDynamicClient.Invokes(clienttesting.NewCreateAction(testCompDefGVR, types.DefaultNamespace, createComponentDef("redis", addonName, inUseVersion)), nil)
+		_, _ = tf.FakeDynamicClient.Invokes(clienttesting.NewCreateAction(testCompDefGVR, types.DefaultNamespace, createComponentDef("redis", addonName, unusedVersion)), nil)
 
 		// Cluster using inUseVersion
-		_, _ = tf.FakeDynamicClient.Invokes(clienttesting.NewCreateAction(testClusterGVR, "", createCluster("test-cluster", addonName, inUseVersion)), nil)
+		_, _ = tf.FakeDynamicClient.Invokes(clienttesting.NewCreateAction(testClusterGVR, testNamespace, createCluster("test-cluster", addonName, inUseVersion)), nil)
 
 		// Unused config resource for unusedVersion
-		_, _ = tf.FakeDynamicClient.Invokes(clienttesting.NewCreateAction(testUnusedConfigGVR, "", createUnusedConfig(addonName, unusedVersion)), nil)
+		_, _ = tf.FakeDynamicClient.Invokes(clienttesting.NewCreateAction(testUnusedConfigGVR, types.DefaultNamespace, createUnusedConfig(addonName, unusedVersion)), nil)
 	})
 
 	AfterEach(func() {

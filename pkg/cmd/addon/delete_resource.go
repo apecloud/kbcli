@@ -180,7 +180,7 @@ func extractVersion(name string) string {
 
 // getExistedVersions get all the existed versions of specified addon by listing the componentDef.
 func (o *deleteResourcesOption) getExistedVersions(addonName string) (map[string]bool, error) {
-	resources, err := o.Dynamic.Resource(types.CompDefGVR()).Namespace("").List(context.Background(), metav1.ListOptions{})
+	resources, err := o.Dynamic.Resource(types.CompDefGVR()).Namespace(metav1.NamespaceAll).List(context.Background(), metav1.ListOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list resources for %s: %w", types.CompDefGVR(), err)
 	}
@@ -188,7 +188,7 @@ func (o *deleteResourcesOption) getExistedVersions(addonName string) (map[string
 	totalVersions := make(map[string]bool)
 	for _, item := range resources.Items {
 		annotations := item.GetAnnotations()
-		if !(annotations != nil && annotations[helmReleaseNameKey] == helmReleaseNamePrefix+addonName) {
+		if !(annotations[helmReleaseNameKey] == helmReleaseNamePrefix+addonName) {
 			continue
 		}
 
@@ -203,22 +203,19 @@ func (o *deleteResourcesOption) getExistedVersions(addonName string) (map[string
 
 // getNewestVersion retrieves the newest version of the addon
 func (o *deleteResourcesOption) getNewestVersion(addonName string) (string, error) {
-	addonUnstructured, err := o.Dynamic.Resource(types.AddonGVR()).Get(context.Background(), addonName, metav1.GetOptions{})
+	addon := &v1alpha1.Addon{}
+	err := util.GetK8SClientObject(o.Dynamic, addon, types.AddonGVR(), "", addonName)
 	if err != nil {
 		return "", fmt.Errorf("failed to get addon: %w", err)
 	}
-	var addon v1alpha1.Addon
-	if err = runtime.DefaultUnstructuredConverter.FromUnstructured(addonUnstructured.Object, &addon); err != nil {
-		return "", fmt.Errorf("failed to convert addon to structured object: %w", err)
-	}
-	return getAddonVersion(&addon), nil
+	return getAddonVersion(addon), nil
 }
 
 // getInUseVersions retrieves the versions of resources that are currently in use.
 func (o *deleteResourcesOption) getInUseVersions(addonName string) (map[string]bool, error) {
 	InUseVersions := map[string]bool{}
 	labelSelector := util.BuildClusterLabel("", []string{addonName})
-	clusterList, err := o.Dynamic.Resource(types.ClusterGVR()).List(context.Background(), metav1.ListOptions{LabelSelector: labelSelector})
+	clusterList, err := o.Dynamic.Resource(types.ClusterGVR()).Namespace(metav1.NamespaceAll).List(context.Background(), metav1.ListOptions{LabelSelector: labelSelector})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list clusters: %w", err)
 	}
@@ -250,7 +247,7 @@ func (o *deleteResourcesOption) cleanSubResources(addon string, versionsToDelete
 	// Iterate through each resource type
 	for _, gvr := range resourceToDelete {
 		// List all resources of the current type
-		resources, err := o.Dynamic.Resource(gvr).Namespace("").List(context.Background(), metav1.ListOptions{})
+		resources, err := o.Dynamic.Resource(gvr).Namespace(metav1.NamespaceAll).List(context.Background(), metav1.ListOptions{})
 		if err != nil {
 			return fmt.Errorf("failed to list resources for %s: %w", gvr.Resource, err)
 		}
@@ -259,7 +256,7 @@ func (o *deleteResourcesOption) cleanSubResources(addon string, versionsToDelete
 		for _, item := range resources.Items {
 			// Skip resources not belong to specified addon
 			annotations := item.GetAnnotations()
-			if !(annotations != nil && annotations[helmReleaseNameKey] == helmReleaseNamePrefix+addon) {
+			if !(annotations[helmReleaseNameKey] == helmReleaseNamePrefix+addon) {
 				continue
 			}
 
@@ -271,7 +268,7 @@ func (o *deleteResourcesOption) cleanSubResources(addon string, versionsToDelete
 			}
 
 			// Skip resources if the resource doesn't have the annotation helm.sh/resource-policy: keep
-			if !(annotations != nil && annotations[helmResourcePolicyKey] == helmResourcePolicyKeep) {
+			if !(annotations[helmResourcePolicyKey] == helmResourcePolicyKeep) {
 				continue
 			}
 
