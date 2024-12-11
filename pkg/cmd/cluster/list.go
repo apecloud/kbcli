@@ -93,6 +93,7 @@ func NewListCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Co
 		},
 	}
 	o.AddFlags(cmd)
+	cmd.Flags().StringVar(&o.Status, "status", "", "Filter objects by given status.")
 	return cmd
 }
 
@@ -151,7 +152,7 @@ func NewListEventsCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *co
 }
 
 func run(o *action.ListOptions, printType cluster.PrintType) error {
-	// if format is JSON or YAML, use default printer to output the result.
+	// if format is JSON or YAML, use default printer.
 	if o.Format == printer.JSON || o.Format == printer.YAML {
 		_, err := o.Run()
 		return err
@@ -185,7 +186,8 @@ func run(o *action.ListOptions, printType cluster.PrintType) error {
 	}
 
 	opt := &cluster.PrinterOptions{
-		ShowLabels: o.ShowLabels,
+		ShowLabels:   o.ShowLabels,
+		StatusFilter: o.Status,
 	}
 
 	p := cluster.NewPrinter(o.IOStreams.Out, printType, opt)
