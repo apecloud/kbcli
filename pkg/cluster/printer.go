@@ -21,6 +21,7 @@ package cluster
 
 import (
 	"io"
+	"sort"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -41,38 +42,38 @@ const (
 )
 
 type PrinterOptions struct {
-	ShowLabels bool
+	ShowLabels   bool
+	StatusFilter string
 }
 
 type tblInfo struct {
 	header     []interface{}
-	addRow     func(tbl *printer.TablePrinter, objs *ClusterObjects, opt *PrinterOptions)
+	addRow     func(tbl *printer.TablePrinter, objs *ClusterObjects, opt *PrinterOptions) [][]interface{}
 	getOptions GetOptions
 }
 
 var mapTblInfo = map[PrintType]tblInfo{
 	PrintClusters: {
-		header: []interface{}{"NAME", "NAMESPACE", "CLUSTER-DEFINITION", "VERSION", "TERMINATION-POLICY", "STATUS", "CREATED-TIME"},
-		addRow: func(tbl *printer.TablePrinter, objs *ClusterObjects, opt *PrinterOptions) {
+		header: []interface{}{"NAME", "NAMESPACE", "CLUSTER-DEFINITION", "TERMINATION-POLICY", "STATUS", "CREATED-TIME"},
+		addRow: func(tbl *printer.TablePrinter, objs *ClusterObjects, opt *PrinterOptions) [][]interface{} {
 			c := objs.GetClusterInfo()
-			info := []interface{}{c.Name, c.Namespace, c.ClusterDefinition, c.ClusterVersion, c.TerminationPolicy, c.Status, c.CreatedTime}
+			info := []interface{}{c.Name, c.Namespace, c.ClusterDefinition, c.TerminationPolicy, c.Status, c.CreatedTime}
 			if opt.ShowLabels {
 				info = append(info, c.Labels)
 			}
-
-			tbl.AddRow(info...)
+			return [][]interface{}{info}
 		},
 		getOptions: GetOptions{},
 	},
 	PrintWide: {
-		header: []interface{}{"NAME", "NAMESPACE", "CLUSTER-DEFINITION", "VERSION", "TERMINATION-POLICY", "STATUS", "INTERNAL-ENDPOINTS", "EXTERNAL-ENDPOINTS", "CREATED-TIME"},
-		addRow: func(tbl *printer.TablePrinter, objs *ClusterObjects, opt *PrinterOptions) {
+		header: []interface{}{"NAME", "NAMESPACE", "CLUSTER-DEFINITION", "TERMINATION-POLICY", "STATUS", "INTERNAL-ENDPOINTS", "EXTERNAL-ENDPOINTS", "CREATED-TIME"},
+		addRow: func(tbl *printer.TablePrinter, objs *ClusterObjects, opt *PrinterOptions) [][]interface{} {
 			c := objs.GetClusterInfo()
-			info := []interface{}{c.Name, c.Namespace, c.ClusterDefinition, c.ClusterVersion, c.TerminationPolicy, c.Status, c.InternalEP, c.ExternalEP, c.CreatedTime}
+			info := []interface{}{c.Name, c.Namespace, c.ClusterDefinition, c.TerminationPolicy, c.Status, c.InternalEP, c.ExternalEP, c.CreatedTime}
 			if opt.ShowLabels {
 				info = append(info, c.Labels)
 			}
-			tbl.AddRow(info...)
+			return [][]interface{}{info}
 		},
 		getOptions: GetOptions{WithClusterDef: Maybe, WithService: Need, WithPod: Need},
 	},
@@ -100,13 +101,15 @@ var mapTblInfo = map[PrintType]tblInfo{
 
 // Printer prints cluster info
 type Printer struct {
-	tbl *printer.TablePrinter
-	opt *PrinterOptions
-	tblInfo
+	tbl     *printer.TablePrinter
+	opt     *PrinterOptions
+	tblInfo tblInfo
+	pt      PrintType
+	rows    [][]interface{}
 }
 
 func NewPrinter(out io.Writer, printType PrintType, opt *PrinterOptions) *Printer {
-	p := &Printer{tbl: printer.NewTablePrinter(out)}
+	p := &Printer{tbl: printer.NewTablePrinter(out), pt: printType}
 	p.tblInfo = mapTblInfo[printType]
 
 	if opt == nil {
@@ -123,48 +126,147 @@ func NewPrinter(out io.Writer, printType PrintType, opt *PrinterOptions) *Printe
 }
 
 func (p *Printer) AddRow(objs *ClusterObjects) {
-	p.addRow(p.tbl, objs, p.opt)
+	lines := p.tblInfo.addRow(p.tbl, objs, p.opt)
+	p.rows = append(p.rows, lines...)
 }
 
 func (p *Printer) Print() {
+	if p.pt == PrintClusters || p.pt == PrintWide {
+		p.filterByStatus()
+		p.sortRows()
+	}
+
+	for _, row := range p.rows {
+		p.tbl.AddRow(row...)
+	}
+
 	p.tbl.Print()
 }
 
 func (p *Printer) GetterOptions() GetOptions {
-	return p.getOptions
+	return p.tblInfo.getOptions
 }
 
-func AddLabelRow(tbl *printer.TablePrinter, objs *ClusterObjects, opt *PrinterOptions) {
+func (p *Printer) filterByStatus() {
+	if p.opt.StatusFilter == "" {
+		return
+	}
+
+	statusIndex := 4
+
+	var filtered [][]interface{}
+	for _, r := range p.rows {
+		statusVal, _ := r[statusIndex].(string)
+		if strings.EqualFold(statusVal, p.opt.StatusFilter) {
+			filtered = append(filtered, r)
+		}
+	}
+	p.rows = filtered
+}
+
+// sortRows Sort By namespace(1), clusterDef(2), status(4), name(0)
+func (p *Printer) sortRows() {
+	// for PrintClusters 和 PrintWide
+	// NAME(0), NAMESPACE(1), CLUSTER-DEFINITION(2), STATUS(4)
+	sort.Slice(p.rows, func(i, j int) bool {
+		ri, rj := p.rows[i], p.rows[j]
+
+		nsI, _ := ri[1].(string)
+		nsJ, _ := rj[1].(string)
+		if nsI != nsJ {
+			return nsI < nsJ
+		}
+
+		cdI, _ := ri[2].(string)
+		cdJ, _ := rj[2].(string)
+		if cdI != cdJ {
+			return cdI < cdJ
+		}
+
+		statusI, _ := ri[4].(string)
+		statusJ, _ := rj[4].(string)
+		if statusI != statusJ {
+			return compareStatus(statusI, statusJ)
+		}
+
+		nameI, _ := ri[0].(string)
+		nameJ, _ := rj[0].(string)
+		return nameI < nameJ
+	})
+}
+
+// compareStatus compares statuses based on the desired order
+func compareStatus(status1, status2 string) bool {
+	statusOrder := map[string]int{
+		"Creating": 1,
+		"Running":  2,
+		"Updating": 3,
+		"Stopping": 4,
+		"Stopped":  5,
+		"Deleting": 6,
+		"Failed":   7,
+		"Abnormal": 8,
+	}
+
+	order1, ok1 := statusOrder[status1]
+	order2, ok2 := statusOrder[status2]
+
+	// unknown is the last
+	if !ok1 && !ok2 {
+		return status1 < status2
+	}
+	if !ok1 {
+		return false
+	}
+	if !ok2 {
+		return true
+	}
+
+	return order1 < order2
+}
+
+func AddLabelRow(tbl *printer.TablePrinter, objs *ClusterObjects, opt *PrinterOptions) [][]interface{} {
 	c := objs.GetClusterInfo()
 	info := []interface{}{c.Name, c.Namespace}
 	if opt.ShowLabels {
 		labels := strings.ReplaceAll(c.Labels, ",", "\n")
 		info = append(info, labels)
 	}
-	tbl.AddRow(info...)
+	return [][]interface{}{info}
 }
 
-func AddComponentRow(tbl *printer.TablePrinter, objs *ClusterObjects, opt *PrinterOptions) {
+func AddComponentRow(tbl *printer.TablePrinter, objs *ClusterObjects, opt *PrinterOptions) [][]interface{} {
 	components := objs.GetComponentInfo()
+	var rows [][]interface{}
 	for _, c := range components {
-		tbl.AddRow(c.Name, c.NameSpace, c.Cluster, c.ComponentDef, c.Image)
+		row := []interface{}{c.Name, c.NameSpace, c.Cluster, c.ComponentDef, c.Image}
+		rows = append(rows, row)
 	}
+	return rows
 }
 
-func AddInstanceRow(tbl *printer.TablePrinter, objs *ClusterObjects, opt *PrinterOptions) {
+func AddInstanceRow(tbl *printer.TablePrinter, objs *ClusterObjects, opt *PrinterOptions) [][]interface{} {
 	instances := objs.GetInstanceInfo()
+	var rows [][]interface{}
 	for _, instance := range instances {
-		tbl.AddRow(instance.Name, instance.Namespace, instance.Cluster, instance.Component,
+		row := []interface{}{
+			instance.Name, instance.Namespace, instance.Cluster, instance.Component,
 			instance.Status, instance.Role, instance.AccessMode,
 			instance.AZ, instance.CPU, instance.Memory,
-			BuildStorageSize(instance.Storage), instance.Node, instance.CreatedTime)
+			BuildStorageSize(instance.Storage), instance.Node, instance.CreatedTime,
+		}
+		rows = append(rows, row)
 	}
+	return rows
 }
 
-func AddEventRow(tbl *printer.TablePrinter, objs *ClusterObjects, opt *PrinterOptions) {
+func AddEventRow(tbl *printer.TablePrinter, objs *ClusterObjects, opt *PrinterOptions) [][]interface{} {
 	events := util.SortEventsByLastTimestamp(objs.Events, "")
+	var rows [][]interface{}
 	for _, event := range *events {
 		e := event.(*corev1.Event)
-		tbl.AddRow(e.Namespace, util.GetEventTimeStr(e), e.Type, e.Reason, util.GetEventObject(e), e.Message)
+		row := []interface{}{e.Namespace, util.GetEventTimeStr(e), e.Type, e.Reason, util.GetEventObject(e), e.Message}
+		rows = append(rows, row)
 	}
+	return rows
 }

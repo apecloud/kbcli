@@ -67,6 +67,7 @@ type ListOptions struct {
 	// only return the result to caller.
 	Print  bool
 	SortBy string
+	Status string
 	genericiooptions.IOStreams
 }
 
