@@ -166,7 +166,7 @@ func (p *Printer) filterByStatus() {
 
 // sortRows Sort By namespace(1), clusterDef(2), status(4), name(0)
 func (p *Printer) sortRows() {
-	// for PrintClusters 和 PrintWide
+	// for PrintClusters and PrintWide
 	// NAME(0), NAMESPACE(1), CLUSTER-DEFINITION(2), STATUS(4)
 	sort.Slice(p.rows, func(i, j int) bool {
 		ri, rj := p.rows[i], p.rows[j]
