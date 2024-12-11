@@ -188,7 +188,7 @@ func (o *deleteResourcesOption) getExistedVersions(addonName string) (map[string
 	totalVersions := make(map[string]bool)
 	for _, item := range resources.Items {
 		annotations := item.GetAnnotations()
-		if !(annotations[helmReleaseNameKey] == helmReleaseNamePrefix+addonName) {
+		if annotations[helmReleaseNameKey] != helmReleaseNamePrefix+addonName {
 			continue
 		}
 
@@ -256,7 +256,7 @@ func (o *deleteResourcesOption) cleanSubResources(addon string, versionsToDelete
 		for _, item := range resources.Items {
 			// Skip resources not belong to specified addon
 			annotations := item.GetAnnotations()
-			if !(annotations[helmReleaseNameKey] == helmReleaseNamePrefix+addon) {
+			if annotations[helmReleaseNameKey] != helmReleaseNamePrefix+addon {
 				continue
 			}
 
@@ -268,7 +268,7 @@ func (o *deleteResourcesOption) cleanSubResources(addon string, versionsToDelete
 			}
 
 			// Skip resources if the resource doesn't have the annotation helm.sh/resource-policy: keep
-			if !(annotations[helmResourcePolicyKey] == helmResourcePolicyKeep) {
+			if annotations[helmResourcePolicyKey] != helmResourcePolicyKeep {
 				continue
 			}
 
