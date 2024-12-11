@@ -79,7 +79,12 @@ func newUninstallCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cob
 
 func (o *uninstallOption) Run() error {
 	for _, name := range o.names {
-		err := o.Dynamic.Resource(o.GVR).Delete(context.Background(), name, metav1.DeleteOptions{})
+		// delete the resources, because some resources won't be deleted by helm.
+		err := o.deleteAllMultiVersionsResources(name)
+		if err != nil {
+			return err
+		}
+		err = o.Dynamic.Resource(o.GVR).Delete(context.Background(), name, metav1.DeleteOptions{})
 		if err != nil {
 			return err
 		}
@@ -95,4 +100,26 @@ func (o *uninstallOption) checkBeforeUninstall() error {
 		return nil
 	}
 	return CheckAddonUsedByCluster(o.Dynamic, o.names, o.In)
+}
+
+func (o *uninstallOption) deleteAllMultiVersionsResources(name string) error {
+	dro := &deleteResourcesOption{
+		baseOption: &baseOption{
+			Factory:   o.Factory,
+			IOStreams: o.IOStreams,
+			GVR:       types.AddonGVR(),
+		},
+		allUnusedVersions:   true,
+		deleteNewestVersion: true,
+	}
+	if err := dro.baseOption.complete(); err != nil {
+		return err
+	}
+	if err := dro.Complete([]string{name}); err != nil {
+		return err
+	}
+	if err := dro.Run(); err != nil {
+		return err
+	}
+	return nil
 }
