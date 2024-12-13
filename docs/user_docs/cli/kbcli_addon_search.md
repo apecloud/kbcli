@@ -5,7 +5,7 @@ title: kbcli addon search
 Search the addon from index
 
 ```
-kbcli addon search [flags]
+kbcli addon search [ADDON_NAME] [flags]
 ```
 
 ### Examples
