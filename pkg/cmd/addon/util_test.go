@@ -20,11 +20,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package addon
 
 import (
-	"net/http"
-
+	"github.com/apecloud/kbcli/pkg/testing"
+	"github.com/apecloud/kbcli/pkg/types"
 	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
@@ -32,9 +33,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	clientfake "k8s.io/client-go/rest/fake"
 	cmdtesting "k8s.io/kubectl/pkg/cmd/testing"
-
-	"github.com/apecloud/kbcli/pkg/testing"
-	"github.com/apecloud/kbcli/pkg/types"
+	"net/http"
 )
 
 var _ = Describe("addon util test", func() {
@@ -46,6 +45,12 @@ var _ = Describe("addon util test", func() {
 	const (
 		fakeAddonName = testing.ClusterDefName
 		namespace     = testing.Namespace
+		addon1Content = `kind: Addon
+name: addon1`
+		addon2Content = `kind: Addon
+name: addon2`
+		invalidContent = `kind: Invalid
+name: invalid-addon`
 	)
 
 	mockClient := func(data runtime.Object) *cmdtesting.TestFactory {
@@ -70,5 +75,13 @@ var _ = Describe("addon util test", func() {
 	It("text CheckAddonUsedByCluster", func() {
 		Expect(CheckAddonUsedByCluster(tf.FakeDynamicClient, []string{fakeAddonName}, streams.In)).Should(HaveOccurred())
 	})
+	It("should return matched addon names for prefix 'my'", func() {
+		// Verify the function
+		toComplete := "my"
+		names, directive := addonNameCompletionFunc(nil, nil, toComplete)
 
+		// Validate results
+		Expect(directive).To(Equal(cobra.ShellCompDirectiveNoFileComp))
+		Expect(len(names)).ShouldNot(Equal(0))
+	})
 })

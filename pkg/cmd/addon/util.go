@@ -136,7 +136,7 @@ func checkAddonInstalled(objects *[]searchResult, o *addonListOpts) error {
 
 func CheckAddonUsedByCluster(dynamic dynamic.Interface, addons []string, in io.Reader) error {
 	labelSelecotor := util.BuildClusterLabel("", addons)
-	list, err := dynamic.Resource(types.ClusterGVR()).List(context.Background(), metav1.ListOptions{LabelSelector: labelSelecotor})
+	list, err := dynamic.Resource(types.ClusterGVR()).Namespace(metav1.NamespaceAll).List(context.Background(), metav1.ListOptions{LabelSelector: labelSelecotor})
 	if err != nil {
 		return err
 	}
