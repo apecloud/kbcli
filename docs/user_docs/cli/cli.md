@@ -8,6 +8,7 @@ sidebar_position: 1
 
 Addon command.
 
+* [kbcli addon delete-resources-with-version](kbcli_addon_delete-resources-with-version.md)	 - Delete the sub-resources of specified addon and versions
 * [kbcli addon describe](kbcli_addon_describe.md)	 - Describe an addon specification.
 * [kbcli addon disable](kbcli_addon_disable.md)	 - Disable an addon.
 * [kbcli addon enable](kbcli_addon_enable.md)	 - Enable an addon.
