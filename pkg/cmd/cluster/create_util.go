@@ -43,9 +43,6 @@ import (
 )
 
 var (
-	resetValFlagNames = []string{
-		cluster.VersionSchemaProp.String(),
-	}
 	resetEngineFlagValues = map[string]map[string]string{
 		"elasticsearch": {
 			"rbac-enabled": "true",
@@ -68,10 +65,6 @@ func addCreateFlags(cmd *cobra.Command, f cmdutil.Factory, c *cluster.ChartInfo,
 	if err := flags.BuildFlagsBySchema(cmd, c.SubSchema); err != nil {
 		return err
 	}
-
-	// reset some flags default value, such as version, a suitable version will be chosen
-	// by cli if user doesn't specify the version
-	resetFlagsValue(cmd.Flags())
 
 	// reset engine related flags default value, such as rbac-enabled for elasticsearch should be true by default
 	resetEngineDefaultFlagsValue(cmd.Flags(), engine)
@@ -110,18 +103,6 @@ func getValuesFromFlags(fs *flag.FlagSet) map[string]interface{} {
 		values[strcase.LowerCamelCase(f.Name)] = val
 	})
 	return values
-}
-
-// resetFlagsValue reset the default value of some flags
-func resetFlagsValue(fs *flag.FlagSet) {
-	fs.VisitAll(func(f *flag.Flag) {
-		for _, n := range resetValFlagNames {
-			if n == f.Name {
-				f.DefValue = ""
-				_ = f.Value.Set("")
-			}
-		}
-	})
 }
 
 func resetEngineDefaultFlagsValue(fs *flag.FlagSet, engine string) {
