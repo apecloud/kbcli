@@ -34,7 +34,7 @@ kbcli cluster create elasticsearch NAME [flags]
       --storage float                Storage size, the unit is Gi. Value range [1, 10000]. (default 20)
       --tenancy string               The tenancy of cluster. Legal values [SharedNode, DedicatedNode]. (default "SharedNode")
       --termination-policy string    The termination policy of cluster. Legal values [DoNotTerminate, Halt, Delete, WipeOut]. (default "Delete")
-      --version string               The version of ElasticSearch.
+      --version string               The version of ElasticSearch. (default "8.8.2")
 ```
 
 ### Options inherited from parent commands

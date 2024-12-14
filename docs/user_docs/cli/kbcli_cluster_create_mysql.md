@@ -36,7 +36,7 @@ kbcli cluster create mysql NAME [flags]
       --storage-class-name string    Storage class name of the data volume
       --tenancy string               The tenancy of cluster. Legal values [SharedNode, DedicatedNode]. (default "SharedNode")
       --termination-policy string    The termination policy of cluster. Legal values [DoNotTerminate, Halt, Delete, WipeOut]. (default "Delete")
-      --version string               Cluster version.
+      --version string               Cluster version. (default "ac-mysql-8.0.30")
 ```
 
 ### Options inherited from parent commands
