@@ -22,7 +22,6 @@ package addon
 import (
 	"net/http"
 
-	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -32,6 +31,8 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	clientfake "k8s.io/client-go/rest/fake"
 	cmdtesting "k8s.io/kubectl/pkg/cmd/testing"
+
+	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
 
 	"github.com/apecloud/kbcli/pkg/testing"
 	"github.com/apecloud/kbcli/pkg/types"
@@ -70,5 +71,4 @@ var _ = Describe("addon util test", func() {
 	It("text CheckAddonUsedByCluster", func() {
 		Expect(CheckAddonUsedByCluster(tf.FakeDynamicClient, []string{fakeAddonName}, streams.In)).Should(HaveOccurred())
 	})
-
 })

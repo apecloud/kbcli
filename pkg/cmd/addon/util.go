@@ -23,14 +23,20 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/fs"
+	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
+	"github.com/spf13/cobra"
 	"golang.org/x/exp/maps"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/klog/v2"
 
 	"github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	extensionsv1alpha1 "github.com/apecloud/kubeblocks/apis/extensions/v1alpha1"
@@ -130,7 +136,7 @@ func checkAddonInstalled(objects *[]searchResult, o *addonListOpts) error {
 
 func CheckAddonUsedByCluster(dynamic dynamic.Interface, addons []string, in io.Reader) error {
 	labelSelecotor := util.BuildClusterLabel("", addons)
-	list, err := dynamic.Resource(types.ClusterGVR()).List(context.Background(), metav1.ListOptions{LabelSelector: labelSelecotor})
+	list, err := dynamic.Resource(types.ClusterGVR()).Namespace(metav1.NamespaceAll).List(context.Background(), metav1.ListOptions{LabelSelector: labelSelecotor})
 	if err != nil {
 		return err
 	}
@@ -150,4 +156,85 @@ func CheckAddonUsedByCluster(dynamic dynamic.Interface, addons []string, in io.R
 		return prompt.Confirm(maps.Keys(usedAddons), in, msg, "")
 	}
 	return nil
+}
+
+// addonNameCompletionFunc provides name auto-completion for addons
+func addonNameCompletionFunc(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	fmt.Printf("toComplete: %s\n", toComplete)
+	var addonDir string
+	var err error
+	addonDir, err = util.GetCliAddonDir()
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+
+	// Retrieve all addon names
+	allAddons, err := getAllAddonNames(addonDir)
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+
+	matches := fuzzyMatch(allAddons, toComplete)
+	return matches, cobra.ShellCompDirectiveNoFileComp
+}
+
+// getAllAddonNames retrieves all addon names from the given directory
+func getAllAddonNames(dir string) ([]string, error) {
+	var addonNames []string
+	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		// Skip hidden directories
+		if strings.HasPrefix(d.Name(), ".") && d.IsDir() {
+			return filepath.SkipDir
+		}
+		if d.IsDir() {
+			return nil
+		}
+		if strings.HasSuffix(strings.ToLower(d.Name()), ".yaml") {
+			content, err := os.ReadFile(path)
+			if err != nil {
+				klog.V(2).Infof("read file %s error: %v", path, err)
+				return nil
+			}
+			addon := &extensionsv1alpha1.Addon{}
+			if yaml.Unmarshal(content, addon) != nil {
+				return nil
+			}
+			if addon.Kind == "Addon" && addon.Name != "" {
+				addonNames = append(addonNames, addon.Name)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// Remove duplicates
+	nameSet := make(map[string]struct{})
+	for _, n := range addonNames {
+		nameSet[n] = struct{}{}
+	}
+	var unique []string
+	for n := range nameSet {
+		unique = append(unique, n)
+	}
+	return unique, nil
+}
+
+// fuzzyMatch performs simple substring fuzzy matching on names
+func fuzzyMatch(names []string, prefix string) []string {
+	if prefix == "" {
+		return names
+	}
+	var matches []string
+	lp := strings.ToLower(prefix)
+	for _, n := range names {
+		if strings.Contains(strings.ToLower(n), lp) {
+			matches = append(matches, n)
+		}
+	}
+	return matches
 }
