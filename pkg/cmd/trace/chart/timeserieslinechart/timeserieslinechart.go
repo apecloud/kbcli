@@ -91,8 +91,6 @@ type dataSet struct {
 	LineStyle runes.LineStyle // type of line runes to draw
 	Style     lipgloss.Style
 
-	lastTime time.Time // last seen time value
-
 	// stores TimePoints as FloatPoint64{X:time.Time, Y: value}
 	// time.Time will be converted to seconds since epoch.
 	// both time and value will be scaled to fit the graphing area
@@ -272,7 +270,7 @@ func (m *Model) Push(t TimePoint) {
 	m.PushDataSet(DefaultDataSetName, t)
 }
 
-// Push will push a TimePoint data value to a data set
+// PushDataSet will push a TimePoint data value to a data set
 // to be displayed with Draw. Using given data set by name string.
 func (m *Model) PushDataSet(n string, t TimePoint) {
 	f := canvas.Float64Point{X: float64(t.Time.Unix()), Y: t.Value}
@@ -479,7 +477,7 @@ func (m *Model) DrawBrailleDataSets(names []string) {
 	}
 }
 
-// DrawColumnRune draws a braille rune on to the canvas at given (X,Y) coordinates with given style.
+// DrawBrailleRune draws a braille rune on to the canvas at given (X,Y) coordinates with given style.
 // The function checks for existing braille runes already on the canvas and
 // will draw a new braille pattern with the dot patterns of both the existing and given runes.
 // Does nothing if given rune is Null or is not a braille rune.
@@ -521,7 +519,7 @@ func (m *Model) getLineSequence(points []canvas.Float64Point) []int {
 	// each index of the bucket corresponds to a graph column.
 	// each index value is the average of data point values
 	// that is mapped to that graph column.
-	buckets := make([]cAverage, width, width)
+	buckets := make([]cAverage, width)
 	for i := 0; i < dataLen; i++ {
 		j := i + 1
 		if j >= dataLen {
@@ -545,7 +543,7 @@ func (m *Model) getLineSequence(points []canvas.Float64Point) []int {
 		}
 	}
 	// populate sequence of Y values to for drawing
-	r := make([]int, width, width)
+	r := make([]int, width)
 	for i, v := range buckets {
 		r[i] = int(math.Round(v.Avg))
 	}
