@@ -32,11 +32,12 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 
+	tracev1 "github.com/apecloud/kubeblocks/apis/trace/v1"
+
 	"github.com/apecloud/kbcli/pkg/cmd/trace/chart/objecttree"
 	"github.com/apecloud/kbcli/pkg/cmd/trace/chart/richviewport"
 	"github.com/apecloud/kbcli/pkg/cmd/trace/chart/summary"
 	"github.com/apecloud/kbcli/pkg/cmd/trace/chart/timeserieslinechart"
-	tracev1 "github.com/apecloud/kubeblocks/apis/trace/v1"
 )
 
 var (
