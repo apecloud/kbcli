@@ -131,6 +131,7 @@ func newInstallCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 		PersistentPreRun: func(_ *cobra.Command, _ []string) {
 			util.CheckErr(addDefaultIndex())
 		},
+		ValidArgsFunction: addonNameCompletionFunc,
 		Run: func(cmd *cobra.Command, args []string) {
 			o.name = args[0]
 			util.CheckErr(o.Complete())
