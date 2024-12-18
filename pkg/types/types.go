@@ -118,6 +118,7 @@ const (
 	ResourceConfigurationVersions    = "configurations"
 	KindCluster                      = "Cluster"
 	KindClusterDef                   = "ClusterDefinition"
+	KindComponentVersion             = "ComponentVersion"
 	KindConfigConstraint             = "ConfigConstraint"
 	KindConfiguration                = "Configuration"
 	KindBackup                       = "Backup"
@@ -300,8 +301,16 @@ func ClusterDefGVR() schema.GroupVersionResource {
 	return schema.GroupVersionResource{Group: AppsAPIGroup, Version: AppsV1APIVersion, Resource: ResourceClusterDefs}
 }
 
+func ClusterDefV1alphaGVR() schema.GroupVersionResource {
+	return schema.GroupVersionResource{Group: AppsAPIGroup, Version: AppsAPIVersion, Resource: ResourceClusterDefs}
+}
+
 func CompDefGVR() schema.GroupVersionResource {
 	return schema.GroupVersionResource{Group: AppsAPIGroup, Version: AppsV1APIVersion, Resource: ResourceComponentDefs}
+}
+
+func CompDefAlpha1GVR() schema.GroupVersionResource {
+	return schema.GroupVersionResource{Group: AppsAPIGroup, Version: AppsAPIVersion, Resource: ResourceComponentDefs}
 }
 
 func ComponentGVR() schema.GroupVersionResource {
