@@ -42,7 +42,7 @@ import (
 var (
 	listBackupPolicyExample = templates.Examples(`
 		# list all backup policies
-		kbcli cluster list-backup-policy
+		kbcli cluster list-backup-policies
 
 		# using short cmd to list backup policy of the specified cluster
         kbcli cluster list-bp mycluster
@@ -58,7 +58,7 @@ var (
 		# create a backup with a specified method, run "kbcli cluster desc-backup-policy mycluster" to show supported backup methods
 		kbcli cluster backup mycluster --method volume-snapshot
 
-		# create a backup with specified backup policy, run "kbcli cluster list-backup-policy mycluster" to show the cluster supported backup policies
+		# create a backup with specified backup policy, run "kbcli cluster list-backup-policies mycluster" to show the cluster supported backup policies
 		kbcli cluster backup mycluster --method volume-snapshot --policy <backup-policy-name>
 
 		# create a backup from a parent backup
@@ -66,13 +66,13 @@ var (
 	`)
 	listBackupExample = templates.Examples(`
 		# list all backups
-		kbcli cluster list-backup
+		kbcli cluster list-backups
 
 	   # list all backups of the cluster 
-		kbcli cluster list-backup <clusterName>
+		kbcli cluster list-backups <clusterName>
       
         # list the specified backups 
-		kbcli cluster list-backup --names b1,b2
+		kbcli cluster list-backups --names b1,b2
 	`)
 	deleteBackupExample = templates.Examples(`
 		# delete a backup named backup-name
@@ -84,13 +84,13 @@ var (
 	`)
 	listRestoreExample = templates.Examples(`
 		# list all restores
-		kbcli cluster list-restore
+		kbcli cluster list-restores
 
 	   # list all restores of the cluster 
-		kbcli cluster list-restore <clusterName>
+		kbcli cluster list-restores <clusterName>
       
         # list the specified restores 
-		kbcli cluster list-restore --names r1,r2
+		kbcli cluster list-restores --names r1,r2
 	`)
 	describeBackupExample = templates.Examples(`
 		# describe a backup
@@ -113,7 +113,7 @@ func NewCreateBackupCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *
 	customOutPut := func(opt *action.CreateOptions) {
 		output := fmt.Sprintf("Backup %s created successfully, you can view the progress:", opt.Name)
 		printer.PrintLine(output)
-		nextLine := fmt.Sprintf("\tkbcli cluster list-backup --name=%s -n %s", opt.Name, opt.Namespace)
+		nextLine := fmt.Sprintf("\tkbcli cluster list-backups --name=%s -n %s", opt.Name, opt.Namespace)
 		printer.PrintLine(nextLine)
 	}
 
@@ -156,7 +156,7 @@ func NewCreateBackupCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *
 func NewListBackupCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
 	o := action.NewListOptions(f, streams, types.BackupGVR())
 	cmd := &cobra.Command{
-		Use:               "list-backup",
+		Use:               "list-backups",
 		Short:             "List backups.",
 		Aliases:           []string{"ls-backup"},
 		Example:           listBackupExample,
@@ -311,7 +311,7 @@ func NewCreateRestoreCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) 
 func NewListBackupPolicyCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
 	o := action.NewListOptions(f, streams, types.BackupPolicyGVR())
 	cmd := &cobra.Command{
-		Use:               "list-backup-policy",
+		Use:               "list-backup-policies",
 		Short:             "List backups policies.",
 		Aliases:           []string{"list-bp"},
 		Example:           listBackupPolicyExample,
@@ -390,7 +390,7 @@ func describeBackupPolicies(o *dp.DescribeDPOptions, args []string) error {
 func NewListRestoreCommand(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
 	o := action.NewListOptions(f, streams, types.RestoreGVR())
 	cmd := &cobra.Command{
-		Use:               "list-restore",
+		Use:               "list-restores",
 		Short:             "List restores.",
 		Aliases:           []string{"ls-restores"},
 		Example:           listRestoreExample,
