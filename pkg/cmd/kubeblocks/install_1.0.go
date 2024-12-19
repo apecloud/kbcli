@@ -30,9 +30,11 @@ import (
 	"helm.sh/helm/v3/pkg/cli/values"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/apecloud/kbcli/pkg/spinner"
 	"github.com/apecloud/kbcli/pkg/types"
@@ -103,7 +105,10 @@ func (o *InstallOptions) preInstallWhenUpgradeFrom09() error {
 		return err
 	}
 	// 4. Set global resources helm owner to 1.0 KB
-	return o.setGlobalResourcesHelmOwner()
+	if err := o.setGlobalResourcesHelmOwner(); err != nil {
+		return err
+	}
+	return o.setCRDAPIVersion()
 }
 
 func (o *InstallOptions) configKB09() error {
@@ -211,4 +216,28 @@ func (o *InstallOptions) setGlobalResourcesHelmOwner() error {
 	}
 	// update BackupRepo
 	return util.SetHelmOwner(o.Dynamic, types.BackupRepoGVR(), types.KubeBlocksChartName, o.HelmCfg.Namespace(), []string{fmt.Sprintf("%s-backuprepo", types.KubeBlocksChartName)})
+}
+
+func (o *InstallOptions) setCRDAPIVersion() error {
+	setCRDAPIVersionAnnotation := func(list *unstructured.UnstructuredList, version string) error {
+		patchOP := fmt.Sprintf(`[{"op": "replace", "path": "/metadata/annotations/kubeblocks.io~1crd-api-version", "value": "apps.kubeblocks.io/%s"}]`, version)
+		for _, v := range list.Items {
+			if v.GetLabels()[constant.CRDAPIVersionAnnotationKey] != "" {
+				continue
+			}
+			if _, err := o.Dynamic.Resource(types.CompDefAlpha1GVR()).Namespace("").Patch(context.TODO(), v.GetName(),
+				k8stypes.JSONPatchType, []byte(patchOP), metav1.PatchOptions{}); client.IgnoreNotFound(err) != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	compDefs, err := o.Dynamic.Resource(types.CompDefAlpha1GVR()).Namespace("").List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+	if err = setCRDAPIVersionAnnotation(compDefs, types.AppsAPIVersion); err != nil {
+		return err
+	}
+	return nil
 }

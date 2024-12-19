@@ -8,7 +8,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.3.0
 	github.com/NimbleMarkets/ntcharts v0.1.2
 	github.com/apecloud/dbctl v0.0.0-20240827084000-68a1980b1a46
-	github.com/apecloud/kubeblocks v1.0.0-beta.1.0.20241126060033-67c88565bfc7
+	github.com/apecloud/kubeblocks v1.0.0-beta.17
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
 	github.com/briandowns/spinner v1.23.0
 	github.com/chaos-mesh/chaos-mesh/api v0.0.0-20230912020346-a5d89c1c90ad
@@ -109,7 +109,6 @@ require (
 	github.com/c9s/goprocinfo v0.0.0-20170724085704-0010a05ce49f // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/chai2010/gettext-go v1.0.2 // indirect
-	github.com/charmbracelet/keygen v0.5.1 // indirect
 	github.com/charmbracelet/x/ansi v0.2.3 // indirect
 	github.com/charmbracelet/x/term v0.2.0 // indirect
 	github.com/chzyer/readline v1.5.1 // indirect
