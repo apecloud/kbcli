@@ -21,6 +21,7 @@ package cluster
 
 import (
 	"compress/gzip"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -257,7 +258,7 @@ func (h *TypeInstance) ValidateChartSchema() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if c.Schema == nil || len(c.Schema) == 0 {
+	if len(c.Schema) == 0 {
 		return false, fmt.Errorf("register cluster chart of %s failed, schema of the chart doesn't exist", h.Name)
 	}
 	if c.Values == nil {
@@ -269,7 +270,7 @@ func (h *TypeInstance) ValidateChartSchema() (bool, error) {
 
 	result, err := gojsonschema.Validate(schemaLoader, valuesLoader)
 	if err != nil {
-		return false, fmt.Errorf("Validation failed: %s\n", err)
+		return false, fmt.Errorf("validation failed: %v", err)
 	}
 
 	if result.Valid() {
@@ -280,7 +281,7 @@ func (h *TypeInstance) ValidateChartSchema() (bool, error) {
 		for _, desc := range result.Errors() {
 			res += fmt.Sprintf("- %s\n", desc)
 		}
-		return false, fmt.Errorf(res)
+		return false, errors.New(res)
 	}
 }
 
