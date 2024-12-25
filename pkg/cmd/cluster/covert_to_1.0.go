@@ -32,6 +32,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/spf13/cobra"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	apiruntime "k8s.io/apimachinery/pkg/runtime"
@@ -41,6 +42,7 @@ import (
 	clientset "k8s.io/client-go/kubernetes"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
 	"github.com/apecloud/kbcli/pkg/printer"
@@ -311,6 +313,7 @@ func NewConvertToV1Cmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *c
 		Example:           convertExample,
 		ValidArgsFunction: util.ResourceNameCompletionFunc(f, types.ClusterGVR()),
 		Run: func(cmd *cobra.Command, args []string) {
+			cmdutil.BehaviorOnFatal(printer.FatalWithRedColor)
 			cmdutil.CheckErr(o.complete(args))
 			cmdutil.CheckErr(o.Run())
 		},
@@ -327,6 +330,7 @@ func (o *ConvertToV1Options) complete(args []string) error {
 	o.Name = args[0]
 	o.Namespace, _, _ = o.f.ToRawKubeConfigLoader().Namespace()
 	o.Dynamic, _ = o.f.DynamicClient()
+	o.Client, _ = o.f.KubernetesClientSet()
 	return nil
 }
 
@@ -360,6 +364,8 @@ func (o *ConvertToV1Options) GetConvertedCluster() (*kbappsv1.Cluster, *kbappsv1
 			return nil, nil, false, err
 		}
 	}
+	delete(cluster.Annotations, kbIncrementConverterAK)
+	cluster.Annotations[constant.CRDAPIVersionAnnotationKey] = kbappsv1.GroupVersion.String()
 	return cluster, clusterV1alpha1, existUnsupportedSpec, nil
 }
 
@@ -379,6 +385,11 @@ func (o *ConvertToV1Options) Run() error {
 	if err = prompt.Confirm(nil, o.In, "", "Please type 'Yes/yes' to confirm your operation:"); err != nil {
 		return err
 	}
+	if len(clusterV1alpha1.Spec.ClusterVersionRef) > 0 {
+		if err = o.convertCredential(clusterV1alpha1.Spec.ClusterDefRef); err != nil {
+			return err
+		}
+	}
 	// convert to v1
 	clusterObj, err := apiruntime.DefaultUnstructuredConverter.ToUnstructured(cluster)
 	if err != nil {
@@ -392,6 +403,38 @@ func (o *ConvertToV1Options) Run() error {
 	printer.PrintLine(output)
 	nextLine := fmt.Sprintf("\tkubectl get clusters.apps.kubeblocks.io %s -n %s -oyaml", o.Name, o.Namespace)
 	printer.PrintLine(nextLine)
+	return nil
+}
+
+func (o *ConvertToV1Options) convertCredential(cdName string) error {
+	oldSecret := &corev1.Secret{}
+	err := util.GetK8SClientObject(o.Dynamic, oldSecret, types.SecretGVR(), o.Namespace, fmt.Sprintf("%s-conn-credential", o.Name))
+	if err != nil {
+		return err
+	}
+	var (
+		compName    string
+		accountName string
+	)
+	// TODO: support all cluster definition
+	switch cdName {
+	case "postgresql":
+		compName = "postgresql"
+		accountName = "postgres"
+	default:
+		return fmt.Errorf("unkown cluster definition %s", cdName)
+	}
+	newSecret := &corev1.Secret{}
+	newSecret.Name = constant.GenerateAccountSecretName(o.Name, compName, accountName)
+	newSecret.Namespace = oldSecret.Namespace
+	newSecret.Labels = constant.GetCompLabels(o.Name, compName)
+	newSecret.Data = map[string][]byte{
+		"username": oldSecret.Data["username"],
+		"password": oldSecret.Data["password"],
+	}
+	if _, err := o.Client.CoreV1().Secrets(oldSecret.Namespace).Create(context.TODO(), newSecret, metav1.CreateOptions{}); err != nil {
+		return client.IgnoreAlreadyExists(err)
+	}
 	return nil
 }
 
@@ -439,8 +482,6 @@ func (o *ConvertToV1Options) ConvertForClusterVersion(cluster *kbappsv1.Cluster,
 	}
 	// remove deprecated v1alpha1
 	cluster.Spec.ClusterDef = ""
-	delete(cluster.Annotations, kbIncrementConverterAK)
-	cluster.Annotations[constant.CRDAPIVersionAnnotationKey] = kbappsv1.GroupVersion.String()
 	return nil
 }
 
@@ -458,7 +499,7 @@ func (o *ConvertToV1Options) Convert09ComponentDef(cluster *kbappsv1.Cluster,
 			}
 		}
 		*existUnsupportedSpec = true
-		return "", nil
+		return "<yourComponentDef>", nil
 	}
 	for i := range clusterV1alpha1Spec.ComponentSpecs {
 		compDef, err := convertCompDef(clusterV1alpha1Spec.ComponentSpecs[i].ComponentDef)
