@@ -376,7 +376,7 @@ func (o *ConvertToV1Options) Run() error {
 	}
 	o.printDiff(clusterV1alpha1.DeepCopy(), cluster.DeepCopy())
 	if existUnsupportedSpec {
-		return fmt.Errorf(`cluster "%s" has unkown clusterVersion or componentDefinition, you can replace with accorrding ComponentDefinition with 1.0 api`, o.Name)
+		return fmt.Errorf(`cluster "%s" has unknown clusterVersion or componentDefinition, you can replace with accorrding ComponentDefinition with 1.0 api`, o.Name)
 	}
 	fmt.Println(printer.BoldYellow(fmt.Sprintf("Cluster %s will be converted to v1 with output as yaml.", o.Name)))
 	if o.DryRun {
@@ -422,7 +422,7 @@ func (o *ConvertToV1Options) convertCredential(cdName string) error {
 		compName = "postgresql"
 		accountName = "postgres"
 	default:
-		return fmt.Errorf("unkown cluster definition %s", cdName)
+		return fmt.Errorf("unknown cluster definition %s", cdName)
 	}
 	newSecret := &corev1.Secret{}
 	newSecret.Name = constant.GenerateAccountSecretName(o.Name, compName, accountName)
