@@ -521,7 +521,9 @@ func (o *ConvertToV1Options) Convert09ComponentDef(cluster *kbappsv1.Cluster,
 
 func (o *ConvertToV1Options) printDiff(clusterV1Alpha1 *kbappsv1alpha1.Cluster, clusterV1 *kbappsv1.Cluster) {
 	clusterV1Alpha1.Status = kbappsv1alpha1.ClusterStatus{}
+	clusterV1Alpha1.ObjectMeta.ManagedFields = nil
 	clusterV1.Status = kbappsv1.ClusterStatus{}
+	clusterV1.ObjectMeta.ManagedFields = nil
 	clusterV1Alpha1Srr, _ := yaml.Marshal(clusterV1Alpha1)
 	clusterV1Str, _ := yaml.Marshal(clusterV1)
 
