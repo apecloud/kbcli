@@ -236,7 +236,7 @@ func newEnableCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.
 				util.CheckErr(o.validate())
 				util.CheckErr(o.complete(o, cmd, []string{name}))
 				util.CheckErr(o.CmdComplete(cmd))
-				util.CheckErr(o.takeOver09AddonGlobalResources())
+				util.CheckErr(o.process09ClusterDefAndComponentVersions())
 				util.CheckErr(o.Run())
 				if isEngineAddon(&o.addon) {
 					util.CheckErr(clusterCmd.RegisterClusterChart(f, streams, "", name, getAddonVersion(&o.addon), types.ClusterChartsRepoURL))
@@ -1035,7 +1035,7 @@ func (o *addonCmdOpts) checkBeforeDisable() error {
 	return CheckAddonUsedByCluster(o.dynamic, o.Names, o.In)
 }
 
-func (o *addonCmdOpts) takeOver09AddonGlobalResources() error {
+func (o *addonCmdOpts) process09ClusterDefAndComponentVersions() error {
 	kbDeploys, err := util.GetKBDeploys(o.client, util.KubeblocksAppComponent, metav1.NamespaceAll)
 	if err != nil || len(kbDeploys) < 2 {
 		return err
@@ -1050,33 +1050,8 @@ func (o *addonCmdOpts) takeOver09AddonGlobalResources() error {
 			break
 		}
 	}
-	selector := metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("%s=%s", constant.AppNameLabelKey, o.addon.Name),
-	}
-	takeOverRelease := func(gvr schema.GroupVersionResource) error {
-		cdList, err := o.dynamic.Resource(gvr).Namespace("").List(context.TODO(), selector)
-		if err != nil {
-			return err
-		}
-		for _, v := range cdList.Items {
-			if err = util.SetHelmOwner(o.dynamic, gvr, "kb-addon-"+o.addon.Name, newKBNamespace, []string{v.GetName()}); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
-	if err = takeOverRelease(types.ClusterDefGVR()); err != nil {
-		return err
-	}
-	if err = takeOverRelease(types.ComponentVersionsGVR()); err != nil {
-		return err
-	}
-	return o.overwriteCDAndCMPVSpecWith10Version(newKBNamespace)
-}
-
-func (o *addonCmdOpts) overwriteCDAndCMPVSpecWith10Version(namespace string) error {
 	// 1. get manifests from the helm repo
-	chartsDownloader, err := helm.NewDownloader(helm.NewConfig(namespace, "", "", false))
+	chartsDownloader, err := helm.NewDownloader(helm.NewConfig(newKBNamespace, "", "", false))
 	if err != nil {
 		return err
 	}
@@ -1086,7 +1061,7 @@ func (o *addonCmdOpts) overwriteCDAndCMPVSpecWith10Version(namespace string) err
 		return err
 	}
 	// 2. overwrite the spec of ClusterDefinition and ComponentVersion with the new version
-	actionCfg, err := helm.NewActionConfig(helm.NewConfig(namespace, "", "", false))
+	actionCfg, err := helm.NewActionConfig(helm.NewConfig(newKBNamespace, "", "", false))
 	if err != nil {
 		return err
 	}
@@ -1096,7 +1071,7 @@ func (o *addonCmdOpts) overwriteCDAndCMPVSpecWith10Version(namespace string) err
 	}
 	renderer := helmaction.NewInstall(actionCfg)
 	renderer.ReleaseName = o.addon.Name + "for-upgrade"
-	renderer.Namespace = namespace
+	renderer.Namespace = newKBNamespace
 	renderer.DryRun = true
 	renderer.Replace = true
 	renderer.ClientOnly = true
@@ -1129,6 +1104,8 @@ func (o *addonCmdOpts) overwriteCDAndCMPVSpecWith10Version(namespace string) err
 		}
 		annotations := targetObj.GetAnnotations()
 		annotations[constant.CRDAPIVersionAnnotationKey] = kbappsv1.GroupVersion.String()
+		annotations["meta.helm.sh/release-name"] = "kb-addon-" + o.addon.Name
+		annotations["meta.helm.sh/release-namespace"] = newKBNamespace
 		targetObj.SetAnnotations(annotations)
 		targetObj.Object["spec"] = unstructuredObj.Object["spec"]
 		if _, err = o.dynamic.Resource(gvr).Namespace("").Update(context.TODO(), targetObj, metav1.UpdateOptions{}); err != nil {
