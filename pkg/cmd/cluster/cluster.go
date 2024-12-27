@@ -103,6 +103,12 @@ func NewClusterCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 				NewListLogsCmd(f, streams),
 			},
 		},
+		{
+			Message: "Convert API version Commands:",
+			Commands: []*cobra.Command{
+				NewConvertToV1Cmd(f, streams),
+			},
+		},
 	}
 
 	// add subcommands

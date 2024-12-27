@@ -297,12 +297,12 @@ func ClusterGVR() schema.GroupVersionResource {
 	return schema.GroupVersionResource{Group: AppsAPIGroup, Version: AppsV1APIVersion, Resource: ResourceClusters}
 }
 
-func ClusterDefGVR() schema.GroupVersionResource {
-	return schema.GroupVersionResource{Group: AppsAPIGroup, Version: AppsV1APIVersion, Resource: ResourceClusterDefs}
+func ClusterV1alphaGVR() schema.GroupVersionResource {
+	return schema.GroupVersionResource{Group: AppsAPIGroup, Version: AppsAPIVersion, Resource: ResourceClusters}
 }
 
-func ClusterDefV1alphaGVR() schema.GroupVersionResource {
-	return schema.GroupVersionResource{Group: AppsAPIGroup, Version: AppsAPIVersion, Resource: ResourceClusterDefs}
+func ClusterDefGVR() schema.GroupVersionResource {
+	return schema.GroupVersionResource{Group: AppsAPIGroup, Version: AppsV1APIVersion, Resource: ResourceClusterDefs}
 }
 
 func CompDefGVR() schema.GroupVersionResource {
