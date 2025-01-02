@@ -168,6 +168,10 @@ func (r *configObserverOptions) printExplainConfigure(configSpecs configSpecsTyp
 		return nil
 	}
 
+	if tpl.ConfigConstraint == nil {
+		fmt.Printf("\n%s\n", fmt.Sprintf(notConfigSchemaPrompt, printer.BoldYellow(tplName)))
+		return nil
+	}
 	confSpec := tpl.ConfigConstraint.Spec
 	if confSpec.ParametersSchema == nil {
 		fmt.Printf("\n%s\n", fmt.Sprintf(notConfigSchemaPrompt, printer.BoldYellow(tplName)))
