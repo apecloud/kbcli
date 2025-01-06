@@ -93,6 +93,8 @@ var _ = Describe("Cluster", func() {
 			Expect(o.ChartInfo).ShouldNot(BeNil())
 			o.Format = printer.YAML
 
+			o.PodAntiAffinity = "Preferred"
+			o.Tenancy = "SharedNode"
 			Expect(o.CreateOptions.Complete()).To(Succeed())
 			o.Client = testing.FakeClientSet()
 			fakeDiscovery1, _ := o.Client.Discovery().(*fakediscovery.FakeDiscovery)
