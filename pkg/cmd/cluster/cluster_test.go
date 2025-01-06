@@ -102,51 +102,6 @@ var _ = Describe("Cluster", func() {
 			Expect(o.Name).ShouldNot(BeEmpty())
 			Expect(o.Run()).Should(Succeed())
 		})
-		It("should apply SharedNode tenancy and Preferred PodAntiAffinity", func() {
-			o, err := NewSubCmdsOptions(createOptions, clusterType)
-			Expect(err).Should(Succeed())
-			o.Tenancy = "SharedNode"
-			o.TopologyKeys = []string{"test-topology1", "test-topology2"}
-			o.NodeLabels = map[string]string{"environment": "test-env", "region": "test-region"}
-			o.TolerationsRaw = []string{"testKey1=testValue1:NoSchedule", "testKey2=testValue2:NoExecute"}
-			o.PodAntiAffinity = "Preferred"
-
-			Expect(o).ShouldNot(BeNil())
-			Expect(o.ChartInfo).ShouldNot(BeNil())
-			o.Format = printer.YAML
-
-			Expect(o.CreateOptions.Complete()).To(Succeed())
-			o.Client = testing.FakeClientSet()
-			fakeDiscovery1, _ := o.Client.Discovery().(*fakediscovery.FakeDiscovery)
-			fakeDiscovery1.FakedServerVersion = &version.Info{Major: "1", Minor: "27", GitVersion: "v1.27.0"}
-			Expect(o.Complete(nil)).To(Succeed())
-			Expect(o.Validate()).To(Succeed())
-			Expect(o.Name).ShouldNot(BeEmpty())
-			Expect(o.Run()).Should(Succeed())
-		})
-
-		It("should apply DedicatedNode tenancy and Required PodAntiAffinity", func() {
-			o, err := NewSubCmdsOptions(createOptions, clusterType)
-			Expect(err).Should(Succeed())
-			o.Tenancy = "DedicatedNode"
-			o.TopologyKeys = []string{"test-region", "test-zone"}
-			o.NodeLabels = map[string]string{"cluster": "test-cluster", "env": "test-production"}
-			o.TolerationsRaw = []string{"testKey3=testValue3:NoSchedule", "testKey4=testValue4:NoExecute"}
-			o.PodAntiAffinity = "Required"
-
-			Expect(o).ShouldNot(BeNil())
-			Expect(o.ChartInfo).ShouldNot(BeNil())
-			o.Format = printer.YAML
-
-			Expect(o.CreateOptions.Complete()).To(Succeed())
-			o.Client = testing.FakeClientSet()
-			fakeDiscovery2, _ := o.Client.Discovery().(*fakediscovery.FakeDiscovery)
-			fakeDiscovery2.FakedServerVersion = &version.Info{Major: "1", Minor: "27", GitVersion: "v1.27.0"}
-			Expect(o.Complete(nil)).To(Succeed())
-			Expect(o.Validate()).To(Succeed())
-			Expect(o.Name).ShouldNot(BeEmpty())
-			Expect(o.Run()).Should(Succeed())
-		})
 	})
 
 	Context("create validate", func() {
@@ -162,6 +117,8 @@ var _ = Describe("Cluster", func() {
 			}
 			o.Name = "mycluster"
 			o.ChartInfo, _ = cluster.BuildChartInfo(clusterType)
+			o.PodAntiAffinity = "Preferred"
+			o.Tenancy = "SharedNode"
 		})
 
 		It("can validate the cluster name must begin with a letter and can only contain lowercase letters, numbers, and '-'.", func() {
@@ -210,6 +167,98 @@ var _ = Describe("Cluster", func() {
 			Expect(len(clusterNameMoreThan16)).Should(BeNumerically(">", 16))
 			o.Name = clusterNameMoreThan16
 			Expect(o.Validate()).Should(HaveOccurred())
+		})
+
+		// Test case: invalid tenancy value
+		It("should fail when tenancy is invalid", func() {
+			o, err := NewSubCmdsOptions(createOptions, clusterType)
+			Expect(err).Should(Succeed())
+			o.Tenancy = "InvalidTenancy" // Set invalid tenancy value
+
+			Expect(o.Validate()).ShouldNot(Succeed()) // Validation should fail
+		})
+
+		// Test case: invalid podAntiAffinity value
+		It("should fail when podAntiAffinity is invalid", func() {
+			o, err := NewSubCmdsOptions(createOptions, clusterType)
+			Expect(err).Should(Succeed())
+			o.PodAntiAffinity = "None" // Set invalid podAntiAffinity value
+
+			Expect(o.Validate()).ShouldNot(Succeed()) // Validation should fail
+		})
+
+		// Test case: topologyKeys contains empty values
+		It("should fail when topologyKeys contains empty values", func() {
+			o, err := NewSubCmdsOptions(createOptions, clusterType)
+			Expect(err).Should(Succeed())
+			o.TopologyKeys = []string{"", "valid-topology"} // One of the keys is empty
+
+			Expect(o.Validate()).ShouldNot(Succeed()) // Validation should fail
+		})
+
+		// Test case: nodeLabels contains empty key or value
+		It("should fail when nodeLabels contains empty key or value", func() {
+			o, err := NewSubCmdsOptions(createOptions, clusterType)
+			Expect(err).Should(Succeed())
+			o.NodeLabels = map[string]string{"environment": "", "": "test-region"} // Key or value is empty
+
+			Expect(o.Validate()).ShouldNot(Succeed()) // Validation should fail
+		})
+
+		// Test case: tolerations contains empty key or operator
+		It("should fail when tolerations contains empty key or operator", func() {
+			o, err := NewSubCmdsOptions(createOptions, clusterType)
+			Expect(err).Should(Succeed())
+			o.TolerationsRaw = []string{"testKey=:NoSchedule", "=testValue:NoExecute"} // Key or operator is empty
+
+			Expect(o.Validate()).ShouldNot(Succeed()) // Validation should fail
+		})
+
+		// Test case: all inputs are valid
+		It("should apply SharedNode tenancy and Preferred PodAntiAffinity", func() {
+			o, err := NewSubCmdsOptions(createOptions, clusterType)
+			Expect(err).Should(Succeed())
+			o.Tenancy = "SharedNode"
+			o.TopologyKeys = []string{"test-topology1", "test-topology2"}
+			o.NodeLabels = map[string]string{"environment": "test-env", "region": "test-region"}
+			o.TolerationsRaw = []string{"testKey1=testValue1:NoSchedule", "testKey2=testValue2:NoExecute"}
+			o.PodAntiAffinity = "Preferred"
+
+			Expect(o).ShouldNot(BeNil())
+			Expect(o.ChartInfo).ShouldNot(BeNil())
+			o.Format = printer.YAML
+
+			Expect(o.CreateOptions.Complete()).To(Succeed())
+			o.Client = testing.FakeClientSet()
+			fakeDiscovery1, _ := o.Client.Discovery().(*fakediscovery.FakeDiscovery)
+			fakeDiscovery1.FakedServerVersion = &version.Info{Major: "1", Minor: "27", GitVersion: "v1.27.0"}
+			Expect(o.Complete(nil)).To(Succeed())
+			Expect(o.Validate()).To(Succeed())
+			Expect(o.Name).ShouldNot(BeEmpty())
+			Expect(o.Run()).Should(Succeed())
+		})
+
+		It("should apply DedicatedNode tenancy and Required PodAntiAffinity", func() {
+			o, err := NewSubCmdsOptions(createOptions, clusterType)
+			Expect(err).Should(Succeed())
+			o.Tenancy = "DedicatedNode"
+			o.TopologyKeys = []string{"test-region", "test-zone"}
+			o.NodeLabels = map[string]string{"cluster": "test-cluster", "env": "test-production"}
+			o.TolerationsRaw = []string{"testKey3=testValue3:NoSchedule", "testKey4=testValue4:NoExecute"}
+			o.PodAntiAffinity = "Required"
+
+			Expect(o).ShouldNot(BeNil())
+			Expect(o.ChartInfo).ShouldNot(BeNil())
+			o.Format = printer.YAML
+
+			Expect(o.CreateOptions.Complete()).To(Succeed())
+			o.Client = testing.FakeClientSet()
+			fakeDiscovery2, _ := o.Client.Discovery().(*fakediscovery.FakeDiscovery)
+			fakeDiscovery2.FakedServerVersion = &version.Info{Major: "1", Minor: "27", GitVersion: "v1.27.0"}
+			Expect(o.Complete(nil)).To(Succeed())
+			Expect(o.Validate()).To(Succeed())
+			Expect(o.Name).ShouldNot(BeEmpty())
+			Expect(o.Run()).Should(Succeed())
 		})
 
 	})
