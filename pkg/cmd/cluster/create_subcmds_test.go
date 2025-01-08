@@ -96,6 +96,8 @@ var _ = Describe("create cluster by cluster type", func() {
 		Expect(err).Should(Succeed())
 		Expect(o).ShouldNot(BeNil())
 		Expect(o.ChartInfo).ShouldNot(BeNil())
+		o.PodAntiAffinity = "Preferred"
+		o.Tenancy = "SharedNode"
 
 		By("complete")
 		var mysqlCmd *cobra.Command
@@ -139,6 +141,8 @@ var _ = Describe("create cluster by cluster type", func() {
 		Expect(err).Should(Succeed())
 		Expect(o).ShouldNot(BeNil())
 		Expect(o.ChartInfo).ShouldNot(BeNil())
+		o.PodAntiAffinity = "Preferred"
+		o.Tenancy = "SharedNode"
 
 		By("complete")
 		var shardCmd *cobra.Command

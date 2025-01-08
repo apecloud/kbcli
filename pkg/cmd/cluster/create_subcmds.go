@@ -129,6 +129,7 @@ func buildCreateSubCmds(createOptions *action.CreateOptions) []*cobra.Command {
 		// Schedule policy
 		if cmd.Flag("pod-anti-affinity") == nil {
 			cmd.Flags().StringVar(&o.PodAntiAffinity, "pod-anti-affinity", "Preferred", "Pod anti-affinity type, one of: (Preferred, Required)")
+			_ = cmd.Flags().SetAnnotation("pod-anti-affinity", cobra.BashCompCustom, []string{"Preferred", "Required"})
 		}
 		if cmd.Flag("topology-keys") == nil {
 			cmd.Flags().StringArrayVar(&o.TopologyKeys, "topology-keys", nil, "Topology keys for affinity")
@@ -141,6 +142,7 @@ func buildCreateSubCmds(createOptions *action.CreateOptions) []*cobra.Command {
 		}
 		if cmd.Flag("tenancy") == nil {
 			cmd.Flags().StringVar(&o.Tenancy, "tenancy", "SharedNode", "Tenancy options, one of: (SharedNode, DedicatedNode)")
+			_ = cmd.Flags().SetAnnotation("tenancy", cobra.BashCompCustom, []string{"SharedNode", "DedicatedNode"})
 		}
 		cmds = append(cmds, cmd)
 	}
@@ -233,6 +235,33 @@ func (o *CreateSubCmdsOptions) Validate() error {
 	}
 	if len(o.Name) > 16 {
 		return fmt.Errorf("cluster name should be less than 16 characters")
+	}
+	if o.Tenancy != "SharedNode" && o.Tenancy != "DedicatedNode" {
+		return fmt.Errorf("tenancy must be one of: (SharedNode, DedicatedNode)")
+	}
+	if o.PodAntiAffinity != "Preferred" && o.PodAntiAffinity != "Required" {
+		return fmt.Errorf("podAntiAffinity must be one of: (Preferred, Required)")
+	}
+	if o.TopologyKeys != nil {
+		for _, key := range o.TopologyKeys {
+			if key == "" {
+				return fmt.Errorf("topologyKeys cannot be empty")
+			}
+		}
+	}
+	if o.NodeLabels != nil {
+		for k, v := range o.NodeLabels {
+			if k == "" || v == "" {
+				return fmt.Errorf("nodeLabels cannot be empty")
+			}
+		}
+	}
+	if o.Tolerations != nil {
+		for _, t := range o.Tolerations {
+			if t.Key == "" || t.Operator == "" {
+				return fmt.Errorf("tolerations cannot be empty")
+			}
+		}
 	}
 	return cluster.ValidateValues(o.ChartInfo, o.Values)
 }
