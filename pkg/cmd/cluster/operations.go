@@ -106,17 +106,20 @@ type OperationsOptions struct {
 	Services      []appsv1alpha1.OpsService `json:"services,omitempty"`
 
 	// Switchover options
-	Component           string                         `json:"component"`
-	Instance            string                         `json:"instance"`
-	Primary             string                         `json:"-"`
-	CharacterType       string                         `json:"-"`
-	LorryHAEnabled      bool                           `json:"-"`
-	ExecPod             *corev1.Pod                    `json:"-"`
-	BackupName          string                         `json:"-"`
-	InstanceNames       []string                       `json:"-"`
-	Nodes               []string                       `json:"-"`
-	RebuildInstanceFrom []appsv1alpha1.RebuildInstance `json:"rebuildInstanceFrom,omitempty"`
-	Env                 []string                       `json:"-"`
+	Component              string                         `json:"component"`
+	ComponentObjectName    string                         `json:"componentObjectName"`
+	Instance               string                         `json:"instance"`
+	Primary                string                         `json:"-"`
+	CharacterType          string                         `json:"-"`
+	LorryHAEnabled         bool                           `json:"-"`
+	ExecPod                *corev1.Pod                    `json:"-"`
+	BackupName             string                         `json:"-"`
+	InstanceNames          []string                       `json:"-"`
+	Nodes                  []string                       `json:"-"`
+	RebuildInstanceFrom    []appsv1alpha1.RebuildInstance `json:"rebuildInstanceFrom,omitempty"`
+	Env                    []string                       `json:"-"`
+	Inplace                bool                           `json:"-"`
+	SourceBackupTargetName string                         `json:"-"`
 }
 
 func newBaseOperationsOptions(f cmdutil.Factory, streams genericiooptions.IOStreams,
@@ -1050,8 +1053,10 @@ func NewPromoteCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 			cmdutil.BehaviorOnFatal(printer.FatalWithRedColor)
 			cmdutil.CheckErr(o.Complete())
 			cmdutil.CheckErr(o.CompleteComponentsFlag())
-			cmdutil.CheckErr(o.CompletePromoteOps())
-			cmdutil.CheckErr(o.Validate())
+			if len(o.ComponentObjectName) == 0 {
+				cmdutil.CheckErr(o.CompletePromoteOps())
+				cmdutil.CheckErr(o.Validate())
+			}
 			if (o.LorryHAEnabled || o.CharacterType == oceanbase) && o.ExecPod != nil {
 				// lorryCli, err := lorryclient.NewK8sExecClientWithPod(nil, o.ExecPod)
 				// cmdutil.CheckErr(err)
@@ -1073,12 +1078,14 @@ func NewPromoteCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 				customOpr.CreateOptions.Options = customOpr
 				cmdutil.CheckErr(customOpr.Run())
 			} else {
+				fmt.Println("component:" + o.Component)
 				cmdutil.CheckErr(o.Run())
 			}
 		},
 	}
 	flags.AddComponentFlag(f, cmd, &o.Component, "Specify the component name of the cluster, if the cluster has multiple components, you need to specify a component")
 	cmd.Flags().StringVar(&o.Instance, "instance", "", "Specify the instance name as the new primary or leader of the cluster, you can get the instance name by running \"kbcli cluster list-instances\"")
+	cmd.Flags().StringVar(&o.ComponentObjectName, "component-object-name", "", "Specify the component object name")
 	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "Skip interactive approval before promote the instance")
 	o.addCommonFlags(cmd, f)
 	return cmd
@@ -1329,9 +1336,11 @@ func NewRebuildInstanceCmd(f cmdutil.Factory, streams genericiooptions.IOStreams
 				ComponentOps: appsv1alpha1.ComponentOps{
 					ComponentName: compName,
 				},
-				Instances:  instances,
-				BackupName: o.BackupName,
-				RestoreEnv: envVars,
+				InPlace:                o.Inplace,
+				Instances:              instances,
+				BackupName:             o.BackupName,
+				RestoreEnv:             envVars,
+				SourceBackupTargetName: o.SourceBackupTargetName,
 			},
 		}
 		return nil
@@ -1354,6 +1363,8 @@ func NewRebuildInstanceCmd(f cmdutil.Factory, streams genericiooptions.IOStreams
 	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "Skip interactive approval before rebuilding the instances.gi")
 	cmd.Flags().StringVar(&o.BackupName, "backup", "", "instances will be rebuild by the specified backup.")
 	cmd.Flags().StringSliceVar(&o.InstanceNames, "instances", nil, "instance which need to rebuild.")
+	cmd.Flags().BoolVar(&o.Inplace, "inPlace", false, "rebuild the instance with the same pod name. if not set, will create a new instance by horizontalScaling and remove the instance after the new instance is ready.")
+	cmd.Flags().StringVar(&o.SourceBackupTargetName, "source-backup-target", "", "To rebuild a sharding component instance from a backup, you can specify the name of the source backup target")
 	cmd.Flags().StringSliceVar(&o.Nodes, "node", nil, "specified the target node which rebuilds the instance on the node otherwise will rebuild on a randon node. format: insName1=nodeName,insName2=nodeName")
 	cmd.Flags().StringArrayVar(&o.Env, "env", []string{}, "provide the necessary env for the 'Restore' operation from the backup. format: key1=value, key2=value")
 	return cmd

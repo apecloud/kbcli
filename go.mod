@@ -8,7 +8,7 @@ require (
 	cuelang.org/go v0.8.0
 	github.com/Masterminds/semver/v3 v3.3.0
 	github.com/apecloud/kubebench v0.0.0-20240327101848-6a031d3f4ebe
-	github.com/apecloud/kubeblocks v0.9.1-beta.27
+	github.com/apecloud/kubeblocks v0.9.3-beta.21
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
 	github.com/briandowns/spinner v1.23.0
 	github.com/chaos-mesh/chaos-mesh/api v0.0.0-20230912020346-a5d89c1c90ad
@@ -325,7 +325,6 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/apiserver v0.31.1 // indirect
 	k8s.io/component-helpers v0.28.3 // indirect
-	k8s.io/kubernetes v1.28.3 // indirect
 	oras.land/oras-go v1.2.5 // indirect
 	periph.io/x/host/v3 v3.8.0 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect

@@ -27,12 +27,15 @@ options: {
 	componentDefinitionName: string
 	serviceVersion:          string
 	component:               string
+	componentObjectName:     string
 	instance:                string
 	componentNames: [...string]
 	rebuildInstanceFrom: [
 		...{
 			componentName: string
 			backupName?:   string
+			sourceBackupTargetName?: string
+			inPlace?:      bool
 			instances: [
 				...{
 					name:            string
@@ -228,12 +231,12 @@ content: {
 		}
 		if options.type == "Switchover" {
 			switchover: [{
-				if options.component == "" {
-					componentName: options.componentNames[0]
-				}
 				if options.component != "" {
 					componentName: options.component
 				}
+				if options.componentObjectName != "" {
+                    componentObjectName: options.componentObjectName
+                }
 				if options.instance == "" {
 					instanceName: "*"
 				}
