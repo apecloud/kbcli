@@ -108,14 +108,16 @@ type OperationsOptions struct {
 	Services      []opsv1alpha1.OpsService `json:"services,omitempty"`
 
 	// Switchover options
-	Component           string                        `json:"component"`
-	Instance            string                        `json:"instance"`
-	BackupName          string                        `json:"-"`
-	Inplace             bool                          `json:"-"`
-	InstanceNames       []string                      `json:"-"`
-	Nodes               []string                      `json:"-"`
-	RebuildInstanceFrom []opsv1alpha1.RebuildInstance `json:"rebuildInstanceFrom,omitempty"`
-	Env                 []string                      `json:"-"`
+	Component              string                        `json:"component"`
+	ComponentObjectName    string                        `json:"componentObjectName,omitempty"`
+	Instance               string                        `json:"instance"`
+	BackupName             string                        `json:"-"`
+	Inplace                bool                          `json:"-"`
+	InstanceNames          []string                      `json:"-"`
+	Nodes                  []string                      `json:"-"`
+	RebuildInstanceFrom    []opsv1alpha1.RebuildInstance `json:"rebuildInstanceFrom,omitempty"`
+	Env                    []string                      `json:"-"`
+	SourceBackupTargetName string                        `json:"-"`
 
 	// Stop and Start options
 	isComponentsFlagOptional bool
@@ -212,10 +214,11 @@ func (o *OperationsOptions) CompleteSwitchoverOps() error {
 	}
 
 	if o.Component == "" {
-		if len(clusterObj.Spec.ComponentSpecs) > 1 {
+		if len(clusterObj.Spec.ComponentSpecs) == 1 {
+			o.Component = clusterObj.Spec.ComponentSpecs[0].Name
+		} else if len(clusterObj.Spec.ComponentSpecs) > 1 {
 			return fmt.Errorf("there are multiple components in cluster, please use --component to specify the component for promote")
 		}
-		o.Component = clusterObj.Spec.ComponentSpecs[0].Name
 	}
 	return nil
 }
@@ -435,23 +438,19 @@ func (o *OperationsOptions) validatePromote(clusterObj *appsv1.Cluster) error {
 		podObj     = &corev1.Pod{}
 	)
 
-	if o.Component == "" && o.Instance == "" {
-		return fmt.Errorf("at least one of --component or --instance is required")
+	if o.Instance == "" {
+		return fmt.Errorf("--candidate is required")
 	}
 	// if the instance is not specified, do not need to check the validity of the instance
-	if o.Instance != "" {
-		// checks the validity of the instance whether it belongs to the current component and ensure it is not the primary or leader instance currently.
-		podKey := client.ObjectKey{
-			Namespace: clusterObj.Namespace,
-			Name:      o.Instance,
-		}
-		if err := util.GetResourceObjectFromGVR(types.PodGVR(), podKey, o.Dynamic, podObj); err != nil || podObj == nil {
-			return fmt.Errorf("instance %s not found, please check the validity of the instance using \"kbcli cluster list-instances\"", o.Instance)
-		}
-		if o.Component == "" {
-			o.Component = cluster.GetPodComponentName(podObj)
-		}
+	// checks the validity of the instance whether it belongs to the current component and ensure it is not the primary or leader instance currently.
+	podKey := client.ObjectKey{
+		Namespace: clusterObj.Namespace,
+		Name:      o.Instance,
 	}
+	if err := util.GetResourceObjectFromGVR(types.PodGVR(), podKey, o.Dynamic, podObj); err != nil || podObj == nil {
+		return fmt.Errorf("instance %s not found, please check the validity of the instance using \"kbcli cluster list-instances\"", o.Instance)
+	}
+	o.ComponentObjectName = constant.GenerateClusterComponentName(clusterObj.Name, podObj.Labels[constant.KBAppComponentLabelKey])
 
 	getAndValidatePod := func(targetRoles ...string) error {
 		// if the instance is not specified, do not need to check the validity of the instance
@@ -467,8 +466,8 @@ func (o *OperationsOptions) validatePromote(clusterObj *appsv1.Cluster) error {
 				return fmt.Errorf("instanceName %s cannot be promoted because it is already the targetRole %s instance", o.Instance, targetRole)
 			}
 		}
-		if cluster.GetPodComponentName(podObj) != o.Component || podObj.Labels[constant.AppInstanceLabelKey] != clusterObj.Name {
-			return fmt.Errorf("instanceName %s does not belong to the current component, please check the validity of the instance using \"kbcli cluster list-instances\"", o.Instance)
+		if podObj.Labels[constant.AppInstanceLabelKey] != clusterObj.Name {
+			return fmt.Errorf("instanceName %s does not belong to the current cluster, please check the validity of the instance using \"kbcli cluster list-instances\"", o.Instance)
 		}
 		return nil
 	}
@@ -492,13 +491,13 @@ func (o *OperationsOptions) validatePromote(clusterObj *appsv1.Cluster) error {
 	// check componentDefinition exist
 	compDefKey := client.ObjectKey{
 		Namespace: "",
-		Name:      cluster.GetComponentSpec(clusterObj, o.Component).ComponentDef,
+		Name:      cluster.GetComponentSpec(clusterObj, cluster.GetPodComponentName(podObj)).ComponentDef,
 	}
 	if err := util.GetResourceObjectFromGVR(types.CompDefGVR(), compDefKey, o.Dynamic, &compDefObj); err != nil {
 		return err
 	}
 	if compDefObj.Spec.LifecycleActions == nil || compDefObj.Spec.LifecycleActions.Switchover == nil {
-		return fmt.Errorf(`this component "%s does not support switchover, you can define the switchover action in the componentDef "%s"`, o.Component, compDefKey.Name)
+		return fmt.Errorf(`this instance "%s does not support switchover, you can define the switchover action in the componentDef "%s"`, o.Instance, compDefKey.Name)
 	}
 	targetRole, err := getTargetRole(compDefObj.Spec.Roles)
 	if err != nil {
@@ -988,20 +987,14 @@ func NewCancelCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.
 
 var promoteExample = templates.Examples(`
 		# Promote the instance mycluster-mysql-1 as the new primary or leader.
-		kbcli cluster promote mycluster --instance mycluster-mysql-1
-
-		# Promote a non-primary or non-leader instance as the new primary or leader, the new primary or leader is determined by the system.
-		kbcli cluster promote mycluster
-
-		# If the cluster has multiple components, you need to specify a component, otherwise an error will be reported.
-	    kbcli cluster promote mycluster --component=mysql --instance mycluster-mysql-1
+		kbcli cluster promote mycluster --candidate mycluster-mysql-1
 `)
 
 // NewPromoteCmd creates a promote command
 func NewPromoteCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
 	o := newBaseOperationsOptions(f, streams, opsv1alpha1.SwitchoverType, false)
 	cmd := &cobra.Command{
-		Use:               "promote NAME [--component=<comp-name>] [--instance <instance-name>]",
+		Use:               "promote NAME [--instance <instance-name>]",
 		Short:             "Promote a non-primary or non-leader instance as the new primary or leader of the cluster",
 		Example:           promoteExample,
 		ValidArgsFunction: util.ResourceNameCompletionFunc(f, types.ClusterGVR()),
@@ -1015,9 +1008,9 @@ func NewPromoteCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 			cmdutil.CheckErr(o.Run())
 		},
 	}
-	flags.AddComponentFlag(f, cmd, &o.Component, "Specify the component name of the cluster, if the cluster has multiple components, you need to specify a component")
-	cmd.Flags().StringVar(&o.Instance, "instance", "", "Specify the instance name as the new primary or leader of the cluster, you can get the instance name by running \"kbcli cluster list-instances\"")
+	cmd.Flags().StringVar(&o.Instance, "candidate", "", "Specify the instance name as the new primary or leader of the cluster, you can get the instance name by running \"kbcli cluster list-instances\"")
 	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "Skip interactive approval before promote the instance")
+	_ = cmd.MarkFlagRequired("candidate")
 	o.addCommonFlags(cmd, f)
 	return cmd
 }
@@ -1327,10 +1320,11 @@ func NewRebuildInstanceCmd(f cmdutil.Factory, streams genericiooptions.IOStreams
 				ComponentOps: opsv1alpha1.ComponentOps{
 					ComponentName: compName,
 				},
-				Instances:  instances,
-				InPlace:    o.Inplace,
-				BackupName: o.BackupName,
-				RestoreEnv: envVars,
+				Instances:              instances,
+				InPlace:                o.Inplace,
+				BackupName:             o.BackupName,
+				RestoreEnv:             envVars,
+				SourceBackupTargetName: o.SourceBackupTargetName,
 			},
 		}
 		return nil
@@ -1355,6 +1349,7 @@ func NewRebuildInstanceCmd(f cmdutil.Factory, streams genericiooptions.IOStreams
 	cmd.Flags().StringVar(&o.BackupName, "backup", "", "instances will be rebuild by the specified backup.")
 	cmd.Flags().StringSliceVar(&o.InstanceNames, "instances", nil, "instances which need to rebuild.")
 	util.CheckErr(flags.CompletedInstanceFlag(cmd, f, "instances"))
+	cmd.Flags().StringVar(&o.SourceBackupTargetName, "source-backup-target", "", "To rebuild a sharding component instance from a backup, you can specify the name of the source backup target")
 	cmd.Flags().StringSliceVar(&o.Nodes, "node", nil, `specified the target node which rebuilds the instance on the node otherwise will rebuild on a random node. format: insName1=nodeName,insName2=nodeName`)
 	cmd.Flags().StringArrayVar(&o.Env, "restore-env", []string{}, "provide the necessary env for the 'Restore' operation from the backup. format: key1=value, key2=value")
 	return cmd
