@@ -31,7 +31,7 @@ kbcli cluster create elasticsearch NAME [flags]
       --node-labels stringToString     Node label selector (default [])
   -o, --output format                  Prints the output in the specified format. Allowed values: JSON and YAML (default yaml)
       --pod-anti-affinity string       Pod anti-affinity type, one of: (Preferred, Required) (default "Preferred")
-      --rbac-enabled                   Specify whether rbac resources will be created by client, otherwise KubeBlocks server will try to create rbac resources. (default true)
+      --rbac-enabled                   Specify whether rbac resources will be created by client, otherwise KubeBlocks server will try to create rbac resources.
       --replicas int                   The number of replicas, for single-node mode, the replicas is 1, for multi-node mode, the default replicas is 3. Value range [1, 5]. (default 1)
       --storage float                  Storage size, the unit is Gi. Value range [1, 10000]. (default 20)
       --tenancy string                 Tenancy options, one of: (SharedNode, DedicatedNode) (default "SharedNode")
