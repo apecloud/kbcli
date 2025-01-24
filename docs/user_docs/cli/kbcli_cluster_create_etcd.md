@@ -29,8 +29,9 @@ kbcli cluster create etcd NAME [flags]
       --memory float                   Memory, the unit is Gi. Value range [0.5, 1000]. (default 0.5)
       --node-labels stringToString     Node label selector (default [])
   -o, --output format                  Prints the output in the specified format. Allowed values: JSON and YAML (default yaml)
+      --peer-service.enabled           Enable peer service (no need to enable for single cluster).
+      --peer-service.type string       Service type for etcd peers, default peer service for single cluster use headless ClusterIP. Valid option is LoadBalancer, will support NodePort in the future. Legal values [ClusterIP, LoadBalancer]. (default "LoadBalancer")
       --pod-anti-affinity string       Pod anti-affinity type, one of: (Preferred, Required) (default "Preferred")
-      --rbac-enabled                   Specify whether rbac resources will be created by client, otherwise KubeBlocks server will try to create rbac resources.
       --replicas int                   The number of replicas, the default replicas is 3. Value range [1, 5]. (default 3)
       --storage float                  Data Storage size, the unit is Gi. Value range [1, 10000]. (default 10)
       --tenancy string                 Tenancy options, one of: (SharedNode, DedicatedNode) (default "SharedNode")
