@@ -1,5 +1,5 @@
 /*
-copyright (c) 2022-2024 apecloud co., ltd
+Copyright (C) 2022-2025 ApeCloud Co., Ltd
 
 this file is part of kubeblocks project
 
