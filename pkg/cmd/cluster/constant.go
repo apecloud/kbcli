@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2022-2024 ApeCloud Co., Ltd
+Copyright (C) 2022-2025 ApeCloud Co., Ltd
 
 This file is part of KubeBlocks project
 
@@ -18,13 +18,5 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 package cluster
-
-const (
-	saNamePrefix             = "kb-"
-	roleNamePrefix           = "kb-"
-	roleBindingNamePrefix    = "kb-"
-	clusterRolePrefix        = "kb-"
-	clusterRoleBindingPrefix = "kb-"
-)
 
 const apeCloudMysql = "apecloud-mysql"

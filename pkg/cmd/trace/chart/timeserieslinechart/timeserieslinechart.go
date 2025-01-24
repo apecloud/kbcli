@@ -1,6 +1,6 @@
 // ntcharts - Copyright (c) 2024 Neomantra Corp.
 /*
-Copyright (C) 2022-2024 ApeCloud Co., Ltd
+Copyright (C) 2022-2025 ApeCloud Co., Ltd
 
 This file is part of KubeBlocks project
 
