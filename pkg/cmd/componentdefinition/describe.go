@@ -198,9 +198,9 @@ func showRoles(roles []kbappsv1.ReplicaRole, out io.Writer) {
 	}
 	fmt.Fprintf(out, "Roles:\n")
 	tbl := printer.NewTablePrinter(out)
-	tbl.SetHeader("\tNAME", "SERVICE-ABLE", "WRITE-ABLE", "VOTE-ABLE")
+	tbl.SetHeader("\tNAME", "WITH-QUORUM", "UPDATE-PRIORITY")
 	for _, role := range roles {
-		tbl.AddRow("\t"+role.Name, role.Serviceable, role.Writable, role.Votable)
+		tbl.AddRow("\t"+role.Name, role.ParticipatesInQuorum, role.UpdatePriority)
 	}
 	tbl.Print()
 	fmt.Fprint(out, "\n")
@@ -228,10 +228,9 @@ func showSystemAccounts(systemAccounts []kbappsv1.SystemAccount, out io.Writer) 
 	}
 	fmt.Fprintf(out, "System Accounts:\n")
 	tbl := printer.NewTablePrinter(out)
-	tbl.SetHeader("\tNAME", "INIT-ACCOUNT", "HAS-SECRET-REF")
+	tbl.SetHeader("\tNAME", "INIT-ACCOUNT")
 	for _, sa := range systemAccounts {
-		hasSecretRef := sa.SecretRef != nil
-		tbl.AddRow("\t"+sa.Name, sa.InitAccount, hasSecretRef)
+		tbl.AddRow("\t"+sa.Name, sa.InitAccount)
 	}
 	tbl.Print()
 	fmt.Fprint(out, "\n")

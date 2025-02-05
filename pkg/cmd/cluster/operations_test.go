@@ -359,17 +359,17 @@ var _ = Describe("operations", func() {
 		By("validate failed because o.Instance is illegal ")
 		o.Name = clusterName1
 		o.Component = testing.ComponentName
-		o.Instance = fmt.Sprintf("%s-%s-%d", clusterName1, testing.ComponentName, 5)
+		o.Candidate = fmt.Sprintf("%s-%s-%d", clusterName1, testing.ComponentName, 5)
 		Expect(o.Validate()).ShouldNot(Succeed())
 		Expect(testing.ContainExpectStrings(o.Validate().Error(), "not found")).Should(BeTrue())
 
 		By("validate failed because o.Instance is already leader and cannot be promoted")
-		o.Instance = fmt.Sprintf("%s-%s-%d", clusterName1, testing.ComponentName, 0)
+		o.Candidate = fmt.Sprintf("%s-%s-%d", clusterName1, testing.ComponentName, 0)
 		Expect(o.Validate()).ShouldNot(Succeed())
 		Expect(testing.ContainExpectStrings(o.Validate().Error(), "cannot be promoted because it is already the targetRole")).Should(BeTrue())
 
 		By("validate failed because o.Instance does not belong to the current component")
-		o.Instance = fmt.Sprintf("%s-%s-%d", clusterName, testing.ComponentName, 1)
+		o.Candidate = fmt.Sprintf("%s-%s-%d", clusterName, testing.ComponentName, 1)
 		o.Name = clusterName1
 		Expect(o.Validate()).ShouldNot(Succeed())
 		Expect(testing.ContainExpectStrings(o.Validate().Error(), "does not belong to the current cluster")).Should(BeTrue())
@@ -394,17 +394,17 @@ var _ = Describe("operations", func() {
 
 		By("validate failed because o.Instance is illegal ")
 		o.Name = clusterNameWithCompDef
-		o.Instance = fmt.Sprintf("%s-%s-%d", clusterNameWithCompDef, testing.ComponentName, 5)
+		o.Candidate = fmt.Sprintf("%s-%s-%d", clusterNameWithCompDef, testing.ComponentName, 5)
 		Expect(o.Validate()).ShouldNot(Succeed())
 		Expect(testing.ContainExpectStrings(o.Validate().Error(), "not found")).Should(BeTrue())
 
 		By("validate failed because o.Instance is already leader and cannot be promoted")
-		o.Instance = fmt.Sprintf("%s-%s-%d", clusterNameWithCompDef, testing.ComponentName, 0)
+		o.Candidate = fmt.Sprintf("%s-%s-%d", clusterNameWithCompDef, testing.ComponentName, 0)
 		Expect(o.Validate()).ShouldNot(Succeed())
 		Expect(testing.ContainExpectStrings(o.Validate().Error(), "cannot be promoted because it is already the targetRole")).Should(BeTrue())
 
 		By("validate failed because o.Instance does not belong to the current cluster")
-		o.Instance = fmt.Sprintf("%s-%s-%d", clusterName1, testing.ComponentName, 1)
+		o.Candidate = fmt.Sprintf("%s-%s-%d", clusterName1, testing.ComponentName, 1)
 		o.Component = testing.ComponentName
 		o.Name = clusterName
 		Expect(o.Validate()).ShouldNot(Succeed())
