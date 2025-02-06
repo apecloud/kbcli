@@ -92,7 +92,7 @@ jobs:
           asset_content_type: application/octet-stream
 
       - name: Upload kbcli Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.TAG_NAME }}-kbcli
           path: |
@@ -100,6 +100,7 @@ jobs:
             ./dist/*.zip
           if-no-files-found: error
           retention-days: 1
+          overwrite: true
 
   upload-release-assert:
     needs: gorelease-assert
@@ -111,7 +112,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Download Kbcli Artifact
-        uses: actions/download-artifact@v3.0.2
+        uses: actions/download-artifact@v4
         with:
           name: ${{ env.TAG_NAME }}-kbcli
           path: ${{ github.workspace }}/dist
