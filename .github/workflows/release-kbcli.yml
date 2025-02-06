@@ -36,7 +36,7 @@ jobs:
   gorelease-assert:
     needs: [ create-release-jihulab ]
     name: Upload and release kbcli
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - name: install lib
@@ -103,7 +103,7 @@ jobs:
 
   upload-release-assert:
     needs: gorelease-assert
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
@@ -134,7 +134,7 @@ jobs:
 
   remove-artifact:
     needs: upload-release-assert
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Remove kbcli Artifact
         uses: geekyeggo/delete-artifact@v2
