@@ -22,6 +22,7 @@ package cluster
 import (
 	"context"
 	"fmt"
+	"math"
 	"strings"
 
 	appsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
@@ -111,6 +112,7 @@ type OperationsOptions struct {
 	Component              string                        `json:"component"`
 	ComponentObjectName    string                        `json:"componentObjectName,omitempty"`
 	Instance               string                        `json:"instance"`
+	Candidate              string                        `json:"candidate"`
 	BackupName             string                        `json:"-"`
 	Inplace                bool                          `json:"-"`
 	InstanceNames          []string                      `json:"-"`
@@ -438,54 +440,75 @@ func (o *OperationsOptions) validatePromote(clusterObj *appsv1.Cluster) error {
 		podObj     = &corev1.Pod{}
 	)
 
-	if o.Instance == "" {
+	if o.Candidate == "" {
 		return fmt.Errorf("--candidate is required")
 	}
 	// if the instance is not specified, do not need to check the validity of the instance
 	// checks the validity of the instance whether it belongs to the current component and ensure it is not the primary or leader instance currently.
 	podKey := client.ObjectKey{
 		Namespace: clusterObj.Namespace,
-		Name:      o.Instance,
+		Name:      o.Candidate,
 	}
 	if err := util.GetResourceObjectFromGVR(types.PodGVR(), podKey, o.Dynamic, podObj); err != nil || podObj == nil {
-		return fmt.Errorf("instance %s not found, please check the validity of the instance using \"kbcli cluster list-instances\"", o.Instance)
+		return fmt.Errorf("instance %s not found, please check the validity of the instance using \"kbcli cluster list-instances\"", o.Candidate)
 	}
 	o.ComponentObjectName = constant.GenerateClusterComponentName(clusterObj.Name, podObj.Labels[constant.KBAppComponentLabelKey])
 
 	getAndValidatePod := func(targetRoles ...string) error {
 		// if the instance is not specified, do not need to check the validity of the instance
-		if o.Instance == "" {
+		if o.Candidate == "" {
 			return nil
 		}
 		v, ok := podObj.Labels[constant.RoleLabelKey]
 		if !ok || v == "" {
-			return fmt.Errorf("instance %s cannot be promoted because it had a invalid role label", o.Instance)
+			return fmt.Errorf("instance %s cannot be promoted because it had a invalid role label", o.Candidate)
 		}
 		for _, targetRole := range targetRoles {
 			if v == targetRole {
-				return fmt.Errorf("instanceName %s cannot be promoted because it is already the targetRole %s instance", o.Instance, targetRole)
+				return fmt.Errorf("instanceName %s cannot be promoted because it is already the targetRole %s instance", o.Candidate, targetRole)
 			}
 		}
 		if podObj.Labels[constant.AppInstanceLabelKey] != clusterObj.Name {
-			return fmt.Errorf("instanceName %s does not belong to the current cluster, please check the validity of the instance using \"kbcli cluster list-instances\"", o.Instance)
+			return fmt.Errorf("instanceName %s does not belong to the current cluster, please check the validity of the instance using \"kbcli cluster list-instances\"", o.Candidate)
 		}
 		return nil
 	}
 
 	getTargetRole := func(roles []appsv1.ReplicaRole) (string, error) {
+		pods, err := o.Client.CoreV1().Pods(clusterObj.Namespace).List(context.Background(), metav1.ListOptions{
+			LabelSelector: fmt.Sprintf("%s=%s", constant.KBAppComponentLabelKey, podObj.Labels[constant.KBAppComponentLabelKey]),
+		})
+		if err != nil {
+			return "", err
+		}
+		if o.Instance != "" {
+			for _, pod := range pods.Items {
+				if pod.Name == o.Instance {
+					return pod.Labels[constant.RoleLabelKey], nil
+				}
+			}
+			return "", fmt.Errorf("instance %s not found, please check the validity of the instance using \"kbcli cluster list-instances\"", o.Instance)
+		}
 		targetRole := ""
 		if len(roles) == 0 {
 			return targetRole, fmt.Errorf("component has no roles definition, does not support switchover")
 		}
-		for _, role := range roles {
-			if role.Serviceable && role.Writable {
-				if targetRole != "" {
-					return targetRole, fmt.Errorf("componentDefinition has more than role is serviceable and writable, does not support switchover")
-				}
-				targetRole = role.Name
+		// HACK: assume the role with highest priority to be writable
+		highestPriority := math.MinInt
+		var role *appsv1.ReplicaRole
+		for _, r := range compDefObj.Spec.Roles {
+			if r.UpdatePriority > highestPriority {
+				highestPriority = r.UpdatePriority
+				role = &r
 			}
 		}
-		return targetRole, nil
+		for _, pod := range pods.Items {
+			if pod.Labels[constant.RoleLabelKey] == role.Name {
+				o.Instance = pod.Name
+				break
+			}
+		}
+		return role.Name, nil
 	}
 
 	// check componentDefinition exist
@@ -497,7 +520,7 @@ func (o *OperationsOptions) validatePromote(clusterObj *appsv1.Cluster) error {
 		return err
 	}
 	if compDefObj.Spec.LifecycleActions == nil || compDefObj.Spec.LifecycleActions.Switchover == nil {
-		return fmt.Errorf(`this instance "%s does not support switchover, you can define the switchover action in the componentDef "%s"`, o.Instance, compDefKey.Name)
+		return fmt.Errorf(`this instance "%s does not support switchover, you can define the switchover action in the componentDef "%s"`, o.Candidate, compDefKey.Name)
 	}
 	targetRole, err := getTargetRole(compDefObj.Spec.Roles)
 	if err != nil {
@@ -1008,7 +1031,8 @@ func NewPromoteCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 			cmdutil.CheckErr(o.Run())
 		},
 	}
-	cmd.Flags().StringVar(&o.Instance, "candidate", "", "Specify the instance name as the new primary or leader of the cluster, you can get the instance name by running \"kbcli cluster list-instances\"")
+	cmd.Flags().StringVar(&o.Candidate, "candidate", "", "Specify the instance name as the new primary or leader of the cluster, you can get the instance name by running \"kbcli cluster list-instances\"")
+	cmd.Flags().StringVar(&o.Instance, "instance", "", "Specify the instance name that will transfer its role to the candidate pod, If not set, the current primary or leader of the cluster will be used.")
 	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "Skip interactive approval before promote the instance")
 	_ = cmd.MarkFlagRequired("candidate")
 	o.addCommonFlags(cmd, f)

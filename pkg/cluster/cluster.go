@@ -423,7 +423,6 @@ func (o *ClusterObjects) GetInstanceInfo() []*InstanceInfo {
 			Component:   componentName,
 			Status:      o.getPodPhase(&pod),
 			Role:        getLabelVal(pod.Labels, constant.RoleLabelKey),
-			AccessMode:  getLabelVal(pod.Labels, constant.AccessModeLabelKey),
 			CreatedTime: util.TimeFormat(&pod.CreationTimestamp),
 		}
 		var componentSpec *kbappsv1.ClusterComponentSpec
