@@ -24,6 +24,7 @@ kbcli cluster promote NAME [--instance <instance-name>] [flags]
       --edit                           Edit the API resource before creating
       --force                           skip the pre-checks of the opsRequest to run the opsRequest forcibly
   -h, --help                           help for promote
+      --instance string                Specify the instance name that will transfer its role to the candidate pod, If not set, the current primary or leader of the cluster will be used.
       --name string                    OpsRequest name. if not specified, it will be randomly generated
   -o, --output format                  Prints the output in the specified format. Allowed values: JSON and YAML (default yaml)
       --ttlSecondsAfterSucceed int     Time to live after the OpsRequest succeed

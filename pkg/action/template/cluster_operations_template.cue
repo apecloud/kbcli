@@ -262,7 +262,7 @@ content: {
 			switchover: [{
 				componentObjectName: options.componentObjectName
 				instanceName:        options.instance
-				candidateName:       options.instance
+				candidateName:       options.candidate
 			}]
 		}
 		if options.type == "RebuildInstance" {
