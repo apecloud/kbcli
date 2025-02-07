@@ -495,20 +495,21 @@ func (o *OperationsOptions) validatePromote(clusterObj *appsv1.Cluster) error {
 		}
 		// HACK: assume the role with highest priority to be writable
 		highestPriority := math.MinInt
-		var role *appsv1.ReplicaRole
-		for _, r := range compDefObj.Spec.Roles {
-			if r.UpdatePriority > highestPriority {
-				highestPriority = r.UpdatePriority
-				role = &r
+		var highestPriorityRole appsv1.ReplicaRole
+		for i := range compDefObj.Spec.Roles {
+			role := compDefObj.Spec.Roles[i]
+			if role.UpdatePriority > highestPriority {
+				highestPriority = role.UpdatePriority
+				highestPriorityRole = role
 			}
 		}
 		for _, pod := range pods.Items {
-			if pod.Labels[constant.RoleLabelKey] == role.Name {
+			if pod.Labels[constant.RoleLabelKey] == highestPriorityRole.Name {
 				o.Instance = pod.Name
 				break
 			}
 		}
-		return role.Name, nil
+		return highestPriorityRole.Name, nil
 	}
 
 	// check componentDefinition exist
