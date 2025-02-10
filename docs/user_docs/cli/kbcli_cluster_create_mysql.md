@@ -27,18 +27,20 @@ kbcli cluster create mysql NAME [flags]
       --edit                           Edit the API resource before creating
   -h, --help                           help for mysql
       --memory float                   Memory, the unit is Gi. Value range [0.5, 1000]. (default 1)
-      --mode string                    Cluster topology mode. Legal values [standalone, replication, raftGroup]. (default "standalone")
       --node-labels stringToString     Node label selector (default [])
   -o, --output format                  Prints the output in the specified format. Allowed values: JSON and YAML (default yaml)
       --pod-anti-affinity string       Pod anti-affinity type, one of: (Preferred, Required) (default "Preferred")
-      --rbac-enabled                   Specify whether rbac resources will be created by client, otherwise KubeBlocks server will try to create rbac resources.
+      --proxysql.cpu float              (default 1)
+      --proxysql.memory float          Memory, the unit is Gi. (default 1)
+      --proxysql.replicas int           (default 1)
       --replicas int                   The number of replicas. Value range [1, 5]. (default 1)
       --storage float                  Storage size, the unit is Gi. Value range [1, 10000]. (default 20)
       --tenancy string                 Tenancy options, one of: (SharedNode, DedicatedNode) (default "SharedNode")
       --termination-policy string      The termination policy of cluster. Legal values [DoNotTerminate, Halt, Delete, WipeOut]. (default "Delete")
       --tolerations strings            Tolerations for cluster, such as "key=value:effect,key:effect", for example '"engineType=mongo:NoSchedule", "diskType:NoSchedule"'
+      --topology string                Topology type of the server Legal values [semisync, semisync-proxysql, mgr, orc, orc-proxysql]. (default "server")
       --topology-keys stringArray      Topology keys for affinity
-      --version string                 Cluster version, run "kbcli cv list --devel" to see all versions. Legal values [mysql-8.4, mysql-8.0, mysql-5.7, mysql-orc-8.0, mysql-orc-5.7]. (default "mysql-8.0")
+      --version string                 MySQL version Legal values [8.0.39, 8.0.38, 8.0.37, 8.0.36, 8.4.2, 8.4.1, 8.4.0, 5.7.44]. (default "8.0.39")
 ```
 
 ### Options inherited from parent commands
