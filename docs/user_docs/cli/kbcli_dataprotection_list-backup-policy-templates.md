@@ -1,13 +1,27 @@
 ---
-title: kbcli clusterversion
+title: kbcli dataprotection list-backup-policy-templates
 ---
 
-ClusterVersion command.
+List backup policy templates
+
+```
+kbcli dataprotection list-backup-policy-templates [flags]
+```
+
+### Examples
+
+```
+  # list all backup policy template
+  kbcli dp list-bpt
+```
 
 ### Options
 
 ```
-  -h, --help   help for clusterversion
+  -h, --help              help for list-backup-policy-templates
+  -o, --output format     prints the output in the specified format. Allowed values: table, json, yaml, wide (default table)
+  -l, --selector string   Selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2). Matching objects must satisfy all of the specified label constraints.
+      --show-labels       When printing, show all labels as the last column (default hide labels column)
 ```
 
 ### Options inherited from parent commands
@@ -36,10 +50,7 @@ ClusterVersion command.
 
 ### SEE ALSO
 
-
-* [kbcli clusterversion list](kbcli_clusterversion_list.md)	 - List ClusterVersions.
-* [kbcli clusterversion set-default](kbcli_clusterversion_set-default.md)	 - Set the clusterversion to the default clusterversion for its clusterdefinition.
-* [kbcli clusterversion unset-default](kbcli_clusterversion_unset-default.md)	 - Unset the clusterversion if it's default.
+* [kbcli dataprotection](kbcli_dataprotection.md)	 - Data protection command.
 
 #### Go Back to [CLI Overview](cli.md) Homepage.
 

@@ -1,24 +1,24 @@
 ---
-title: kbcli clusterversion unset-default
+title: kbcli trace watch
 ---
 
-Unset the clusterversion if it's default.
+watch a trace.
 
 ```
-kbcli clusterversion unset-default NAME [flags]
+kbcli trace watch trace-name [flags]
 ```
 
 ### Examples
 
 ```
-  # unset ac-mysql-8.0.30 to default clusterversion if it's default
-  kbcli clusterversion unset-default ac-mysql-8.0.30
+  # watch a trace
+  kbcli trace watch pg-cluster-trace
 ```
 
 ### Options
 
 ```
-  -h, --help   help for unset-default
+  -h, --help   help for watch
 ```
 
 ### Options inherited from parent commands
@@ -47,7 +47,7 @@ kbcli clusterversion unset-default NAME [flags]
 
 ### SEE ALSO
 
-* [kbcli clusterversion](kbcli_clusterversion.md)	 - ClusterVersion command.
+* [kbcli trace](kbcli_trace.md)	 - trace management command
 
 #### Go Back to [CLI Overview](cli.md) Homepage.
 

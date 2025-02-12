@@ -1,24 +1,27 @@
 ---
-title: kbcli clusterdefinition list-components
+title: kbcli dataprotection list-action-sets
 ---
 
-List cluster definition components.
+List actionsets
 
 ```
-kbcli clusterdefinition list-components [flags]
+kbcli dataprotection list-action-sets [flags]
 ```
 
 ### Examples
 
 ```
-  # List all components belonging to the cluster definition.
-  kbcli clusterdefinition list-components apecloud-mysql
+  # list all action sets
+  kbcli dp list-as
 ```
 
 ### Options
 
 ```
-  -h, --help   help for list-components
+  -h, --help              help for list-action-sets
+  -o, --output format     prints the output in the specified format. Allowed values: table, json, yaml, wide (default table)
+  -l, --selector string   Selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2). Matching objects must satisfy all of the specified label constraints.
+      --show-labels       When printing, show all labels as the last column (default hide labels column)
 ```
 
 ### Options inherited from parent commands
@@ -47,7 +50,7 @@ kbcli clusterdefinition list-components [flags]
 
 ### SEE ALSO
 
-* [kbcli clusterdefinition](kbcli_clusterdefinition.md)	 - ClusterDefinition command.
+* [kbcli dataprotection](kbcli_dataprotection.md)	 - Data protection command.
 
 #### Go Back to [CLI Overview](cli.md) Homepage.
 
