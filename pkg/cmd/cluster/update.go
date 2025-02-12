@@ -82,7 +82,7 @@ var clusterUpdateExample = templates.Examples(`
 
 	# enable cluster auto backup
 	kbcli cluster update mycluster --backup-enabled=true
-	
+
 	# update cluster backup retention period
 	kbcli cluster update mycluster --backup-retention-period=1d
 
@@ -175,7 +175,7 @@ func NewUpdateCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.
 func (f *UpdatableFlags) addFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVar(&f.DisableExporter, "disable-exporter", true, "Enable or disable monitoring")
 	cmd.Flags().BoolVar(&f.EnableAllLogs, "enable-all-logs", false, "Enable advanced application all log extraction, set to true will ignore enabledLogs of component level, default is false")
-	cmd.Flags().StringVar(&f.TerminationPolicy, "termination-policy", "Delete", "Termination policy, one of: (DoNotTerminate, Halt, Delete, WipeOut)")
+	cmd.Flags().StringVar(&f.TerminationPolicy, "termination-policy", "Delete", "Termination policy, one of: (DoNotTerminate, Delete, WipeOut)")
 	cmd.Flags().StringSliceVar(&f.TolerationsRaw, "tolerations", nil, `Tolerations for cluster, such as "key=value:effect, key:effect", for example '"engineType=mongo:NoSchedule", "diskType:NoSchedule"'`)
 	cmd.Flags().BoolVar(&f.BackupEnabled, "backup-enabled", false, "Specify whether enabled automated backup")
 	cmd.Flags().StringVar(&f.BackupRetentionPeriod, "backup-retention-period", "1d", "a time string ending with the 'd'|'D'|'h'|'H' character to describe how long the Backup should be retained")
@@ -189,10 +189,9 @@ func (f *UpdatableFlags) addFlags(cmd *cobra.Command) {
 		"termination-policy",
 		func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 			return []string{
-				"DoNotTerminate\tblock delete operation",
-				"Halt\tdelete workload resources such as statefulset, deployment workloads but keep PVCs",
-				"Delete\tbased on Halt and deletes PVCs",
-				"WipeOut\tbased on Delete and wipe out all volume snapshots and snapshot data from backup storage location",
+				"DoNotTerminate\tprevents deletion of the Cluster",
+				"Delete\tdeletes all runtime resources belong to the Cluster.",
+				"WipeOut\tdeletes all Cluster resources, including volume snapshots and backups in external storage.",
 			}, cobra.ShellCompDirectiveNoFileComp
 		}))
 }
