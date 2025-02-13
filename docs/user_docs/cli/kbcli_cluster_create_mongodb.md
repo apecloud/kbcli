@@ -36,7 +36,7 @@ kbcli cluster create mongodb NAME [flags]
       --storage float                  Storage size, the unit is Gi. Value range [1, 10000]. (default 20)
       --storage-class-name string      Storage class name of the data volume
       --tenancy string                 Tenancy options, one of: (SharedNode, DedicatedNode) (default "SharedNode")
-      --termination-policy string      The termination policy of cluster. Legal values [DoNotTerminate, Halt, Delete, WipeOut]. (default "Delete")
+      --termination-policy string      The termination policy of cluster. Legal values [DoNotTerminate, Delete, WipeOut]. (default "Delete")
       --tolerations strings            Tolerations for cluster, such as "key=value:effect,key:effect", for example '"engineType=mongo:NoSchedule", "diskType:NoSchedule"'
       --topology-keys stringArray      Topology keys for affinity
       --version string                 Cluster version. Legal values [8.0.4, 7.0.16, 7.0.12, 6.0.20, 6.0.16, 5.0.30, 5.0.28, 4.4.29, 4.2.24, 4.0.28]. (default "6.0.16")
