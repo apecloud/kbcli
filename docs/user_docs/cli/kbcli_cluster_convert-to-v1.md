@@ -1,30 +1,29 @@
 ---
-title: kbcli cluster create
+title: kbcli cluster convert-to-v1
 ---
 
-Create a cluster.
+convert cluster api version.
 
 ```
-kbcli cluster create [NAME] [flags]
+kbcli cluster convert-to-v1 [NAME] [flags]
 ```
 
 ### Examples
 
 ```
-  # Create a postgresql
-  kbcli cluster create postgresql my-cluster
+  # convert a v1alpha1 cluster
+  kbcli cluster convert-to-v1 mycluster
   
-  # Get the cluster yaml by dry-run
-  kbcli cluster create postgresql my-cluster --dry-run
-  
-  # Edit cluster yaml before creation.
-  kbcli cluster create mycluster --edit
+  # convert a v1alpha1 cluster with --dry-run
+  kbcli cluster convert-to-v1 mycluster --dry-run
 ```
 
 ### Options
 
 ```
-  -h, --help   help for create
+      --dry-run   dry run mode
+  -h, --help      help for convert-to-v1
+      --no-diff   only print the new cluster yaml
 ```
 
 ### Options inherited from parent commands
@@ -54,15 +53,6 @@ kbcli cluster create [NAME] [flags]
 ### SEE ALSO
 
 * [kbcli cluster](kbcli_cluster.md)	 - Cluster command.
-* [kbcli cluster create apecloud-mysql](kbcli_cluster_create_apecloud-mysql.md)	 - Create a apecloud-mysql cluster.
-* [kbcli cluster create etcd](kbcli_cluster_create_etcd.md)	 - Create a etcd cluster.
-* [kbcli cluster create kafka](kbcli_cluster_create_kafka.md)	 - Create a kafka cluster.
-* [kbcli cluster create mongodb](kbcli_cluster_create_mongodb.md)	 - Create a mongodb cluster.
-* [kbcli cluster create mysql](kbcli_cluster_create_mysql.md)	 - Create a mysql cluster.
-* [kbcli cluster create postgresql](kbcli_cluster_create_postgresql.md)	 - Create a postgresql cluster.
-* [kbcli cluster create qdrant](kbcli_cluster_create_qdrant.md)	 - Create a qdrant cluster.
-* [kbcli cluster create rabbitmq](kbcli_cluster_create_rabbitmq.md)	 - Create a rabbitmq cluster.
-* [kbcli cluster create redis](kbcli_cluster_create_redis.md)	 - Create a redis cluster.
 
 #### Go Back to [CLI Overview](cli.md) Homepage.
 

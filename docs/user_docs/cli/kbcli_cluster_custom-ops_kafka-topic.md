@@ -1,43 +1,45 @@
 ---
-title: kbcli cluster create postgresql
+title: kbcli cluster custom-ops kafka-topic
 ---
 
-Create a postgresql cluster.
+Create a custom ops with opsDef kafka-topic
 
 ```
-kbcli cluster create postgresql NAME [flags]
+kbcli cluster custom-ops kafka-topic <ClusterName> [flags]
 ```
 
 ### Examples
 
 ```
-  # Create a cluster with the default values
-  kbcli cluster create postgresql
-  
-  # Create a cluster with the specified cpu, memory and storage
-  kbcli cluster create postgresql --cpu 1 --memory 2 --storage 10
+  # Create a kafka-topic ops
+  kbcli cluster custom-ops kafka-topic <clusterName> --component <componentName> --topic=<topic> --type=<type>
 ```
 
 ### Options
 
 ```
-      --cpu float                      CPU cores. Value range [0.5, 64]. (default 0.5)
-      --disable-exporter               Enable or disable monitor. (default true)
+      --auto-approve                   Skip interactive approval before promote the instance
+      --component string               Specify the component name of the cluster. if not specified, using the first component which referenced the defined componentDefinition.
+      --config string                  A topic configuration override for the topic being created or altered.
       --dry-run string[="unchanged"]   Must be "client", or "server". If with client strategy, only print the object that would be sent, and no data is actually sent. If with server strategy, submit the server-side request, but no data is persistent. (default "none")
       --edit                           Edit the API resource before creating
-  -h, --help                           help for postgresql
-      --memory float                   Memory, the unit is Gi. Value range [0.5, 1000]. (default 0.5)
-      --node-labels stringToString     Node label selector (default [])
+      --force                           skip the pre-checks of the opsRequest to run the opsRequest forcibly
+  -h, --help                           help for kafka-topic
+      --name string                    OpsRequest name. if not specified, it will be randomly generated
   -o, --output format                  Prints the output in the specified format. Allowed values: JSON and YAML (default yaml)
-      --pod-anti-affinity string       Pod anti-affinity type, one of: (Preferred, Required) (default "Preferred")
-      --replicas int                   The number of replicas, for standalone mode, the replicas is 1, for replication mode, the default replicas is 2. Value range [1, 5]. (default 1)
-      --storage float                  Storage size, the unit is Gi. Value range [1, 10000]. (default 20)
-      --storage-class-name string      Storage class name of the data volume
-      --tenancy string                 Tenancy options, one of: (SharedNode, DedicatedNode) (default "SharedNode")
-      --termination-policy string      The termination policy of cluster. Legal values [DoNotTerminate, Delete, WipeOut]. (default "Delete")
-      --tolerations strings            Tolerations for cluster, such as "key=value:effect,key:effect", for example '"engineType=mongo:NoSchedule", "diskType:NoSchedule"'
-      --topology-keys stringArray      Topology keys for affinity
-      --version string                 service version. (default "15.7.0")
+      --partitions int                 The number of partitions for the topic being created or altered (WARNING:
+                                       If partitions are increased for a topic that has a key, the partition logic or ordering
+                                       of the messages will be affected). If not supplied for create, defaults to the cluster default.
+                                        Value range [1, 10000].
+      --replicas int                   The replication factor for each partition in the topic being
+                                       created. If not supplied, defaults to the cluster default.
+                                        Value range [1, 10].
+      --topic string                   The topic to create, alter or delete. It also accepts a regular
+                                       expression, except for --create option. Put topic name in double quotes and
+                                       use the '\' prefix to escape regular expression symbols; e.g. "test\.topic".
+                                       
+      --ttlSecondsAfterSucceed int     Time to live after the OpsRequest succeed
+      --type string                    operation type, supports value: [create, alter, delete]. Legal values [create, alter, delete].
 ```
 
 ### Options inherited from parent commands
@@ -66,7 +68,7 @@ kbcli cluster create postgresql NAME [flags]
 
 ### SEE ALSO
 
-* [kbcli cluster create](kbcli_cluster_create.md)	 - Create a cluster.
+* [kbcli cluster custom-ops](kbcli_cluster_custom-ops.md)	 - 
 
 #### Go Back to [CLI Overview](cli.md) Homepage.
 

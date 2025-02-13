@@ -1,30 +1,29 @@
 ---
-title: kbcli cluster create
+title: kbcli addon delete-resources-with-version
 ---
 
-Create a cluster.
+Delete the sub-resources of specified addon and versions
 
 ```
-kbcli cluster create [NAME] [flags]
+kbcli addon delete-resources-with-version [flags]
 ```
 
 ### Examples
 
 ```
-  # Create a postgresql
-  kbcli cluster create postgresql my-cluster
+  # Delete specific versions of redis addon resources
+  kbcli addon delete-resources-with-version redis --versions=0.9.1,0.9.2
   
-  # Get the cluster yaml by dry-run
-  kbcli cluster create postgresql my-cluster --dry-run
-  
-  # Edit cluster yaml before creation.
-  kbcli cluster create mycluster --edit
+  # Delete all unused and outdated resources of redis addon
+  kbcli addon delete-resources-with-version redis --all-unused-versions=true
 ```
 
 ### Options
 
 ```
-  -h, --help   help for create
+      --all-unused-versions   If set to true, all the resources which are not currently used and not with the newest version will be deleted.
+  -h, --help                  help for delete-resources-with-version
+      --versions strings      Specify the versions of resources to delete.
 ```
 
 ### Options inherited from parent commands
@@ -53,16 +52,7 @@ kbcli cluster create [NAME] [flags]
 
 ### SEE ALSO
 
-* [kbcli cluster](kbcli_cluster.md)	 - Cluster command.
-* [kbcli cluster create apecloud-mysql](kbcli_cluster_create_apecloud-mysql.md)	 - Create a apecloud-mysql cluster.
-* [kbcli cluster create etcd](kbcli_cluster_create_etcd.md)	 - Create a etcd cluster.
-* [kbcli cluster create kafka](kbcli_cluster_create_kafka.md)	 - Create a kafka cluster.
-* [kbcli cluster create mongodb](kbcli_cluster_create_mongodb.md)	 - Create a mongodb cluster.
-* [kbcli cluster create mysql](kbcli_cluster_create_mysql.md)	 - Create a mysql cluster.
-* [kbcli cluster create postgresql](kbcli_cluster_create_postgresql.md)	 - Create a postgresql cluster.
-* [kbcli cluster create qdrant](kbcli_cluster_create_qdrant.md)	 - Create a qdrant cluster.
-* [kbcli cluster create rabbitmq](kbcli_cluster_create_rabbitmq.md)	 - Create a rabbitmq cluster.
-* [kbcli cluster create redis](kbcli_cluster_create_redis.md)	 - Create a redis cluster.
+* [kbcli addon](kbcli_addon.md)	 - Addon command.
 
 #### Go Back to [CLI Overview](cli.md) Homepage.
 

@@ -1,30 +1,34 @@
 ---
-title: kbcli cluster create
+title: kbcli trace create
 ---
 
-Create a cluster.
+create a trace.
 
 ```
-kbcli cluster create [NAME] [flags]
+kbcli trace create trace-name [flags]
 ```
 
 ### Examples
 
 ```
-  # Create a postgresql
-  kbcli cluster create postgresql my-cluster
+  # create a trace for cluster has the same name 'pg-cluster'
+  kbcli trace create pg-cluster
   
-  # Get the cluster yaml by dry-run
-  kbcli cluster create postgresql my-cluster --dry-run
+  # create a trace for cluster has the name of 'pg-cluster'
+  kbcli trace create pg-cluster-trace --cluster-name pg-cluster
   
-  # Edit cluster yaml before creation.
-  kbcli cluster create mycluster --edit
+  # create a trace with custom locale, stateEvaluationExpression
+  kbcli trace create pg-cluster-trace --locale zh_cn --cel-state-evaluation-expression "has(object.status.phase) && object.status.phase == \"Running\""
 ```
 
 ### Options
 
 ```
-  -h, --help   help for create
+      --cel-state-evaluation-expression string   Specify CEL state evaluation expression.
+      --cluster-name string                      Specify target cluster name.
+      --depth int                                Specify object tree depth to display.
+  -h, --help                                     help for create
+      --locale string                            Specify locale.
 ```
 
 ### Options inherited from parent commands
@@ -53,16 +57,7 @@ kbcli cluster create [NAME] [flags]
 
 ### SEE ALSO
 
-* [kbcli cluster](kbcli_cluster.md)	 - Cluster command.
-* [kbcli cluster create apecloud-mysql](kbcli_cluster_create_apecloud-mysql.md)	 - Create a apecloud-mysql cluster.
-* [kbcli cluster create etcd](kbcli_cluster_create_etcd.md)	 - Create a etcd cluster.
-* [kbcli cluster create kafka](kbcli_cluster_create_kafka.md)	 - Create a kafka cluster.
-* [kbcli cluster create mongodb](kbcli_cluster_create_mongodb.md)	 - Create a mongodb cluster.
-* [kbcli cluster create mysql](kbcli_cluster_create_mysql.md)	 - Create a mysql cluster.
-* [kbcli cluster create postgresql](kbcli_cluster_create_postgresql.md)	 - Create a postgresql cluster.
-* [kbcli cluster create qdrant](kbcli_cluster_create_qdrant.md)	 - Create a qdrant cluster.
-* [kbcli cluster create rabbitmq](kbcli_cluster_create_rabbitmq.md)	 - Create a rabbitmq cluster.
-* [kbcli cluster create redis](kbcli_cluster_create_redis.md)	 - Create a redis cluster.
+* [kbcli trace](kbcli_trace.md)	 - trace management command
 
 #### Go Back to [CLI Overview](cli.md) Homepage.
 

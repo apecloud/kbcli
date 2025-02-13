@@ -1,30 +1,39 @@
 ---
-title: kbcli cluster create
+title: kbcli cluster custom-ops kafka-quota
 ---
 
-Create a cluster.
+Create a custom ops with opsDef kafka-quota
 
 ```
-kbcli cluster create [NAME] [flags]
+kbcli cluster custom-ops kafka-quota <ClusterName> [flags]
 ```
 
 ### Examples
 
 ```
-  # Create a postgresql
-  kbcli cluster create postgresql my-cluster
-  
-  # Get the cluster yaml by dry-run
-  kbcli cluster create postgresql my-cluster --dry-run
-  
-  # Edit cluster yaml before creation.
-  kbcli cluster create mycluster --edit
+  # Create a kafka-quota ops
+  kbcli cluster custom-ops kafka-quota <clusterName> --component <componentName>
 ```
 
 ### Options
 
 ```
-  -h, --help   help for create
+      --auto-approve                   Skip interactive approval before promote the instance
+      --client string                  client id.
+      --component string               Specify the component name of the cluster. if not specified, using the first component which referenced the defined componentDefinition.
+      --consumer-byte-rate int         the maximum number of messages that can be consumed per second, measured in bytes/sec
+      --controller-mutation-rate int   partition mutation quota to control the rate at which mutations are accepted for user requests.
+      --delete-quotas stringArray      
+      --dry-run string[="unchanged"]   Must be "client", or "server". If with client strategy, only print the object that would be sent, and no data is actually sent. If with server strategy, submit the server-side request, but no data is persistent. (default "none")
+      --edit                           Edit the API resource before creating
+      --force                           skip the pre-checks of the opsRequest to run the opsRequest forcibly
+  -h, --help                           help for kafka-quota
+      --name string                    OpsRequest name. if not specified, it will be randomly generated
+  -o, --output format                  Prints the output in the specified format. Allowed values: JSON and YAML (default yaml)
+      --producer-byte-rate int         the maximum number of messages that can be produced per second, measured in bytes/sec
+      --request-percentage int         request percentage.
+      --ttlSecondsAfterSucceed int     Time to live after the OpsRequest succeed
+      --user string                    user name
 ```
 
 ### Options inherited from parent commands
@@ -48,21 +57,11 @@ kbcli cluster create [NAME] [flags]
   -s, --server string                  The address and port of the Kubernetes API server
       --tls-server-name string         Server name to use for server certificate validation. If it is not provided, the hostname used to contact the server is used
       --token string                   Bearer token for authentication to the API server
-      --user string                    The name of the kubeconfig user to use
 ```
 
 ### SEE ALSO
 
-* [kbcli cluster](kbcli_cluster.md)	 - Cluster command.
-* [kbcli cluster create apecloud-mysql](kbcli_cluster_create_apecloud-mysql.md)	 - Create a apecloud-mysql cluster.
-* [kbcli cluster create etcd](kbcli_cluster_create_etcd.md)	 - Create a etcd cluster.
-* [kbcli cluster create kafka](kbcli_cluster_create_kafka.md)	 - Create a kafka cluster.
-* [kbcli cluster create mongodb](kbcli_cluster_create_mongodb.md)	 - Create a mongodb cluster.
-* [kbcli cluster create mysql](kbcli_cluster_create_mysql.md)	 - Create a mysql cluster.
-* [kbcli cluster create postgresql](kbcli_cluster_create_postgresql.md)	 - Create a postgresql cluster.
-* [kbcli cluster create qdrant](kbcli_cluster_create_qdrant.md)	 - Create a qdrant cluster.
-* [kbcli cluster create rabbitmq](kbcli_cluster_create_rabbitmq.md)	 - Create a rabbitmq cluster.
-* [kbcli cluster create redis](kbcli_cluster_create_redis.md)	 - Create a redis cluster.
+* [kbcli cluster custom-ops](kbcli_cluster_custom-ops.md)	 - 
 
 #### Go Back to [CLI Overview](cli.md) Homepage.
 

@@ -1,30 +1,33 @@
 ---
-title: kbcli cluster create
+title: kbcli trace update
 ---
 
-Create a cluster.
+update a trace.
 
 ```
-kbcli cluster create [NAME] [flags]
+kbcli trace update trace-name [flags]
 ```
 
 ### Examples
 
 ```
-  # Create a postgresql
-  kbcli cluster create postgresql my-cluster
-  
-  # Get the cluster yaml by dry-run
-  kbcli cluster create postgresql my-cluster --dry-run
-  
-  # Edit cluster yaml before creation.
-  kbcli cluster create mycluster --edit
+  # update a trace with custom locale, stateEvaluationExpression
+  kbcli trace update pg-cluster-trace --locale zh_cn --cel-state-evaluation-expression "has(object.status.phase) && object.status.phase == \"Running\""
 ```
 
 ### Options
 
 ```
-  -h, --help   help for create
+      --allow-missing-template-keys              If true, ignore any errors in templates when a field or map key is missing in the template. Only applies to golang and jsonpath output formats. (default true)
+      --cel-state-evaluation-expression string   Specify CEL state evaluation expression.
+      --depth int                                Specify object tree depth to display. (default -1)
+      --dry-run string[="unchanged"]             Must be "none", "server", or "client". If client strategy, only print the object that would be sent, without sending it. If server strategy, submit server-side request without persisting the resource. (default "none")
+      --edit                                     Edit the API resource
+  -h, --help                                     help for update
+      --locale string                            Specify locale.
+  -o, --output string                            Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).
+      --show-managed-fields                      If true, keep the managedFields when printing objects in JSON or YAML format.
+      --template string                          Template string or path to template file to use when -o=go-template, -o=go-template-file. The template format is golang templates [http://golang.org/pkg/text/template/#pkg-overview].
 ```
 
 ### Options inherited from parent commands
@@ -53,16 +56,7 @@ kbcli cluster create [NAME] [flags]
 
 ### SEE ALSO
 
-* [kbcli cluster](kbcli_cluster.md)	 - Cluster command.
-* [kbcli cluster create apecloud-mysql](kbcli_cluster_create_apecloud-mysql.md)	 - Create a apecloud-mysql cluster.
-* [kbcli cluster create etcd](kbcli_cluster_create_etcd.md)	 - Create a etcd cluster.
-* [kbcli cluster create kafka](kbcli_cluster_create_kafka.md)	 - Create a kafka cluster.
-* [kbcli cluster create mongodb](kbcli_cluster_create_mongodb.md)	 - Create a mongodb cluster.
-* [kbcli cluster create mysql](kbcli_cluster_create_mysql.md)	 - Create a mysql cluster.
-* [kbcli cluster create postgresql](kbcli_cluster_create_postgresql.md)	 - Create a postgresql cluster.
-* [kbcli cluster create qdrant](kbcli_cluster_create_qdrant.md)	 - Create a qdrant cluster.
-* [kbcli cluster create rabbitmq](kbcli_cluster_create_rabbitmq.md)	 - Create a rabbitmq cluster.
-* [kbcli cluster create redis](kbcli_cluster_create_redis.md)	 - Create a redis cluster.
+* [kbcli trace](kbcli_trace.md)	 - trace management command
 
 #### Go Back to [CLI Overview](cli.md) Homepage.
 

@@ -1,21 +1,21 @@
 ---
-title: kbcli cluster create postgresql
+title: kbcli cluster create etcd
 ---
 
-Create a postgresql cluster.
+Create a etcd cluster.
 
 ```
-kbcli cluster create postgresql NAME [flags]
+kbcli cluster create etcd NAME [flags]
 ```
 
 ### Examples
 
 ```
   # Create a cluster with the default values
-  kbcli cluster create postgresql
+  kbcli cluster create etcd
   
   # Create a cluster with the specified cpu, memory and storage
-  kbcli cluster create postgresql --cpu 1 --memory 2 --storage 10
+  kbcli cluster create etcd --cpu 1 --memory 2 --storage 10
 ```
 
 ### Options
@@ -25,19 +25,20 @@ kbcli cluster create postgresql NAME [flags]
       --disable-exporter               Enable or disable monitor. (default true)
       --dry-run string[="unchanged"]   Must be "client", or "server". If with client strategy, only print the object that would be sent, and no data is actually sent. If with server strategy, submit the server-side request, but no data is persistent. (default "none")
       --edit                           Edit the API resource before creating
-  -h, --help                           help for postgresql
+  -h, --help                           help for etcd
       --memory float                   Memory, the unit is Gi. Value range [0.5, 1000]. (default 0.5)
       --node-labels stringToString     Node label selector (default [])
   -o, --output format                  Prints the output in the specified format. Allowed values: JSON and YAML (default yaml)
+      --peer-service.enabled           Enable peer service (no need to enable for single cluster).
+      --peer-service.type string       Service type for etcd peers, default peer service for single cluster use headless ClusterIP. Valid option is LoadBalancer, will support NodePort in the future. Legal values [ClusterIP, LoadBalancer]. (default "LoadBalancer")
       --pod-anti-affinity string       Pod anti-affinity type, one of: (Preferred, Required) (default "Preferred")
-      --replicas int                   The number of replicas, for standalone mode, the replicas is 1, for replication mode, the default replicas is 2. Value range [1, 5]. (default 1)
-      --storage float                  Storage size, the unit is Gi. Value range [1, 10000]. (default 20)
-      --storage-class-name string      Storage class name of the data volume
+      --replicas int                   The number of replicas, the default replicas is 3. Value range [1, 5]. (default 3)
+      --storage float                  Data Storage size, the unit is Gi. Value range [1, 10000]. (default 10)
       --tenancy string                 Tenancy options, one of: (SharedNode, DedicatedNode) (default "SharedNode")
       --termination-policy string      The termination policy of cluster. Legal values [DoNotTerminate, Delete, WipeOut]. (default "Delete")
+      --tls-enable                     Enable TLS for etcd cluster
       --tolerations strings            Tolerations for cluster, such as "key=value:effect,key:effect", for example '"engineType=mongo:NoSchedule", "diskType:NoSchedule"'
       --topology-keys stringArray      Topology keys for affinity
-      --version string                 service version. (default "15.7.0")
 ```
 
 ### Options inherited from parent commands
