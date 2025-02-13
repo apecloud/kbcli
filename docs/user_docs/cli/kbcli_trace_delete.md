@@ -1,24 +1,24 @@
 ---
-title: kbcli clusterdefinition list-service-reference
+title: kbcli trace delete
 ---
 
-List cluster references declared in a cluster definition.
+Delete a trace.
 
 ```
-kbcli clusterdefinition list-service-reference [flags]
+kbcli trace delete trace-name [flags]
 ```
 
 ### Examples
 
 ```
-  # List cluster references name declared in a cluster definition.
-  kbcli clusterdefinition list-service-reference orioledb
+  # Delete a trace
+  kbcli trace delete pg-cluster
 ```
 
 ### Options
 
 ```
-  -h, --help   help for list-service-reference
+  -h, --help   help for delete
 ```
 
 ### Options inherited from parent commands
@@ -47,7 +47,7 @@ kbcli clusterdefinition list-service-reference [flags]
 
 ### SEE ALSO
 
-* [kbcli clusterdefinition](kbcli_clusterdefinition.md)	 - ClusterDefinition command.
+* [kbcli trace](kbcli_trace.md)	 - trace management command
 
 #### Go Back to [CLI Overview](cli.md) Homepage.
 

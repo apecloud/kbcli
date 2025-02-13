@@ -1,27 +1,29 @@
 ---
-title: kbcli dataprotection list-backup-policy-template
+title: kbcli addon delete-resources-with-version
 ---
 
-List backup policy template
+Delete the sub-resources of specified addon and versions
 
 ```
-kbcli dataprotection list-backup-policy-template [flags]
+kbcli addon delete-resources-with-version [flags]
 ```
 
 ### Examples
 
 ```
-  # list all backup policy template
-  kbcli dp list-bpt
+  # Delete specific versions of redis addon resources
+  kbcli addon delete-resources-with-version redis --versions=0.9.1,0.9.2
+  
+  # Delete all unused and outdated resources of redis addon
+  kbcli addon delete-resources-with-version redis --all-unused-versions=true
 ```
 
 ### Options
 
 ```
-  -h, --help              help for list-backup-policy-template
-  -o, --output format     prints the output in the specified format. Allowed values: table, json, yaml, wide (default table)
-  -l, --selector string   Selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2). Matching objects must satisfy all of the specified label constraints.
-      --show-labels       When printing, show all labels as the last column (default hide labels column)
+      --all-unused-versions   If set to true, all the resources which are not currently used and not with the newest version will be deleted.
+  -h, --help                  help for delete-resources-with-version
+      --versions strings      Specify the versions of resources to delete.
 ```
 
 ### Options inherited from parent commands
@@ -50,7 +52,7 @@ kbcli dataprotection list-backup-policy-template [flags]
 
 ### SEE ALSO
 
-* [kbcli dataprotection](kbcli_dataprotection.md)	 - Data protection command.
+* [kbcli addon](kbcli_addon.md)	 - Addon command.
 
 #### Go Back to [CLI Overview](cli.md) Homepage.
 

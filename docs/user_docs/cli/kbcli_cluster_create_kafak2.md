@@ -1,51 +1,56 @@
 ---
-title: kbcli cluster create llm
+title: kbcli cluster create kafak2
 ---
 
-Create a llm cluster.
+Create a kafak2 cluster.
 
 ```
-kbcli cluster create llm NAME [flags]
+kbcli cluster create kafak2 NAME [flags]
 ```
 
 ### Examples
 
 ```
   # Create a cluster with the default values
-  kbcli cluster create llm
+  kbcli cluster create kafak2
   
   # Create a cluster with the specified cpu, memory and storage
-  kbcli cluster create llm --cpu 1 --memory 2 --storage 10
+  kbcli cluster create kafak2 --cpu 1 --memory 2 --storage 10
 ```
 
 ### Options
 
 ```
-      --availability-policy string     The availability policy of cluster. Legal values [none, node, zone]. (default "node")
-      --cpu float                      CPU cores. Value range [0, 64].
-      --cpu-mode                       Set to true if no GPU is available, default true (default true)
+      --broker-heap string             Kafka broker's jvm heap setting. (default "-XshowSettings:vm -XX:MaxRAMPercentage=100 -Ddepth=64")
+      --broker-replicas int            The number of Kafka broker replicas for separated mode. Value range [1, 100]. (default 1)
+      --controller-heap string         Kafka controller's jvm heap setting for separated mode (default "-XshowSettings:vm -XX:MaxRAMPercentage=100 -Ddepth=64")
+      --controller-replicas int        The number of Kafka controller replicas for separated mode. Legal values [1, 3, 5]. (default 1)
+      --cpu float                      CPU cores. Value range [0.5, 64]. (default 0.5)
       --disable-exporter               Enable or disable monitor. (default true)
       --dry-run string[="unchanged"]   Must be "client", or "server". If with client strategy, only print the object that would be sent, and no data is actually sent. If with server strategy, submit the server-side request, but no data is persistent. (default "none")
       --edit                           Edit the API resource before creating
-      --extra-args string              extra arguments that will be passed to run model (default "--trust-remote-code")
-      --gpu float                      GPU cores. Value range [0, 64]. (default 1)
-  -h, --help                           help for llm
-      --host-network-accessible        Specify whether the cluster can be accessed from within the VPC.
-      --memory float                   Memory, the unit is Gi. Value range [0, 1000].
-      --model string                   Model name (default "facebook/opt-125m")
+  -h, --help                           help for kafak2
+      --memory float                   Memory, the unit is Gi. Value range [0.5, 1000]. (default 0.5)
+      --meta-storage float             Metadata Storage size, the unit is Gi. Value range [1, 10000]. (default 5)
+      --meta-storage-class string      The StorageClass for Kafka Metadata Storage.
+      --mode string                    Mode for Kafka kraft cluster, 'combined' is combined Kafka controller and broker,'separated' is broker and controller running independently. Legal values [combined, separated]. (default "combined")
+      --monitor-enable                 Enable monitor for Kafka. (default true)
+      --monitor-replicas int           The number of Kafka monitor replicas. Value range [1, 5]. (default 1)
       --node-labels stringToString     Node label selector (default [])
+      --node-port-enabled              Whether NodePort service is enabled, default is false
   -o, --output format                  Prints the output in the specified format. Allowed values: JSON and YAML (default yaml)
       --pod-anti-affinity string       Pod anti-affinity type, one of: (Preferred, Required) (default "Preferred")
-      --publicly-accessible            Specify whether the cluster can be accessed from the public internet.
-      --quantize string                Model's quantized file name, only work for CPU mode
       --rbac-enabled                   Specify whether rbac resources will be created by client, otherwise KubeBlocks server will try to create rbac resources.
-      --replicas int                   The number of replicas, for standalone mode, the replicas is 1, for replication mode, the default replicas is 2. Value range [1, 5]. (default 1)
-      --tenancy string                 The tenancy of cluster. Legal values [SharedNode, DedicatedNode]. (default "SharedNode")
+      --replicas int                   The number of Kafka broker replicas for combined mode. Legal values [1, 3, 5]. (default 1)
+      --sasl-enable                    Enable authentication using SASL/PLAIN for Kafka.
+      --storage float                  Data Storage size, the unit is Gi. Value range [1, 10000]. (default 10)
+      --storage-class string           The StorageClass for Kafka Data Storage.
+      --storage-enable                 Enable storage for Kafka.
+      --tenancy string                 Tenancy options, one of: (SharedNode, DedicatedNode) (default "SharedNode")
       --termination-policy string      The termination policy of cluster. Legal values [DoNotTerminate, Halt, Delete, WipeOut]. (default "Delete")
       --tolerations strings            Tolerations for cluster, such as "key=value:effect,key:effect", for example '"engineType=mongo:NoSchedule", "diskType:NoSchedule"'
       --topology-keys stringArray      Topology keys for affinity
-      --url string                     Model URL, only work for CPU mode
-      --version string                 Cluster version.
+      --version string                 Cluster version. (default "kafka-3.3.2")
 ```
 
 ### Options inherited from parent commands

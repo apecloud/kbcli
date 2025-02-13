@@ -35,7 +35,7 @@ kbcli cluster create etcd NAME [flags]
       --replicas int                   The number of replicas, the default replicas is 3. Value range [1, 5]. (default 3)
       --storage float                  Data Storage size, the unit is Gi. Value range [1, 10000]. (default 10)
       --tenancy string                 Tenancy options, one of: (SharedNode, DedicatedNode) (default "SharedNode")
-      --termination-policy string      The termination policy of cluster. Legal values [DoNotTerminate, Halt, Delete, WipeOut]. (default "Delete")
+      --termination-policy string      The termination policy of cluster. Legal values [DoNotTerminate, Delete, WipeOut]. (default "Delete")
       --tls-enable                     Enable TLS for etcd cluster
       --tolerations strings            Tolerations for cluster, such as "key=value:effect,key:effect", for example '"engineType=mongo:NoSchedule", "diskType:NoSchedule"'
       --topology-keys stringArray      Topology keys for affinity

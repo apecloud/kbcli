@@ -1,27 +1,33 @@
 ---
-title: kbcli dataprotection list-action-set
+title: kbcli trace update
 ---
 
-List actionsets
+update a trace.
 
 ```
-kbcli dataprotection list-action-set [flags]
+kbcli trace update trace-name [flags]
 ```
 
 ### Examples
 
 ```
-  # list all action sets
-  kbcli dp list-as
+  # update a trace with custom locale, stateEvaluationExpression
+  kbcli trace update pg-cluster-trace --locale zh_cn --cel-state-evaluation-expression "has(object.status.phase) && object.status.phase == \"Running\""
 ```
 
 ### Options
 
 ```
-  -h, --help              help for list-action-set
-  -o, --output format     prints the output in the specified format. Allowed values: table, json, yaml, wide (default table)
-  -l, --selector string   Selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2). Matching objects must satisfy all of the specified label constraints.
-      --show-labels       When printing, show all labels as the last column (default hide labels column)
+      --allow-missing-template-keys              If true, ignore any errors in templates when a field or map key is missing in the template. Only applies to golang and jsonpath output formats. (default true)
+      --cel-state-evaluation-expression string   Specify CEL state evaluation expression.
+      --depth int                                Specify object tree depth to display. (default -1)
+      --dry-run string[="unchanged"]             Must be "none", "server", or "client". If client strategy, only print the object that would be sent, without sending it. If server strategy, submit server-side request without persisting the resource. (default "none")
+      --edit                                     Edit the API resource
+  -h, --help                                     help for update
+      --locale string                            Specify locale.
+  -o, --output string                            Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).
+      --show-managed-fields                      If true, keep the managedFields when printing objects in JSON or YAML format.
+      --template string                          Template string or path to template file to use when -o=go-template, -o=go-template-file. The template format is golang templates [http://golang.org/pkg/text/template/#pkg-overview].
 ```
 
 ### Options inherited from parent commands
@@ -50,7 +56,7 @@ kbcli dataprotection list-action-set [flags]
 
 ### SEE ALSO
 
-* [kbcli dataprotection](kbcli_dataprotection.md)	 - Data protection command.
+* [kbcli trace](kbcli_trace.md)	 - trace management command
 
 #### Go Back to [CLI Overview](cli.md) Homepage.
 

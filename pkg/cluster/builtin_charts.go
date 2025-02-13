@@ -70,16 +70,12 @@ var (
 	redisChart embed.FS
 	//go:embed charts/mongodb.tgz
 	mongodbChart embed.FS
-	//go:embed charts/llm.tgz
-	llmChart embed.FS
-	//go:embed charts/xinference.tgz
-	xinferenceChart embed.FS
-	//go:embed charts/elasticsearch.tgz
-	elasticsearchChart embed.FS
 	//go:embed charts/qdrant.tgz
 	qdrantChart embed.FS
 	//go:embed charts/etcd.tgz
 	etcdChart embed.FS
+	//go:embed charts/rabbitmq.tgz
+	rabbitmqChart embed.FS
 )
 
 var builtinClusterTypes = map[ClusterType]bool{}
@@ -126,24 +122,6 @@ func init() {
 			alias:   "",
 		},
 
-		"llm": {
-			chartFS: llmChart,
-			name:    "llm.tgz",
-			alias:   "",
-		},
-
-		"xinference": {
-			chartFS: xinferenceChart,
-			name:    "xinference.tgz",
-			alias:   "",
-		},
-
-		"elasticsearch": {
-			chartFS: elasticsearchChart,
-			name:    "elasticsearch.tgz",
-			alias:   "",
-		},
-
 		"qdrant": {
 			chartFS: qdrantChart,
 			name:    "qdrant.tgz",
@@ -153,6 +131,12 @@ func init() {
 		"etcd": {
 			chartFS: etcdChart,
 			name:    "etcd.tgz",
+			alias:   "",
+		},
+
+		"rabbitmq": {
+			chartFS: rabbitmqChart,
+			name:    "rabbitmq.tgz",
 			alias:   "",
 		},
 	}
