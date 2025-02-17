@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package cluster
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -54,11 +55,16 @@ type CreateOptions struct {
 func NewCreateCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
 	o := NewCreateOptions(f, streams)
 	cmd := &cobra.Command{
-		Use:     "create [NAME]",
+		Use:     "create [ClusterType]",
 		Short:   "Create a cluster.",
 		Example: clusterCreateExample,
 		Run: func(cmd *cobra.Command, args []string) {
-			println("no implement")
+			if len(args) == 0 {
+				fmt.Fprintf(o.Out, "A ClusterType shoule be specified to ")
+				cmd.Help()
+				return
+			}
+			fmt.Fprintf(o.Out, "The engine type you specified is not implemented.")
 		},
 	}
 
