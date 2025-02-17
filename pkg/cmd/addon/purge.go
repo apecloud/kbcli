@@ -49,7 +49,7 @@ const (
 	helmResourcePolicyKey  = "helm.sh/resource-policy"
 	helmResourcePolicyKeep = "keep"
 
-	versionErrorTemplate = "failed to retrieve versions for resource for resource %s: %v"
+	versionErrorTemplate = "failed to retrieve versions for resource %s: %v"
 )
 
 // GVRsToPurge Resource types to be processed for deletion

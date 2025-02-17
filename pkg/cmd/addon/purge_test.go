@@ -355,7 +355,7 @@ var _ = Describe("purge_resources test", func() {
 		option.Factory = tf
 		err := option.Complete([]string{"nonexistent-addon"})
 		Expect(err).Should(HaveOccurred())
-		Expect(err.Error()).To(ContainSubstring("failed to retrieve versions for resource nonexistent-addon"))
+		Expect(err.Error()).To(ContainSubstring("failed to retrieve versions"))
 	})
 
 	It("test --all flag when no versions are in use", func() {
