@@ -103,13 +103,13 @@ func (o *uninstallOption) checkBeforeUninstall() error {
 }
 
 func (o *uninstallOption) deleteAllMultiVersionsResources(name string) error {
-	dro := &deleteResourcesOption{
+	dro := &purgeResourcesOption{
 		baseOption: &baseOption{
 			Factory:   o.Factory,
 			IOStreams: o.IOStreams,
 			GVR:       types.AddonGVR(),
 		},
-		allUnusedVersions:   true,
+		all:                 true,
 		deleteNewestVersion: true,
 	}
 	if err := dro.baseOption.complete(); err != nil {
