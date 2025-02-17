@@ -17,9 +17,6 @@ kbcli cluster update NAME [flags]
   # enable cluster monitor
   kbcli cluster update mycluster --monitor=true
   
-  # enable all logs
-  kbcli cluster update mycluster --enable-all-logs=true
-  
   # update cluster tolerations
   kbcli cluster update mycluster --tolerations='"key=engineType,value=mongo,operator=Equal,effect=NoSchedule","key=diskType,value=ssd,operator=Equal,effect=NoSchedule"'
   
@@ -64,7 +61,6 @@ kbcli cluster update NAME [flags]
       --disable-exporter                       Enable or disable monitoring (default true)
       --dry-run string[="unchanged"]           Must be "none", "server", or "client". If client strategy, only print the object that would be sent, without sending it. If server strategy, submit server-side request without persisting the resource. (default "none")
       --edit                                   Edit the API resource
-      --enable-all-logs                        Enable advanced application all log extraction, set to true will ignore enabledLogs of component level, default is false
   -h, --help                                   help for update
   -o, --output string                          Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).
       --pitr-enabled                           Specify whether enabled point in time recovery

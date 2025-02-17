@@ -55,9 +55,7 @@ kbcli cluster create [NAME] [flags]
 
 * [kbcli cluster](kbcli_cluster.md)	 - Cluster command.
 * [kbcli cluster create apecloud-mysql](kbcli_cluster_create_apecloud-mysql.md)	 - Create a apecloud-mysql cluster.
-* [kbcli cluster create clickhouse](kbcli_cluster_create_clickhouse.md)	 - Create a clickhouse cluster.
 * [kbcli cluster create etcd](kbcli_cluster_create_etcd.md)	 - Create a etcd cluster.
-* [kbcli cluster create kafak2](kbcli_cluster_create_kafak2.md)	 - Create a kafak2 cluster.
 * [kbcli cluster create kafka](kbcli_cluster_create_kafka.md)	 - Create a kafka cluster.
 * [kbcli cluster create mongodb](kbcli_cluster_create_mongodb.md)	 - Create a mongodb cluster.
 * [kbcli cluster create mysql](kbcli_cluster_create_mysql.md)	 - Create a mysql cluster.
@@ -65,7 +63,6 @@ kbcli cluster create [NAME] [flags]
 * [kbcli cluster create qdrant](kbcli_cluster_create_qdrant.md)	 - Create a qdrant cluster.
 * [kbcli cluster create rabbitmq](kbcli_cluster_create_rabbitmq.md)	 - Create a rabbitmq cluster.
 * [kbcli cluster create redis](kbcli_cluster_create_redis.md)	 - Create a redis cluster.
-* [kbcli cluster create testredis](kbcli_cluster_create_testredis.md)	 - Create a testredis cluster.
 
 #### Go Back to [CLI Overview](cli.md) Homepage.
 
