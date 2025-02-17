@@ -111,6 +111,7 @@ func (o *uninstallOption) deleteAllMultiVersionsResources(name string) error {
 		},
 		all:                 true,
 		deleteNewestVersion: true,
+		autoApprove:         true,
 	}
 	if err := dro.baseOption.complete(); err != nil {
 		return err
