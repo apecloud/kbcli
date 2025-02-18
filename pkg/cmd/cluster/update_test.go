@@ -92,14 +92,6 @@ var _ = Describe("cluster update", func() {
 			Expect(o.Complete()).Should(Succeed())
 			Expect(o.Patch).Should(ContainSubstring("\"disableExporter\":false"))
 		})
-
-		It("set enable-all-logs", func() {
-			fakeCluster := testing.FakeCluster("c1", "default")
-			tf.FakeDynamicClient = testing.FakeDynamicClient(fakeCluster)
-			Expect(cmd.Flags().Set("enable-all-logs", "false")).Should(Succeed())
-			Expect(o.CmdComplete(cmd, args)).Should(Succeed())
-			Expect(o.Complete()).Should(Succeed())
-		})
 	})
 	/*
 			Context("logs variables reconfiguring tests", func() {

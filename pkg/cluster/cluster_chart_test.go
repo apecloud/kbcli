@@ -76,7 +76,7 @@ var _ = Describe("cluster engine", func() {
 				"all values are valid",
 				map[string]interface{}{
 					"cpu":               1.0,
-					"terminationPolicy": "Delete",
+					"terminationPolicy": "WipeOut",
 				},
 				true,
 			},

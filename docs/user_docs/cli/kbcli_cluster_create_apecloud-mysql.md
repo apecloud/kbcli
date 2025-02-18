@@ -48,7 +48,7 @@ kbcli cluster create apecloud-mysql NAME [flags]
       --storage float                                Storage size, the unit is Gi. Value range [1, 10000]. (default 20)
       --storage-class-name string                    Storage class name of the data volume
       --tenancy string                               Tenancy options, one of: (SharedNode, DedicatedNode) (default "SharedNode")
-      --termination-policy string                    The termination policy of cluster. Legal values [DoNotTerminate, Halt, Delete, WipeOut]. (default "Delete")
+      --termination-policy string                    The termination policy of cluster. Legal values [DoNotTerminate, Delete, WipeOut]. (default "Delete")
       --tolerations strings                          Tolerations for cluster, such as "key=value:effect,key:effect", for example '"engineType=mongo:NoSchedule", "diskType:NoSchedule"'
       --topology-keys stringArray                    Topology keys for affinity
       --version string                               MySQL Service Version. (default "8.0.30")

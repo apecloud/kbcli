@@ -1,32 +1,26 @@
 ---
-title: kbcli cluster list-backup
+title: kbcli dataprotection list-restores
 ---
 
-List backups.
+List restores.
 
 ```
-kbcli cluster list-backup [flags]
+kbcli dataprotection list-restores [flags]
 ```
 
 ### Examples
 
 ```
-  # list all backups
-  kbcli cluster list-backup
-  
-  # list all backups of the cluster
-  kbcli cluster list-backup <clusterName>
-  
-  # list the specified backups
-  kbcli cluster list-backup --names b1,b2
+  # list all restores
+  kbcli dp list-restores
 ```
 
 ### Options
 
 ```
   -A, --all-namespaces     If present, list the requested object(s) across all namespaces. Namespace in current context is ignored even if specified with --namespace.
-  -h, --help               help for list-backup
-      --names strings      The backup name to get the details.
+      --cluster string     List restores in the specified cluster
+  -h, --help               help for list-restores
   -n, --namespace string   specified the namespace
   -o, --output format      prints the output in the specified format. Allowed values: table, json, yaml, wide (default table)
   -l, --selector string    Selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2). Matching objects must satisfy all of the specified label constraints.
@@ -43,7 +37,6 @@ kbcli cluster list-backup [flags]
       --certificate-authority string   Path to a cert file for the certificate authority
       --client-certificate string      Path to a client certificate file for TLS
       --client-key string              Path to a client key file for TLS
-      --cluster string                 The name of the kubeconfig cluster to use
       --context string                 The name of the kubeconfig context to use
       --disable-compression            If true, opt-out of response compression for all requests to the server
       --insecure-skip-tls-verify       If true, the server's certificate will not be checked for validity. This will make your HTTPS connections insecure
@@ -58,7 +51,7 @@ kbcli cluster list-backup [flags]
 
 ### SEE ALSO
 
-* [kbcli cluster](kbcli_cluster.md)	 - Cluster command.
+* [kbcli dataprotection](kbcli_dataprotection.md)	 - Data protection command.
 
 #### Go Back to [CLI Overview](cli.md) Homepage.
 

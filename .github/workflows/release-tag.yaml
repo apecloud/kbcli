@@ -55,6 +55,15 @@ jobs:
           submodules: 'recursive'
           fetch-depth: 0
 
+      - name: get ref name
+        id: get_ref_name
+        run: |
+          GITHUB_REF_NAME="${{ github.ref_name }}"
+          if [[ -z "${{ inputs.RELEASE_VERSION }}" && -n "${{ env.CUR_BRANCH }}" ]]; then
+            GITHUB_REF_NAME="${{ env.CUR_BRANCH }}"
+          fi
+          echo github_ref_name="${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
+
       - name: build kbcli embed chart
         id: build-kbcli-embed-chart
         run: |
@@ -74,23 +83,23 @@ jobs:
           echo 'RELEASE_COMMIT='${RELEASE_COMMIT} >> $GITHUB_ENV
 
       - name: push kbcli embed chart changes to new branch
-        if: ${{ steps.build-kbcli-embed-chart.outputs.file_changes && github.ref_name == 'main' }}
+        if: ${{ steps.build-kbcli-embed-chart.outputs.file_changes && steps.get_ref_name.outputs.github_ref_name == 'main' }}
         uses: ad-m/github-push-action@master
         with:
           github_token: ${{ env.GITHUB_TOKEN }}
           branch: support/auto-update-kbcli-${{ env.RELEASE_COMMIT }}
 
       - name: auto create pr head new branch
-        if: ${{ steps.build-kbcli-embed-chart.outputs.file_changes && github.ref_name == 'main' }}
+        if: ${{ steps.build-kbcli-embed-chart.outputs.file_changes && steps.get_ref_name.outputs.github_ref_name == 'main' }}
         run: |
           gh pr create --head "support/auto-update-kbcli-${{ env.RELEASE_COMMIT }}" --title "chore: auto update kbcli embed chart changes" --body ""
 
       - name: push kbcli embed chart changes
         uses: ad-m/github-push-action@master
-        if: ${{ steps.build-kbcli-embed-chart.outputs.file_changes && github.ref_name != 'main' }}
+        if: ${{ steps.build-kbcli-embed-chart.outputs.file_changes && steps.get_ref_name.outputs.github_ref_name != 'main' }}
         with:
           github_token: ${{ env.GITHUB_TOKEN }}
-          branch: ${{ github.ref }}
+          branch: ${{ steps.get_ref_name.outputs.github_ref_name }}
 
       - name: push tag ${{ inputs.VERSION }}
         uses: mathieudutour/github-tag-action@v6.1
