@@ -30,7 +30,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/maps"
-	"helm.sh/helm/v3/pkg/repo"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -204,6 +203,10 @@ func (o *UninstallOptions) Uninstall() error {
 		}
 		printSpinner(newSpinner("Remove "+gvr.Resource), deleteObjects(o.Dynamic, gvr, objs[gvr]))
 	}
+
+	// remove KB release
+	printSpinner(newSpinner("Uninstall helm release "+types.KubeBlocksReleaseName+" "+v.KubeBlocks),
+		chart.Uninstall(o.HelmCfg))
 
 	// delete namespace if it is default namespace
 	if o.Namespace == types.DefaultNamespace && o.RemoveNamespace {
