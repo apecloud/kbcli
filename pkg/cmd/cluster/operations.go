@@ -209,22 +209,6 @@ func (o *OperationsOptions) CompleteComponentsFlag() error {
 	return nil
 }
 
-func (o *OperationsOptions) CompleteSwitchoverOps() error {
-	clusterObj, err := cluster.GetClusterByName(o.Dynamic, o.Name, o.Namespace)
-	if err != nil {
-		return err
-	}
-
-	if o.Component == "" {
-		if len(clusterObj.Spec.ComponentSpecs) == 1 {
-			o.Component = clusterObj.Spec.ComponentSpecs[0].Name
-		} else if len(clusterObj.Spec.ComponentSpecs) > 1 {
-			return fmt.Errorf("there are multiple components in cluster, please use --component to specify the component for promote")
-		}
-	}
-	return nil
-}
-
 func (o *OperationsOptions) validateUpgrade(cluster *appsv1.Cluster) error {
 	if o.ComponentDefinitionName == "nil" && o.ServiceVersion == "nil" {
 		return fmt.Errorf("missing component-def or service-version")
@@ -1027,7 +1011,6 @@ func NewPromoteCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 			cmdutil.BehaviorOnFatal(printer.FatalWithRedColor)
 			cmdutil.CheckErr(o.Complete())
 			cmdutil.CheckErr(o.CompleteComponentsFlag())
-			cmdutil.CheckErr(o.CompleteSwitchoverOps())
 			cmdutil.CheckErr(o.Validate())
 			cmdutil.CheckErr(o.Run())
 		},

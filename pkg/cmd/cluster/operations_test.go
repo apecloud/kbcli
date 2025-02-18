@@ -351,11 +351,6 @@ var _ = Describe("operations", func() {
 		Expect(o.CompleteComponentsFlag()).Should(Succeed())
 		Expect(o.ComponentNames).Should(BeEmpty())
 
-		By("validate failed because there are multi-components in cluster and not specify the component")
-		Expect(o.CompleteComponentsFlag()).Should(Succeed())
-		Expect(o.CompleteSwitchoverOps()).ShouldNot(Succeed())
-		Expect(testing.ContainExpectStrings(o.CompleteSwitchoverOps().Error(), "there are multiple components in cluster, please use --component to specify the component for promote")).Should(BeTrue())
-
 		By("validate failed because o.Instance is illegal ")
 		o.Name = clusterName1
 		o.Component = testing.ComponentName
@@ -386,11 +381,6 @@ var _ = Describe("operations", func() {
 		o.ComponentNames = nil
 		Expect(o.CompleteComponentsFlag()).Should(Succeed())
 		Expect(o.ComponentNames).Should(BeEmpty())
-
-		By("validate failed because there are multi-components in cluster and not specify the component")
-		Expect(o.CompleteComponentsFlag()).Should(Succeed())
-		Expect(o.CompleteSwitchoverOps()).ShouldNot(Succeed())
-		Expect(testing.ContainExpectStrings(o.CompleteSwitchoverOps().Error(), "there are multiple components in cluster, please use --component to specify the component for promote")).Should(BeTrue())
 
 		By("validate failed because o.Instance is illegal ")
 		o.Name = clusterNameWithCompDef
