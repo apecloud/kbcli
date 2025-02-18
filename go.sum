@@ -677,8 +677,8 @@ github.com/apache/arrow/go/v11 v11.0.0/go.mod h1:Eg5OsL5H+e299f7u5ssuXsuHQVEGC4x
 github.com/apache/thrift v0.16.0/go.mod h1:PHK3hniurgQaNMZYaCLEqXKsYK8upmhPbmdP2FXSqgU=
 github.com/apecloud/dbctl v0.0.0-20240827084000-68a1980b1a46 h1:+Jcc7IjDGxPgIfIkGX2Q5Yxj35U65zgcfjh0B9rDhjo=
 github.com/apecloud/dbctl v0.0.0-20240827084000-68a1980b1a46/go.mod h1:eksJtZ7z1nVcVLqDzAdcN5EfpHwXllIAvHZEks2zWys=
-github.com/apecloud/kubeblocks v1.0.0-beta.25 h1:wWnvGSt/0emzvnbKSIVUQ5/nB9IeRrsgtsqFsu2Jfis=
-github.com/apecloud/kubeblocks v1.0.0-beta.25/go.mod h1:b656nTyvHhwRwOuwNpOPG87Q0Lba3ygGRWoSOacPt5o=
+github.com/apecloud/kubeblocks v1.0.0-beta.29 h1:7t1K7mQxjFz1s7OiBG8XQ8MkP1aW0yQLeTv73LmM0GM=
+github.com/apecloud/kubeblocks v1.0.0-beta.29/go.mod h1:b656nTyvHhwRwOuwNpOPG87Q0Lba3ygGRWoSOacPt5o=
 github.com/apparentlymart/go-textseg v1.0.0/go.mod h1:z96Txxhf3xSFMPmb5X/1W05FF/Nj9VFpLOpjS5yuumk=
 github.com/apparentlymart/go-textseg/v13 v13.0.0/go.mod h1:ZK2fH7c4NqDTLtiYLvIkEghdlcqw7yxLeM89kiTRPUo=
 github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5 h1:0CwZNZbxp69SHPdPJAN/hZIm0C4OItdklCFmMRWYpio=
