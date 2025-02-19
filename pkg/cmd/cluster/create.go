@@ -61,7 +61,7 @@ func NewCreateCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) == 0 {
 				fmt.Fprintf(o.Out, "A ClusterType shoule be specified to ")
-				cmd.Help()
+				_ = cmd.Help()
 				return
 			}
 			fmt.Fprintf(o.Out, "The engine type you specified is not implemented.")
