@@ -8,7 +8,7 @@ require (
 	cuelang.org/go v0.8.0
 	github.com/Masterminds/semver/v3 v3.3.0
 	github.com/apecloud/kubebench v0.0.0-20240327101848-6a031d3f4ebe
-	github.com/apecloud/kubeblocks v0.9.3-beta.21
+	github.com/apecloud/kubeblocks v0.9.3
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
 	github.com/briandowns/spinner v1.23.0
 	github.com/chaos-mesh/chaos-mesh/api v0.0.0-20230912020346-a5d89c1c90ad
