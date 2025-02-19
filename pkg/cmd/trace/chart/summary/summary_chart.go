@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2022-2024 ApeCloud Co., Ltd
+Copyright (C) 2022-2025 ApeCloud Co., Ltd
 
 This file is part of KubeBlocks project
 
@@ -68,7 +68,7 @@ func (m *Model) View() string {
 
 func (m *Model) setBarData(b *barchart.Model, msg tea.MouseMsg) {
 	x, y := m.summary.ZoneManager().Get(b.ZoneID()).Pos(msg)
-	selectedBarData = b.BarDataFromPoint(canvas.Point{x, y})
+	selectedBarData = b.BarDataFromPoint(canvas.Point{X: x, Y: y})
 }
 
 func legend(bd barchart.BarData) (r string) {

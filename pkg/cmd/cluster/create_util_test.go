@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2022-2024 ApeCloud Co., Ltd
+Copyright (C) 2022-2025 ApeCloud Co., Ltd
 
 This file is part of KubeBlocks project
 
@@ -191,13 +191,13 @@ metadata:
 			"version":           "1.0.0",
 			"cpu":               1,
 			"memory":            1,
-			"terminationPolicy": "Halt",
+			"terminationPolicy": "WipeOut",
 		}
 		helmValues := buildHelmValues(c, values)
 		Expect(helmValues).ShouldNot(BeNil())
 		Expect(helmValues["version"]).Should(Equal("1.0.0"))
 		Expect(helmValues[c.SubChartName]).ShouldNot(BeNil())
-		Expect(helmValues[c.SubChartName].(map[string]interface{})["terminationPolicy"]).Should(Equal("Halt"))
+		Expect(helmValues[c.SubChartName].(map[string]interface{})["terminationPolicy"]).Should(Equal("WipeOut"))
 
 		By("build object helm values")
 		values = map[string]interface{}{

@@ -1,5 +1,5 @@
 /*
-copyright (c) 2022-2024 apecloud co., ltd
+Copyright (C) 2022-2025 ApeCloud Co., Ltd
 
 this file is part of kubeblocks project
 
@@ -284,6 +284,7 @@ type ConvertToV1Options struct {
 	f         cmdutil.Factory
 	Dynamic   dynamic.Interface
 	DryRun    bool
+	NoDiff    bool
 	Name      string
 	Namespace string
 	genericiooptions.IOStreams
@@ -319,6 +320,7 @@ func NewConvertToV1Cmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *c
 		},
 	}
 	cmd.Flags().BoolVar(&o.DryRun, "dry-run", false, "dry run mode")
+	cmd.Flags().BoolVar(&o.NoDiff, "no-diff", false, "only print the new cluster yaml")
 	return cmd
 }
 
@@ -378,10 +380,10 @@ func (o *ConvertToV1Options) Run() error {
 	if existUnsupportedSpec {
 		return fmt.Errorf(`cluster "%s" has unknown clusterVersion or componentDefinition, you can replace with accorrding ComponentDefinition with 1.0 api`, o.Name)
 	}
-	fmt.Println(printer.BoldYellow(fmt.Sprintf("Cluster %s will be converted to v1 with output as yaml.", o.Name)))
 	if o.DryRun {
 		return nil
 	}
+	fmt.Println(printer.BoldYellow(fmt.Sprintf("Cluster %s will be converted to v1 with output as yaml.", o.Name)))
 	if err = prompt.Confirm(nil, o.In, "", "Please type 'Yes/yes' to confirm your operation:"); err != nil {
 		return err
 	}
@@ -526,7 +528,10 @@ func (o *ConvertToV1Options) printDiff(clusterV1Alpha1 *kbappsv1alpha1.Cluster, 
 	clusterV1.ObjectMeta.ManagedFields = nil
 	clusterV1Alpha1Srr, _ := yaml.Marshal(clusterV1Alpha1)
 	clusterV1Str, _ := yaml.Marshal(clusterV1)
-
+	if o.NoDiff {
+		fmt.Println(string(clusterV1Str))
+		return
+	}
 	getDiffContext := func(isV1Cluster bool) string {
 		dmp := diffmatchpatch.New()
 		diffs := dmp.DiffMain(string(clusterV1Alpha1Srr), string(clusterV1Str), false)

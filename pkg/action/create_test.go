@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2022-2024 ApeCloud Co., Ltd
+Copyright (C) 2022-2025 ApeCloud Co., Ltd
 
 This file is part of KubeBlocks project
 
@@ -54,7 +54,7 @@ var _ = Describe("Create", func() {
 			"clusterDefRef":     "test-def",
 			"clusterVersionRef": "test-clusterversion-ref",
 			"components":        []string{},
-			"terminationPolicy": "Halt",
+			"terminationPolicy": "WipeOut",
 		}
 		options = CreateOptions{
 			Factory:         tf,

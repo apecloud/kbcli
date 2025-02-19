@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2022-2024 ApeCloud Co., Ltd
+Copyright (C) 2022-2025 ApeCloud Co., Ltd
 
 This file is part of KubeBlocks project
 
@@ -314,22 +314,19 @@ func FakeCompDef() *kbappsv1.ComponentDefinition {
 		},
 		Roles: []kbappsv1.ReplicaRole{
 			{
-				Name:        "leader",
-				Serviceable: true,
-				Writable:    true,
-				Votable:     true,
+				Name:                 "leader",
+				ParticipatesInQuorum: true,
+				UpdatePriority:       2,
 			},
 			{
-				Name:        "follower",
-				Serviceable: true,
-				Writable:    false,
-				Votable:     true,
+				Name:                 "follower",
+				ParticipatesInQuorum: true,
+				UpdatePriority:       1,
 			},
 			{
-				Name:        "learner",
-				Serviceable: false,
-				Writable:    false,
-				Votable:     false,
+				Name:                 "learner",
+				ParticipatesInQuorum: true,
+				UpdatePriority:       0,
 			},
 		},
 		SystemAccounts: []kbappsv1.SystemAccount{

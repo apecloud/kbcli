@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2022-2024 ApeCloud Co., Ltd
+Copyright (C) 2022-2025 ApeCloud Co., Ltd
 
 This file is part of KubeBlocks project
 
@@ -145,8 +145,7 @@ func (o *ListLogsOptions) printListLogs(dataObj *cluster.ClusterObjects) error {
 	tbl := printer.NewTablePrinter(o.Out)
 	logFilesData := o.gatherLogFilesData(dataObj.Cluster, dataObj.ClusterDef, dataObj.Pods)
 	if len(logFilesData) == 0 {
-		fmt.Fprintf(o.ErrOut, "No log files found. You can enable the log feature with the kbcli command below.\n"+
-			"kbcli cluster update %s --enable-all-logs=true --namespace %s\n", dataObj.Cluster.Name, dataObj.Cluster.Namespace)
+		fmt.Fprintf(o.ErrOut, "No log files found. \n")
 	} else {
 		tbl.SetHeader("INSTANCE", "LOG-TYPE", "FILE-PATH", "SIZE", "LAST-WRITTEN", "COMPONENT")
 		for _, f := range logFilesData {

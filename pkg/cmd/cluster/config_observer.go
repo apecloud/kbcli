@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2022-2024 ApeCloud Co., Ltd
+Copyright (C) 2022-2025 ApeCloud Co., Ltd
 
 This file is part of KubeBlocks project
 
@@ -165,6 +165,11 @@ func (r *configObserverOptions) printComponentExplainConfigure(objects *ConfigRe
 func (r *configObserverOptions) printExplainConfigure(configSpecs configSpecsType, tplName string) error {
 	tpl := configSpecs.findByName(tplName)
 	if tpl == nil {
+		return nil
+	}
+
+	if tpl.ConfigConstraint == nil {
+		fmt.Printf("\n%s\n", fmt.Sprintf(noConfigConstraintPrompt, printer.BoldYellow(tplName)))
 		return nil
 	}
 

@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2022-2024 ApeCloud Co., Ltd
+Copyright (C) 2022-2025 ApeCloud Co., Ltd
 
 This file is part of KubeBlocks project
 
@@ -31,7 +31,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/maps"
-	"helm.sh/helm/v3/pkg/repo"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -229,10 +228,6 @@ func (o *UninstallOptions) Uninstall() error {
 		// remove KB release
 		printSpinner(newSpinner("Uninstall helm release "+types.KubeBlocksReleaseName+" "+v.KubeBlocks),
 			chart.Uninstall(o.HelmCfg))
-
-		// remove repo
-		printSpinner(newSpinner("Remove helm repo "+types.KubeBlocksChartName),
-			helm.RemoveRepo(&repo.Entry{Name: types.KubeBlocksChartName}))
 	}
 
 	// delete namespace if it is default namespace

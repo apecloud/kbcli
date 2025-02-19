@@ -38,7 +38,7 @@ jobs:
   gorelease-assert:
     needs: [ create-release-jihulab ]
     name: Upload and release kbcli
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - name: install lib
@@ -95,7 +95,7 @@ jobs:
           asset_content_type: application/octet-stream
 
       - name: Upload kbcli Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.TAG_NAME }}-kbcli
           path: |
@@ -103,10 +103,11 @@ jobs:
             ./dist/*.zip
           if-no-files-found: error
           retention-days: 1
+          overwrite: true
 
   upload-release-assert:
     needs: gorelease-assert
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
@@ -114,7 +115,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Download Kbcli Artifact
-        uses: actions/download-artifact@v3.0.2
+        uses: actions/download-artifact@v4
         with:
           name: ${{ env.TAG_NAME }}-kbcli
           path: ${{ github.workspace }}/dist
@@ -137,7 +138,7 @@ jobs:
 
   remove-artifact:
     needs: upload-release-assert
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Remove kbcli Artifact
         uses: geekyeggo/delete-artifact@v2

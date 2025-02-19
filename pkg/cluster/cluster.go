@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2022-2024 ApeCloud Co., Ltd
+Copyright (C) 2022-2025 ApeCloud Co., Ltd
 
 This file is part of KubeBlocks project
 
@@ -423,7 +423,6 @@ func (o *ClusterObjects) GetInstanceInfo() []*InstanceInfo {
 			Component:   componentName,
 			Status:      o.getPodPhase(&pod),
 			Role:        getLabelVal(pod.Labels, constant.RoleLabelKey),
-			AccessMode:  getLabelVal(pod.Labels, constant.AccessModeLabelKey),
 			CreatedTime: util.TimeFormat(&pod.CreationTimestamp),
 		}
 		var componentSpec *kbappsv1.ClusterComponentSpec

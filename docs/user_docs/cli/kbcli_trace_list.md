@@ -1,32 +1,25 @@
 ---
-title: kbcli cluster list-restore
+title: kbcli trace list
 ---
 
-List restores.
+list all traces.
 
 ```
-kbcli cluster list-restore [flags]
+kbcli trace list [flags]
 ```
 
 ### Examples
 
 ```
-  # list all restores
-  kbcli cluster list-restore
-  
-  # list all restores of the cluster
-  kbcli cluster list-restore <clusterName>
-  
-  # list the specified restores
-  kbcli cluster list-restore --names r1,r2
+  # list all traces
+  kbcli trace list
 ```
 
 ### Options
 
 ```
   -A, --all-namespaces     If present, list the requested object(s) across all namespaces. Namespace in current context is ignored even if specified with --namespace.
-  -h, --help               help for list-restore
-      --names strings      List restores in the specified cluster
+  -h, --help               help for list
   -n, --namespace string   specified the namespace
   -o, --output format      prints the output in the specified format. Allowed values: table, json, yaml, wide (default table)
   -l, --selector string    Selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2). Matching objects must satisfy all of the specified label constraints.
@@ -58,7 +51,7 @@ kbcli cluster list-restore [flags]
 
 ### SEE ALSO
 
-* [kbcli cluster](kbcli_cluster.md)	 - Cluster command.
+* [kbcli trace](kbcli_trace.md)	 - trace management command
 
 #### Go Back to [CLI Overview](cli.md) Homepage.
 

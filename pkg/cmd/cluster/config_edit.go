@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2022-2024 ApeCloud Co., Ltd
+Copyright (C) 2022-2025 ApeCloud Co., Ltd
 
 This file is part of KubeBlocks project
 
@@ -93,7 +93,7 @@ func (o *editConfigOptions) Run(fn func() error) error {
 	util.DisplayDiffWithColor(o.IOStreams.Out, diff)
 
 	configSpec := wrapper.ConfigTemplateSpec()
-	if configSpec.ConfigConstraintRef != "" {
+	if hasSchemaForFile(configSpec, wrapper.ConfigFile()) {
 		return o.runWithConfigConstraints(cfgEditContext, configSpec, fn)
 	}
 
@@ -108,6 +108,16 @@ func (o *editConfigOptions) Run(fn func() error) error {
 	o.HasPatch = false
 	o.FileContent = cfgEditContext.getEdited()
 	return fn()
+}
+
+func hasSchemaForFile(configSpec *appsv1alpha1.ComponentConfigSpec, configFile string) bool {
+	if configSpec.ConfigConstraintRef == "" {
+		return false
+	}
+	if len(configSpec.Keys) == 0 || configFile == "" {
+		return true
+	}
+	return slices.Contains(configSpec.Keys, configFile)
 }
 
 func (o *editConfigOptions) runWithConfigConstraints(cfgEditContext *configEditContext, configSpec *appsv1alpha1.ComponentConfigSpec, fn func() error) error {

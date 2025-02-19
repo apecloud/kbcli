@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2022-2024 ApeCloud Co., Ltd
+Copyright (C) 2022-2025 ApeCloud Co., Ltd
 
 This file is part of KubeBlocks project
 
@@ -76,7 +76,7 @@ var _ = Describe("cluster engine", func() {
 				"all values are valid",
 				map[string]interface{}{
 					"cpu":               1.0,
-					"terminationPolicy": "Delete",
+					"terminationPolicy": "WipeOut",
 				},
 				true,
 			},

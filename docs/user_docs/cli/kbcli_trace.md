@@ -1,31 +1,13 @@
 ---
-title: kbcli cluster describe-account
+title: kbcli trace
 ---
 
-Describe account roles and related information
-
-```
-kbcli cluster describe-account [flags]
-```
-
-### Examples
-
-```
-  # describe account and show role information
-  kbcli cluster describe-account CLUSTERNAME --component COMPNAME --name USERNAME
-  # describe account with default component
-  kbcli cluster describe-account CLUSTERNAME --name USERNAME
-  # describe account for instance
-  kbcli cluster describe-account --instance INSTANCE --name USERNAME
-```
+trace management command
 
 ### Options
 
 ```
-      --component string   Specify the name of component to be connected. If not specified, pick the first one.
-  -h, --help               help for describe-account
-  -i, --instance string    Specify the name of instance to be connected.
-      --name string        Required user name, please specify it.
+  -h, --help   help for trace
 ```
 
 ### Options inherited from parent commands
@@ -54,7 +36,12 @@ kbcli cluster describe-account [flags]
 
 ### SEE ALSO
 
-* [kbcli cluster](kbcli_cluster.md)	 - Cluster command.
+
+* [kbcli trace create](kbcli_trace_create.md)	 - create a trace.
+* [kbcli trace delete](kbcli_trace_delete.md)	 - Delete a trace.
+* [kbcli trace list](kbcli_trace_list.md)	 - list all traces.
+* [kbcli trace update](kbcli_trace_update.md)	 - update a trace.
+* [kbcli trace watch](kbcli_trace_watch.md)	 - watch a trace.
 
 #### Go Back to [CLI Overview](cli.md) Homepage.
 

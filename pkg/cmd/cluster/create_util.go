@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2022-2024 ApeCloud Co., Ltd
+Copyright (C) 2022-2025 ApeCloud Co., Ltd
 
 This file is part of KubeBlocks project
 
@@ -38,11 +38,7 @@ import (
 )
 
 var (
-	resetEngineFlagValues = map[string]map[string]string{
-		"elasticsearch": {
-			"rbac-enabled": "true",
-		},
-	}
+	resetEngineFlagValues = map[string]map[string]string{}
 )
 
 // addCreateFlags adds the flags for creating a cluster, these flags are built by the cluster schema.
@@ -61,7 +57,7 @@ func addCreateFlags(cmd *cobra.Command, f cmdutil.Factory, c *cluster.ChartInfo,
 		return err
 	}
 
-	// reset engine related flags default value, such as rbac-enabled for elasticsearch should be true by default
+	// reset engine related flags default value
 	resetEngineDefaultFlagsValue(cmd.Flags(), engine)
 	return nil
 }

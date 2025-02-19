@@ -1,4 +1,4 @@
-//Copyright (C) 2022-2024 ApeCloud Co., Ltd
+//Copyright (C) 2022-2025 ApeCloud Co., Ltd
 //
 //This file is part of KubeBlocks project
 //
@@ -30,14 +30,16 @@ options: {
 	componentDefinitionName: string
 	serviceVersion:          string
 	component:               string
+	componentObjectName:     string
 	instance:                string
 	componentNames: [...string]
 	instanceTPLNames: [...string]
 	rebuildInstanceFrom: [
 		...{
-			componentName: string
-			backupName?:   string
-			inPlace?:      bool
+			componentName:           string
+			backupName?:             string
+			inPlace?:                bool
+			sourceBackupTargetName?: string
 			instances: [
 				...{
 					name:            string
@@ -57,8 +59,8 @@ options: {
 	replicas: string
 	offlineInstancesToOnline: [...string]
 	onlineInstancesToOffline: [...string]
-	scaleOut: bool
-	storage:  string
+	scaleOut:          bool
+	storage:           string
 	opsDefinitionName: string
 	vctNames: [...string]
 	keyValues: [string]: {string | null}
@@ -153,7 +155,7 @@ content: {
 							replicaChanges: strconv.Atoi(options.replicas)
 						}
 						if len(options.offlineInstancesToOnline) > 0 {
-						    offlineInstancesToOnline: options.offlineInstancesToOnline
+							offlineInstancesToOnline: options.offlineInstancesToOnline
 						}
 					}
 				}
@@ -163,8 +165,8 @@ content: {
 							replicaChanges: strconv.Atoi(options.replicas)
 						}
 						if len(options.onlineInstancesToOffline) > 0 {
-                            onlineInstancesToOffline: options.onlineInstancesToOffline
-                        }
+							onlineInstancesToOffline: options.onlineInstancesToOffline
+						}
 					}
 				}
 			}]
@@ -215,52 +217,27 @@ content: {
 			}]
 		}
 		if options.type == "Reconfiguring" {
-			if len(options.componentNames) == 1 {
-				reconfigure: {
-					componentName: options.componentNames[0]
-					configurations: [ {
-						name: options.cfgTemplateName
-						if options.forceRestart {
-							policy: "simple"
+			reconfigures: [ for _, cName in options.componentNames {
+				componentName: cName
+				configurations: [ {
+					name: options.cfgTemplateName
+					if options.forceRestart {
+						policy: "simple"
+					}
+					keys: [{
+						key: options.cfgFile
+						if options.fileContent != "" {
+							fileContent: options.fileContent
 						}
-						keys: [{
-							key: options.cfgFile
-							if options.fileContent != "" {
-								fileContent: options.fileContent
-							}
-							if options.hasPatch {
-								parameters: [ for k, v in options.keyValues {
-									key:   k
-									value: v
-								}]
-							}
-						}]
-					}]
-				}
-			}
-			if len(options.componentNames) > 1 {
-				reconfigures: [ for _, cName in options.componentNames {
-					componentName: cName
-					configurations: [ {
-						name: options.cfgTemplateName
-						if options.forceRestart {
-							policy: "simple"
+						if options.hasPatch {
+							parameters: [ for k, v in options.keyValues {
+								key:   k
+								value: v
+							}]
 						}
-						keys: [{
-							key: options.cfgFile
-							if options.fileContent != "" {
-								fileContent: options.fileContent
-							}
-							if options.hasPatch {
-								parameters: [ for k, v in options.keyValues {
-									key:   k
-									value: v
-								}]
-							}
-						}]
 					}]
 				}]
-			}
+			}]
 		}
 		if options.type == "Expose" {
 			expose: [ for _, cName in options.componentNames {
@@ -283,13 +260,9 @@ content: {
 		}
 		if options.type == "Switchover" {
 			switchover: [{
-				componentName: options.component
-				if options.instance == "" {
-					instanceName: "*"
-				}
-				if options.instance != "" {
-					instanceName: options.instance
-				}
+				componentObjectName: options.componentObjectName
+				instanceName:        options.instance
+				candidateName:       options.candidate
 			}]
 		}
 		if options.type == "RebuildInstance" {
@@ -302,7 +275,7 @@ content: {
 					{
 						componentName: options.component
 						if len(options.params) > 0 {
-						    parameters:    options.params
+							parameters: options.params
 						}
 					},
 				]

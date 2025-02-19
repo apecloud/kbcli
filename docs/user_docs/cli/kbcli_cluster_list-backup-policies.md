@@ -1,32 +1,33 @@
 ---
-title: kbcli cluster custom-ops etcd-defragmentation
+title: kbcli cluster list-backup-policies
 ---
 
-Create a custom ops with opsDef etcd-defragmentation
+List backups policies.
 
 ```
-kbcli cluster custom-ops etcd-defragmentation <ClusterName> [flags]
+kbcli cluster list-backup-policies [flags]
 ```
 
 ### Examples
 
 ```
-  # Create a etcd-defragmentation ops
-  kbcli cluster custom-ops etcd-defragmentation <clusterName> --component <componentName>
+  # list all backup policies
+  kbcli cluster list-backup-policies
+  
+  # using short cmd to list backup policy of the specified cluster
+  kbcli cluster list-bp mycluster
 ```
 
 ### Options
 
 ```
-      --auto-approve                   Skip interactive approval before promote the instance
-      --component string               Specify the component name of the cluster. if not specified, using the first component which referenced the defined componentDefinition.
-      --dry-run string[="unchanged"]   Must be "client", or "server". If with client strategy, only print the object that would be sent, and no data is actually sent. If with server strategy, submit the server-side request, but no data is persistent. (default "none")
-      --edit                           Edit the API resource before creating
-      --force                           skip the pre-checks of the opsRequest to run the opsRequest forcibly
-  -h, --help                           help for etcd-defragmentation
-      --name string                    OpsRequest name. if not specified, it will be randomly generated
-  -o, --output format                  Prints the output in the specified format. Allowed values: JSON and YAML (default yaml)
-      --ttlSecondsAfterSucceed int     Time to live after the OpsRequest succeed
+  -A, --all-namespaces     If present, list the requested object(s) across all namespaces. Namespace in current context is ignored even if specified with --namespace.
+  -h, --help               help for list-backup-policies
+      --names strings      The backup policy name to get the details.
+  -n, --namespace string   specified the namespace
+  -o, --output format      prints the output in the specified format. Allowed values: table, json, yaml, wide (default table)
+  -l, --selector string    Selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2). Matching objects must satisfy all of the specified label constraints.
+      --show-labels        When printing, show all labels as the last column (default hide labels column)
 ```
 
 ### Options inherited from parent commands
@@ -45,7 +46,6 @@ kbcli cluster custom-ops etcd-defragmentation <ClusterName> [flags]
       --insecure-skip-tls-verify       If true, the server's certificate will not be checked for validity. This will make your HTTPS connections insecure
       --kubeconfig string              Path to the kubeconfig file to use for CLI requests.
       --match-server-version           Require server version to match client version
-  -n, --namespace string               If present, the namespace scope for this CLI request
       --request-timeout string         The length of time to wait before giving up on a single server request. Non-zero values should contain a corresponding time unit (e.g. 1s, 2m, 3h). A value of zero means don't timeout requests. (default "0")
   -s, --server string                  The address and port of the Kubernetes API server
       --tls-server-name string         Server name to use for server certificate validation. If it is not provided, the hostname used to contact the server is used
@@ -55,7 +55,7 @@ kbcli cluster custom-ops etcd-defragmentation <ClusterName> [flags]
 
 ### SEE ALSO
 
-* [kbcli cluster custom-ops](kbcli_cluster_custom-ops.md)	 - 
+* [kbcli cluster](kbcli_cluster.md)	 - Cluster command.
 
 #### Go Back to [CLI Overview](cli.md) Homepage.
 

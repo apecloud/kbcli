@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2022-2024 ApeCloud Co., Ltd
+Copyright (C) 2022-2025 ApeCloud Co., Ltd
 
 This file is part of KubeBlocks project
 
@@ -41,6 +41,7 @@ var (
 	notFoundConfigFileErrorMessage   = "cannot find config file[name=%s] in the configspec[name=%s], all configfiles: %v"
 	notSupportFileUpdateErrorMessage = "not supported file[%s] for updating, current supported files: %v"
 
+	noConfigConstraintPrompt      = "cannot find configConstraint for template[%s]"
 	notConfigSchemaPrompt         = "The config template[%s] is not defined in schema and parameter explanation info cannot be generated."
 	cue2openAPISchemaFailedPrompt = "The cue schema may not satisfy the conversion constraints of openAPISchema and parameter explanation info cannot be generated."
 	restartConfirmPrompt          = "The parameter change incurs a cluster restart, which brings the cluster down for a while. Enter to continue...\n, "
