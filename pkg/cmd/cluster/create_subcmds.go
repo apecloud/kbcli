@@ -392,7 +392,6 @@ func (o *CreateSubCmdsOptions) getObjectsInfo() ([]*objectInfo, error) {
 
 func (o *CreateSubCmdsOptions) getClusterObj(objs []*objectInfo) (*unstructured.Unstructured, error) {
 	for _, obj := range objs {
-		fmt.Println(obj.gvr.String())
 		if obj.gvr == types.ClusterGVR() {
 			return obj.obj, nil
 		}
