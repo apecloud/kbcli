@@ -106,6 +106,7 @@ type OperationsOptions struct {
 	ExposeType    string                   `json:"-"`
 	ExposeSubType string                   `json:"-"`
 	ExposeEnabled string                   `json:"exposeEnabled,omitempty"`
+	RoleSelector  string                   `json:"roleSelector,omitempty"`
 	Services      []opsv1alpha1.OpsService `json:"services,omitempty"`
 
 	// Switchover options
@@ -599,13 +600,8 @@ func (o *OperationsOptions) fillExpose() error {
 	} else {
 		svc.ServiceType = corev1.ServiceTypeLoadBalancer
 	}
-
-	roleSelector, err := util.GetDefaultRoleSelector(o.Dynamic, clusterObj, componentSpec.ComponentDef, componentSpec.ComponentDef)
-	if err != nil {
-		return err
-	}
-	if len(roleSelector) > 0 {
-		svc.RoleSelector = roleSelector
+	if o.RoleSelector != "" {
+		svc.RoleSelector = o.RoleSelector
 	}
 	o.Services = append(o.Services, svc)
 	return nil
@@ -855,6 +851,7 @@ func NewExposeCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.
 	cmd.Flags().StringVar(&o.ExposeSubType, "sub-type", "LoadBalancer", "Expose sub type, currently supported types are 'NodePort', 'LoadBalancer', only available if type is intranet")
 	cmd.Flags().StringVar(&o.ExposeEnabled, "enable", "", "Enable or disable the expose, values can be true or false")
 	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "Skip interactive approval before exposing the cluster")
+	cmd.Flags().StringVar(&o.RoleSelector, "role-selector", "", "The Component's exposed Services may target replicas based on their roles using `roleSelector`, this flag must be set when the component specified has roles")
 
 	util.CheckErr(cmd.RegisterFlagCompletionFunc("type", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		return []string{string(util.ExposeToIntranet), string(util.ExposeToInternet)}, cobra.ShellCompDirectiveNoFileComp
