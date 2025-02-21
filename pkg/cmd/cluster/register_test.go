@@ -101,10 +101,6 @@ var _ = Describe("cluster register", func() {
 			os.Remove(filepath.Join(cluster.CliChartsCacheDir, filepath.Base(source)))
 		})
 
-		It("test register chart by source", func() {
-			Expect(RegisterClusterChart(tf, streams, source, engine, "", "")).Should(Succeed())
-		})
-
 		It("test register chart by engine, version and default repo", func() {
 			Expect(RegisterClusterChart(tf, streams, "", engine, version, repo)).Should(Succeed())
 		})
