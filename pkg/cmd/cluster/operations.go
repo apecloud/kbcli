@@ -477,7 +477,7 @@ func (o *OperationsOptions) validatePromote(clusterObj *appsv1.Cluster) error {
 	getTargetRole := func(roles []appsv1.ReplicaRole) (string, error) {
 		pods, err := o.Client.CoreV1().Pods(clusterObj.Namespace).List(context.Background(), metav1.ListOptions{
 			LabelSelector: fmt.Sprintf("%s=%s,%s=%s", constant.KBAppComponentLabelKey,
-				podObj.Labels[constant.KBAppComponentLabelKey], constant.AppInstanceLabelKey, clusterObj.Name)
+				podObj.Labels[constant.KBAppComponentLabelKey], constant.AppInstanceLabelKey, clusterObj.Name),
 		})
 		if err != nil {
 			return "", err
