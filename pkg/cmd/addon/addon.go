@@ -127,7 +127,7 @@ func NewAddonCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.C
 		newInstallCmd(f, streams),
 		newUninstallCmd(f, streams),
 		newUpgradeCmd(f, streams),
-		newDeleteResourcesCmd(f, streams),
+		newPurgeResourcesCmd(f, streams),
 	)
 	return cmd
 }

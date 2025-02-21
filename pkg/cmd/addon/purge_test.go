@@ -22,6 +22,7 @@ package addon
 import (
 	"bytes"
 	"fmt"
+	"io"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -33,19 +34,19 @@ import (
 	clienttesting "k8s.io/client-go/testing"
 	cmdtesting "k8s.io/kubectl/pkg/cmd/testing"
 
-	kbv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
-	v1alpha1 "github.com/apecloud/kubeblocks/apis/extensions/v1alpha1"
-	"github.com/apecloud/kubeblocks/pkg/constant"
-
 	"github.com/apecloud/kbcli/pkg/testing"
 	"github.com/apecloud/kbcli/pkg/types"
+
+	kbv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
+	"github.com/apecloud/kubeblocks/apis/extensions/v1alpha1"
+	"github.com/apecloud/kubeblocks/pkg/constant"
 )
 
-var _ = Describe("delete_resources_with_version test", func() {
+var _ = Describe("purge_resources test", func() {
 	var (
 		streams              genericiooptions.IOStreams
 		tf                   *cmdtesting.TestFactory
-		bufOut, bufErr       *bytes.Buffer
+		in, out              *bytes.Buffer
 		addonName            = "redis"
 		newestVersion        = "0.9.3"
 		inUseVersion         = "0.9.2"
@@ -133,9 +134,7 @@ var _ = Describe("delete_resources_with_version test", func() {
 	}
 
 	BeforeEach(func() {
-		bufOut = new(bytes.Buffer)
-		bufErr = new(bytes.Buffer)
-		streams = genericiooptions.IOStreams{Out: bufOut, ErrOut: bufErr}
+		streams, in, out, _ = genericiooptions.NewTestIOStreams()
 		tf = cmdtesting.NewTestFactory().WithNamespace(testNamespace)
 		tf.FakeDynamicClient = testing.FakeDynamicClient()
 		tf.Client = &clientfake.RESTClient{}
@@ -160,41 +159,45 @@ var _ = Describe("delete_resources_with_version test", func() {
 		tf.Cleanup()
 	})
 
-	It("test delete_resources_with_versions cmd creation", func() {
-		Expect(newDeleteResourcesCmd(tf, streams)).ShouldNot(BeNil())
+	It("test purge_resources cmd creation", func() {
+		Expect(newPurgeResourcesCmd(tf, streams)).ShouldNot(BeNil())
 	})
 
 	It("test baseOption complete", func() {
-		option := newDeleteResourcesOption(tf, streams)
+		option := newPurgeResourcesOption(tf, streams)
+		option.autoApprove = true
 		Expect(option).ShouldNot(BeNil())
 		Expect(option.baseOption.complete()).Should(Succeed())
 	})
 
 	It("test no addon name provided", func() {
-		option := newDeleteResourcesOption(tf, streams)
+		option := newPurgeResourcesOption(tf, streams)
+		option.autoApprove = true
 		err := option.Complete(nil)
 		Expect(err).Should(HaveOccurred())
 		Expect(err.Error()).Should(ContainSubstring("no addon provided"))
 	})
 
-	It("test no versions and no --all-unused-versions", func() {
-		option := newDeleteResourcesOption(tf, streams)
+	It("test no versions and no --all", func() {
+		option := newPurgeResourcesOption(tf, streams)
 		option.Dynamic = tf.FakeDynamicClient
 		option.Factory = tf
+		option.autoApprove = true
 		err := option.Complete([]string{addonName})
 		Expect(err).ShouldNot(HaveOccurred())
 
 		// Validate should fail due to no versions and no all-unused-versions
 		err = option.Validate()
 		Expect(err).Should(HaveOccurred())
-		Expect(err.Error()).To(ContainSubstring("please specify versions or set --all-unused-versions to true"))
+		Expect(err.Error()).To(ContainSubstring("please specify versions or use --all"))
 	})
 
 	It("test specifying a non-existent version", func() {
-		option := newDeleteResourcesOption(tf, streams)
+		option := newPurgeResourcesOption(tf, streams)
 		option.versions = []string{"1.0.0"}
 		option.Dynamic = tf.FakeDynamicClient
 		option.Factory = tf
+		option.autoApprove = true
 		err := option.Complete([]string{addonName})
 		Expect(err).ShouldNot(HaveOccurred())
 
@@ -204,33 +207,126 @@ var _ = Describe("delete_resources_with_version test", func() {
 	})
 
 	It("test specifying newest version without deleteNewestVersion flag", func() {
-		option := newDeleteResourcesOption(tf, streams)
+		option := newPurgeResourcesOption(tf, streams)
 		option.versions = []string{newestVersion} // newest version
 		option.Dynamic = tf.FakeDynamicClient
 		option.Factory = tf
+		option.autoApprove = true
 		err := option.Complete([]string{addonName})
 		Expect(err).ShouldNot(HaveOccurred())
 
 		err = option.Validate()
 		Expect(err).Should(HaveOccurred())
-		Expect(err.Error()).To(ContainSubstring("cannot be deleted as it is the newest version"))
+		Expect(err.Error()).To(ContainSubstring("cannot be purged as it is the newest version"))
 	})
 
 	It("test specifying an in-use version", func() {
-		option := newDeleteResourcesOption(tf, streams)
+		option := newPurgeResourcesOption(tf, streams)
 		option.versions = []string{inUseVersion}
 		option.Dynamic = tf.FakeDynamicClient
 		option.Factory = tf
+		option.autoApprove = true
 		err := option.Complete([]string{addonName})
 		Expect(err).ShouldNot(HaveOccurred())
 
 		err = option.Validate()
 		Expect(err).Should(HaveOccurred())
-		Expect(err.Error()).To(ContainSubstring("cannot be deleted as it is currently used"))
+		Expect(err.Error()).To(ContainSubstring("cannot be purged as it is currently in use"))
 	})
 
 	It("test specifying an unused old version directly", func() {
-		option := newDeleteResourcesOption(tf, streams)
+		option := newPurgeResourcesOption(tf, streams)
+		option.versions = []string{unusedVersion}
+		option.Dynamic = tf.FakeDynamicClient
+		option.Factory = tf
+		option.autoApprove = true
+		err := option.Complete([]string{addonName})
+		Expect(err).ShouldNot(HaveOccurred())
+
+		// Validate should succeed
+		err = option.Validate()
+		Expect(err).ShouldNot(HaveOccurred())
+
+		// Run should1 purge resources associated with unusedVersion
+		err = option.Run()
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(out.String()).To(ContainSubstring(unusedVersion))
+	})
+
+	It("test no versions specified and --all flag is set", func() {
+		option := newPurgeResourcesOption(tf, streams)
+		option.all = true
+		option.Dynamic = tf.FakeDynamicClient
+		option.Factory = tf
+		option.autoApprove = true
+		err := option.Complete([]string{addonName})
+		Expect(err).ShouldNot(HaveOccurred())
+
+		// Validate should succeed now that we have automatically set unused versions
+		err = option.Validate()
+		Expect(err).ShouldNot(HaveOccurred())
+
+		// Run should purge all unused and non-newest versions. In this case, unusedVersion = "0.9.1"
+		err = option.Run()
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(out.String()).To(ContainSubstring(unusedVersion))
+	})
+
+	It("test dry-run flag", func() {
+		option := newPurgeResourcesOption(tf, streams)
+		option.versions = []string{unusedVersion}
+		option.Dynamic = tf.FakeDynamicClient
+		option.Factory = tf
+		option.autoApprove = true
+		option.dryRun = true
+		err := option.Complete([]string{addonName})
+		Expect(err).ShouldNot(HaveOccurred())
+
+		// Validate should succeed
+		err = option.Validate()
+		Expect(err).ShouldNot(HaveOccurred())
+
+		// Run should print the resources that would be purged without actually deleting them
+		err = option.Run()
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(out.String()).To(ContainSubstring("The following versions will be purged"))
+		Expect(out.String()).To(ContainSubstring(unusedVersion))
+
+		// Check that no actual deletion occurred
+		Expect(out.String()).NotTo(ContainSubstring("Purged resource"))
+	})
+
+	It("test invalid version format", func() {
+		option := newPurgeResourcesOption(tf, streams)
+		option.versions = []string{"invalid-version"}
+		option.Dynamic = tf.FakeDynamicClient
+		option.Factory = tf
+		option.autoApprove = true
+		err := option.Complete([]string{addonName})
+		Expect(err).ShouldNot(HaveOccurred())
+
+		// Validate should fail due to invalid version format
+		err = option.Validate()
+		Expect(err).Should(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("specified version invalid-version does not exist"))
+	})
+
+	It("test no versions specified and --all flag not set", func() {
+		option := newPurgeResourcesOption(tf, streams)
+		option.Dynamic = tf.FakeDynamicClient
+		option.Factory = tf
+		option.autoApprove = true
+		err := option.Complete([]string{addonName})
+		Expect(err).ShouldNot(HaveOccurred())
+
+		// Validate should fail because no versions specified and --all flag is not set
+		err = option.Validate()
+		Expect(err).Should(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("please specify versions or use --all"))
+	})
+
+	It("test abort purge operation", func() {
+		option := newPurgeResourcesOption(tf, streams)
 		option.versions = []string{unusedVersion}
 		option.Dynamic = tf.FakeDynamicClient
 		option.Factory = tf
@@ -241,27 +337,64 @@ var _ = Describe("delete_resources_with_version test", func() {
 		err = option.Validate()
 		Expect(err).ShouldNot(HaveOccurred())
 
-		// Run should delete resources associated with unusedVersion
+		in.Write([]byte("n\n"))
+		option.In = io.NopCloser(in)
+
+		// Run the operation
 		err = option.Run()
 		Expect(err).ShouldNot(HaveOccurred())
-		Expect(bufOut.String()).To(ContainSubstring("Deleted resource: configmaps/" + "config-" + unusedVersion))
+
+		// Ensure the purge operation is aborted
+		Expect(out.String()).To(ContainSubstring("Purge operation aborted"))
 	})
 
-	It("test using --all-unused-versions", func() {
-		option := newDeleteResourcesOption(tf, streams)
-		option.allUnusedVersions = true
+	It("test invalid addon name", func() {
+		option := newPurgeResourcesOption(tf, streams)
+		option.autoApprove = true
 		option.Dynamic = tf.FakeDynamicClient
 		option.Factory = tf
+		err := option.Complete([]string{"nonexistent-addon"})
+		Expect(err).Should(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("failed to retrieve versions"))
+	})
+
+	It("test --all flag when no versions are in use", func() {
+		option := newPurgeResourcesOption(tf, streams)
+		option.all = true
+		option.Dynamic = tf.FakeDynamicClient
+		option.Factory = tf
+		option.autoApprove = true
 		err := option.Complete([]string{addonName})
 		Expect(err).ShouldNot(HaveOccurred())
 
-		// Validate should succeed now that we have automatically set unused versions
+		// Validate should succeed as unused versions are included
 		err = option.Validate()
 		Expect(err).ShouldNot(HaveOccurred())
 
-		// Run should delete all unused and non-newest versions. In this case, unusedVersion = "0.9.1"
+		// Run should purge all unused versions. In this case, no versions are in use.
 		err = option.Run()
 		Expect(err).ShouldNot(HaveOccurred())
-		Expect(bufOut.String()).To(ContainSubstring("Deleted resource: configmaps/" + "config-" + unusedVersion))
+		Expect(out.String()).To(ContainSubstring(unusedVersion))
 	})
+
+	It("test purging the latest version with --deleteNewestVersion flag", func() {
+		option := newPurgeResourcesOption(tf, streams)
+		option.versions = []string{newestVersion}
+		option.deleteNewestVersion = true
+		option.Dynamic = tf.FakeDynamicClient
+		option.Factory = tf
+		option.autoApprove = true
+		err := option.Complete([]string{addonName})
+		Expect(err).ShouldNot(HaveOccurred())
+
+		// Validate should succeed
+		err = option.Validate()
+		Expect(err).ShouldNot(HaveOccurred())
+
+		// Run should purge the latest version if --deleteNewestVersion is set
+		err = option.Run()
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(out.String()).To(ContainSubstring(newestVersion))
+	})
+
 })
