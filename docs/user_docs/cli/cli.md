@@ -107,14 +107,6 @@ ComponentVersions command.
 * [kbcli componentversion list](kbcli_componentversion_list.md)	 - List ComponentVersion.
 
 
-## [dashboard](kbcli_dashboard.md)
-
-List and open the KubeBlocks dashboards.
-
-* [kbcli dashboard list](kbcli_dashboard_list.md)	 - List all dashboards.
-* [kbcli dashboard open](kbcli_dashboard_open.md)	 - Open one dashboard.
-
-
 ## [dataprotection](kbcli_dataprotection.md)
 
 Data protection command.
