@@ -168,10 +168,6 @@ func (o *UninstallOptions) Uninstall() error {
 	printSpinner(newSpinner("Uninstall helm release "+types.KubeBlocksReleaseName+" "+v.KubeBlocks),
 		chart.Uninstall(o.HelmCfg))
 
-	// remove repo
-	printSpinner(newSpinner("Remove helm repo "+types.KubeBlocksChartName),
-		helm.RemoveRepo(&repo.Entry{Name: types.KubeBlocksChartName}))
-
 	// get KubeBlocks objects, then try to remove them
 	objs, err := getKBObjects(o.Dynamic, o.Namespace, o.addons)
 	if err != nil {
