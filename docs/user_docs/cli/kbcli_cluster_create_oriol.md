@@ -1,39 +1,50 @@
 ---
-title: kbcli cluster custom-ops kafka-quota
+title: kbcli cluster create oriol
 ---
 
-Create a custom ops with opsDef kafka-quota
+Create a oriol cluster.
 
 ```
-kbcli cluster custom-ops kafka-quota <ClusterName> [flags]
+kbcli cluster create oriol NAME [flags]
 ```
 
 ### Examples
 
 ```
-  # Create a kafka-quota ops
-  kbcli cluster custom-ops kafka-quota <clusterName> --component <componentName>
+  # Create a cluster with the default values
+  kbcli cluster create oriol
+  
+  # Create a cluster with the specified cpu, memory and storage
+  kbcli cluster create oriol --cpu 1 --memory 2 --storage 10
 ```
 
 ### Options
 
 ```
-      --auto-approve                   Skip interactive approval before promote the instance
-      --client string                  client id.
-      --component string               Specify the component name of the cluster. if not specified, using the first component which referenced the defined componentDefinition.
-      --consumer-byte-rate int         the maximum number of messages that can be consumed per second, measured in bytes/sec
-      --controller-mutation-rate int   partition mutation quota to control the rate at which mutations are accepted for user requests.
-      --delete-quotas stringArray      
+      --availability-policy string     The availability policy of cluster. Legal values [none, node, zone]. (default "node")
+      --cpu float                      CPU cores. Value range [0.5, 64]. (default 0.5)
       --dry-run string[="unchanged"]   Must be "client", or "server". If with client strategy, only print the object that would be sent, and no data is actually sent. If with server strategy, submit the server-side request, but no data is persistent. (default "none")
       --edit                           Edit the API resource before creating
-      --force                           skip the pre-checks of the opsRequest to run the opsRequest forcibly
-  -h, --help                           help for kafka-quota
-      --name string                    OpsRequest name. if not specified, it will be randomly generated
+      --etcd.cluster string            The patroni dependency etcd cluster name (default "etcd")
+      --etcd.namespace string          The patroni dependency etcd cluster namespace (default "default")
+  -h, --help                           help for oriol
+      --host-network-accessible        Specify whether the cluster can be accessed from within the VPC.
+      --memory float                   Memory, the unit is Gi. Value range [0.5, 1000]. (default 0.5)
+      --mode string                     Legal values [standalone, replication]. (default "standalone")
+      --monitor-enabled                Enable or disable monitor.
+      --node-labels stringToString     Node label selector (default [])
   -o, --output format                  Prints the output in the specified format. Allowed values: JSON and YAML (default yaml)
-      --producer-byte-rate int         the maximum number of messages that can be produced per second, measured in bytes/sec
-      --request-percentage int         request percentage.
-      --ttlSecondsAfterSucceed int     Time to live after the OpsRequest succeed
-      --user string                    user name
+      --pod-anti-affinity string       Pod anti-affinity type, one of: (Preferred, Required) (default "Preferred")
+      --publicly-accessible            Specify whether the cluster can be accessed from the public internet.
+      --rbac-enabled                   Specify whether rbac resources will be created by client, otherwise KubeBlocks server will try to create rbac resources.
+      --replicas int                    Value range [1, 5]. (default 1)
+      --storage float                  Storage size, the unit is Gi. Value range [1, 10000]. (default 20)
+      --storage-class-name string      Storage class name of the data volume
+      --tenancy string                 The tenancy of cluster. Legal values [SharedNode, DedicatedNode]. (default "SharedNode")
+      --termination-policy string      The termination policy of cluster. Legal values [DoNotTerminate, Halt, Delete, WipeOut]. (default "Delete")
+      --tolerations strings            Tolerations for cluster, such as "key=value:effect,key:effect", for example '"engineType=mongo:NoSchedule", "diskType:NoSchedule"'
+      --topology-keys stringArray      Topology keys for affinity
+      --version string                  (default "orioledb-beta1")
 ```
 
 ### Options inherited from parent commands
@@ -57,11 +68,12 @@ kbcli cluster custom-ops kafka-quota <ClusterName> [flags]
   -s, --server string                  The address and port of the Kubernetes API server
       --tls-server-name string         Server name to use for server certificate validation. If it is not provided, the hostname used to contact the server is used
       --token string                   Bearer token for authentication to the API server
+      --user string                    The name of the kubeconfig user to use
 ```
 
 ### SEE ALSO
 
-* [kbcli cluster custom-ops](kbcli_cluster_custom-ops.md)	 - 
+* [kbcli cluster create](kbcli_cluster_create.md)	 - Create a cluster.
 
 #### Go Back to [CLI Overview](cli.md) Homepage.
 

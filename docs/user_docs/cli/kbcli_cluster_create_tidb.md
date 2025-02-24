@@ -1,35 +1,46 @@
 ---
-title: kbcli cluster custom-ops mysql-orc-switchover
+title: kbcli cluster create tidb
 ---
 
-Create a custom ops with opsDef mysql-orc-switchover
+Create a tidb cluster.
 
 ```
-kbcli cluster custom-ops mysql-orc-switchover <ClusterName> [flags]
+kbcli cluster create tidb NAME [flags]
 ```
 
 ### Examples
 
 ```
-  # Create a mysql-orc-switchover ops
-  kbcli cluster custom-ops mysql-orc-switchover <clusterName> --component <componentName>
+  # Create a cluster with the default values
+  kbcli cluster create tidb
+  
+  # Create a cluster with the specified cpu, memory and storage
+  kbcli cluster create tidb --cpu 1 --memory 2 --storage 10
 ```
 
 ### Options
 
 ```
-      --auto-approve                   Skip interactive approval before promote the instance
-      --candidate string               candidate instance name(pod Name). if candidate is not empty, will promote it to primary.
-                                       otherwise promote a randomly selected pod to primary.
-                                       
-      --component string               Specify the component name of the cluster. if not specified, using the first component which referenced the defined componentDefinition.
       --dry-run string[="unchanged"]   Must be "client", or "server". If with client strategy, only print the object that would be sent, and no data is actually sent. If with server strategy, submit the server-side request, but no data is persistent. (default "none")
       --edit                           Edit the API resource before creating
-      --force                           skip the pre-checks of the opsRequest to run the opsRequest forcibly
-  -h, --help                           help for mysql-orc-switchover
-      --name string                    OpsRequest name. if not specified, it will be randomly generated
+  -h, --help                           help for tidb
+      --node-labels stringToString     Node label selector (default [])
   -o, --output format                  Prints the output in the specified format. Allowed values: JSON and YAML (default yaml)
-      --ttlSecondsAfterSucceed int     Time to live after the OpsRequest succeed
+      --pd.cpu float                   CPU cores. Value range [2, 64]. (default 2)
+      --pd.memory float                Memory, the unit is Gi. Value range [4, 1000]. (default 4)
+      --pd.replicas int                The number of replicas Value range [1, 5]. (default 3)
+      --pd.storage float               Storage size, the unit is Gi. Value range [1, 10000]. (default 20)
+      --pod-anti-affinity string       Pod anti-affinity type, one of: (Preferred, Required) (default "Preferred")
+      --tenancy string                 Tenancy options, one of: (SharedNode, DedicatedNode) (default "SharedNode")
+      --termination-policy string      The termination policy of cluster. Legal values [DoNotTerminate, Halt, Delete, WipeOut]. (default "Delete")
+      --tidb.cpu float                 CPU cores. Value range [2, 64]. (default 2)
+      --tidb.replicas int              The number of replicas Value range [1, 5]. (default 2)
+      --tikv.cpu float                 CPU cores. Value range [2, 64]. (default 2)
+      --tikv.memory float              Memory, the unit is Gi. Value range [4, 1000]. (default 4)
+      --tikv.replicas int              The number of replicas Value range [1, 5]. (default 3)
+      --tikv.storage float             Storage size, the unit is Gi. Value range [1, 10000]. (default 20)
+      --tolerations strings            Tolerations for cluster, such as "key=value:effect,key:effect", for example '"engineType=mongo:NoSchedule", "diskType:NoSchedule"'
+      --topology-keys stringArray      Topology keys for affinity
 ```
 
 ### Options inherited from parent commands
@@ -58,7 +69,7 @@ kbcli cluster custom-ops mysql-orc-switchover <ClusterName> [flags]
 
 ### SEE ALSO
 
-* [kbcli cluster custom-ops](kbcli_cluster_custom-ops.md)	 - 
+* [kbcli cluster create](kbcli_cluster_create.md)	 - Create a cluster.
 
 #### Go Back to [CLI Overview](cli.md) Homepage.
 

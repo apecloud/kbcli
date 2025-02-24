@@ -1,24 +1,34 @@
 ---
-title: kbcli dashboard list
+title: kbcli addon purge
 ---
 
-List all dashboards.
+Purge the sub-resources of specified addon and versions
 
 ```
-kbcli dashboard list [flags]
+kbcli addon purge [flags]
 ```
 
 ### Examples
 
 ```
-  # List all dashboards
-  kbcli dashboard list
+  # Purge specific versions of redis addon resources
+  kbcli addon purge redis --versions=0.9.1,0.9.2
+  
+  # Purge all unused and outdated resources of redis addon
+  kbcli addon purge redis --all
+  
+  # Print the resources that would be purged, and no resource is actually purged
+  kbcli addon purge redis --dry-run
 ```
 
 ### Options
 
 ```
-  -h, --help   help for list
+      --all                If set to true, all resources will be purged, including those that are unused and not the newest version.
+      --auto-approve       Skip interactive approval before deleting
+      --dry-run            If set to true, only print the resources that would be purged, and no resource is actually purged.
+  -h, --help               help for purge
+      --versions strings   Specify the versions of resources to purge.
 ```
 
 ### Options inherited from parent commands
@@ -47,7 +57,7 @@ kbcli dashboard list [flags]
 
 ### SEE ALSO
 
-* [kbcli dashboard](kbcli_dashboard.md)	 - List and open the KubeBlocks dashboards.
+* [kbcli addon](kbcli_addon.md)	 - Addon command.
 
 #### Go Back to [CLI Overview](cli.md) Homepage.
 
