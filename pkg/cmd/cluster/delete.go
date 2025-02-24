@@ -29,9 +29,12 @@ import (
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
 
+	appsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
+	"github.com/apecloud/kubeblocks/pkg/constant"
 
 	"github.com/apecloud/kbcli/pkg/action"
+	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
 )
@@ -40,8 +43,12 @@ var (
 	deleteExample = templates.Examples(`
 		# delete a cluster named mycluster
 		kbcli cluster delete mycluster
+
 		# delete a cluster by label selector
 		kbcli cluster delete --selector clusterdefinition.kubeblocks.io/name=apecloud-mysql
+
+		# delete a cluster named mycluster forcedly
+		kbcli cluster delete mycluster --force
 `)
 )
 
@@ -80,9 +87,25 @@ func clusterPreDeleteHook(o *action.DeleteOptions, object runtime.Object) error 
 	if err != nil {
 		return err
 	}
-	if cluster.Spec.TerminationPolicy == appsv1alpha1.DoNotTerminate {
+	if cluster.Spec.TerminationPolicy == appsv1.DoNotTerminate {
 		return fmt.Errorf("cluster %s is protected by termination policy %s, skip deleting", cluster.Name, appsv1alpha1.DoNotTerminate)
 	}
+
+	if o.Force {
+		fmt.Fprintf(o.Out, printer.BoldRed("WARNING: Using --force may lead to potential data loss or residual dirty data if the cluster depends on other clusters.\n"))
+		components := util.GetComponentsOrShards(cluster)
+		for _, componentName := range components {
+			dynamicClient, err := o.Factory.DynamicClient()
+			if err != nil {
+				return err
+			}
+			err = util.AddAnnotationToComponentOrShard(dynamicClient, constant.GenerateClusterComponentName(cluster.Name, componentName), cluster.Namespace, constant.SkipPreTerminateAnnotationKey, "true")
+			if err != nil {
+				return fmt.Errorf("failed to add annotation to component %s: %v", componentName, err)
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -96,12 +119,12 @@ func clusterPostDeleteHook(o *action.DeleteOptions, object runtime.Object) error
 	return nil
 }
 
-func getClusterFromObject(object runtime.Object) (*appsv1alpha1.Cluster, error) {
-	if object.GetObjectKind().GroupVersionKind().Kind != appsv1alpha1.ClusterKind {
+func getClusterFromObject(object runtime.Object) (*appsv1.Cluster, error) {
+	if object.GetObjectKind().GroupVersionKind().Kind != appsv1.ClusterKind {
 		return nil, fmt.Errorf("object %s is not of kind %s", object.GetObjectKind().GroupVersionKind().Kind, appsv1alpha1.ClusterKind)
 	}
 	u := object.(*unstructured.Unstructured)
-	cluster := &appsv1alpha1.Cluster{}
+	cluster := &appsv1.Cluster{}
 	if err := runtime.DefaultUnstructuredConverter.FromUnstructured(u.Object, cluster); err != nil {
 		return nil, err
 	}
