@@ -618,6 +618,9 @@ func (o *OperationsOptions) validatePromote(cluster *appsv1alpha1.Cluster) error
 		return nil
 	}
 
+	if componentName == "" {
+		componentName = cluster.Spec.ComponentSpecs[0].Name
+	}
 	componentSpec := resolveComponent(cluster, componentName)
 	if componentSpec == nil {
 		return fmt.Errorf("component %s not found", componentName)
