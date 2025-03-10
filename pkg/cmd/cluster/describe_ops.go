@@ -368,12 +368,7 @@ func (o *describeOpsOptions) getReconfiguringCommand(spec opsv1alpha1.OpsRequest
 }
 
 func generateReconfiguringCommand(clusterName string, updatedParams *opsv1alpha1.Reconfigure, components []string) []string {
-	if len(updatedParams.Configurations) == 0 {
-		return nil
-	}
-
-	configuration := updatedParams.Configurations[0]
-	if len(configuration.Keys) == 0 {
+	if len(updatedParams.Parameters) == 0 {
 		return nil
 	}
 
@@ -383,11 +378,8 @@ func generateReconfiguringCommand(clusterName string, updatedParams *opsv1alpha1
 	commandArgs = append(commandArgs, "configure")
 	commandArgs = append(commandArgs, clusterName)
 	commandArgs = append(commandArgs, fmt.Sprintf("--components=%s", strings.Join(components, ",")))
-	commandArgs = append(commandArgs, fmt.Sprintf("--config-spec=%s", configuration.Name))
 
-	config := configuration.Keys[0]
-	commandArgs = append(commandArgs, fmt.Sprintf("--config-file=%s", config.Key))
-	for _, p := range config.Parameters {
+	for _, p := range updatedParams.Parameters {
 		if p.Value == nil {
 			continue
 		}

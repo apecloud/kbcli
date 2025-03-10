@@ -35,7 +35,6 @@ import (
 	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
 	appsv1beta1 "github.com/apecloud/kubeblocks/apis/apps/v1beta1"
 	cfgcore "github.com/apecloud/kubeblocks/pkg/configuration/core"
-	"github.com/apecloud/kubeblocks/pkg/controller/builder"
 	testapps "github.com/apecloud/kubeblocks/pkg/testutil/apps"
 
 	"github.com/apecloud/kbcli/pkg/testing"
@@ -86,24 +85,24 @@ var _ = Describe("reconfigure test", func() {
 			&appsv1beta1.ConfigConstraint{})
 		componentConfig := testapps.NewConfigMap(ns, cfgcore.GetComponentCfgName(clusterName, statefulCompName, configSpecName), testapps.SetConfigMapData("my.cnf", ""))
 		By("Create a configuration obj")
-		configObj := builder.NewConfigurationBuilder(ns, cfgcore.GenerateComponentConfigurationName(clusterName, statefulCompName)).
-			ClusterRef(clusterName).
-			Component(statefulCompName).
-			AddConfigurationItem(kbappsv1.ComponentConfigSpec{
-				ComponentTemplateSpec: kbappsv1.ComponentTemplateSpec{
-					Name:        configSpecName,
-					TemplateRef: configmap.Name,
-					Namespace:   ns,
-					VolumeName:  configVolumeName,
-				},
-				ConfigConstraintRef: constraint.Name,
-			}).
-			GetObject()
+		// configObj := builder.NewConfigurationBuilder(ns, cfgcore.GenerateComponentConfigurationName(clusterName, statefulCompName)).
+		// 	ClusterRef(clusterName).
+		// 	Component(statefulCompName).
+		// 	AddConfigurationItem(kbappsv1.ComponentConfigSpec{
+		// 		ComponentTemplateSpec: kbappsv1.ComponentTemplateSpec{
+		// 			Name:        configSpecName,
+		// 			TemplateRef: configmap.Name,
+		// 			Namespace:   ns,
+		// 			VolumeName:  configVolumeName,
+		// 		},
+		// 		ConfigConstraintRef: constraint.Name,
+		// 	}).
+		// 	GetObject()
 		By("creating a cluster")
 		clusterObj := testapps.NewClusterFactory(ns, clusterName, "").
 			AddComponent(statefulCompName, statefulCompDefName).GetObject()
 
-		objs := []runtime.Object{configmap, constraint, clusterObj, componentConfig, configObj}
+		objs := []runtime.Object{configmap, constraint, clusterObj, componentConfig}
 		ttf, ops := NewFakeOperationsOptions(ns, clusterObj.Name, objs...)
 		o := &configOpsOptions{
 			// nil cannot be set to a map struct in CueLang, so init the map of KeyValues.
