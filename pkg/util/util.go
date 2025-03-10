@@ -44,7 +44,9 @@ import (
 
 	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
 	opsv1alpha1 "github.com/apecloud/kubeblocks/apis/operations/v1alpha1"
+	parametersv1alpha1 "github.com/apecloud/kubeblocks/apis/parameters/v1alpha1"
 	intctrlutil "github.com/apecloud/kubeblocks/pkg/controllerutil"
+	"github.com/apecloud/kubeblocks/pkg/generics"
 	"github.com/fatih/color"
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
@@ -461,32 +463,32 @@ func GetEventObject(e *corev1.Event) string {
 }
 
 // ComponentConfigSpecs returns configSpecs used by the component.
-func ComponentConfigSpecs(clusterName string, namespace string, cli dynamic.Interface, componentName string, reloadTpl bool) ([]kbappsv1alpha1.ComponentConfigSpec, error) {
-	var (
-		clusterObj    = kbappsv1.Cluster{}
-		clusterDefObj = kbappsv1.ClusterDefinition{}
-	)
-
-	clusterKey := client.ObjectKey{
-		Namespace: namespace,
-		Name:      clusterName,
-	}
-	if err := GetResourceObjectFromGVR(types.ClusterGVR(), clusterKey, cli, &clusterObj); err != nil {
-		return nil, err
-	}
-	clusterDefKey := client.ObjectKey{
-		Namespace: "",
-		Name:      clusterObj.Spec.ClusterDef,
-	}
-	if err := GetResourceObjectFromGVR(types.ClusterDefGVR(), clusterDefKey, cli, &clusterDefObj); err != nil {
-		return nil, err
-	}
-	compDef, err := GetComponentDefByCompName(cli, &clusterObj, componentName)
-	if err != nil {
-		return nil, err
-	}
-	return GetValidConfigSpecs(reloadTpl, ToV1ComponentConfigSpecs(compDef.Spec.Configs))
-}
+// func ComponentConfigSpecs(clusterName string, namespace string, cli dynamic.Interface, componentName string, reloadTpl bool) ([]kbappsv1alpha1.ComponentConfigSpec, error) {
+// 	var (
+// 		clusterObj    = kbappsv1.Cluster{}
+// 		clusterDefObj = kbappsv1.ClusterDefinition{}
+// 	)
+//
+// 	clusterKey := client.ObjectKey{
+// 		Namespace: namespace,
+// 		Name:      clusterName,
+// 	}
+// 	if err := GetResourceObjectFromGVR(types.ClusterGVR(), clusterKey, cli, &clusterObj); err != nil {
+// 		return nil, err
+// 	}
+// 	clusterDefKey := client.ObjectKey{
+// 		Namespace: "",
+// 		Name:      clusterObj.Spec.ClusterDef,
+// 	}
+// 	if err := GetResourceObjectFromGVR(types.ClusterDefGVR(), clusterDefKey, cli, &clusterDefObj); err != nil {
+// 		return nil, err
+// 	}
+// 	compDef, err := GetComponentDefByCompName(cli, &clusterObj, componentName)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	return GetValidConfigSpecs(reloadTpl, ToV1ComponentConfigSpecs(compDef.Spec.Configs))
+// }
 
 func GetComponentDefByName(dynamic dynamic.Interface, name string) (*kbappsv1.ComponentDefinition, error) {
 	componentDef := &kbappsv1.ComponentDefinition{}
@@ -547,33 +549,33 @@ func GetConfigSpecsFromComponentName(cli dynamic.Interface, namespace, clusterNa
 	return GetValidConfigSpecs(reloadTpl, configSpecs)
 }
 
-func ToV1ComponentConfigSpec(configSpec kbappsv1.ComponentConfigSpec) kbappsv1alpha1.ComponentConfigSpec {
-	config := kbappsv1alpha1.ComponentConfigSpec{
-		ComponentTemplateSpec: kbappsv1alpha1.ComponentTemplateSpec{
-			Name:        configSpec.Name,
-			TemplateRef: configSpec.TemplateRef,
-			Namespace:   configSpec.Namespace,
-			VolumeName:  configSpec.VolumeName,
-			DefaultMode: configSpec.DefaultMode,
-		},
-		Keys:                configSpec.Keys,
-		ConfigConstraintRef: configSpec.ConfigConstraintRef,
-		InjectEnvTo:         configSpec.InjectEnvTo,
-		AsSecret:            configSpec.AsSecret,
-	}
-	for i := range configSpec.ReRenderResourceTypes {
-		config.ReRenderResourceTypes = append(config.ReRenderResourceTypes, kbappsv1alpha1.RerenderResourceType(configSpec.ReRenderResourceTypes[i]))
-	}
-	return config
-}
-
-func ToV1ComponentConfigSpecs(configSpecs []kbappsv1.ComponentConfigSpec) []kbappsv1alpha1.ComponentConfigSpec {
-	var configs []kbappsv1alpha1.ComponentConfigSpec
-	for i := range configSpecs {
-		configs = append(configs, ToV1ComponentConfigSpec(configSpecs[i]))
-	}
-	return configs
-}
+// func ToV1ComponentConfigSpec(configSpec kbappsv1.ComponentConfigSpec) kbappsv1alpha1.ComponentConfigSpec {
+// 	config := kbappsv1alpha1.ComponentConfigSpec{
+// 		ComponentTemplateSpec: kbappsv1alpha1.ComponentTemplateSpec{
+// 			Name:        configSpec.Name,
+// 			TemplateRef: configSpec.TemplateRef,
+// 			Namespace:   configSpec.Namespace,
+// 			VolumeName:  configSpec.VolumeName,
+// 			DefaultMode: configSpec.DefaultMode,
+// 		},
+// 		Keys:                configSpec.Keys,
+// 		ConfigConstraintRef: configSpec.ConfigConstraintRef,
+// 		InjectEnvTo:         configSpec.InjectEnvTo,
+// 		AsSecret:            configSpec.AsSecret,
+// 	}
+// 	for i := range configSpec.ReRenderResourceTypes {
+// 		config.ReRenderResourceTypes = append(config.ReRenderResourceTypes, kbappsv1alpha1.RerenderResourceType(configSpec.ReRenderResourceTypes[i]))
+// 	}
+// 	return config
+// }
+//
+// func ToV1ComponentConfigSpecs(configSpecs []kbappsv1.ComponentConfigSpec) []kbappsv1alpha1.ComponentConfigSpec {
+// 	var configs []kbappsv1alpha1.ComponentConfigSpec
+// 	for i := range configSpecs {
+// 		configs = append(configs, ToV1ComponentConfigSpec(configSpecs[i]))
+// 	}
+// 	return configs
+// }
 
 // GetK8SClientObject gets the client object of k8s,
 // obj must be a struct pointer so that obj can be updated with the response.
@@ -690,24 +692,47 @@ func IsSupportReconfigureParams(tpl kbappsv1alpha1.ComponentConfigSpec, values m
 	return true, nil
 }
 
-func ValidateParametersModified(tpl *kbappsv1alpha1.ComponentConfigSpec, parameters sets.Set[string], cli dynamic.Interface) (err error) {
-	cc := kbappsv1beta1.ConfigConstraint{}
-	ccKey := client.ObjectKey{
-		Namespace: "",
-		Name:      tpl.ConfigConstraintRef,
+func ValidateParametersModified(classifyParameters map[string]map[string]*parametersv1alpha1.ParametersInFile, pds []*parametersv1alpha1.ParametersDefinition) (err error) {
+	validator := func(index int, parameters sets.Set[string]) error {
+		if index < 0 || len(pds[index].Spec.ImmutableParameters) == 0 {
+			return nil
+		}
+		immuSet := sets.New(pds[index].Spec.ImmutableParameters...)
+		uniqueParameters := immuSet.Intersection(parameters)
+		if uniqueParameters.Len() == 0 {
+			return nil
+		}
+		return core.MakeError("parameter[%v] is immutable, cannot be modified!", cfgutil.ToSet(uniqueParameters).AsSlice())
 	}
-	if err = GetResourceObjectFromGVR(types.ConfigConstraintGVR(), ccKey, cli, &cc); err != nil {
-		return
+
+	for _, tplParams := range classifyParameters {
+		for file, params := range tplParams {
+			match := func(pd *parametersv1alpha1.ParametersDefinition) bool {
+				return pd.Spec.FileName == file
+			}
+			index := generics.FindFirstFunc(pds, match)
+			if err := validator(index, sets.KeySet(params.Parameters)); err != nil {
+				return err
+			}
+		}
 	}
-	return ValidateParametersModified2(parameters, cc.Spec)
+	return nil
 }
 
-func ValidateParametersModified2(parameters sets.Set[string], cc kbappsv1beta1.ConfigConstraintSpec) error {
-	if len(cc.ImmutableParameters) == 0 {
+func ValidateParametersModified2(parameters sets.Set[string], pds []*parametersv1alpha1.ParametersDefinition, file string) error {
+	var ret *parametersv1alpha1.ParametersDefinition
+	for _, pd := range pds {
+		if pd.Spec.FileName == file {
+			ret = pd
+			break
+		}
+	}
+
+	if ret == nil || len(ret.Spec.ImmutableParameters) == 0 {
 		return nil
 	}
 
-	immutableParameters := sets.New(cc.ImmutableParameters...)
+	immutableParameters := sets.New(ret.Spec.ImmutableParameters...)
 	uniqueParameters := immutableParameters.Intersection(parameters)
 	if uniqueParameters.Len() == 0 {
 		return nil
