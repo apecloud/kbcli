@@ -605,8 +605,29 @@ func (o *OperationsOptions) validatePromote(cluster *appsv1alpha1.Cluster) error
 		return nil
 	}
 
-	if cluster.Spec.ComponentSpecs[0].ComponentDef != "" {
-		return validateBaseOnCompDef(cluster.Spec.ComponentSpecs[0].ComponentDef)
+	resolveComponent := func(cluster *appsv1alpha1.Cluster, componentName string) *appsv1alpha1.ClusterComponentSpec {
+		componentSpec := cluster.Spec.GetComponentByName(componentName)
+		if componentSpec != nil {
+			return componentSpec
+		}
+		for i, spec := range cluster.Spec.ShardingSpecs {
+			if spec.Name == componentName {
+				return &cluster.Spec.ShardingSpecs[i].Template
+			}
+		}
+		return nil
+	}
+
+	if componentName == "" {
+		componentName = cluster.Spec.ComponentSpecs[0].Name
+	}
+	componentSpec := resolveComponent(cluster, componentName)
+	if componentSpec == nil {
+		return fmt.Errorf("component %s not found", componentName)
+	}
+
+	if componentSpec.ComponentDef != "" {
+		return validateBaseOnCompDef(componentSpec.ComponentDef)
 	} else {
 		return validateBaseOnClusterCompDef()
 	}

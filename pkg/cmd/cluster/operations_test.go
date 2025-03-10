@@ -362,7 +362,7 @@ var _ = Describe("operations", func() {
 		o.Instance = ""
 		o.Component = testing.ComponentDefName
 		Expect(o.Validate()).ShouldNot(Succeed())
-		Expect(testing.ContainExpectStrings(o.Validate().Error(), "is invalid")).Should(BeTrue())
+		Expect(testing.ContainExpectStrings(o.Validate().Error(), "component fake-component-type not found")).Should(BeTrue())
 	})
 
 	It("Switchover ops base on component definition", func() {
@@ -405,7 +405,7 @@ var _ = Describe("operations", func() {
 		o.Component = testing.ComponentDefName
 		Expect(o.Validate()).ShouldNot(Succeed())
 		fmt.Println(o.Validate().Error())
-		Expect(testing.ContainExpectStrings(o.Validate().Error(), "is invalid")).Should(BeTrue())
+		Expect(testing.ContainExpectStrings(o.Validate().Error(), "component fake-component-type not found")).Should(BeTrue())
 	})
 
 	It("Custom ops base on component definition", func() {
