@@ -1287,3 +1287,38 @@ func SetHelmOwner(dynamicClient dynamic.Interface, gvr schema.GroupVersionResour
 	}
 	return nil
 }
+
+// AddAnnotationToComponentOrShard adds a specific annotation to a component.
+func AddAnnotationToComponentOrShard(dynamicClient dynamic.Interface, componentName, namespace, annotationKey, annotationValue string) error {
+	gvr := types.ComponentGVR()
+	resourceClient := dynamicClient.Resource(gvr).Namespace(namespace)
+	componentObj, err := resourceClient.Get(context.Background(), componentName, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to get component %s: %v", componentName, err)
+	}
+
+	annotations := componentObj.GetAnnotations()
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
+	annotations[annotationKey] = annotationValue
+	componentObj.SetAnnotations(annotations)
+
+	_, err = resourceClient.Update(context.Background(), componentObj, metav1.UpdateOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to update component %s with annotation %s: %v", componentName, annotationKey, err)
+	}
+
+	return nil
+}
+
+func GetComponentsOrShards(cluster *kbappsv1.Cluster) []string {
+	var components []string
+	for _, component := range cluster.Spec.ComponentSpecs {
+		components = append(components, component.Name)
+	}
+	for _, sharding := range cluster.Spec.Shardings {
+		components = append(components, sharding.Name)
+	}
+	return components
+}
