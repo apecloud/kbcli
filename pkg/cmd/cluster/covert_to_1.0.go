@@ -392,6 +392,9 @@ func (o *ConvertToV1Options) Run() error {
 			return err
 		}
 	}
+	if err = o.removeConfigurationOwnForParameter(); err != nil {
+		return err
+	}
 	// convert to v1
 	clusterObj, err := apiruntime.DefaultUnstructuredConverter.ToUnstructured(cluster)
 	if err != nil {
@@ -423,6 +426,36 @@ func (o *ConvertToV1Options) convertCredential(cdName string) error {
 	case "postgresql":
 		compName = "postgresql"
 		accountName = "postgres"
+	case "mysql":
+		compName = "mysql"
+		accountName = "root"
+	case "apecloud-mysql":
+		compName = "mysql"
+		accountName = "root"
+	case "etcd":
+		compName = "etcd"
+		accountName = "root"
+	case "weaviate":
+		compName = "weaviate"
+		accountName = "root"
+	case "redis":
+		compName = "redis"
+		accountName = "default"
+	case "qdrant":
+		compName = "qdrant"
+		accountName = "root"
+	case "polardbx":
+		compName = "gms"
+		accountName = "polardbx_root"
+	case "orioledb":
+		compName = "orioledb"
+		accountName = "postgres"
+	case "neon":
+		compName = "neon-compute"
+		accountName = "cloud_admin"
+	case "mongodb":
+		compName = "mongodb"
+		accountName = "root"
 	default:
 		return fmt.Errorf("unknown cluster definition %s", cdName)
 	}
@@ -436,6 +469,29 @@ func (o *ConvertToV1Options) convertCredential(cdName string) error {
 	}
 	if _, err := o.Client.CoreV1().Secrets(oldSecret.Namespace).Create(context.TODO(), newSecret, metav1.CreateOptions{}); err != nil {
 		return client.IgnoreAlreadyExists(err)
+	}
+	return nil
+}
+
+func (o *ConvertToV1Options) removeConfigurationOwnForParameter() error {
+	cmList, err := o.Dynamic.Resource(types.ConfigmapGVR()).Namespace(o.Namespace).List(context.TODO(), metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("%s=%s", constant.AppInstanceLabelKey, o.Name),
+	})
+	if err != nil {
+		return err
+	}
+	for i := range cmList.Items {
+		cm := cmList.Items[i]
+		if _, ok := cm.GetLabels()[constant.CMConfigurationConstraintsNameLabelKey]; !ok {
+			continue
+		}
+		if _, ok := cm.GetLabels()[constant.CMConfigurationSpecProviderLabelKey]; !ok {
+			continue
+		}
+		cm.SetOwnerReferences(nil)
+		if _, err = o.Dynamic.Resource(types.ConfigmapGVR()).Namespace(o.Namespace).Update(context.TODO(), &cm, metav1.UpdateOptions{}); err != nil {
+			return err
+		}
 	}
 	return nil
 }
