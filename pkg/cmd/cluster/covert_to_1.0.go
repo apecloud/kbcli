@@ -516,7 +516,7 @@ func (o *ConvertToV1Options) normalizeConfigMaps() error {
 			return err
 		}
 		if _, err = o.Dynamic.Resource(types.ConfigmapGVR()).Namespace(o.Namespace).Patch(context.TODO(), cm.GetName(), apitypes.MergePatchType, newData, metav1.PatchOptions{}); err != nil {
-			return err
+			return client.IgnoreNotFound(err)
 		}
 		return nil
 	}
@@ -526,7 +526,7 @@ func (o *ConvertToV1Options) normalizeConfigMaps() error {
 		if _, ok := labels[constant.CMConfigurationSpecProviderLabelKey]; !ok {
 			// add file-template label for scripts
 			if _, isScripts := labels[constant.CMTemplateNameLabelKey]; isScripts {
-				if err = o.Dynamic.Resource(types.ConfigmapGVR()).Namespace(cm.GetNamespace()).Delete(context.TODO(), cm.GetName(), metav1.DeleteOptions{}); err != nil {
+				if err = o.Dynamic.Resource(types.ConfigmapGVR()).Namespace(cm.GetNamespace()).Delete(context.TODO(), cm.GetName(), metav1.DeleteOptions{}); client.IgnoreNotFound(err) != nil {
 					return err
 				}
 			}
@@ -627,6 +627,10 @@ func (o *ConvertToV1Options) Convert09ComponentDef(cluster *kbappsv1.Cluster,
 			return err
 		}
 		cluster.Spec.ComponentSpecs[i].ComponentDef = compDef
+		// reset service account name
+		if cluster.Spec.ComponentSpecs[i].ServiceAccountName == fmt.Sprintf("kb-%s", cluster.Name) {
+			cluster.Spec.ComponentSpecs[i].ServiceAccountName = ""
+		}
 	}
 	for i := range clusterV1alpha1Spec.ShardingSpecs {
 		compDef, err := convertCompDef(clusterV1alpha1Spec.ShardingSpecs[i].Template.ComponentDef)
@@ -634,6 +638,10 @@ func (o *ConvertToV1Options) Convert09ComponentDef(cluster *kbappsv1.Cluster,
 			return err
 		}
 		cluster.Spec.Shardings[i].Template.ComponentDef = compDef
+		// reset service account name
+		if cluster.Spec.Shardings[i].Template.ServiceAccountName == fmt.Sprintf("kb-%s", cluster.Name) {
+			cluster.Spec.Shardings[i].Template.ServiceAccountName = ""
+		}
 	}
 	delete(cluster.Annotations, kbIncrementConverterAK)
 	return nil
