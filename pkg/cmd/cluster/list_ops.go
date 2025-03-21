@@ -194,33 +194,6 @@ func getComponentNameFromOps(ops *opsv1alpha1.OpsRequest) string {
 	return strings.Join(components, ",")
 }
 
-func getTemplateNameFromOps(ops opsv1alpha1.OpsRequestSpec) string {
-	if ops.Type != opsv1alpha1.ReconfiguringType {
-		return ""
-	}
-
-	tpls := make([]string, 0)
-	// TODO: support reconfigures
-	for _, config := range ops.Reconfigures[0].Configurations {
-		tpls = append(tpls, config.Name)
-	}
-	return strings.Join(tpls, ",")
-}
-
-func getKeyNameFromOps(ops opsv1alpha1.OpsRequestSpec) string {
-	if ops.Type != opsv1alpha1.ReconfiguringType {
-		return ""
-	}
-
-	keys := make([]string, 0)
-	for _, config := range ops.Reconfigures[0].Configurations {
-		for _, key := range config.Keys {
-			keys = append(keys, key.Key)
-		}
-	}
-	return strings.Join(keys, ",")
-}
-
 func (o *opsListOptions) containsIgnoreCase(s []string, e string) bool {
 	for i := range s {
 		if strings.EqualFold(s[i], e) {

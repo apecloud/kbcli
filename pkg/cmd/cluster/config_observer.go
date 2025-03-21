@@ -20,28 +20,20 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package cluster
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
-	"sort"
-	"strings"
 
-	opsv1alpha1 "github.com/apecloud/kubeblocks/apis/operations/v1alpha1"
+	parametersv1alpha1 "github.com/apecloud/kubeblocks/apis/parameters/v1alpha1"
+	intctrlutil "github.com/apecloud/kubeblocks/pkg/controllerutil"
 	"github.com/spf13/cobra"
 	apiext "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
 
-	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	cfgcore "github.com/apecloud/kubeblocks/pkg/configuration/core"
 	"github.com/apecloud/kubeblocks/pkg/configuration/openapi"
 	cfgutil "github.com/apecloud/kubeblocks/pkg/configuration/util"
-	"github.com/apecloud/kubeblocks/pkg/constant"
 
-	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
@@ -60,8 +52,7 @@ type configObserverOptions struct {
 	truncDocument bool
 	paramName     string
 
-	keys       []string
-	showDetail bool
+	keys []string
 }
 
 var (
@@ -104,85 +95,79 @@ func (r *configObserverOptions) complete2(args []string) error {
 	return r.complete(args)
 }
 
-func (r *configObserverOptions) run(printFn func(objects *ConfigRelatedObjects, component string) error) error {
-	objects, err := New(r.clusterName, r.namespace, r.dynamic, r.componentNames...).GetObjects()
+func (r *configObserverOptions) run(printFn func(*ReconfigureContext) error) error {
+	wrapper, err := New(r.clusterName, r.namespace, r.describeOpsOptions, r.componentNames...)
 	if err != nil {
 		return err
 	}
-
-	components := r.componentNames
-	if len(components) == 0 {
-		components = getComponentNames(objects.Cluster)
-	}
-
-	for _, component := range components {
-		fmt.Fprintf(r.Out, "component: %s\n", component)
-		if _, ok := objects.ConfigSpecs[component]; !ok {
-			fmt.Fprintf(r.Out, "not found component: %s and pass\n\n", component)
-		}
-		if err := printFn(objects, component); err != nil {
+	for _, rctx := range wrapper.rctxMap {
+		fmt.Fprintf(r.Out, "component: %s\n", rctx.CompName)
+		if err := printFn(rctx); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (r *configObserverOptions) printComponentConfigSpecsDescribe(objects *ConfigRelatedObjects, component string) error {
-	configSpecs, ok := objects.ConfigSpecs[component]
-	if !ok {
-		return cfgcore.MakeError("not found component: %s", component)
+func (r *configObserverOptions) printComponentConfigSpecsDescribe(rctx *ReconfigureContext) error {
+	resolveParameterTemplate := func(tpl string) string {
+		for _, config := range rctx.Cmpd.Spec.Configs {
+			if config.Name == tpl {
+				return config.TemplateRef
+			}
+		}
+		return ""
 	}
-	configs, err := r.getReconfigureMeta(configSpecs)
-	if err != nil {
-		return err
+
+	if rctx.ConfigRender == nil || len(rctx.ConfigRender.Spec.Configs) == 0 {
+		return nil
 	}
-	if r.showDetail {
-		r.printConfigureContext(configs, component)
+	tbl := printer.NewTablePrinter(r.Out)
+	printer.PrintTitle("ConfigSpecs Meta")
+	tbl.SetHeader("CONFIG-SPEC-NAME", "FILE", "TEMPLATE-NAME", "COMPONENT", "CLUSTER")
+	for _, info := range rctx.ConfigRender.Spec.Configs {
+		tbl.AddRow(
+			printer.BoldYellow(info.TemplateName),
+			printer.BoldYellow(info.Name),
+			printer.BoldYellow(resolveParameterTemplate(info.TemplateName)),
+			rctx.CompName,
+			rctx.Cluster.Name)
 	}
-	printer.PrintComponentConfigMeta(configs, r.clusterName, component, r.Out)
-	return r.printConfigureHistory(component)
+	tbl.Print()
+	return nil
 }
 
-func (r *configObserverOptions) printComponentExplainConfigure(objects *ConfigRelatedObjects, component string) error {
-	configSpecs := r.configSpecs
-	if len(configSpecs) == 0 {
-		configSpecs = objects.ConfigSpecs[component].listConfigSpecs(true)
-	}
-	for _, templateName := range configSpecs {
-		fmt.Println("template meta:")
-		printer.PrintLineWithTabSeparator(
-			printer.NewPair("  ConfigSpec", templateName),
-			printer.NewPair("ComponentName", component),
-			printer.NewPair("ClusterName", r.clusterName),
-		)
-		if err := r.printExplainConfigure(objects.ConfigSpecs[component], templateName); err != nil {
+func (r *configObserverOptions) printComponentExplainConfigure(rctx *ReconfigureContext) error {
+	for _, pd := range rctx.ParametersDefs {
+		if rctx.ConfigRender != nil {
+			config := intctrlutil.GetComponentConfigDescription(&rctx.ConfigRender.Spec, pd.Spec.FileName)
+			if config != nil {
+				fmt.Println("template meta:")
+				printer.PrintLineWithTabSeparator(
+					printer.NewPair("  FileName", pd.Spec.FileName),
+					printer.NewPair("  ConfigSpec", config.TemplateName),
+					printer.NewPair("ComponentName", rctx.CompName),
+					printer.NewPair("ClusterName", r.clusterName),
+				)
+			}
+		}
+		if err := r.printExplainConfigure(&pd.Spec); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (r *configObserverOptions) printExplainConfigure(configSpecs configSpecsType, tplName string) error {
-	tpl := configSpecs.findByName(tplName)
-	if tpl == nil {
+func (r *configObserverOptions) printExplainConfigure(pdSpec *parametersv1alpha1.ParametersDefinitionSpec) error {
+	if pdSpec.ParametersSchema == nil {
+		fmt.Printf("\n%s\n", fmt.Sprintf(notConfigSchemaPrompt, printer.BoldYellow(pdSpec.FileName)))
 		return nil
 	}
 
-	if tpl.ConfigConstraint == nil {
-		fmt.Printf("\n%s\n", fmt.Sprintf(noConfigConstraintPrompt, printer.BoldYellow(tplName)))
-		return nil
-	}
-
-	confSpec := tpl.ConfigConstraint.Spec
-	if confSpec.ParametersSchema == nil {
-		fmt.Printf("\n%s\n", fmt.Sprintf(notConfigSchemaPrompt, printer.BoldYellow(tplName)))
-		return nil
-	}
-
-	schema := confSpec.ParametersSchema.DeepCopy()
+	schema := pdSpec.ParametersSchema.DeepCopy()
 	if schema.SchemaInJSON == nil {
 		if schema.CUE == "" {
-			fmt.Printf("\n%s\n", fmt.Sprintf(notConfigSchemaPrompt, printer.BoldYellow(tplName)))
+			fmt.Printf("\n%s\n", fmt.Sprintf(notConfigSchemaPrompt, printer.BoldYellow(pdSpec.FileName)))
 			return nil
 		}
 		apiSchema, err := openapi.GenerateOpenAPISchema(schema.CUE, schema.TopLevelKey)
@@ -196,96 +181,9 @@ func (r *configObserverOptions) printExplainConfigure(configSpecs configSpecsTyp
 		schema.SchemaInJSON = apiSchema
 	}
 	return r.printConfigConstraint(schema.SchemaInJSON,
-		cfgutil.NewSet(confSpec.StaticParameters...),
-		cfgutil.NewSet(confSpec.DynamicParameters...),
-		cfgutil.NewSet(confSpec.ImmutableParameters...))
-}
-
-func (r *configObserverOptions) getReconfigureMeta(configSpecs configSpecsType) ([]types.ConfigTemplateInfo, error) {
-	configs := make([]types.ConfigTemplateInfo, 0)
-	configList := r.configSpecs
-	if len(configList) == 0 {
-		configList = configSpecs.listConfigSpecs(false)
-	}
-	for _, tplName := range configList {
-		tpl := configSpecs.findByName(tplName)
-		if tpl == nil || tpl.ConfigSpec == nil {
-			fmt.Fprintf(r.Out, "not found config spec: %s, and pass\n", tplName)
-			continue
-		}
-		if tpl.ConfigSpec == nil {
-			fmt.Fprintf(r.Out, "current configSpec[%s] not support reconfiguring and pass\n", tplName)
-			continue
-		}
-		configs = append(configs, types.ConfigTemplateInfo{
-			Name:  tplName,
-			TPL:   *tpl.ConfigSpec,
-			CMObj: tpl.ConfigMap,
-		})
-	}
-	return configs, nil
-}
-
-func (r *configObserverOptions) printConfigureContext(configs []types.ConfigTemplateInfo, component string) {
-	printer.PrintTitle("Configures Context[${component-name}/${config-spec}/${file-name}]")
-
-	keys := cfgutil.NewSet(r.keys...)
-	for _, info := range configs {
-		for key, context := range info.CMObj.Data {
-			if keys.Length() != 0 && !keys.InArray(key) {
-				continue
-			}
-			fmt.Fprintf(r.Out, "%s%s\n",
-				printer.BoldYellow(fmt.Sprintf("%s/%s/%s:\n", component, info.Name, key)), context)
-		}
-	}
-}
-
-func (r *configObserverOptions) printConfigureHistory(component string) error {
-	printer.PrintTitle("History modifications")
-
-	// filter reconfigure
-	// kubernetes not support fieldSelector with CRD: https://github.com/kubernetes/kubernetes/issues/51046
-	listOptions := metav1.ListOptions{
-		LabelSelector: strings.Join([]string{constant.AppInstanceLabelKey, r.clusterName}, "="),
-	}
-
-	opsList, err := r.dynamic.Resource(types.OpsGVR()).Namespace(r.namespace).List(context.TODO(), listOptions)
-	if err != nil {
-		return err
-	}
-	// sort the unstructured objects with the creationTimestamp in positive order
-	sort.Sort(action.UnstructuredList(opsList.Items))
-	tbl := printer.NewTablePrinter(r.Out)
-	tbl.SetHeader("OPS-NAME", "CLUSTER", "COMPONENT", "CONFIG-SPEC-NAME", "FILE", "STATUS", "POLICY", "PROGRESS", "CREATED-TIME", "VALID-UPDATED")
-	for _, obj := range opsList.Items {
-		ops := &opsv1alpha1.OpsRequest{}
-		if err = runtime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, ops); err != nil {
-			return err
-		}
-		if ops.Spec.Type != opsv1alpha1.ReconfiguringType {
-			continue
-		}
-		components := getComponentNameFromOps(ops)
-		if !strings.Contains(components, component) {
-			continue
-		}
-		phase := string(ops.Status.Phase)
-		tplNames := getTemplateNameFromOps(ops.Spec)
-		keyNames := getKeyNameFromOps(ops.Spec)
-		tbl.AddRow(ops.Name,
-			ops.Spec.GetClusterName(),
-			components,
-			tplNames,
-			keyNames,
-			phase,
-			getReconfigurePolicy(ops.Status, component),
-			ops.Status.Progress,
-			util.TimeFormat(&ops.CreationTimestamp),
-			getValidUpdatedParams(ops.Status, component))
-	}
-	tbl.Print()
-	return nil
+		cfgutil.NewSet(pdSpec.StaticParameters...),
+		cfgutil.NewSet(pdSpec.DynamicParameters...),
+		cfgutil.NewSet(pdSpec.ImmutableParameters...))
 }
 
 func (r *configObserverOptions) hasSpecificParam() bool {
@@ -336,55 +234,6 @@ func (r *configObserverOptions) printConfigConstraint(schema *apiext.JSONSchemaP
 	return nil
 }
 
-func getReconfigurePolicy(status opsv1alpha1.OpsRequestStatus, component string) string {
-	reconfigureStatus := getReconfigureStatus(status, component)
-	if reconfigureStatus == nil || len(reconfigureStatus.ConfigurationStatus) == 0 {
-		return ""
-	}
-
-	var policy string
-	reStatus := reconfigureStatus.ConfigurationStatus[0]
-	switch reStatus.UpdatePolicy {
-	case appsv1alpha1.SyncDynamicReloadPolicy:
-		policy = "syncDynamicReload"
-	case appsv1alpha1.AsyncDynamicReloadPolicy:
-		policy = "asyncDynamicReload"
-	case appsv1alpha1.DynamicReloadAndRestartPolicy:
-		policy = "dynamicReloadBeginRestart"
-	case appsv1alpha1.NormalPolicy, appsv1alpha1.RestartPolicy, appsv1alpha1.RollingPolicy:
-		policy = "restart"
-	default:
-		return ""
-	}
-	return printer.BoldYellow(policy)
-}
-
-func getReconfigureStatus(status opsv1alpha1.OpsRequestStatus, component string) *opsv1alpha1.ReconfiguringStatus {
-	rStatus := status.ReconfiguringStatusAsComponent
-	var compRSStatus *opsv1alpha1.ReconfiguringStatus
-	if rStatus == nil && len(status.ReconfiguringStatusAsComponent) != 0 {
-		compRSStatus = status.ReconfiguringStatusAsComponent[component]
-	}
-	return compRSStatus
-}
-
-func getValidUpdatedParams(status opsv1alpha1.OpsRequestStatus, component string) string {
-	reconfigureStatus := getReconfigureStatus(status, component)
-	if reconfigureStatus == nil || len(reconfigureStatus.ConfigurationStatus) == 0 {
-		return ""
-	}
-
-	reStatus := reconfigureStatus.ConfigurationStatus[0]
-	if len(reStatus.UpdatedParameters.UpdatedKeys) == 0 {
-		return ""
-	}
-	b, err := json.Marshal(reStatus.UpdatedParameters.UpdatedKeys)
-	if err != nil {
-		return err.Error()
-	}
-	return string(b)
-}
-
 func isDynamicType(pt *parameterSchema, staticParameters, dynamicParameters, immutableParameters *cfgutil.Sets) bool {
 	switch {
 	case immutableParameters.InArray(pt.name):
@@ -406,7 +255,6 @@ func isDynamicType(pt *parameterSchema, staticParameters, dynamicParameters, imm
 func NewDescribeReconfigureCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
 	o := &configObserverOptions{
 		isExplain:          false,
-		showDetail:         false,
 		describeOpsOptions: newDescribeOpsOptions(f, streams),
 	}
 	cmd := &cobra.Command{
@@ -421,7 +269,6 @@ func NewDescribeReconfigureCmd(f cmdutil.Factory, streams genericiooptions.IOStr
 		},
 	}
 	o.addCommonFlags(cmd, f)
-	cmd.Flags().BoolVar(&o.showDetail, "show-detail", o.showDetail, "If true, the content of the files specified by config-file will be printed.")
 	cmd.Flags().StringSliceVar(&o.keys, "config-file", nil, "Specify the name of the configuration file to be describe (e.g. for mysql: --config-file=my.cnf). If unset, all files.")
 	return cmd
 }

@@ -376,8 +376,7 @@ func (o *ClusterObjects) GetComponentInfo() []*ComponentInfo {
 			if ins.Resources != nil {
 				resources = *ins.Resources
 			}
-			vcts := o.getCompTemplateVolumeClaimTemplates(&compSpec, ins)
-			setComponentInfos(compSpec, resources, vcts, ins.GetReplicas(), clusterCompName, ins.Name, isSharding)
+			setComponentInfos(compSpec, resources, compSpec.VolumeClaimTemplates, ins.GetReplicas(), clusterCompName, ins.Name, isSharding)
 		}
 		setComponentInfos(compSpec, compSpec.Resources, compSpec.VolumeClaimTemplates,
 			compSpec.Replicas-tplReplicas, clusterCompName, "", isSharding)
@@ -389,27 +388,6 @@ func (o *ClusterObjects) GetComponentInfo() []*ComponentInfo {
 		buildComponentInfos(c.Template, c.Name, true)
 	}
 	return comps
-}
-
-// getCompTemplateVolumeClaimTemplates merges volume claim for instance template
-func (o *ClusterObjects) getCompTemplateVolumeClaimTemplates(compSpec *kbappsv1.ClusterComponentSpec,
-	template kbappsv1.InstanceTemplate) []kbappsv1.ClusterComponentVolumeClaimTemplate {
-	var vcts []kbappsv1.ClusterComponentVolumeClaimTemplate
-	for i := range compSpec.VolumeClaimTemplates {
-		insVctIndex := -1
-		for j := range template.VolumeClaimTemplates {
-			if template.VolumeClaimTemplates[j].Name == compSpec.VolumeClaimTemplates[i].Name {
-				insVctIndex = j
-				break
-			}
-		}
-		if insVctIndex != -1 {
-			vcts = append(vcts, template.VolumeClaimTemplates[insVctIndex])
-		} else {
-			vcts = append(vcts, compSpec.VolumeClaimTemplates[i])
-		}
-	}
-	return vcts
 }
 
 func (o *ClusterObjects) GetInstanceInfo() []*InstanceInfo {
@@ -441,18 +419,7 @@ func (o *ClusterObjects) GetInstanceInfo() []*InstanceInfo {
 				}
 			}
 		}
-		templateName := kbappsv1.GetInstanceTemplateName(o.Cluster.Name, componentName, pod.Name)
-		template := kbappsv1.InstanceTemplate{}
-		if templateName != "" {
-			for _, v := range componentSpec.Instances {
-				if v.Name == templateName {
-					template = v
-					break
-				}
-			}
-		}
-		vcts := o.getCompTemplateVolumeClaimTemplates(componentSpec, template)
-		instance.Storage = o.getStorageInfo(vcts, pod.Labels[constant.KBAppComponentLabelKey])
+		instance.Storage = o.getStorageInfo(componentSpec.VolumeClaimTemplates, pod.Labels[constant.KBAppComponentLabelKey])
 		instance.ServiceVersion = componentSpec.ServiceVersion
 		getInstanceNodeInfo(o.Nodes, &pod, instance)
 		instance.CPU, instance.Memory = getResourceInfo(resource.PodRequestsAndLimits(&pod))

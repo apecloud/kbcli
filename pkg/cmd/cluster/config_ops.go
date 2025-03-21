@@ -25,18 +25,16 @@ import (
 	"strings"
 
 	opsv1alpha1 "github.com/apecloud/kubeblocks/apis/operations/v1alpha1"
+	parametersv1alpha1 "github.com/apecloud/kubeblocks/apis/parameters/v1alpha1"
+	cfgcm "github.com/apecloud/kubeblocks/pkg/configuration/config_manager"
+	"github.com/apecloud/kubeblocks/pkg/configuration/core"
+	configctrl "github.com/apecloud/kubeblocks/pkg/controller/configuration"
+	"github.com/apecloud/kubeblocks/pkg/controllerutil"
+	"github.com/apecloud/kubeblocks/pkg/generics"
 	"github.com/spf13/cobra"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
-	appsv1beta1 "github.com/apecloud/kubeblocks/apis/apps/v1beta1"
-	cfgcm "github.com/apecloud/kubeblocks/pkg/configuration/config_manager"
-	"github.com/apecloud/kubeblocks/pkg/configuration/core"
-	"github.com/apecloud/kubeblocks/pkg/controllerutil"
 
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
@@ -48,7 +46,7 @@ type configOpsOptions struct {
 	*OperationsOptions
 
 	editMode bool
-	wrapper  *configWrapper
+	wrapper  *ReconfigureWrapper
 
 	// config file replace
 	replaceFile bool
@@ -91,7 +89,8 @@ func (o *configOpsOptions) Complete() error {
 	}
 
 	o.wrapper = wrapper
-	return wrapper.AutoFillRequiredParam()
+	// return wrapper.AutoFillRequiredParam()
+	return nil
 }
 
 func (o *configOpsOptions) validateReconfigureOptions() error {
@@ -116,10 +115,6 @@ func (o *configOpsOptions) validateReconfigureOptions() error {
 
 // Validate command flags or args is legal
 func (o *configOpsOptions) Validate() error {
-	if err := o.wrapper.ValidateRequiredParam(o.replaceFile); err != nil {
-		return err
-	}
-
 	o.CfgFile = o.wrapper.ConfigFile()
 	o.CfgTemplateName = o.wrapper.ConfigSpecName()
 	if len(o.ComponentNames) == 0 {
@@ -129,71 +124,77 @@ func (o *configOpsOptions) Validate() error {
 	if o.editMode {
 		return nil
 	}
-	if err := o.validateConfigParams(o.wrapper.ConfigTemplateSpec()); err != nil {
+
+	rctx := o.wrapper.rctx
+	tplObjs, err := resolveConfigTemplate(rctx, o.Dynamic)
+	if err != nil {
 		return err
 	}
-	if err := util.ValidateParametersModified(o.wrapper.ConfigTemplateSpec(), sets.KeySet(o.KeyValues), o.Dynamic); err != nil {
+
+	classifyParams := configctrl.ClassifyComponentParameters(o.KeyValues, rctx.ParametersDefs, rctx.Cmpd.Spec.Configs, tplObjs)
+	if err := util.ValidateParametersModified(classifyParams, rctx.ParametersDefs); err != nil {
 		return err
 	}
-	o.printConfigureTips()
+
+	if err := o.validateConfigParams(o.wrapper.rctx, classifyParams); err != nil {
+		return err
+	}
+
+	o.printConfigureTips(classifyParams)
 	return nil
 }
 
-func (o *configOpsOptions) validateConfigParams(tpl *appsv1alpha1.ComponentConfigSpec) error {
-	configConstraintKey := client.ObjectKey{
-		Namespace: "",
-		Name:      tpl.ConfigConstraintRef,
-	}
-	configConstraint := appsv1beta1.ConfigConstraint{}
-	if err := util.GetResourceObjectFromGVR(types.ConfigConstraintGVR(), configConstraintKey, o.Dynamic, &configConstraint); err != nil {
-		return err
-	}
-
-	var err error
-	var newConfigData map[string]string
+func (o *configOpsOptions) validateConfigParams(rctx *ReconfigureContext, classifyParameters map[string]map[string]*parametersv1alpha1.ParametersInFile) error {
 	if o.FileContent != "" {
-		newConfigData = map[string]string{o.CfgFile: o.FileContent}
-	} else {
-		newConfigData, err = controllerutil.MergeAndValidateConfigs(configConstraint.Spec, map[string]string{o.CfgFile: ""}, tpl.Keys, []core.ParamPairs{{
-			Key:           o.CfgFile,
-			UpdatedParams: core.FromStringMap(o.KeyValues),
-		}})
-	}
-	if err != nil {
-		return err
-	}
-	return o.checkChangedParamsAndDoubleConfirm(&configConstraint.Spec, newConfigData, tpl)
-}
-
-func (o *configOpsOptions) checkChangedParamsAndDoubleConfirm(cc *appsv1beta1.ConfigConstraintSpec, data map[string]string, tpl *appsv1alpha1.ComponentConfigSpec) error {
-	mockEmptyData := func(m map[string]string) map[string]string {
-		r := make(map[string]string, len(data))
-		for key := range m {
-			r[key] = ""
-		}
-		return r
-	}
-
-	if !cfgcm.IsSupportReload(cc.ReloadAction) {
 		return o.confirmReconfigureWithRestart()
 	}
 
-	configPatch, restart, err := core.CreateConfigPatch(mockEmptyData(data), data, cc.FileFormatConfig.Format, tpl.Keys, o.FileContent != "")
-	if err != nil {
-		return err
+	checkRestart := func(params map[string]*parametersv1alpha1.ParametersInFile) bool {
+		for file := range params {
+			match := func(pd *parametersv1alpha1.ParametersDefinition) bool {
+				return pd.Spec.FileName == file && cfgcm.IsSupportReload(pd.Spec.ReloadAction)
+			}
+			if generics.FindFirstFunc(rctx.ParametersDefs, match) < 0 {
+				return true
+			}
+		}
+		return false
 	}
+
+	transform := func(params map[string]*parametersv1alpha1.ParametersInFile) []core.ParamPairs {
+		var result []core.ParamPairs
+		for file, ps := range params {
+			result = append(result, core.ParamPairs{
+				Key:           file,
+				UpdatedParams: core.FromStringMap(ps.Parameters),
+			})
+		}
+		return result
+	}
+
+	restart := false
+	for _, parameters := range classifyParameters {
+		_, err := controllerutil.MergeAndValidateConfigs(mockEmptyData(parameters), transform(parameters), rctx.ParametersDefs, rctx.ConfigRender.Spec.Configs)
+		if err != nil {
+			return err
+		}
+		if !restart {
+			restart = checkRestart(parameters)
+		}
+	}
+
 	if restart {
 		return o.confirmReconfigureWithRestart()
 	}
+	return nil
+}
 
-	dynamicUpdated, err := core.IsUpdateDynamicParameters(cc, configPatch)
-	if err != nil {
-		return nil
+func mockEmptyData(m map[string]*parametersv1alpha1.ParametersInFile) map[string]string {
+	r := make(map[string]string, len(m))
+	for key := range m {
+		r[key] = ""
 	}
-	if dynamicUpdated {
-		return nil
-	}
-	return o.confirmReconfigureWithRestart()
+	return r
 }
 
 func (o *configOpsOptions) confirmReconfigureWithRestart() error {
@@ -231,13 +232,17 @@ func (o *configOpsOptions) parseUpdatedParams() (map[string]string, error) {
 	return keyValues, nil
 }
 
-func (o *configOpsOptions) printConfigureTips() {
+func (o *configOpsOptions) printConfigureTips(classifyParameters map[string]map[string]*parametersv1alpha1.ParametersInFile) {
 	fmt.Println("Will updated configure file meta:")
-	printer.PrintLineWithTabSeparator(
-		printer.NewPair("  ConfigSpec", printer.BoldYellow(o.CfgTemplateName)),
-		printer.NewPair("  ConfigFile", printer.BoldYellow(o.CfgFile)),
-		printer.NewPair("ComponentName", o.ComponentName),
-		printer.NewPair("ClusterName", o.Name))
+	for tpl, tplParams := range classifyParameters {
+		for file := range tplParams {
+			printer.PrintLineWithTabSeparator(
+				printer.NewPair("  ConfigSpec", printer.BoldYellow(tpl)),
+				printer.NewPair("  ConfigFile", printer.BoldYellow(file)),
+				printer.NewPair("ComponentName", o.ComponentName),
+				printer.NewPair("ClusterName", o.Name))
+		}
+	}
 }
 
 // buildReconfigureCommonFlags build common flags for reconfigure command

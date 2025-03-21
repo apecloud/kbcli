@@ -219,23 +219,9 @@ content: {
 		if options.type == "Reconfiguring" {
 			reconfigures: [ for _, cName in options.componentNames {
 				componentName: cName
-				configurations: [ {
-					name: options.cfgTemplateName
-					if options.forceRestart {
-						policy: "simple"
-					}
-					keys: [{
-						key: options.cfgFile
-						if options.fileContent != "" {
-							fileContent: options.fileContent
-						}
-						if options.hasPatch {
-							parameters: [ for k, v in options.keyValues {
-								key:   k
-								value: v
-							}]
-						}
-					}]
+				parameters: [ for k, v in options.keyValues {
+					key:   k
+					value: v
 				}]
 			}]
 		}
