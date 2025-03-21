@@ -21,6 +21,7 @@ package cluster
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"slices"
 	"strings"
@@ -36,6 +37,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	apiruntime "k8s.io/apimachinery/pkg/runtime"
+	apitypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	"k8s.io/client-go/dynamic"
@@ -392,6 +394,9 @@ func (o *ConvertToV1Options) Run() error {
 			return err
 		}
 	}
+	if err = o.convertAccounts(); err != nil {
+		return err
+	}
 	// convert to v1
 	clusterObj, err := apiruntime.DefaultUnstructuredConverter.ToUnstructured(cluster)
 	if err != nil {
@@ -405,7 +410,10 @@ func (o *ConvertToV1Options) Run() error {
 	printer.PrintLine(output)
 	nextLine := fmt.Sprintf("\tkubectl get clusters.apps.kubeblocks.io %s -n %s -oyaml", o.Name, o.Namespace)
 	printer.PrintLine(nextLine)
-	return nil
+	if err = o.deleteConfiguration(); err != nil {
+		return err
+	}
+	return o.normalizeConfigMaps()
 }
 
 func (o *ConvertToV1Options) convertCredential(cdName string) error {
@@ -423,6 +431,36 @@ func (o *ConvertToV1Options) convertCredential(cdName string) error {
 	case "postgresql":
 		compName = "postgresql"
 		accountName = "postgres"
+	case "mysql":
+		compName = "mysql"
+		accountName = "root"
+	case "apecloud-mysql":
+		compName = "mysql"
+		accountName = "root"
+	case "etcd":
+		compName = "etcd"
+		accountName = "root"
+	case "weaviate":
+		compName = "weaviate"
+		accountName = "root"
+	case "redis":
+		compName = "redis"
+		accountName = "default"
+	case "qdrant":
+		compName = "qdrant"
+		accountName = "root"
+	case "polardbx":
+		compName = "gms"
+		accountName = "polardbx_root"
+	case "orioledb":
+		compName = "orioledb"
+		accountName = "postgres"
+	case "neon":
+		compName = "neon-compute"
+		accountName = "cloud_admin"
+	case "mongodb":
+		compName = "mongodb"
+		accountName = "root"
 	default:
 		return fmt.Errorf("unknown cluster definition %s", cdName)
 	}
@@ -430,12 +468,77 @@ func (o *ConvertToV1Options) convertCredential(cdName string) error {
 	newSecret.Name = constant.GenerateAccountSecretName(o.Name, compName, accountName)
 	newSecret.Namespace = oldSecret.Namespace
 	newSecret.Labels = constant.GetCompLabels(o.Name, compName)
+	newSecret.Labels["apps.kubeblocks.io/system-account"] = accountName
 	newSecret.Data = map[string][]byte{
 		"username": oldSecret.Data["username"],
 		"password": oldSecret.Data["password"],
 	}
 	if _, err := o.Client.CoreV1().Secrets(oldSecret.Namespace).Create(context.TODO(), newSecret, metav1.CreateOptions{}); err != nil {
 		return client.IgnoreAlreadyExists(err)
+	}
+	return nil
+}
+
+func (o *ConvertToV1Options) convertAccounts() error {
+	secretList, err := o.Dynamic.Resource(types.SecretGVR()).Namespace(o.Namespace).List(context.TODO(), metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("%s=%s", constant.AppInstanceLabelKey, o.Name),
+	})
+	if err != nil {
+		return err
+	}
+	for i := range secretList.Items {
+		secret := secretList.Items[i]
+		labels := secret.GetLabels()
+		account, ok := labels["account.kubeblocks.io/name"]
+		if !ok {
+			continue
+		}
+		labels["apps.kubeblocks.io/system-account"] = account
+		secret.SetLabels(labels)
+		if _, err = o.Dynamic.Resource(types.SecretGVR()).Namespace(o.Namespace).Update(context.TODO(), &secret, metav1.UpdateOptions{}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (o *ConvertToV1Options) normalizeConfigMaps() error {
+	cmList, err := o.Dynamic.Resource(types.ConfigmapGVR()).Namespace(o.Namespace).List(context.TODO(), metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("%s=%s", constant.AppInstanceLabelKey, o.Name),
+	})
+	if err != nil {
+		return err
+	}
+	patch := func(cm unstructured.Unstructured) error {
+		// in-place upgrade
+		newData, err := json.Marshal(cm)
+		if err != nil {
+			return err
+		}
+		if _, err = o.Dynamic.Resource(types.ConfigmapGVR()).Namespace(o.Namespace).Patch(context.TODO(), cm.GetName(), apitypes.MergePatchType, newData, metav1.PatchOptions{}); err != nil {
+			return err
+		}
+		return nil
+	}
+	for i := range cmList.Items {
+		cm := cmList.Items[i]
+		labels := cm.GetLabels()
+		if _, ok := labels[constant.CMConfigurationSpecProviderLabelKey]; !ok {
+			// add file-template label for scripts
+			if _, isScripts := labels[constant.CMTemplateNameLabelKey]; isScripts {
+				if err = o.Dynamic.Resource(types.ConfigmapGVR()).Namespace(cm.GetNamespace()).Delete(context.TODO(), cm.GetName(), metav1.DeleteOptions{}); err != nil {
+					return err
+				}
+			}
+			continue
+		}
+		if _, ok := labels[constant.CMConfigurationSpecProviderLabelKey]; !ok {
+			continue
+		}
+		cm.SetOwnerReferences(nil)
+		if err = patch(cm); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -456,6 +559,21 @@ func (o *ConvertToV1Options) getLatestComponentDef(componentDefPrefix string) (s
 	// TODO: sort with semantic version?
 	slices.Sort(matchedCompDefs)
 	return matchedCompDefs[len(matchedCompDefs)-1], nil
+}
+
+func (o *ConvertToV1Options) deleteConfiguration() error {
+	configList, err := o.Dynamic.Resource(types.ConfigurationGVR()).Namespace(o.Namespace).List(context.TODO(), metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("%s=%s", constant.AppInstanceLabelKey, o.Name),
+	})
+	if err != nil {
+		return err
+	}
+	for i := range configList.Items {
+		if err = o.Dynamic.Resource(types.ConfigurationGVR()).Namespace(o.Namespace).Delete(context.TODO(), configList.Items[i].GetName(), metav1.DeleteOptions{}); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (o *ConvertToV1Options) ConvertForClusterVersion(cluster *kbappsv1.Cluster,
