@@ -42,7 +42,6 @@ type ReconfigureContext struct {
 	ConfigRender   *parametersv1alpha1.ParamConfigRenderer
 	ParametersDefs []*parametersv1alpha1.ParametersDefinition
 
-	Sharding bool
 	CompName string
 }
 
@@ -129,13 +128,12 @@ func generateReconfigureContext(ctx context.Context, clientSet versioned.Interfa
 		componentName = defaultCompName(clusterObj.Spec)
 	}
 
-	sharding, cmpd, err := resolveComponentDefObj(ctx, clientSet, clusterObj, componentName)
+	cmpd, err := resolveComponentDefObj(ctx, clientSet, clusterObj, componentName)
 	if err != nil {
 		return nil, err
 	}
 	rctx := &ReconfigureContext{
 		Context:  ctx,
-		Sharding: sharding,
 		Cmpd:     cmpd,
 		Cluster:  clusterObj,
 		Client:   clientSet,
@@ -148,7 +146,7 @@ func generateReconfigureContext(ctx context.Context, clientSet versioned.Interfa
 	return rctx, nil
 }
 
-func resolveComponentDefObj(ctx context.Context, client versioned.Interface, clusterObj *kbappsv1.Cluster, componentName string) (sharding bool, cmpd *kbappsv1.ComponentDefinition, err error) {
+func resolveComponentDefObj(ctx context.Context, client versioned.Interface, clusterObj *kbappsv1.Cluster, componentName string) (*kbappsv1.ComponentDefinition, error) {
 	resolveCmpd := func(cmpdName string) (*kbappsv1.ComponentDefinition, error) {
 		if cmpdName == "" {
 			return nil, errors.New("the referenced ComponentDefinition is empty")
@@ -172,23 +170,17 @@ func resolveComponentDefObj(ctx context.Context, client versioned.Interface, clu
 
 	compSpec := clusterObj.Spec.GetComponentByName(componentName)
 	if compSpec != nil {
-		cmpd, err = resolveCmpd(compSpec.ComponentDef)
-		return
+		return resolveCmpd(compSpec.ComponentDef)
 	}
+
 	shardingSpec := clusterObj.Spec.GetShardingByName(componentName)
 	if shardingSpec == nil {
-		err = makeComponentNotExistErr(clusterObj.Name, componentName)
-		return
+		return nil, makeComponentNotExistErr(clusterObj.Name, componentName)
 	}
-
-	sharding = true
 	if shardingSpec.ShardingDef != "" {
-		cmpd, err = resolveShardingCmpd(shardingSpec.ShardingDef)
-		return
+		return resolveShardingCmpd(shardingSpec.ShardingDef)
 	}
-
-	cmpd, err = resolveCmpd(shardingSpec.Template.ComponentDef)
-	return
+	return resolveCmpd(shardingSpec.Template.ComponentDef)
 }
 
 func resolveCmpdParametersDefs(rctx *ReconfigureContext) error {
