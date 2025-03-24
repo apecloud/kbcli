@@ -49,7 +49,7 @@ endif
 export GOPROXY
 
 # build tags
-BUILD_TAGS="containers_image_openpgp"
+BUILD_TAGS=""
 
 
 TAG_LATEST ?= false
