@@ -48,10 +48,6 @@ GOPROXY := https://proxy.golang.org
 endif
 export GOPROXY
 
-# build tags
-BUILD_TAGS=""
-
-
 TAG_LATEST ?= false
 BUILDX_ENABLED ?= ""
 ifeq ($(BUILDX_ENABLED), "")
@@ -104,7 +100,7 @@ fmt: ## Run go fmt against code.
 
 .PHONY: vet
 vet: ## Run go vet against code.
-	GOOS=$(GOOS) $(GO) vet -tags $(BUILD_TAGS) -mod=mod ./...
+	GOOS=$(GOOS) $(GO) vet -mod=mod ./...
 
 .PHONY: cue-fmt
 cue-fmt: cuetool ## Run cue fmt against code.
@@ -124,7 +120,7 @@ golangci-lint: golangci generate ## Run golangci-lint against code.
 
 .PHONY: staticcheck
 staticcheck: staticchecktool generate ## Run staticcheck against code.
-	$(STATICCHECK) -tags $(BUILD_TAGS) ./...
+	$(STATICCHECK)  ./...
 
 .PHONY: build-checks
 build-checks: generate fmt vet goimports lint-fast ## Run build checks.
@@ -143,11 +139,11 @@ TEST_PACKAGES ?= ./pkg/... ./cmd/...
 OUTPUT_COVERAGE=-coverprofile cover.out
 .PHONY: test
 test: generate ## Run operator controller tests with current $KUBECONFIG context. if existing k8s cluster is k3d or minikube, specify EXISTING_CLUSTER_TYPE.
-	$(GO) test -tags $(BUILD_TAGS) -p 1 $(TEST_PACKAGES) $(OUTPUT_COVERAGE)
+	$(GO) test -p 1 $(TEST_PACKAGES) $(OUTPUT_COVERAGE)
 
 .PHONY: test-fast
 test-fast:
-	$(GO) test -tags $(BUILD_TAGS) -short $(TEST_PACKAGES)  $(OUTPUT_COVERAGE)
+	$(GO) test -short $(TEST_PACKAGES)  $(OUTPUT_COVERAGE)
 
 .PHONY: cover-report
 cover-report: ## Generate cover.html from cover.out
@@ -179,7 +175,7 @@ CLI_LD_FLAGS ="-s -w \
 	-X github.com/apecloud/kbcli/version.DefaultKubeBlocksVersion=$(VERSION)"
 
 bin/kbcli.%: ## Cross build bin/kbcli.$(OS).$(ARCH).
-	GOOS=$(word 2,$(subst ., ,$@)) GOARCH=$(word 3,$(subst ., ,$@)) $(GO) build -tags $(BUILD_TAGS) -ldflags=${CLI_LD_FLAGS} -o $@ cmd/cli/main.go
+	GOOS=$(word 2,$(subst ., ,$@)) GOARCH=$(word 3,$(subst ., ,$@)) $(GO) build -ldflags=${CLI_LD_FLAGS} -o $@ cmd/cli/main.go
 
 .PHONY: fetch-addons
 fetch-addons: ## update addon submodule
@@ -249,7 +245,7 @@ clean-kbcli: ## Clean bin/kbcli*.
 .PHONY: kbcli-doc
 kbcli-doc: ## generate CLI command reference manual.
 
-	$(GO) run -tags $(BUILD_TAGS) ./hack/docgen/cli/main.go ./docs/user_docs/cli
+	$(GO) run ./hack/docgen/cli/main.go ./docs/user_docs/cli
 
 .PHONY: install-docker-buildx
 install-docker-buildx: ## Create `docker buildx` builder.

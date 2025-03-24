@@ -33,7 +33,7 @@ import (
 	cmdtesting "k8s.io/kubectl/pkg/cmd/testing"
 
 	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
-	appsv1beta1 "github.com/apecloud/kubeblocks/apis/apps/v1beta1"
+	kbfakeclient "github.com/apecloud/kubeblocks/pkg/client/clientset/versioned/fake"
 	cfgcore "github.com/apecloud/kubeblocks/pkg/configuration/core"
 	testapps "github.com/apecloud/kubeblocks/pkg/testutil/apps"
 
@@ -71,39 +71,17 @@ var _ = Describe("reconfigure test", func() {
 
 	It("check params for reconfiguring operations", func() {
 		const (
-			ns                  = "default"
-			clusterName         = "test-cluster"
-			statefulCompDefName = "replicasets"
-			statefulCompName    = "mysql"
-			configSpecName      = "mysql-config-tpl"
-			configVolumeName    = "mysql-config"
+			ns               = "default"
+			clusterName      = "test-cluster"
+			statefulCompName = "mysql"
+			configSpecName   = "mysql-config-tpl"
 		)
 
 		By("Create configmap and config constraint obj")
-		configmap := testapps.NewCustomizedObj("resources/mysql-config-template.yaml", &corev1.ConfigMap{}, testapps.WithNamespace(ns))
-		constraint := testapps.NewCustomizedObj("resources/mysql-config-constraint.yaml",
-			&appsv1beta1.ConfigConstraint{})
+		configmap := testapps.NewCustomizedObj("resources/mysql-config-template.yaml", &corev1.ConfigMap{}, testapps.WithNamespace(ns), testapps.WithName(testing.FakeMysqlTemplateName))
 		componentConfig := testapps.NewConfigMap(ns, cfgcore.GetComponentCfgName(clusterName, statefulCompName, configSpecName), testapps.SetConfigMapData("my.cnf", ""))
-		By("Create a configuration obj")
-		// configObj := builder.NewConfigurationBuilder(ns, cfgcore.GenerateComponentConfigurationName(clusterName, statefulCompName)).
-		// 	ClusterRef(clusterName).
-		// 	Component(statefulCompName).
-		// 	AddConfigurationItem(kbappsv1.ComponentConfigSpec{
-		// 		ComponentTemplateSpec: kbappsv1.ComponentTemplateSpec{
-		// 			Name:        configSpecName,
-		// 			TemplateRef: configmap.Name,
-		// 			Namespace:   ns,
-		// 			VolumeName:  configVolumeName,
-		// 		},
-		// 		ConfigConstraintRef: constraint.Name,
-		// 	}).
-		// 	GetObject()
-		By("creating a cluster")
-		clusterObj := testapps.NewClusterFactory(ns, clusterName, "").
-			AddComponent(statefulCompName, statefulCompDefName).GetObject()
-
-		objs := []runtime.Object{configmap, constraint, clusterObj, componentConfig}
-		ttf, ops := NewFakeOperationsOptions(ns, clusterObj.Name, objs...)
+		objs := []runtime.Object{configmap, componentConfig}
+		ttf, ops := NewFakeOperationsOptions(ns, clusterName, objs...)
 		o := &configOpsOptions{
 			// nil cannot be set to a map struct in CueLang, so init the map of KeyValues.
 			OperationsOptions: &OperationsOptions{
@@ -112,10 +90,16 @@ var _ = Describe("reconfigure test", func() {
 		}
 		o.KeyValues = make(map[string]*string)
 		o.HasPatch = true
+		o.clientSet = kbfakeclient.NewSimpleClientset(
+			testing.FakeCluster(clusterName, ns),
+			testing.FakeCompDef(),
+			testing.FakeParameterDefinition(),
+			testing.FakeParameterConfigRenderer(),
+		)
 		defer ttf.Cleanup()
 
 		By("validate reconfiguring parameters")
-		o.ComponentNames = []string{statefulCompName}
+		o.ComponentNames = []string{testing.ComponentName}
 		_, err := o.parseUpdatedParams()
 		Expect(err.Error()).To(ContainSubstring(missingUpdatedParametersErrMessage))
 		o.Parameters = []string{"abcd"}

@@ -26,6 +26,7 @@ import (
 
 	opsv1alpha1 "github.com/apecloud/kubeblocks/apis/operations/v1alpha1"
 	parametersv1alpha1 "github.com/apecloud/kubeblocks/apis/parameters/v1alpha1"
+	"github.com/apecloud/kubeblocks/pkg/client/clientset/versioned"
 	cfgcm "github.com/apecloud/kubeblocks/pkg/configuration/config_manager"
 	"github.com/apecloud/kubeblocks/pkg/configuration/core"
 	configctrl "github.com/apecloud/kubeblocks/pkg/controller/configuration"
@@ -55,6 +56,8 @@ type configOpsOptions struct {
 	ComponentName string
 	LocalFilePath string   `json:"localFilePath"`
 	Parameters    []string `json:"parameters"`
+
+	clientSet versioned.Interface
 }
 
 var (
@@ -83,7 +86,11 @@ func (o *configOpsOptions) Complete() error {
 		}
 	}
 
-	wrapper, err := newConfigWrapper(o.CreateOptions, o.ComponentName, o.CfgTemplateName, o.CfgFile, o.KeyValues)
+	client := o.clientSet
+	if client == nil {
+		client = GetClientFromOptionsOrDie(o.Factory)
+	}
+	wrapper, err := newConfigWrapper(client, o.Namespace, o.Name, o.ComponentName, o.CfgTemplateName, o.CfgFile, o.KeyValues)
 	if err != nil {
 		return err
 	}

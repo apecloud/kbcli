@@ -31,12 +31,10 @@ import (
 	"github.com/apecloud/kubeblocks/pkg/generics"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
-
-	"github.com/apecloud/kbcli/pkg/action"
 )
 
 type ReconfigureContext struct {
-	Client  *versioned.Clientset
+	Client  versioned.Interface
 	Context context.Context
 
 	Cluster        *kbappsv1.Cluster
@@ -49,8 +47,6 @@ type ReconfigureContext struct {
 }
 
 type ReconfigureWrapper struct {
-	action.CreateOptions
-
 	rctx *ReconfigureContext
 
 	updatedParams map[string]*string
@@ -88,22 +84,16 @@ func (w *ReconfigureWrapper) ConfigFile() string {
 	return ""
 }
 
-func GetClientFromOptions(factory cmdutil.Factory) (*versioned.Clientset, error) {
+func GetClientFromOptionsOrDie(factory cmdutil.Factory) versioned.Interface {
 	config, err := factory.ToRESTConfig()
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
-
-	return versioned.NewForConfigOrDie(config), err
+	return versioned.NewForConfigOrDie(config)
 }
 
-func newConfigWrapper(baseOptions action.CreateOptions, componentName, templateName, fileName string, params map[string]*string) (*ReconfigureWrapper, error) {
-	cli, err := GetClientFromOptions(baseOptions.Factory)
-	if err != nil {
-		return nil, err
-	}
-
-	rctx, err := generateReconfigureContext(context.TODO(), cli, baseOptions.Name, componentName, baseOptions.Namespace)
+func newConfigWrapper(clientSet versioned.Interface, ns, clusterName, componentName, templateName, fileName string, params map[string]*string) (*ReconfigureWrapper, error) {
+	rctx, err := generateReconfigureContext(context.TODO(), clientSet, clusterName, componentName, ns)
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +102,6 @@ func newConfigWrapper(baseOptions action.CreateOptions, componentName, templateN
 	}
 
 	return &ReconfigureWrapper{
-		CreateOptions:  baseOptions,
 		rctx:           rctx,
 		configSpecName: templateName,
 		configFileKey:  fileName,
@@ -120,7 +109,7 @@ func newConfigWrapper(baseOptions action.CreateOptions, componentName, templateN
 	}, nil
 }
 
-func generateReconfigureContext(ctx context.Context, clientSet *versioned.Clientset, clusterName, componentName, ns string) (*ReconfigureContext, error) {
+func generateReconfigureContext(ctx context.Context, clientSet versioned.Interface, clusterName, componentName, ns string) (*ReconfigureContext, error) {
 	defaultCompName := func(clusterSpec kbappsv1.ClusterSpec) string {
 		switch {
 		case len(clusterSpec.ComponentSpecs) != 0:
@@ -159,7 +148,7 @@ func generateReconfigureContext(ctx context.Context, clientSet *versioned.Client
 	return rctx, nil
 }
 
-func resolveComponentDefObj(ctx context.Context, client *versioned.Clientset, clusterObj *kbappsv1.Cluster, componentName string) (sharding bool, cmpd *kbappsv1.ComponentDefinition, err error) {
+func resolveComponentDefObj(ctx context.Context, client versioned.Interface, clusterObj *kbappsv1.Cluster, componentName string) (sharding bool, cmpd *kbappsv1.ComponentDefinition, err error) {
 	resolveCmpd := func(cmpdName string) (*kbappsv1.ComponentDefinition, error) {
 		if cmpdName == "" {
 			return nil, errors.New("the referenced ComponentDefinition is empty")

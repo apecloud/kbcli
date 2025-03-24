@@ -154,9 +154,17 @@ var _ = Describe("logs", func() {
 		compDefName := "component-type"
 		compName := "component-name"
 		compDef := testapps.NewComponentDefinitionFactory(compDefName).
-			AddLogConfig("slow", "/log/mysql/*slow.log").
-			AddLogConfig("error", "/log/mysql/*.err").
 			Get()
+		compDef.Spec.LogConfigs = []kbappsv1.LogConfig{
+			{
+				Name:            "slow",
+				FilePathPattern: "/log/mysql/*slow.log",
+			},
+			{
+				Name:            "error",
+				FilePathPattern: "/log/mysql/*err",
+			},
+		}
 		pod := &corev1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            "foo",

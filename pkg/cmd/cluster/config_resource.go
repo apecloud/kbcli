@@ -35,7 +35,7 @@ type ConfigObjectsWrapper struct {
 	rctxMap map[string]*ReconfigureContext
 }
 
-func GetCluster(clientSet *versioned.Clientset, ns, clusterName string) (*appsv1.Cluster, error) {
+func GetCluster(clientSet versioned.Interface, ns, clusterName string) (*appsv1.Cluster, error) {
 	clusterObj, err := clientSet.AppsV1().Clusters(ns).Get(context.TODO(), clusterName, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
@@ -44,10 +44,7 @@ func GetCluster(clientSet *versioned.Clientset, ns, clusterName string) (*appsv1
 }
 
 func New(clusterName string, namespace string, options *describeOpsOptions, components ...string) (*ConfigObjectsWrapper, error) {
-	clientSet, err := GetClientFromOptions(options.factory)
-	if err != nil {
-		return nil, err
-	}
+	clientSet := GetClientFromOptionsOrDie(options.factory)
 	clusterObj, err := GetCluster(clientSet, namespace, clusterName)
 	if err != nil {
 		return nil, err
