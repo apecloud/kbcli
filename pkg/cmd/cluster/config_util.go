@@ -38,7 +38,6 @@ import (
 	"k8s.io/kubectl/pkg/cmd/util/editor"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	cfgcore "github.com/apecloud/kubeblocks/pkg/configuration/core"
 	cfgutil "github.com/apecloud/kubeblocks/pkg/configuration/util"
 
@@ -270,16 +269,6 @@ func getComponentNames(cluster *appsv1.Cluster) []string {
 		components = append(components, component.Name)
 	}
 	return components
-}
-
-func findTplByName(tpls []appsv1alpha1.ComponentConfigSpec, tplName string) *appsv1alpha1.ComponentConfigSpec {
-	for i := range tpls {
-		tpl := &tpls[i]
-		if tpl.Name == tplName {
-			return tpl
-		}
-	}
-	return nil
 }
 
 func resolveConfigTemplate(rctx *ReconfigureContext, dynamic dynamic.Interface) (map[string]*corev1.ConfigMap, error) {

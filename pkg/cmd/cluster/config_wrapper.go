@@ -58,8 +58,6 @@ type ReconfigureWrapper struct {
 	// autofill field
 	configSpecName string
 	configFileKey  string
-
-	configTemplateSpec kbappsv1.ComponentTemplateSpec
 }
 
 func (w *ReconfigureWrapper) ConfigSpecName() string {
@@ -89,98 +87,6 @@ func (w *ReconfigureWrapper) ConfigFile() string {
 	}
 	return ""
 }
-
-// AutoFillRequiredParam auto fills required param.
-// func (w *ReconfigureWrapper) AutoFillRequiredParam() error {
-// 	if err := w.fillConfigSpec(); err != nil {
-// 		return err
-// 	}
-// 	return w.fillConfigFile()
-// }
-
-// ValidateRequiredParam validates required param.
-// func (w *ReconfigureWrapper) ValidateRequiredParam(forceReplace bool) error {
-// 	// step1: check existence of component.
-// 	if w.Spec.GetComponentByName(w.componentName) == nil {
-// 		return makeComponentNotExistErr(w.clusterName, w.componentName)
-// 	}
-//
-// 	// step2: check existence of configmap
-// 	cmObj := corev1.ConfigMap{}
-// 	cmKey := client.ObjectKey{
-// 		Name:      core.GetComponentCfgName(w.clusterName, w.componentName, w.configSpecName),
-// 		Namespace: w.Namespace,
-// 	}
-// 	if err := util.GetResourceObjectFromGVR(types.ConfigmapGVR(), cmKey, w.Dynamic, &cmObj); err != nil {
-// 		return err
-// 	}
-//
-// 	// step3: check existence of config file
-// 	if _, ok := cmObj.Data[w.configFileKey]; !ok {
-// 		return makeNotFoundConfigFileErr(w.configFileKey, w.configSpecName, cfgutil.ToSet(cmObj.Data).AsSlice())
-// 	}
-//
-// 	if !forceReplace && !util.IsSupportConfigFileReconfigure(w.configTemplateSpec, w.configFileKey) {
-// 		return makeNotSupportConfigFileUpdateErr(w.configFileKey, w.configTemplateSpec)
-// 	}
-// 	return nil
-// }
-
-func (w *ReconfigureWrapper) fillConfigSpec() error {
-	var rctx = w.rctx
-
-	if rctx.ConfigRender == nil || len(rctx.ConfigRender.Spec.Configs) == 0 {
-		return makeNotFoundTemplateErr(w.Name, rctx.CompName)
-	}
-
-	var configs []parametersv1alpha1.ComponentConfigDescription
-	if w.configSpecName != "" {
-		configs = intctrlutil.GetComponentConfigDescriptions(&rctx.ConfigRender.Spec, w.configSpecName)
-		if len(configs) == 0 {
-			return makeConfigSpecNotExistErr(w.Name, rctx.CompName, w.configSpecName)
-		}
-	}
-	return nil
-}
-
-// func (w *ReconfigureWrapper) fillConfigFile() error {
-// 	if w.configFileKey != "" {
-// 		return nil
-// 	}
-//
-// 	if w.configTemplateSpec.TemplateRef == "" {
-// 		return makeNotFoundTemplateErr(w.clusterName, w.componentName)
-// 	}
-//
-// 	cmObj := corev1.ConfigMap{}
-// 	cmKey := client.ObjectKey{
-// 		Name:      core.GetComponentCfgName(w.clusterName, w.componentName, w.configSpecName),
-// 		Namespace: w.Namespace,
-// 	}
-// 	if err := util.GetResourceObjectFromGVR(types.ConfigmapGVR(), cmKey, w.Dynamic, &cmObj); err != nil {
-// 		return err
-// 	}
-// 	if len(cmObj.Data) == 0 {
-// 		return core.MakeError("not supported reconfiguring because there is no config file.")
-// 	}
-//
-// 	keys := w.filterForReconfiguring(cmObj.Data)
-// 	if len(keys) == 1 {
-// 		w.configFileKey = keys[0]
-// 		return nil
-// 	}
-// 	return core.MakeError(multiConfigFileErrorMessage)
-// }
-
-// func (w *ReconfigureWrapper) filterForReconfiguring(data map[string]string) []string {
-// 	keys := make([]string, 0, len(data))
-// 	for configFileKey := range data {
-// 		if util.IsSupportConfigFileReconfigure(w.configTemplateSpec, configFileKey) {
-// 			keys = append(keys, configFileKey)
-// 		}
-// 	}
-// 	return keys
-// }
 
 func GetClientFromOptions(factory cmdutil.Factory) (*versioned.Clientset, error) {
 	config, err := factory.ToRESTConfig()
@@ -289,6 +195,7 @@ func resolveComponentDefObj(ctx context.Context, client *versioned.Clientset, cl
 	sharding = true
 	if shardingSpec.ShardingDef != "" {
 		cmpd, err = resolveShardingCmpd(shardingSpec.ShardingDef)
+		return
 	}
 
 	cmpd, err = resolveCmpd(shardingSpec.Template.ComponentDef)

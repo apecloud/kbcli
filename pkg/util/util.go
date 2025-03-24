@@ -462,34 +462,6 @@ func GetEventObject(e *corev1.Event) string {
 	return fmt.Sprintf("%s/%s", kind, e.InvolvedObject.Name)
 }
 
-// ComponentConfigSpecs returns configSpecs used by the component.
-// func ComponentConfigSpecs(clusterName string, namespace string, cli dynamic.Interface, componentName string, reloadTpl bool) ([]kbappsv1alpha1.ComponentConfigSpec, error) {
-// 	var (
-// 		clusterObj    = kbappsv1.Cluster{}
-// 		clusterDefObj = kbappsv1.ClusterDefinition{}
-// 	)
-//
-// 	clusterKey := client.ObjectKey{
-// 		Namespace: namespace,
-// 		Name:      clusterName,
-// 	}
-// 	if err := GetResourceObjectFromGVR(types.ClusterGVR(), clusterKey, cli, &clusterObj); err != nil {
-// 		return nil, err
-// 	}
-// 	clusterDefKey := client.ObjectKey{
-// 		Namespace: "",
-// 		Name:      clusterObj.Spec.ClusterDef,
-// 	}
-// 	if err := GetResourceObjectFromGVR(types.ClusterDefGVR(), clusterDefKey, cli, &clusterDefObj); err != nil {
-// 		return nil, err
-// 	}
-// 	compDef, err := GetComponentDefByCompName(cli, &clusterObj, componentName)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return GetValidConfigSpecs(reloadTpl, ToV1ComponentConfigSpecs(compDef.Spec.Configs))
-// }
-
 func GetComponentDefByName(dynamic dynamic.Interface, name string) (*kbappsv1.ComponentDefinition, error) {
 	componentDef := &kbappsv1.ComponentDefinition{}
 	if err := GetK8SClientObject(dynamic, componentDef, types.CompDefGVR(), "", name); err != nil {
@@ -512,70 +484,6 @@ func GetComponentDefByCompName(cli dynamic.Interface, clusterObj *kbappsv1.Clust
 	}
 	return GetComponentDefByName(cli, compDefName)
 }
-
-func GetValidConfigSpecs(reloadTpl bool, configSpecs []kbappsv1alpha1.ComponentConfigSpec) ([]kbappsv1alpha1.ComponentConfigSpec, error) {
-	if !reloadTpl || len(configSpecs) == 1 {
-		return configSpecs, nil
-	}
-
-	validConfigSpecs := make([]kbappsv1alpha1.ComponentConfigSpec, 0, len(configSpecs))
-	for _, configSpec := range configSpecs {
-		if configSpec.ConfigConstraintRef != "" && configSpec.TemplateRef != "" {
-			validConfigSpecs = append(validConfigSpecs, configSpec)
-		}
-	}
-	return validConfigSpecs, nil
-}
-
-func GetConfigSpecsFromComponentName(cli dynamic.Interface, namespace, clusterName, componentName string, reloadTpl bool) ([]kbappsv1alpha1.ComponentConfigSpec, error) {
-	configKey := client.ObjectKey{
-		Namespace: namespace,
-		Name:      core.GenerateComponentConfigurationName(clusterName, componentName),
-	}
-	config := kbappsv1alpha1.Configuration{}
-	if err := GetResourceObjectFromGVR(types.ConfigurationGVR(), configKey, cli, &config); err != nil {
-		return nil, err
-	}
-	if len(config.Spec.ConfigItemDetails) == 0 {
-		return nil, nil
-	}
-
-	configSpecs := make([]kbappsv1alpha1.ComponentConfigSpec, 0, len(config.Spec.ConfigItemDetails))
-	for _, item := range config.Spec.ConfigItemDetails {
-		if item.ConfigSpec != nil {
-			configSpecs = append(configSpecs, *item.ConfigSpec)
-		}
-	}
-	return GetValidConfigSpecs(reloadTpl, configSpecs)
-}
-
-// func ToV1ComponentConfigSpec(configSpec kbappsv1.ComponentConfigSpec) kbappsv1alpha1.ComponentConfigSpec {
-// 	config := kbappsv1alpha1.ComponentConfigSpec{
-// 		ComponentTemplateSpec: kbappsv1alpha1.ComponentTemplateSpec{
-// 			Name:        configSpec.Name,
-// 			TemplateRef: configSpec.TemplateRef,
-// 			Namespace:   configSpec.Namespace,
-// 			VolumeName:  configSpec.VolumeName,
-// 			DefaultMode: configSpec.DefaultMode,
-// 		},
-// 		Keys:                configSpec.Keys,
-// 		ConfigConstraintRef: configSpec.ConfigConstraintRef,
-// 		InjectEnvTo:         configSpec.InjectEnvTo,
-// 		AsSecret:            configSpec.AsSecret,
-// 	}
-// 	for i := range configSpec.ReRenderResourceTypes {
-// 		config.ReRenderResourceTypes = append(config.ReRenderResourceTypes, kbappsv1alpha1.RerenderResourceType(configSpec.ReRenderResourceTypes[i]))
-// 	}
-// 	return config
-// }
-//
-// func ToV1ComponentConfigSpecs(configSpecs []kbappsv1.ComponentConfigSpec) []kbappsv1alpha1.ComponentConfigSpec {
-// 	var configs []kbappsv1alpha1.ComponentConfigSpec
-// 	for i := range configSpecs {
-// 		configs = append(configs, ToV1ComponentConfigSpec(configSpecs[i]))
-// 	}
-// 	return configs
-// }
 
 // GetK8SClientObject gets the client object of k8s,
 // obj must be a struct pointer so that obj can be updated with the response.
@@ -601,57 +509,6 @@ func GetResourceObjectFromGVR(gvr schema.GroupVersionResource, key client.Object
 		return core.WrapError(err, "failed to get resource[%v]", key)
 	}
 	return apiruntime.DefaultUnstructuredConverter.FromUnstructured(unstructuredObj.Object, k8sObj)
-}
-
-// GetComponentsFromResource returns name of component.
-func GetComponentsFromResource(namespace, clusterName string, componentSpecs []kbappsv1.ClusterComponentSpec, cli dynamic.Interface) ([]string, error) {
-	componentNames := make([]string, 0, len(componentSpecs))
-	for _, component := range componentSpecs {
-		configKey := client.ObjectKey{
-			Namespace: namespace,
-			Name:      core.GenerateComponentConfigurationName(clusterName, component.Name),
-		}
-		config := kbappsv1alpha1.Configuration{}
-		if err := GetResourceObjectFromGVR(types.ConfigurationGVR(), configKey, cli, &config); err != nil {
-			return nil, err
-		}
-		if len(config.Spec.ConfigItemDetails) == 0 {
-			continue
-		}
-
-		if enableReconfiguring(&config.Spec) {
-			componentNames = append(componentNames, component.Name)
-		}
-	}
-	return componentNames, nil
-}
-
-func IsSupportConfigFileReconfigure(configTemplateSpec kbappsv1alpha1.ComponentConfigSpec, configFileKey string) bool {
-	if len(configTemplateSpec.Keys) == 0 {
-		return true
-	}
-	for _, keySelector := range configTemplateSpec.Keys {
-		if keySelector == configFileKey {
-			return true
-		}
-	}
-	return false
-}
-
-func enableReconfiguring(component *kbappsv1alpha1.ConfigurationSpec) bool {
-	if component == nil {
-		return false
-	}
-	for _, item := range component.ConfigItemDetails {
-		if item.ConfigSpec == nil {
-			continue
-		}
-		tpl := item.ConfigSpec
-		if len(tpl.ConfigConstraintRef) > 0 && len(tpl.TemplateRef) > 0 {
-			return true
-		}
-	}
-	return false
 }
 
 // IsSupportReconfigureParams checks whether all updated parameters belong to config template parameters.
