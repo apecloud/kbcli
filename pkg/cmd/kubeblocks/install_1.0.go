@@ -29,6 +29,7 @@ import (
 	"golang.org/x/mod/semver"
 	"helm.sh/helm/v3/pkg/cli/values"
 	appsv1 "k8s.io/api/apps/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	k8stypes "k8s.io/apimachinery/pkg/types"
@@ -213,6 +214,18 @@ func (o *InstallOptions) setGlobalResourcesHelmOwner() error {
 		"obs", "oss", "pvc", "s3",
 	}); err != nil {
 		return err
+	}
+	_, err := o.Dynamic.Resource(types.StorageClassGVR()).Namespace("").Get(context.TODO(), "kb-default-sc", metav1.GetOptions{})
+	if err != nil {
+		if !apierrors.IsNotFound(err) {
+			return err
+		}
+	} else {
+		if err = util.SetHelmOwner(o.Dynamic, types.StorageClassGVR(), types.KubeBlocksChartName, o.HelmCfg.Namespace(), []string{
+			"kb-default-sc",
+		}); err != nil {
+			return err
+		}
 	}
 	// update BackupRepo
 	return util.SetHelmOwner(o.Dynamic, types.BackupRepoGVR(), types.KubeBlocksChartName, o.HelmCfg.Namespace(), []string{fmt.Sprintf("%s-backuprepo", types.KubeBlocksChartName)})
