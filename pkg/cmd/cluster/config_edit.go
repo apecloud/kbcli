@@ -27,6 +27,11 @@ import (
 	"strings"
 
 	opsv1alpha1 "github.com/apecloud/kubeblocks/apis/operations/v1alpha1"
+	parametersv1alpha1 "github.com/apecloud/kubeblocks/apis/parameters/v1alpha1"
+	cfgcm "github.com/apecloud/kubeblocks/pkg/configuration/config_manager"
+	"github.com/apecloud/kubeblocks/pkg/configuration/core"
+	"github.com/apecloud/kubeblocks/pkg/configuration/validate"
+	intctrlutil "github.com/apecloud/kubeblocks/pkg/controllerutil"
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/slices"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -34,13 +39,6 @@ import (
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/cmd/util/editor"
 	"k8s.io/kubectl/pkg/util/templates"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
-	appsv1beta1 "github.com/apecloud/kubeblocks/apis/apps/v1beta1"
-	cfgcm "github.com/apecloud/kubeblocks/pkg/configuration/config_manager"
-	"github.com/apecloud/kubeblocks/pkg/configuration/core"
-	"github.com/apecloud/kubeblocks/pkg/configuration/validate"
 
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
@@ -92,9 +90,8 @@ func (o *editConfigOptions) Run(fn func() error) error {
 	}
 	util.DisplayDiffWithColor(o.IOStreams.Out, diff)
 
-	configSpec := wrapper.ConfigTemplateSpec()
-	if hasSchemaForFile(configSpec, wrapper.ConfigFile()) {
-		return o.runWithConfigConstraints(cfgEditContext, configSpec, fn)
+	if hasSchemaForFile(wrapper.rctx, wrapper.ConfigFile()) {
+		return o.runWithConfigConstraints(cfgEditContext, wrapper.rctx, fn)
 	}
 
 	yes, err := o.confirmReconfigure(fmt.Sprintf(fullRestartConfirmPrompt, printer.BoldRed(o.CfgFile)))
@@ -110,17 +107,14 @@ func (o *editConfigOptions) Run(fn func() error) error {
 	return fn()
 }
 
-func hasSchemaForFile(configSpec *appsv1alpha1.ComponentConfigSpec, configFile string) bool {
-	if configSpec.ConfigConstraintRef == "" {
+func hasSchemaForFile(rctx *ReconfigureContext, configFile string) bool {
+	if rctx.ConfigRender == nil {
 		return false
 	}
-	if len(configSpec.Keys) == 0 || configFile == "" {
-		return true
-	}
-	return slices.Contains(configSpec.Keys, configFile)
+	return intctrlutil.GetComponentConfigDescription(&rctx.ConfigRender.Spec, configFile) != nil
 }
 
-func (o *editConfigOptions) runWithConfigConstraints(cfgEditContext *configEditContext, configSpec *appsv1alpha1.ComponentConfigSpec, fn func() error) error {
+func (o *editConfigOptions) runWithConfigConstraints(cfgEditContext *configEditContext, rctx *ReconfigureContext, fn func() error) error {
 	oldVersion := map[string]string{
 		o.CfgFile: cfgEditContext.getOriginal(),
 	}
@@ -128,19 +122,7 @@ func (o *editConfigOptions) runWithConfigConstraints(cfgEditContext *configEditC
 		o.CfgFile: cfgEditContext.getEdited(),
 	}
 
-	configConstraintKey := client.ObjectKey{
-		Namespace: "",
-		Name:      configSpec.ConfigConstraintRef,
-	}
-	configConstraint := appsv1beta1.ConfigConstraint{}
-	if err := util.GetResourceObjectFromGVR(types.ConfigConstraintGVR(), configConstraintKey, o.Dynamic, &configConstraint); err != nil {
-		return err
-	}
-	formatterConfig := configConstraint.Spec.FileFormatConfig
-	if formatterConfig == nil {
-		return core.MakeError("config spec[%s] not support reconfiguring!", configSpec.Name)
-	}
-	configPatch, fileUpdated, err := core.CreateConfigPatch(oldVersion, newVersion, formatterConfig.Format, configSpec.Keys, true)
+	configPatch, fileUpdated, err := core.CreateConfigPatch(oldVersion, newVersion, rctx.ConfigRender.Spec, true)
 	if err != nil {
 		return err
 	}
@@ -151,20 +133,31 @@ func (o *editConfigOptions) runWithConfigConstraints(cfgEditContext *configEditC
 
 	fmt.Fprintf(o.Out, "Config patch(updated parameters): \n%s\n\n", string(configPatch.UpdateConfig[o.CfgFile]))
 	if !o.enableDelete {
-		if err := core.ValidateConfigPatch(configPatch, configConstraint.Spec.FileFormatConfig); err != nil {
+		if err := core.ValidateConfigPatch(configPatch, rctx.ConfigRender.Spec); err != nil {
 			return err
 		}
 	}
 
-	params := core.GenerateVisualizedParamsList(configPatch, configConstraint.Spec.FileFormatConfig, nil)
+	params := core.GenerateVisualizedParamsList(configPatch, rctx.ConfigRender.Spec.Configs)
+	o.KeyValues = fromKeyValuesToMap(params, o.CfgFile)
 	// check immutable parameters
-	if len(configConstraint.Spec.ImmutableParameters) > 0 {
-		if err = util.ValidateParametersModified2(sets.KeySet(fromKeyValuesToMap(params, o.CfgFile)), configConstraint.Spec); err != nil {
-			return err
+	if err = util.ValidateParametersModified2(sets.KeySet(fromKeyValuesToMap(params, o.CfgFile)), rctx.ParametersDefs, o.CfgFile); err != nil {
+		return err
+	}
+
+	var config *parametersv1alpha1.ComponentConfigDescription
+	if config = intctrlutil.GetComponentConfigDescription(&rctx.ConfigRender.Spec, o.CfgFile); config == nil {
+		return fn()
+	}
+	var pd *parametersv1alpha1.ParametersDefinition
+	for _, paramsDef := range rctx.ParametersDefs {
+		if paramsDef.Spec.FileName == o.CfgFile {
+			pd = paramsDef
+			break
 		}
 	}
 
-	confirmPrompt, err := generateReconfiguringPrompt(fileUpdated, configPatch, &configConstraint.Spec, o.CfgFile)
+	confirmPrompt, err := generateReconfiguringPrompt(fileUpdated, configPatch, pd, o.CfgFile, config.FileFormatConfig)
 	if err != nil {
 		return err
 	}
@@ -176,29 +169,26 @@ func (o *editConfigOptions) runWithConfigConstraints(cfgEditContext *configEditC
 		return nil
 	}
 
-	validatedData := map[string]string{
-		o.CfgFile: cfgEditContext.getEdited(),
+	if pd != nil && pd.Spec.ParametersSchema != nil {
+		if err = validate.NewConfigValidator(pd.Spec.ParametersSchema, config.FileFormatConfig).Validate(cfgEditContext.getEdited()); err != nil {
+			return core.WrapError(err, "failed to validate edited config")
+		}
 	}
-	options := validate.WithKeySelector(configSpec.Keys)
-	if err = validate.NewConfigValidator(&configConstraint.Spec, options).Validate(validatedData); err != nil {
-		return core.WrapError(err, "failed to validate edited config")
-	}
-	o.KeyValues = fromKeyValuesToMap(params, o.CfgFile)
 	return fn()
 }
 
-func generateReconfiguringPrompt(fileUpdated bool, configPatch *core.ConfigPatchInfo, cc *appsv1beta1.ConfigConstraintSpec, fileName string) (string, error) {
-	if fileUpdated {
+func generateReconfiguringPrompt(fileUpdated bool, configPatch *core.ConfigPatchInfo, pd *parametersv1alpha1.ParametersDefinition, fileName string, config *parametersv1alpha1.FileFormatConfig) (string, error) {
+	if fileUpdated || pd == nil {
 		return restartConfirmPrompt, nil
 	}
 
-	dynamicUpdated, err := core.IsUpdateDynamicParameters(cc, configPatch)
+	dynamicUpdated, err := core.IsUpdateDynamicParameters(config, &pd.Spec, configPatch)
 	if err != nil {
 		return "", nil
 	}
 
 	confirmPrompt := confirmApplyReconfigurePrompt
-	if !dynamicUpdated || !cfgcm.IsSupportReload(cc.ReloadAction) {
+	if !dynamicUpdated || !cfgcm.IsSupportReload(pd.Spec.ReloadAction) {
 		confirmPrompt = restartConfirmPrompt
 	}
 	return confirmPrompt, nil

@@ -30,9 +30,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
-
-	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
 )
 
@@ -67,36 +64,6 @@ func PrintConditions(conditions []metav1.Condition, out io.Writer) {
 	tbl.SetHeader("LAST-TRANSITION-TIME", "TYPE", "REASON", "STATUS", "MESSAGE")
 	for _, con := range conditions {
 		tbl.AddRow(util.TimeFormat(&con.LastTransitionTime), con.Type, con.Reason, con.Status, con.Message)
-	}
-	tbl.Print()
-}
-
-// PrintComponentConfigMeta prints the conditions of resource.
-func PrintComponentConfigMeta(tplInfos []types.ConfigTemplateInfo, clusterName, componentName string, out io.Writer) {
-	if len(tplInfos) == 0 {
-		return
-	}
-	tbl := NewTablePrinter(out)
-	PrintTitle("ConfigSpecs Meta")
-	enableReconfiguring := func(tpl appsv1alpha1.ComponentConfigSpec, configFileKey string) string {
-		if len(tpl.ConfigConstraintRef) > 0 && util.IsSupportConfigFileReconfigure(tpl, configFileKey) {
-			return "true"
-		}
-		return "false"
-	}
-	tbl.SetHeader("CONFIG-SPEC-NAME", "FILE", "ENABLED", "TEMPLATE", "CONSTRAINT", "RENDERED", "COMPONENT", "CLUSTER")
-	for _, info := range tplInfos {
-		for configFileKey := range info.CMObj.Data {
-			tbl.AddRow(
-				BoldYellow(info.Name),
-				configFileKey,
-				BoldYellow(enableReconfiguring(info.TPL, configFileKey)),
-				info.TPL.TemplateRef,
-				info.TPL.ConfigConstraintRef,
-				info.CMObj.Name,
-				componentName,
-				clusterName)
-		}
 	}
 	tbl.Print()
 }

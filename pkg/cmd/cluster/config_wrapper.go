@@ -20,208 +20,209 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package cluster
 
 import (
+	"context"
+	"errors"
+	"fmt"
+
 	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"github.com/apecloud/kubeblocks/pkg/configuration/core"
-
-	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
-	cfgutil "github.com/apecloud/kubeblocks/pkg/configuration/util"
-
-	"github.com/apecloud/kbcli/pkg/action"
-	"github.com/apecloud/kbcli/pkg/cluster"
-	"github.com/apecloud/kbcli/pkg/types"
-	"github.com/apecloud/kbcli/pkg/util"
+	parametersv1alpha1 "github.com/apecloud/kubeblocks/apis/parameters/v1alpha1"
+	"github.com/apecloud/kubeblocks/pkg/client/clientset/versioned"
+	intctrlutil "github.com/apecloud/kubeblocks/pkg/controllerutil"
+	"github.com/apecloud/kubeblocks/pkg/generics"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 )
 
-type configWrapper struct {
-	action.CreateOptions
-	*kbappsv1.Cluster
+type ReconfigureContext struct {
+	Client  versioned.Interface
+	Context context.Context
 
-	clusterName   string
+	Cluster        *kbappsv1.Cluster
+	Cmpd           *kbappsv1.ComponentDefinition
+	ConfigRender   *parametersv1alpha1.ParamConfigRenderer
+	ParametersDefs []*parametersv1alpha1.ParametersDefinition
+
+	CompName string
+}
+
+type ReconfigureWrapper struct {
+	rctx *ReconfigureContext
+
 	updatedParams map[string]*string
 
 	// autofill field
-	componentName  string
 	configSpecName string
 	configFileKey  string
-
-	configTemplateSpec appsv1alpha1.ComponentConfigSpec
 }
 
-func (w *configWrapper) ConfigTemplateSpec() *appsv1alpha1.ComponentConfigSpec {
-	return &w.configTemplateSpec
-}
-
-func (w *configWrapper) ConfigSpecName() string {
-	return w.configSpecName
-}
-
-func (w *configWrapper) ComponentName() string {
-	return w.componentName
-}
-
-func (w *configWrapper) ConfigFile() string {
-	return w.configFileKey
-}
-
-// AutoFillRequiredParam auto fills required param.
-func (w *configWrapper) AutoFillRequiredParam() error {
-	if err := w.fillComponent(); err != nil {
-		return err
-	}
-	if err := w.fillConfigSpec(); err != nil {
-		return err
-	}
-	return w.fillConfigFile()
-}
-
-// ValidateRequiredParam validates required param.
-func (w *configWrapper) ValidateRequiredParam(forceReplace bool) error {
-	// step1: check existence of component.
-	if w.Spec.GetComponentByName(w.componentName) == nil {
-		return makeComponentNotExistErr(w.clusterName, w.componentName)
-	}
-
-	// step2: check existence of configmap
-	cmObj := corev1.ConfigMap{}
-	cmKey := client.ObjectKey{
-		Name:      core.GetComponentCfgName(w.clusterName, w.componentName, w.configSpecName),
-		Namespace: w.Namespace,
-	}
-	if err := util.GetResourceObjectFromGVR(types.ConfigmapGVR(), cmKey, w.Dynamic, &cmObj); err != nil {
-		return err
-	}
-
-	// step3: check existence of config file
-	if _, ok := cmObj.Data[w.configFileKey]; !ok {
-		return makeNotFoundConfigFileErr(w.configFileKey, w.configSpecName, cfgutil.ToSet(cmObj.Data).AsSlice())
-	}
-
-	if !forceReplace && !util.IsSupportConfigFileReconfigure(w.configTemplateSpec, w.configFileKey) {
-		return makeNotSupportConfigFileUpdateErr(w.configFileKey, w.configTemplateSpec)
-	}
-	return nil
-}
-
-func (w *configWrapper) fillComponent() error {
-	if w.componentName != "" {
-		return nil
-	}
-	componentNames, err := util.GetComponentsFromResource(w.Namespace, w.clusterName, w.Spec.ComponentSpecs, w.Dynamic)
-	if err != nil {
-		return err
-	}
-	if len(componentNames) != 1 {
-		return core.MakeError(multiComponentsErrorMessage)
-	}
-	w.componentName = componentNames[0]
-	return nil
-}
-
-func (w *configWrapper) fillConfigSpec() error {
-	foundConfigSpec := func(configSpecs []appsv1alpha1.ComponentConfigSpec, name string) *appsv1alpha1.ComponentConfigSpec {
-		for _, configSpec := range configSpecs {
-			if configSpec.Name == name {
-				w.configTemplateSpec = configSpec
-				return &configSpec
-			}
-		}
-		return nil
-	}
-
-	configSpecs, err := util.GetConfigSpecsFromComponentName(w.Dynamic, w.GetNamespace(), w.clusterName, w.componentName, w.configSpecName == "")
-	if err != nil {
-		return err
-	}
-	if len(configSpecs) == 0 {
-		return makeNotFoundTemplateErr(w.clusterName, w.componentName)
-	}
-
-	if w.configSpecName != "" {
-		if foundConfigSpec(configSpecs, w.configSpecName) == nil {
-			return makeConfigSpecNotExistErr(w.clusterName, w.componentName, w.configSpecName)
-		}
-		return nil
-	}
-
-	w.configTemplateSpec = configSpecs[0]
-	if len(configSpecs) == 1 {
-		w.configSpecName = configSpecs[0].Name
-		return nil
-	}
-
-	if len(w.updatedParams) == 0 {
-		return core.MakeError(multiConfigTemplateErrorMessage)
-	}
-	supportUpdatedTpl := make([]appsv1alpha1.ComponentConfigSpec, 0)
-	for _, configSpec := range configSpecs {
-		if ok, err := util.IsSupportReconfigureParams(configSpec, w.updatedParams, w.Dynamic); err == nil && ok {
-			supportUpdatedTpl = append(supportUpdatedTpl, configSpec)
-		}
-	}
-	if len(supportUpdatedTpl) == 1 {
-		w.configTemplateSpec = configSpecs[0]
-		w.configSpecName = supportUpdatedTpl[0].Name
-		return nil
-	}
-	return core.MakeError(multiConfigTemplateErrorMessage)
-}
-
-func (w *configWrapper) fillConfigFile() error {
+func (w *ReconfigureWrapper) ConfigSpecName() string {
 	if w.configFileKey != "" {
-		return nil
+		return w.configFileKey
 	}
-
-	if w.configTemplateSpec.TemplateRef == "" {
-		return makeNotFoundTemplateErr(w.clusterName, w.componentName)
-	}
-
-	cmObj := corev1.ConfigMap{}
-	cmKey := client.ObjectKey{
-		Name:      core.GetComponentCfgName(w.clusterName, w.componentName, w.configSpecName),
-		Namespace: w.Namespace,
-	}
-	if err := util.GetResourceObjectFromGVR(types.ConfigmapGVR(), cmKey, w.Dynamic, &cmObj); err != nil {
-		return err
-	}
-	if len(cmObj.Data) == 0 {
-		return core.MakeError("not supported reconfiguring because there is no config file.")
-	}
-
-	keys := w.filterForReconfiguring(cmObj.Data)
-	if len(keys) == 1 {
-		w.configFileKey = keys[0]
-		return nil
-	}
-	return core.MakeError(multiConfigFileErrorMessage)
-}
-
-func (w *configWrapper) filterForReconfiguring(data map[string]string) []string {
-	keys := make([]string, 0, len(data))
-	for configFileKey := range data {
-		if util.IsSupportConfigFileReconfigure(w.configTemplateSpec, configFileKey) {
-			keys = append(keys, configFileKey)
+	file := w.ConfigFile()
+	if file != "" && w.rctx.ConfigRender != nil {
+		config := intctrlutil.GetComponentConfigDescription(&w.rctx.ConfigRender.Spec, file)
+		if config != nil {
+			return config.TemplateName
 		}
 	}
-	return keys
+	return ""
 }
 
-func newConfigWrapper(baseOptions action.CreateOptions, componentName, configSpec, configKey string, params map[string]*string) (*configWrapper, error) {
-	var err error
-	var clusterObj *kbappsv1.Cluster
+func (w *ReconfigureWrapper) ComponentName() string {
+	return w.rctx.CompName
+}
 
-	if clusterObj, err = cluster.GetClusterByName(baseOptions.Dynamic, baseOptions.Name, baseOptions.Namespace); err != nil {
+func (w *ReconfigureWrapper) ConfigFile() string {
+	if w.configFileKey != "" {
+		return w.configFileKey
+	}
+	if w.rctx.ConfigRender != nil && len(w.rctx.ConfigRender.Spec.Configs) > 0 {
+		return w.rctx.ConfigRender.Spec.Configs[0].Name
+	}
+	return ""
+}
+
+func GetClientFromOptionsOrDie(factory cmdutil.Factory) versioned.Interface {
+	config, err := factory.ToRESTConfig()
+	if err != nil {
+		panic(err)
+	}
+	return versioned.NewForConfigOrDie(config)
+}
+
+func newConfigWrapper(clientSet versioned.Interface, ns, clusterName, componentName, templateName, fileName string, params map[string]*string) (*ReconfigureWrapper, error) {
+	rctx, err := generateReconfigureContext(context.TODO(), clientSet, clusterName, componentName, ns)
+	if err != nil {
 		return nil, err
 	}
-	return &configWrapper{
-		CreateOptions:  baseOptions,
-		Cluster:        clusterObj,
-		clusterName:    baseOptions.Name,
-		componentName:  componentName,
-		configSpecName: configSpec,
-		configFileKey:  configKey,
+	if len(rctx.ParametersDefs) == 0 && rctx.ConfigRender == nil {
+		return nil, fmt.Errorf("the referenced component[%s] has no ParametersDefinitions or ParamConfigRenderer, and disable reconfigure", componentName)
+	}
+
+	return &ReconfigureWrapper{
+		rctx:           rctx,
+		configSpecName: templateName,
+		configFileKey:  fileName,
 		updatedParams:  params,
 	}, nil
+}
+
+func generateReconfigureContext(ctx context.Context, clientSet versioned.Interface, clusterName, componentName, ns string) (*ReconfigureContext, error) {
+	defaultCompName := func(clusterSpec kbappsv1.ClusterSpec) string {
+		switch {
+		case len(clusterSpec.ComponentSpecs) != 0:
+			return clusterSpec.ComponentSpecs[0].Name
+		case len(clusterSpec.Shardings) == 0:
+			return clusterSpec.Shardings[0].Name
+		default:
+			panic("cluster not have any component or sharding")
+		}
+	}
+
+	clusterObj, err := clientSet.AppsV1().Clusters(ns).Get(ctx, clusterName, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	if componentName == "" {
+		componentName = defaultCompName(clusterObj.Spec)
+	}
+
+	cmpd, err := resolveComponentDefObj(ctx, clientSet, clusterObj, componentName)
+	if err != nil {
+		return nil, err
+	}
+	rctx := &ReconfigureContext{
+		Context:  ctx,
+		Cmpd:     cmpd,
+		Cluster:  clusterObj,
+		Client:   clientSet,
+		CompName: componentName,
+	}
+
+	if err = resolveCmpdParametersDefs(rctx); err != nil {
+		return nil, err
+	}
+	return rctx, nil
+}
+
+func resolveComponentDefObj(ctx context.Context, client versioned.Interface, clusterObj *kbappsv1.Cluster, componentName string) (*kbappsv1.ComponentDefinition, error) {
+	resolveCmpd := func(cmpdName string) (*kbappsv1.ComponentDefinition, error) {
+		if cmpdName == "" {
+			return nil, errors.New("the referenced ComponentDefinition is empty")
+		}
+		return client.AppsV1().
+			ComponentDefinitions().
+			Get(ctx, cmpdName, metav1.GetOptions{})
+	}
+	resolveShardingCmpd := func(cmpdName string) (*kbappsv1.ComponentDefinition, error) {
+		shardingCmpd, err := client.AppsV1().
+			ShardingDefinitions().
+			Get(ctx, cmpdName, metav1.GetOptions{})
+		if err != nil {
+			return nil, err
+		}
+		if shardingCmpd.Spec.Template.CompDef == "" {
+			return nil, errors.New("the referenced ShardingDefinition has no ComponentDefinition")
+		}
+		return resolveCmpd(shardingCmpd.Spec.Template.CompDef)
+	}
+
+	compSpec := clusterObj.Spec.GetComponentByName(componentName)
+	if compSpec != nil {
+		return resolveCmpd(compSpec.ComponentDef)
+	}
+
+	shardingSpec := clusterObj.Spec.GetShardingByName(componentName)
+	if shardingSpec == nil {
+		return nil, makeComponentNotExistErr(clusterObj.Name, componentName)
+	}
+	if shardingSpec.ShardingDef != "" {
+		return resolveShardingCmpd(shardingSpec.ShardingDef)
+	}
+	return resolveCmpd(shardingSpec.Template.ComponentDef)
+}
+
+func resolveCmpdParametersDefs(rctx *ReconfigureContext) error {
+	configRender, err := resolveComponentConfigRender(rctx, rctx.Cmpd)
+	if err != nil {
+		return err
+	}
+	if configRender == nil || len(configRender.Spec.ParametersDefs) == 0 {
+		return nil
+	}
+	rctx.ConfigRender = configRender
+	for _, defName := range configRender.Spec.ParametersDefs {
+		pd, err := rctx.Client.ParametersV1alpha1().ParametersDefinitions().Get(rctx.Context, defName, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		rctx.ParametersDefs = append(rctx.ParametersDefs, pd)
+	}
+	return nil
+}
+
+func resolveComponentConfigRender(rctx *ReconfigureContext, cmpd *kbappsv1.ComponentDefinition) (*parametersv1alpha1.ParamConfigRenderer, error) {
+	pcrList, err := rctx.Client.ParametersV1alpha1().ParamConfigRenderers().List(rctx.Context, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	var prcs []parametersv1alpha1.ParamConfigRenderer
+	for i, item := range pcrList.Items {
+		if item.Spec.ComponentDef != cmpd.Name {
+			continue
+		}
+		if item.Spec.ServiceVersion == "" || item.Spec.ServiceVersion == cmpd.Spec.ServiceVersion {
+			prcs = append(prcs, pcrList.Items[i])
+		}
+	}
+	if len(prcs) == 1 {
+		return &prcs[0], nil
+	}
+	if len(prcs) > 1 {
+		return nil, fmt.Errorf("the ParamConfigRenderer is ambiguous which referenced cmpd[%s], prcs: [%s]", cmpd.Namespace,
+			generics.Map(prcs, func(pcr parametersv1alpha1.ParamConfigRenderer) string { return pcr.Name }))
+	}
+	return nil, nil
 }

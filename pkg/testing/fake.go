@@ -24,6 +24,7 @@ import (
 	"time"
 
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
+	parametersv1alpha1 "github.com/apecloud/kubeblocks/apis/parameters/v1alpha1"
 	"github.com/apecloud/kubeblocks/pkg/controller/instanceset"
 	chaosmeshv1alpha1 "github.com/chaos-mesh/chaos-mesh/api/v1alpha1"
 	snapshotv1 "github.com/kubernetes-csi/external-snapshotter/client/v6/apis/volumesnapshot/v1"
@@ -73,6 +74,9 @@ const (
 	BackupName          = "fake-backup-name"
 
 	accountName = "root"
+
+	fakeConfigTemplateName = "mysql-config"
+	FakeMysqlTemplateName  = "mysql-config-tpl"
 
 	IsDefault = true
 )
@@ -352,6 +356,14 @@ func FakeCompDef() *kbappsv1.ComponentDefinition {
 			Reconfigure:      &defaultAction,
 			AccountProvision: &defaultAction,
 		},
+		Configs: []kbappsv1.ComponentTemplateSpec{
+			{
+				Name:        fakeConfigTemplateName,
+				TemplateRef: FakeMysqlTemplateName,
+				Namespace:   "default",
+				VolumeName:  "for_test",
+			},
+		},
 	}
 	return compDef
 }
@@ -360,6 +372,49 @@ func FakeActionSet() *dpv1alpha1.ActionSet {
 	as := &dpv1alpha1.ActionSet{}
 	as.Name = ActionSetName
 	return as
+}
+
+func FakeParameterDefinition() *parametersv1alpha1.ParametersDefinition {
+	pd := &parametersv1alpha1.ParametersDefinition{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: fmt.Sprintf("%s/%s", types.ParametersAPIGroup, types.ParametersAPIVersion),
+			Kind:       types.KindParametersDef,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test-pd",
+		},
+		Spec: parametersv1alpha1.ParametersDefinitionSpec{
+			FileName: "my.cnf",
+		},
+	}
+	return pd
+}
+
+func FakeParameterConfigRenderer() *parametersv1alpha1.ParamConfigRenderer {
+	pcr := &parametersv1alpha1.ParamConfigRenderer{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: fmt.Sprintf("%s/%s", types.ParametersAPIGroup, types.ParametersAPIVersion),
+			Kind:       types.KindParameterConfigRender,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-pcr",
+			Namespace: Namespace,
+		},
+		Spec: parametersv1alpha1.ParamConfigRendererSpec{
+			ComponentDef:   CompDefName,
+			ParametersDefs: []string{"test-pd"},
+			Configs: []parametersv1alpha1.ComponentConfigDescription{
+				{
+					Name:         "my.cnf",
+					TemplateName: fakeConfigTemplateName,
+					FileFormatConfig: &parametersv1alpha1.FileFormatConfig{
+						Format: parametersv1alpha1.Ini,
+					},
+				},
+			},
+		},
+	}
+	return pcr
 }
 
 func FakeBackupPolicy(backupPolicyName, clusterName string) *dpv1alpha1.BackupPolicy {

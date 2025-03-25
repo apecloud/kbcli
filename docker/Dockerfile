@@ -39,7 +39,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 RUN --mount=type=bind,target=. \
     --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=cache,target=/go/pkg/mod \
-    CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -ldflags="${LD_FLAGS}" -tags="containers_image_openpgp" -a -o /out/kbcli cmd/cli/main.go
+    CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -ldflags="${LD_FLAGS}" -a -o /out/kbcli cmd/cli/main.go
 
 # Use alpine with tag 20230329 is corresponding to "edge" tag (latest release to date is 3.18) as of 20230625
 FROM docker.io/alpine:edge as dist

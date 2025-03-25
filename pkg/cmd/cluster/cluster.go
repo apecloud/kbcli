@@ -78,7 +78,6 @@ func NewClusterCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 				NewEditConfigureCmd(f, streams),
 				NewDescribeReconfigureCmd(f, streams),
 				NewExplainReconfigureCmd(f, streams),
-				NewDiffConfigureCmd(f, streams),
 			},
 		},
 		{
