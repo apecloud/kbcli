@@ -401,7 +401,7 @@ func (o *statusOptions) showWorkloads(ctx context.Context, allErrs *[]error) {
 
 	tblPrinter.SetHeader("NAMESPACE", "KIND", "NAME", "READY PODS", "CPU(cores)", "MEMORY(bytes)", "CREATED-AT")
 
-	unstructuredList := util.ListResourceByGVR(ctx, o.dynamic, o.ns, kubeBlocksWorkloads, o.selectorList, allErrs)
+	unstructuredList := util.ListResourceByGVR(ctx, o.dynamic, "", kubeBlocksWorkloads, o.selectorList, allErrs)
 
 	cpuMap, memMap, readyMap := computeMetricByWorkloads(ctx, o.ns, unstructuredList, o.mc, allErrs)
 
