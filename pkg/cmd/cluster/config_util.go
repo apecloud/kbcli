@@ -28,13 +28,16 @@ import (
 	"sort"
 	"strings"
 
+	appsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
+	parametersv1alpha1 "github.com/apecloud/kubeblocks/apis/parameters/v1alpha1"
+	"github.com/apecloud/kubeblocks/pkg/generics"
 	"github.com/spf13/cast"
 	corev1 "k8s.io/api/core/v1"
 	apiext "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/kubectl/pkg/cmd/util/editor"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	cfgcore "github.com/apecloud/kubeblocks/pkg/configuration/core"
 	cfgutil "github.com/apecloud/kubeblocks/pkg/configuration/util"
 
@@ -257,20 +260,40 @@ func generateParameterSchema(paramName string, property apiext.JSONSchemaProps) 
 	return pt, nil
 }
 
-func getComponentNames(cluster *appsv1alpha1.Cluster) []string {
+func getComponentNames(cluster *appsv1.Cluster) []string {
 	var components []string
 	for _, component := range cluster.Spec.ComponentSpecs {
+		components = append(components, component.Name)
+	}
+	for _, component := range cluster.Spec.Shardings {
 		components = append(components, component.Name)
 	}
 	return components
 }
 
-func findTplByName(tpls []appsv1alpha1.ComponentConfigSpec, tplName string) *appsv1alpha1.ComponentConfigSpec {
-	for i := range tpls {
-		tpl := &tpls[i]
-		if tpl.Name == tplName {
-			return tpl
+func resolveConfigTemplate(rctx *ReconfigureContext, dynamic dynamic.Interface) (map[string]*corev1.ConfigMap, error) {
+	tpls := generics.Map(rctx.ConfigRender.Spec.Configs, func(parameter parametersv1alpha1.ComponentConfigDescription) string {
+		return parameter.TemplateName
+	})
+	tplObjs := make(map[string]*corev1.ConfigMap, len(tpls))
+	for _, tpl := range tpls {
+		if _, ok := tplObjs[tpl]; ok {
+			continue
 		}
+		index := generics.FindFirstFunc(rctx.Cmpd.Spec.Configs, func(spec appsv1.ComponentTemplateSpec) bool {
+			return spec.Name == tpl
+		})
+		if index < 0 {
+			return nil, makeConfigSpecNotExistErr(rctx.Cluster.Name, rctx.CompName, tpl)
+		}
+		var cm = &corev1.ConfigMap{}
+		tplMeta := rctx.Cmpd.Spec.Configs[index]
+		key := client.ObjectKey{Namespace: tplMeta.Namespace, Name: tplMeta.TemplateRef}
+		if err := util.GetResourceObjectFromGVR(types.ConfigmapGVR(), key, dynamic, cm); err != nil {
+			return nil, err
+		}
+		tplObjs[tpl] = cm
 	}
-	return nil
+
+	return tplObjs, nil
 }

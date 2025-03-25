@@ -131,6 +131,8 @@ const (
 	KindDeployment                   = "Deployment"
 	KindConfigMap                    = "ConfigMap"
 	KindCronJob                      = "CronJob"
+	KindParametersDef                = "ParametersDefinition"
+	KindParameterConfigRender        = "ParameterConfigRender"
 )
 
 // K8S rbac API group
@@ -176,6 +178,8 @@ const (
 	ResourceBackupRepos     = "backuprepos"
 	ResourceBackupSchedules = "backupschedules"
 	ResourceBackupTemplates = "backuppolicytemplates"
+	ParametersAPIGroup      = "parameters.kubeblocks.io"
+	ParametersAPIVersion    = "v1alpha1"
 )
 
 // Extensions API group
