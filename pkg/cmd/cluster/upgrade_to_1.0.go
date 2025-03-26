@@ -279,7 +279,7 @@ func init() {
 	})
 }
 
-type ConvertToV1Options struct {
+type UpgradeToV1Options struct {
 	Cmd *cobra.Command `json:"-"`
 
 	Client    clientset.Interface
@@ -293,26 +293,26 @@ type ConvertToV1Options struct {
 	compDefList *unstructured.UnstructuredList
 }
 
-func NewConvertToV1Option(f cmdutil.Factory, streams genericiooptions.IOStreams) *ConvertToV1Options {
-	return &ConvertToV1Options{
+func NewUpgradeToV1Option(f cmdutil.Factory, streams genericiooptions.IOStreams) *UpgradeToV1Options {
+	return &UpgradeToV1Options{
 		f:         f,
 		IOStreams: streams,
 	}
 }
 
 var convertExample = templates.Examples(`
-		# convert a v1alpha1 cluster
-		kbcli cluster convert-to-v1 mycluster
+		# upgrade a v1alpha1 cluster to v1 cluster
+		kbcli cluster upgrade-to-v1 mycluster
 
-		# convert a v1alpha1 cluster with --dry-run
-		kbcli cluster convert-to-v1 mycluster --dry-run
+		# upgrade a v1alpha1 cluster with --dry-run
+		kbcli cluster upgrade-to-v1 mycluster --dry-run
 `)
 
-func NewConvertToV1Cmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
-	o := NewConvertToV1Option(f, streams)
+func NewUpgradeToV1Cmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
+	o := NewUpgradeToV1Option(f, streams)
 	cmd := &cobra.Command{
-		Use:               "convert-to-v1 [NAME]",
-		Short:             "convert cluster api version.",
+		Use:               "upgrade-to-v1 [NAME]",
+		Short:             "upgrade cluster to v1 api version.",
 		Example:           convertExample,
 		ValidArgsFunction: util.ResourceNameCompletionFunc(f, types.ClusterGVR()),
 		Run: func(cmd *cobra.Command, args []string) {
@@ -326,7 +326,7 @@ func NewConvertToV1Cmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *c
 	return cmd
 }
 
-func (o *ConvertToV1Options) complete(args []string) error {
+func (o *UpgradeToV1Options) complete(args []string) error {
 
 	if len(args) == 0 {
 		return fmt.Errorf("must specify cluster name")
@@ -338,7 +338,7 @@ func (o *ConvertToV1Options) complete(args []string) error {
 	return nil
 }
 
-func (o *ConvertToV1Options) GetConvertedCluster() (*kbappsv1.Cluster, *kbappsv1alpha1.Cluster, bool, error) {
+func (o *UpgradeToV1Options) GetConvertedCluster() (*kbappsv1.Cluster, *kbappsv1alpha1.Cluster, bool, error) {
 	cluster := &kbappsv1.Cluster{}
 	err := util.GetK8SClientObject(o.Dynamic, cluster, types.ClusterGVR(), o.Namespace, o.Name)
 	if err != nil {
@@ -373,7 +373,7 @@ func (o *ConvertToV1Options) GetConvertedCluster() (*kbappsv1.Cluster, *kbappsv1
 	return cluster, clusterV1alpha1, existUnsupportedSpec, nil
 }
 
-func (o *ConvertToV1Options) Run() error {
+func (o *UpgradeToV1Options) Run() error {
 	cluster, clusterV1alpha1, existUnsupportedSpec, err := o.GetConvertedCluster()
 	if err != nil {
 		return err
@@ -416,7 +416,7 @@ func (o *ConvertToV1Options) Run() error {
 	return o.normalizeConfigMaps()
 }
 
-func (o *ConvertToV1Options) convertCredential(cdName string) error {
+func (o *UpgradeToV1Options) convertCredential(cdName string) error {
 	oldSecret := &corev1.Secret{}
 	err := util.GetK8SClientObject(o.Dynamic, oldSecret, types.SecretGVR(), o.Namespace, fmt.Sprintf("%s-conn-credential", o.Name))
 	if err != nil {
@@ -479,7 +479,7 @@ func (o *ConvertToV1Options) convertCredential(cdName string) error {
 	return nil
 }
 
-func (o *ConvertToV1Options) convertAccounts() error {
+func (o *UpgradeToV1Options) convertAccounts() error {
 	secretList, err := o.Dynamic.Resource(types.SecretGVR()).Namespace(o.Namespace).List(context.TODO(), metav1.ListOptions{
 		LabelSelector: fmt.Sprintf("%s=%s", constant.AppInstanceLabelKey, o.Name),
 	})
@@ -502,7 +502,7 @@ func (o *ConvertToV1Options) convertAccounts() error {
 	return nil
 }
 
-func (o *ConvertToV1Options) normalizeConfigMaps() error {
+func (o *UpgradeToV1Options) normalizeConfigMaps() error {
 	cmList, err := o.Dynamic.Resource(types.ConfigmapGVR()).Namespace(o.Namespace).List(context.TODO(), metav1.ListOptions{
 		LabelSelector: fmt.Sprintf("%s=%s", constant.AppInstanceLabelKey, o.Name),
 	})
@@ -543,7 +543,7 @@ func (o *ConvertToV1Options) normalizeConfigMaps() error {
 	return nil
 }
 
-func (o *ConvertToV1Options) getLatestComponentDef(componentDefPrefix string) (string, error) {
+func (o *UpgradeToV1Options) getLatestComponentDef(componentDefPrefix string) (string, error) {
 	var matchedCompDefs []string
 	for _, v := range o.compDefList.Items {
 		if v.GetAnnotations()[constant.CRDAPIVersionAnnotationKey] != kbappsv1.GroupVersion.String() {
@@ -561,7 +561,7 @@ func (o *ConvertToV1Options) getLatestComponentDef(componentDefPrefix string) (s
 	return matchedCompDefs[len(matchedCompDefs)-1], nil
 }
 
-func (o *ConvertToV1Options) deleteConfiguration() error {
+func (o *UpgradeToV1Options) deleteConfiguration() error {
 	configList, err := o.Dynamic.Resource(types.ConfigurationGVR()).Namespace(o.Namespace).List(context.TODO(), metav1.ListOptions{
 		LabelSelector: fmt.Sprintf("%s=%s", constant.AppInstanceLabelKey, o.Name),
 	})
@@ -576,7 +576,7 @@ func (o *ConvertToV1Options) deleteConfiguration() error {
 	return nil
 }
 
-func (o *ConvertToV1Options) ConvertForClusterVersion(cluster *kbappsv1.Cluster,
+func (o *UpgradeToV1Options) ConvertForClusterVersion(cluster *kbappsv1.Cluster,
 	clusterV1alpha1Spec kbappsv1alpha1.ClusterSpec,
 	existUnsupportedSpec *bool) error {
 	convert, ok := clusterVersionConvert[clusterV1alpha1Spec.ClusterVersionRef]
@@ -605,7 +605,7 @@ func (o *ConvertToV1Options) ConvertForClusterVersion(cluster *kbappsv1.Cluster,
 	return nil
 }
 
-func (o *ConvertToV1Options) Convert09ComponentDef(cluster *kbappsv1.Cluster,
+func (o *UpgradeToV1Options) Convert09ComponentDef(cluster *kbappsv1.Cluster,
 	clusterV1alpha1Spec kbappsv1alpha1.ClusterSpec,
 	existUnsupportedSpec *bool) error {
 	componentDefWithChartVersionSet := sets.New(componentDefWithChartVersion...)
@@ -647,7 +647,7 @@ func (o *ConvertToV1Options) Convert09ComponentDef(cluster *kbappsv1.Cluster,
 	return nil
 }
 
-func (o *ConvertToV1Options) printDiff(clusterV1Alpha1 *kbappsv1alpha1.Cluster, clusterV1 *kbappsv1.Cluster) {
+func (o *UpgradeToV1Options) printDiff(clusterV1Alpha1 *kbappsv1alpha1.Cluster, clusterV1 *kbappsv1.Cluster) {
 	clusterV1Alpha1.Status = kbappsv1alpha1.ClusterStatus{}
 	clusterV1Alpha1.ObjectMeta.ManagedFields = nil
 	clusterV1.Status = kbappsv1.ClusterStatus{}
@@ -685,10 +685,10 @@ func (o *ConvertToV1Options) printDiff(clusterV1Alpha1 *kbappsv1alpha1.Cluster, 
 	fmt.Println(lipgloss.JoinHorizontal(lipgloss.Left, style.Render(getDiffContext(false)), "    ", style.Render(getDiffContext(true))))
 }
 
-func (o *ConvertToV1Options) colorRed(str string) string {
+func (o *UpgradeToV1Options) colorRed(str string) string {
 	return strings.ReplaceAll(color.RedString(str), "\n", fmt.Sprintf("%s[0m\n%s[31m", escape, escape))
 }
 
-func (o *ConvertToV1Options) colorGreen(str string) string {
+func (o *UpgradeToV1Options) colorGreen(str string) string {
 	return strings.ReplaceAll(color.GreenString(str), "\n", fmt.Sprintf("%s[0m\n%s[32m", escape, escape))
 }
