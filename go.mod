@@ -93,7 +93,7 @@ require (
 	github.com/Masterminds/sprig/v3 v3.3.0 // indirect
 	github.com/Masterminds/squirrel v1.5.4 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
-	github.com/Microsoft/hcsshim v0.12.5 // indirect
+	github.com/Microsoft/hcsshim v0.12.8 // indirect
 	github.com/ProtonMail/go-crypto v1.1.3 // indirect
 	github.com/StudioSol/set v1.0.0 // indirect
 	github.com/ahmetalpbalkan/go-cursor v0.0.0-20131010032410-8136607ea412 // indirect
@@ -183,7 +183,7 @@ require (
 	github.com/google/certificate-transparency-go v1.1.5 // indirect
 	github.com/google/gnostic-models v0.6.8 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
-	github.com/google/go-containerregistry v0.20.0 // indirect
+	github.com/google/go-containerregistry v0.20.1 // indirect
 	github.com/google/go-intervals v0.0.2 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/pprof v0.0.0-20240727154555-813a5fbdbec8 // indirect
@@ -272,7 +272,7 @@ require (
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
 	github.com/pjbgf/sha1cd v0.3.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
-	github.com/prometheus/client_golang v1.19.1 // indirect
+	github.com/prometheus/client_golang v1.20.2 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.55.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
