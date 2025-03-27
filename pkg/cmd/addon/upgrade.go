@@ -26,28 +26,15 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
-	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
 	extensionsv1alpha1 "github.com/apecloud/kubeblocks/apis/extensions/v1alpha1"
-	"github.com/apecloud/kubeblocks/pkg/constant"
 	"github.com/spf13/cobra"
-	helmaction "helm.sh/helm/v3/pkg/action"
-	"helm.sh/helm/v3/pkg/chart/loader"
-	"helm.sh/helm/v3/pkg/releaseutil"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	ktypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
-	"sigs.k8s.io/yaml"
 
-	"github.com/apecloud/kbcli/pkg/cluster"
 	"github.com/apecloud/kbcli/pkg/printer"
-	"github.com/apecloud/kbcli/pkg/util/helm"
-
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
 )
@@ -110,7 +97,9 @@ func newUpgradeCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 			o.name = args[0]
 			util.CheckErr(o.Complete())
 			util.CheckErr(o.Validate())
-			util.CheckErr(o.process09ClusterDefAndComponentVersions())
+			if strings.HasPrefix(o.currentVersion, "0.9") {
+				util.CheckErr(o.process09ClusterDefAndComponentVersions())
+			}
 			util.CheckErr(o.Run(f, streams))
 		},
 	}
@@ -184,110 +173,4 @@ func (o *upgradeOption) Run(f cmdutil.Factory, streams genericiooptions.IOStream
 		fmt.Printf("Addon %s-%s upgrade successed.\n", o.name, o.version)
 	}
 	return err
-}
-
-func (o *upgradeOption) process09ClusterDefAndComponentVersions() error {
-	kbDeploys, err := util.GetKBDeploys(o.Client, util.KubeblocksAppComponent, metav1.NamespaceAll)
-	if err != nil || len(kbDeploys) < 2 {
-		return err
-	}
-	if !strings.HasPrefix(o.currentVersion, "0.9") {
-		return nil
-	}
-	var newKBNamespace string
-	for _, v := range kbDeploys {
-		if strings.HasPrefix(v.Labels[constant.AppVersionLabelKey], "1.0") {
-			newKBNamespace = v.Namespace
-			break
-		}
-	}
-	// 1. get manifests from the helm repo
-	chartsDownloader, err := helm.NewDownloader(helm.NewConfig(newKBNamespace, "", "", false))
-	if err != nil {
-		return err
-	}
-	// DownloadTo can't specify the saved name, so download it to TempDir and rename it when copy
-	chartPath, _, err := chartsDownloader.DownloadTo(o.addon.Spec.Helm.ChartLocationURL, "", cluster.CliChartsCacheDir)
-	if err != nil {
-		return err
-	}
-	// 2. overwrite the spec of ClusterDefinition and ComponentVersion with the new version
-	actionCfg, err := helm.NewActionConfig(helm.NewConfig(newKBNamespace, "", "", false))
-	if err != nil {
-		return err
-	}
-	chart, err := loader.Load(chartPath)
-	if err != nil {
-		return err
-	}
-	renderer := helmaction.NewInstall(actionCfg)
-	renderer.ReleaseName = o.addon.Name + "for-upgrade"
-	renderer.Namespace = newKBNamespace
-	renderer.DryRun = true
-	renderer.Replace = true
-	renderer.ClientOnly = true
-	valuesMap := map[string]interface{}{}
-	if o.addon.Spec.Helm != nil {
-		for _, v := range o.addon.Spec.Helm.InstallValues.SetValues {
-			keyValues := strings.Split(v, "=")
-			if len(keyValues) != 2 {
-				return fmt.Errorf("invalid install value: %s", v)
-			}
-			valuesMap[keyValues[0]] = keyValues[1]
-		}
-	}
-	release, err := renderer.Run(chart, valuesMap)
-	if err != nil {
-		return err
-	}
-
-	updateObject := func(obj runtime.Object, gvr schema.GroupVersionResource) error {
-		unstructuredObj := obj.(*unstructured.Unstructured)
-		targetObj, err := o.Dynamic.Resource(gvr).Namespace("").Get(context.TODO(), unstructuredObj.GetName(), metav1.GetOptions{})
-		if err != nil {
-			if apierrors.IsNotFound(err) {
-				return nil
-			}
-			return err
-		}
-		annotations := targetObj.GetAnnotations()
-		annotations[constant.CRDAPIVersionAnnotationKey] = kbappsv1.GroupVersion.String()
-		annotations["meta.helm.sh/release-name"] = "kb-addon-" + o.addon.Name
-		annotations["meta.helm.sh/release-namespace"] = newKBNamespace
-		targetObj.SetAnnotations(annotations)
-		targetObj.Object["spec"] = unstructuredObj.Object["spec"]
-		if _, err = o.Dynamic.Resource(gvr).Namespace("").Update(context.TODO(), targetObj, metav1.UpdateOptions{}); err != nil {
-			return err
-		}
-		return nil
-	}
-	manifests := releaseutil.SplitManifests(release.Manifest)
-	for _, manifest := range manifests {
-
-		// convert yaml to json
-		jsonData, err := yaml.YAMLToJSON([]byte(manifest))
-		if err != nil {
-			return err
-		}
-		// check if jsonData is empty or null
-		if len(jsonData) == 0 || string(jsonData) == "null" {
-			continue
-		}
-		// get resource gvk
-		obj, gvk, err := unstructured.UnstructuredJSONScheme.Decode(jsonData, nil, nil)
-		if err != nil {
-			return err
-		}
-		switch gvk.Kind {
-		case types.KindClusterDef:
-			if err = updateObject(obj, types.ClusterDefGVR()); err != nil {
-				return err
-			}
-		case types.KindComponentVersion:
-			if err = updateObject(obj, types.ComponentVersionsGVR()); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
 }
