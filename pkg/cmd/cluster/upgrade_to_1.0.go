@@ -648,6 +648,8 @@ func (o *UpgradeToV1Options) Convert09ComponentDef(cluster *kbappsv1.Cluster,
 }
 
 func (o *UpgradeToV1Options) printDiff(clusterV1Alpha1 *kbappsv1alpha1.Cluster, clusterV1 *kbappsv1.Cluster) {
+	delete(clusterV1Alpha1.Annotations, corev1.LastAppliedConfigAnnotation)
+	delete(clusterV1.Annotations, corev1.LastAppliedConfigAnnotation)
 	clusterV1Alpha1.Status = kbappsv1alpha1.ClusterStatus{}
 	clusterV1Alpha1.ObjectMeta.ManagedFields = nil
 	clusterV1.Status = kbappsv1.ClusterStatus{}
