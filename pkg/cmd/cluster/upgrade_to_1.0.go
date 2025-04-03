@@ -64,12 +64,19 @@ type componentDefRefConvert struct {
 	serviceVersion string
 }
 
+type serviceVersionConvert struct {
+	fromServiceVersion string
+	toServiceVersion   string
+}
+
 var (
 	clusterVersionConvert = map[string]map[string]componentDefRefConvert{}
 	// 0.9 cmpd name => 1.0 cmpd prefix
 	componentDefWithChartVersion = []string{
 		"clickhouse-24",
+		"apecloud-mysql",
 		"elasticsearch-8",
+		"elasticsearch-7",
 		"kafka-combine", "kafka-controller", "kafka-exporter", "kafka-broker",
 		"loki-backend", "loki-gateway", "loki-write", "loki-read",
 		"milvus-datanode", "milvus-indexnode", "milvus-minio",
@@ -85,7 +92,6 @@ var (
 		"redis-7", "redis-cluster-7", "redis-sentinel-7", "redis-twemproxy-0.5",
 		"pulsar-bookkeeper", "pulsar-broker-3", "pulsar-proxy-3", "pulsar-zookeeper-3",
 		"starrocks-ce-be", "starrocks-ce-fe",
-		"tidb-pd-7", "tidb-7", "tikv-7", "tikv-8", "tidb-8", "tidb-pd-8",
 		"vanilla-postgresql-12", "vanilla-postgresql-14", "vanilla-postgresql-15", "vanilla-postgresql-supabase15",
 		"vm-insert", "vm-select", "vm-storage",
 		"weaviate",
@@ -97,6 +103,18 @@ var (
 		"etcd-":             "etcd-3",
 		"ch-keeper-24":      "clickhouse-keeper-24",
 		"pulsar-bkrecovery": "pulsar-bookies-recovery-3",
+		"tidb-pd":           "tidb-pd",
+		"tidb-7":            "tidb",
+		"tidb-8":            "tidb",
+		"tikv":              "tikv",
+	}
+	componentServiceVersionMapping = map[string][]serviceVersionConvert{
+		"minio": {
+			{
+				fromServiceVersion: "0.9.0",
+				toServiceVersion:   "2024.6.29",
+			},
+		},
 	}
 )
 
@@ -397,6 +415,10 @@ func (o *UpgradeToV1Options) Run() error {
 	if err = o.convertAccounts(); err != nil {
 		return err
 	}
+	if err = o.ConvertServices(); err != nil {
+		return err
+	}
+
 	// convert to v1
 	clusterObj, err := apiruntime.DefaultUnstructuredConverter.ToUnstructured(cluster)
 	if err != nil {
@@ -622,7 +644,8 @@ func (o *UpgradeToV1Options) Convert09ComponentDef(cluster *kbappsv1.Cluster,
 		return "<yourComponentDef>", nil
 	}
 	for i := range clusterV1alpha1Spec.ComponentSpecs {
-		compDef, err := convertCompDef(clusterV1alpha1Spec.ComponentSpecs[i].ComponentDef)
+		compDef09 := clusterV1alpha1Spec.ComponentSpecs[i].ComponentDef
+		compDef, err := convertCompDef(compDef09)
 		if err != nil {
 			return err
 		}
@@ -631,9 +654,14 @@ func (o *UpgradeToV1Options) Convert09ComponentDef(cluster *kbappsv1.Cluster,
 		if cluster.Spec.ComponentSpecs[i].ServiceAccountName == fmt.Sprintf("kb-%s", cluster.Name) {
 			cluster.Spec.ComponentSpecs[i].ServiceAccountName = ""
 		}
+		toServiceVersion := o.ConvertServiceVersion(compDef09, clusterV1alpha1Spec.ComponentSpecs[i].ServiceVersion)
+		if len(toServiceVersion) != 0 {
+			cluster.Spec.ComponentSpecs[i].ServiceVersion = toServiceVersion
+		}
 	}
 	for i := range clusterV1alpha1Spec.ShardingSpecs {
-		compDef, err := convertCompDef(clusterV1alpha1Spec.ShardingSpecs[i].Template.ComponentDef)
+		compDef09 := clusterV1alpha1Spec.ShardingSpecs[i].Template.ComponentDef
+		compDef, err := convertCompDef(compDef09)
 		if err != nil {
 			return err
 		}
@@ -642,8 +670,57 @@ func (o *UpgradeToV1Options) Convert09ComponentDef(cluster *kbappsv1.Cluster,
 		if cluster.Spec.Shardings[i].Template.ServiceAccountName == fmt.Sprintf("kb-%s", cluster.Name) {
 			cluster.Spec.Shardings[i].Template.ServiceAccountName = ""
 		}
+		toServiceVersion := o.ConvertServiceVersion(compDef09, clusterV1alpha1Spec.ShardingSpecs[i].Template.ServiceVersion)
+		if len(toServiceVersion) != 0 {
+			cluster.Spec.Shardings[i].Template.ServiceVersion = toServiceVersion
+		}
 	}
 	delete(cluster.Annotations, kbIncrementConverterAK)
+	return nil
+}
+
+func (o *UpgradeToV1Options) ConvertServiceVersion(compDef09 string, fromServiceVersion string) string {
+	var toServiceVersion string
+	if converts, ok := componentServiceVersionMapping[compDef09]; ok {
+		for _, s := range converts {
+			if s.fromServiceVersion == fromServiceVersion {
+				toServiceVersion = s.toServiceVersion
+				break
+			}
+		}
+	}
+	return toServiceVersion
+}
+
+func (o *UpgradeToV1Options) convertService(svc unstructured.Unstructured) error {
+	selector, _, _ := unstructured.NestedStringMap(svc.Object, "spec", "selector")
+	if _, ok := selector[constant.AppNameLabelKey]; !ok {
+		return nil
+	}
+	delete(selector, constant.AppNameLabelKey)
+	_ = unstructured.SetNestedStringMap(svc.Object, selector, "spec", "selector")
+	if _, err := o.Dynamic.Resource(types.ServiceGVR()).Namespace(o.Namespace).Update(context.TODO(), &svc, metav1.UpdateOptions{}); err != nil {
+		return err
+	}
+	selector1, _, _ := unstructured.NestedStringMap(svc.Object, "spec", "selector")
+	fmt.Println(selector1)
+	return nil
+}
+
+func (o *UpgradeToV1Options) ConvertServices() error {
+	svcList, err := o.Dynamic.Resource(types.ServiceGVR()).Namespace(o.Namespace).List(context.TODO(), metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("%s=%s,app.kubernetes.io/managed-by=kubeblocks", constant.AppInstanceLabelKey, o.Name),
+	})
+	if err != nil {
+		return err
+	}
+	for i := range svcList.Items {
+		svc := svcList.Items[i]
+		fmt.Println(svc.GetName())
+		if err = o.convertService(svc); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
