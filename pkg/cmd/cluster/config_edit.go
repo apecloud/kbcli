@@ -63,7 +63,7 @@ var (
 
 func (o *editConfigOptions) Run(fn func() error) error {
 	wrapper := o.wrapper
-	cfgEditContext := newConfigContext(o.CreateOptions, o.Name, wrapper.ComponentName(), wrapper.ConfigSpecName(), wrapper.ConfigFile())
+	cfgEditContext := newConfigContext(o.CreateOptions, o.CreateOptions.Name, wrapper.ComponentName(), wrapper.ConfigSpecName(), wrapper.ConfigFile())
 	if err := cfgEditContext.prepare(); err != nil {
 		return err
 	}
@@ -88,7 +88,7 @@ func (o *editConfigOptions) Run(fn func() error) error {
 		fmt.Println("Edit cancelled, no changes made.")
 		return nil
 	}
-	util.DisplayDiffWithColor(o.IOStreams.Out, diff)
+	util.DisplayDiffWithColor(o.CreateOptions.IOStreams.Out, diff)
 
 	if hasSchemaForFile(wrapper.rctx, wrapper.ConfigFile()) {
 		return o.runWithConfigConstraints(cfgEditContext, wrapper.rctx, fn)
@@ -131,7 +131,7 @@ func (o *editConfigOptions) runWithConfigConstraints(cfgEditContext *configEditC
 		return nil
 	}
 
-	fmt.Fprintf(o.Out, "Config patch(updated parameters): \n%s\n\n", string(configPatch.UpdateConfig[o.CfgFile]))
+	fmt.Fprintf(o.CreateOptions.Out, "Config patch(updated parameters): \n%s\n\n", string(configPatch.UpdateConfig[o.CfgFile]))
 	if !o.enableDelete {
 		if err := core.ValidateConfigPatch(configPatch, rctx.ConfigRender.Spec); err != nil {
 			return err
@@ -199,14 +199,14 @@ func (o *editConfigOptions) confirmReconfigure(promptStr string) (bool, error) {
 	const noStr = "no"
 
 	confirmStr := []string{yesStr, noStr}
-	printer.Warning(o.Out, promptStr)
+	printer.Warning(o.CreateOptions.Out, promptStr)
 	input, err := prompt.NewPrompt("Please type [Yes/No] to confirm:",
 		func(input string) error {
 			if !slices.Contains(confirmStr, strings.ToLower(input)) {
 				return fmt.Errorf("typed \"%s\" does not match \"%s\"", input, confirmStr)
 			}
 			return nil
-		}, o.In).Run()
+		}, o.CreateOptions.In).Run()
 	if err != nil {
 		return false, err
 	}
@@ -239,7 +239,7 @@ func NewEditConfigureCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) 
 		Example:           editConfigExample,
 		ValidArgsFunction: util.ResourceNameCompletionFunc(f, types.ClusterGVR()),
 		Run: func(cmd *cobra.Command, args []string) {
-			o.Args = args
+			o.CreateOptions.Args = args
 			cmdutil.CheckErr(o.CreateOptions.Complete())
 			util.CheckErr(o.Complete())
 			util.CheckErr(o.Validate())

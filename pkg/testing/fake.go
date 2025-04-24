@@ -356,12 +356,12 @@ func FakeCompDef() *kbappsv1.ComponentDefinition {
 			Reconfigure:      &defaultAction,
 			AccountProvision: &defaultAction,
 		},
-		Configs: []kbappsv1.ComponentTemplateSpec{
+		Configs: []kbappsv1.ComponentFileTemplate{
 			{
-				Name:        fakeConfigTemplateName,
-				TemplateRef: FakeMysqlTemplateName,
-				Namespace:   "default",
-				VolumeName:  "for_test",
+				Name:       fakeConfigTemplateName,
+				Template:   FakeMysqlTemplateName,
+				Namespace:  "default",
+				VolumeName: "for_test",
 			},
 		},
 	}

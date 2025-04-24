@@ -280,7 +280,7 @@ func resolveConfigTemplate(rctx *ReconfigureContext, dynamic dynamic.Interface) 
 		if _, ok := tplObjs[tpl]; ok {
 			continue
 		}
-		index := generics.FindFirstFunc(rctx.Cmpd.Spec.Configs, func(spec appsv1.ComponentTemplateSpec) bool {
+		index := generics.FindFirstFunc(rctx.Cmpd.Spec.Configs, func(spec appsv1.ComponentFileTemplate) bool {
 			return spec.Name == tpl
 		})
 		if index < 0 {
@@ -288,7 +288,7 @@ func resolveConfigTemplate(rctx *ReconfigureContext, dynamic dynamic.Interface) 
 		}
 		var cm = &corev1.ConfigMap{}
 		tplMeta := rctx.Cmpd.Spec.Configs[index]
-		key := client.ObjectKey{Namespace: tplMeta.Namespace, Name: tplMeta.TemplateRef}
+		key := client.ObjectKey{Namespace: tplMeta.Namespace, Name: tplMeta.Template}
 		if err := util.GetResourceObjectFromGVR(types.ConfigmapGVR(), key, dynamic, cm); err != nil {
 			return nil, err
 		}

@@ -63,7 +63,7 @@ func newListCommand(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobr
 		Example:           listExample,
 		ValidArgsFunction: util.ResourceNameCompletionFunc(f, types.BackupRepoGVR()),
 		Run: func(cmd *cobra.Command, args []string) {
-			o.Names = args
+			o.ListOptions.Names = args
 			cmdutil.CheckErr(o.Complete())
 			cmdutil.CheckErr(printBackupRepoList(o))
 		},
@@ -74,7 +74,7 @@ func newListCommand(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobr
 
 func (o *listBackupRepoOptions) Complete() error {
 	var err error
-	o.dynamic, err = o.Factory.DynamicClient()
+	o.dynamic, err = o.ListOptions.Factory.DynamicClient()
 	if err != nil {
 		return err
 	}
@@ -83,14 +83,14 @@ func (o *listBackupRepoOptions) Complete() error {
 
 func printBackupRepoList(o *listBackupRepoOptions) error {
 	// if format is JSON or YAML, use default printer to output the result.
-	if o.Format == printer.JSON || o.Format == printer.YAML {
+	if o.ListOptions.Format == printer.JSON || o.ListOptions.Format == printer.YAML {
 		_, err := o.Run()
 		return err
 	}
 
 	backupRepoList, err := o.dynamic.Resource(types.BackupRepoGVR()).List(context.TODO(), metav1.ListOptions{
-		LabelSelector: o.LabelSelector,
-		FieldSelector: o.FieldSelector,
+		LabelSelector: o.ListOptions.LabelSelector,
+		FieldSelector: o.ListOptions.FieldSelector,
 	})
 	if err != nil {
 		return err
@@ -140,7 +140,7 @@ func printBackupRepoList(o *listBackupRepoOptions) error {
 		return nil
 	}
 
-	if err = printer.PrintTable(o.Out, nil, printRows,
+	if err = printer.PrintTable(o.ListOptions.Out, nil, printRows,
 		"NAME", "STATUS", "STORAGE-PROVIDER", "ACCESS-METHOD", "DEFAULT", "BACKUPS", "TOTAL-SIZE"); err != nil {
 		return err
 	}

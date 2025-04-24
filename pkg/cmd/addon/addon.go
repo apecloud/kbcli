@@ -130,13 +130,13 @@ func newListCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Co
 		Use:               "list",
 		Short:             "List addons.",
 		Aliases:           []string{"ls"},
-		ValidArgsFunction: util.ResourceNameCompletionFunc(f, o.GVR),
+		ValidArgsFunction: util.ResourceNameCompletionFunc(f, o.ListOptions.GVR),
 		Run: func(cmd *cobra.Command, args []string) {
-			o.Names = args
+			o.ListOptions.Names = args
 			util.CheckErr(addonListRun(o))
 		},
 	}
-	o.AddFlags(cmd, true)
+	o.ListOptions.AddFlags(cmd, true)
 	cmd.Flags().StringArrayVar(&o.status, "status", []string{}, "Filter addons by status")
 	cmd.Flags().BoolVar(&o.listEngines, "engines", false, "List engine addons only")
 	return cmd
@@ -225,8 +225,8 @@ func newEnableCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.
 				util.CheckErr(o.fetchAddonObj())
 				util.CheckErr(o.validate())
 				util.CheckErr(o.complete(o, cmd, []string{name}))
-				util.CheckErr(o.CmdComplete(cmd))
-				util.CheckErr(o.Run())
+				util.CheckErr(o.PatchOptions.CmdComplete(cmd))
+				util.CheckErr(o.PatchOptions.Run())
 				if isEngineAddon(&o.addon) {
 					util.CheckErr(clusterCmd.RegisterClusterChart(f, streams, "", name, getAddonVersion(&o.addon), types.ClusterChartsRepoURL))
 				}
@@ -293,7 +293,7 @@ func newDisableCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 				util.CheckErr(o.checkBeforeDisable())
 				util.CheckErr(o.complete(o, cmd, []string{name}))
 				util.CheckErr(o.CmdComplete(cmd))
-				util.CheckErr(o.Run())
+				util.CheckErr(o.PatchOptions.Run())
 			}
 		},
 	}
@@ -303,7 +303,7 @@ func newDisableCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 }
 
 func (o *addonCmdOpts) init(args []string) error {
-	o.Names = args
+	o.PatchOptions.Names = args
 	if o.dynamic == nil {
 		var err error
 		if o.dynamic, err = o.Factory.DynamicClient(); err != nil {
@@ -353,7 +353,7 @@ func (o *addonCmdOpts) validate() error {
 	}
 	for _, s := range o.addon.Spec.Installable.Selectors {
 		if !s.MatchesFromConfig() {
-			return fmt.Errorf("addon %s INSTALLABLE-SELECTOR has no matching requirement", o.Names)
+			return fmt.Errorf("addon %s INSTALLABLE-SELECTOR has no matching requirement", o.PatchOptions.Names)
 		}
 	}
 
@@ -819,20 +819,20 @@ func (o *addonCmdOpts) buildPatch(flags []*pflag.Flag) error {
 	if err != nil {
 		return err
 	}
-	o.Patch = string(bytes)
+	o.PatchOptions.Patch = string(bytes)
 	return nil
 }
 
 func addonListRun(o *addonListOpts) error {
 	// if format is JSON or YAML, use default printer to output the result.
-	if o.Format == printer.JSON || o.Format == printer.YAML {
-		_, err := o.Run()
+	if o.ListOptions.Format == printer.JSON || o.ListOptions.Format == printer.YAML {
+		_, err := o.ListOptions.Run()
 		return err
 	}
 
 	// get and output the result
-	o.Print = false
-	r, err := o.Run()
+	o.ListOptions.Print = false
+	r, err := o.ListOptions.Run()
 	if err != nil {
 		return err
 	}
@@ -921,7 +921,7 @@ func addonListRun(o *addonListOpts) error {
 		return nil
 	}
 
-	if o.Format == printer.Wide {
+	if o.ListOptions.Format == printer.Wide {
 		if err = printer.PrintTable(o.Out, nil, printRows,
 			"NAME", "VERSION", "PROVIDER", "STATUS", "AUTO-INSTALL", "AUTO-INSTALLABLE-SELECTOR", "EXTRAS"); err != nil {
 			return err

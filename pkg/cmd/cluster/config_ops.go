@@ -138,7 +138,10 @@ func (o *configOpsOptions) Validate() error {
 		return err
 	}
 
-	classifyParams := configctrl.ClassifyComponentParameters(o.KeyValues, rctx.ParametersDefs, rctx.Cmpd.Spec.Configs, tplObjs)
+	classifyParams, err := configctrl.ClassifyComponentParameters(o.KeyValues, rctx.ParametersDefs, rctx.Cmpd.Spec.Configs, tplObjs, rctx.ConfigRender)
+	if err != nil {
+		return err
+	}
 	if err := util.ValidateParametersModified(classifyParams, rctx.ParametersDefs); err != nil {
 		return err
 	}
