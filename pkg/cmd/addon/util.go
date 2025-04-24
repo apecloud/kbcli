@@ -78,9 +78,9 @@ func uniqueByName(objects []searchResult) []searchResult {
 func checkAddonInstalled(objects *[]searchResult, o *addonListOpts) error {
 	// list installed addons
 	var installedAddons []string
-	o.Print = false
+	o.ListOptions.Print = false
 	// get and output the result
-	o.Print = false
+	o.ListOptions.Print = false
 	r, _ := o.Run()
 	if r == nil {
 		return nil
