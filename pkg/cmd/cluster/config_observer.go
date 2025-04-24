@@ -113,7 +113,7 @@ func (r *configObserverOptions) printComponentConfigSpecsDescribe(rctx *Reconfig
 	resolveParameterTemplate := func(tpl string) string {
 		for _, config := range rctx.Cmpd.Spec.Configs {
 			if config.Name == tpl {
-				return config.TemplateRef
+				return config.Template
 			}
 		}
 		return ""

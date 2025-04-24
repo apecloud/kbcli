@@ -71,7 +71,7 @@ func (o *UpdateOptions) buildPatch() error {
 	if err != nil {
 		return err
 	}
-	o.Patch = string(bytes)
+	o.PatchOptions.Patch = string(bytes)
 	return nil
 }
 
@@ -86,9 +86,9 @@ func newUpdateCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.
 		Aliases:           []string{"u"},
 		ValidArgsFunction: util.ResourceNameCompletionFunc(f, types.TraceGVR()),
 		Run: func(cmd *cobra.Command, args []string) {
-			o.Names = args
+			o.PatchOptions.Names = args
 			util.CheckErr(o.CmdComplete(cmd))
-			util.CheckErr(o.Run())
+			util.CheckErr(o.PatchOptions.Run())
 		},
 	}
 
