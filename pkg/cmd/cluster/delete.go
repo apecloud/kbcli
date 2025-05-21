@@ -92,7 +92,7 @@ func clusterPreDeleteHook(o *action.DeleteOptions, object runtime.Object) error 
 	}
 
 	if o.Force {
-		fmt.Fprintf(o.Out, printer.BoldRed("WARNING: Using --force may lead to potential data loss or residual dirty data if the cluster depends on other clusters.\n"))
+		fmt.Fprint(o.Out, printer.BoldRed("WARNING: Using --force may lead to potential data loss or residual dirty data if the cluster depends on other clusters.\n"))
 		components := util.GetComponentsOrShards(cluster)
 		for _, componentName := range components {
 			dynamicClient, err := o.Factory.DynamicClient()
