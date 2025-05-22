@@ -1,0 +1,33 @@
+apiVersion: v1
+data:
+  values-kubeblocks-override.yaml: |-
+    affinity:
+      nodeAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+        - preference:
+            matchExpressions:
+            - key: kb-controller
+              operator: In
+              values:
+              - "true"
+          weight: 100
+    enabled: true
+    image:
+      repository: apecloud-registry.cn-zhangjiakou.cr.aliyuncs.com/apecloud/snapshot-controller
+      tag: v6.2.1
+    replicaCount: 1
+    tolerations:
+    - effect: NoSchedule
+      key: kb-controller
+      operator: Equal
+      value: "true"
+    volumeSnapshotClasses:
+    - deletionPolicy: Delete
+      driver: hostpath.csi.k8s.io
+      name: default-vsc
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/instance: kubeblocks
+    app.kubernetes.io/name: kubeblocks
+  name: snapshot-controller-chart-kubeblocks-values

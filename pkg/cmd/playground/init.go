@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -30,12 +31,16 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/slices"
+	"golang.org/x/net/context"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	"k8s.io/klog/v2"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
+	"sigs.k8s.io/yaml"
 
 	cp "github.com/apecloud/kbcli/pkg/cloudprovider"
 	"github.com/apecloud/kbcli/pkg/cluster"
@@ -72,7 +77,8 @@ on the created kubernetes cluster, and an apecloud-mysql cluster named mycluster
 		kbcli cluster describe mycluster
 
 		# connect to database
-		kbcli cluster connect mycluster
+		kbcli exec -it mycluster-mysql-0 bash
+	    mysql -h 127.1 -u root -p$MYSQL_ROOT_PASSWORD
 
 		# view the Grafana
 		kbcli dashboard open kubeblocks-grafana
@@ -205,6 +211,18 @@ func (o *initOptions) local() error {
 				K3dProxyImage: o.k3dProxyImage,
 			},
 		}
+	}
+
+	if clusterInfo.K3sImage == "" {
+		if o.prevCluster != nil {
+			playgrouddir, err := initPlaygroundDir()
+			if err != nil {
+				return err
+			}
+			return fmt.Errorf(fmt.Sprintf("k3s image not specified, you can run `rm -rf %s ` and retry", playgrouddir))
+		}
+		clusterInfo.K3sImage = cp.K3sImageDefault
+		clusterInfo.K3dProxyImage = cp.K3dProxyImageDefault
 	}
 
 	if err = writeClusterInfo(o.stateFilePath, clusterInfo); err != nil {
@@ -410,6 +428,10 @@ func (o *initOptions) installKBAndCluster(info *cp.K8sClusterInfo) error {
 		return errors.Wrap(err, "failed to install KubeBlocks")
 	}
 	klog.V(1).Info("KubeBlocks installed successfully")
+	if err = o.createSnapshotController(); err != nil {
+		return errors.Wrap(err, "failed to install snapshot controller")
+	}
+	klog.V(1).Info("create snapshot controller addon successfully")
 	// install database cluster
 	clusterInfo := "ClusterType: " + o.clusterType
 	s := spinner.New(o.Out, spinnerMsg("Create cluster %s (%s)", kbClusterName, clusterInfo))
@@ -492,6 +514,46 @@ func (o *initOptions) installKubeBlocks(k8sClusterName string) error {
 		return err
 	}
 	return insOpts.Install()
+}
+
+func (o *initOptions) createSnapshotController() error {
+	if o.cloudProvider != cp.Local {
+		return nil
+	}
+	cli, err := util.NewFactory().DynamicClient()
+	if err != nil {
+		return err
+	}
+	_, currentFile, _, _ := runtime.Caller(1)
+	baseDir := filepath.Dir(currentFile)
+	getUnstructured := func(fileName string) (*unstructured.Unstructured, error) {
+		cmBytes, err := os.ReadFile(fileName)
+		if err != nil {
+			return nil, err
+		}
+		cm := &unstructured.Unstructured{}
+		if err := yaml.Unmarshal(cmBytes, cm); err != nil {
+			return nil, err
+		}
+		return cm, err
+	}
+	snapshotControllerCM, err := getUnstructured(baseDir + "/snapshot-controller/snapshot-controller-cm.yaml")
+	if err != nil {
+		return err
+	}
+	snapshotControllerCM.SetNamespace(defaultNamespace)
+	if _, err = cli.Resource(types.ConfigmapGVR()).Namespace(defaultNamespace).Create(context.TODO(), snapshotControllerCM, metav1.CreateOptions{}); err != nil {
+		return err
+	}
+
+	snapshotControllerAddon, err := getUnstructured(baseDir + "/snapshot-controller/snapshot-controller-addon.yaml")
+	if err != nil {
+		return err
+	}
+	if _, err = cli.Resource(types.AddonGVR()).Namespace("").Create(context.TODO(), snapshotControllerAddon, metav1.CreateOptions{}); err != nil {
+		return err
+	}
+	return nil
 }
 
 // createCluster constructs a cluster create options and run
