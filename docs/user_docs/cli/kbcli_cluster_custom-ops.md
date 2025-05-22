@@ -57,6 +57,9 @@ kbcli cluster custom-ops OpsDef --cluster <clusterName> <your custom params> [fl
 ### SEE ALSO
 
 * [kbcli cluster](kbcli_cluster.md)	 - Cluster command.
+* [kbcli cluster custom-ops kafka-quota](kbcli_cluster_custom-ops_kafka-quota.md)	 - Create a custom ops with opsDef kafka-quota
+* [kbcli cluster custom-ops kafka-topic](kbcli_cluster_custom-ops_kafka-topic.md)	 - Create a custom ops with opsDef kafka-topic
+* [kbcli cluster custom-ops kafka-user-acl](kbcli_cluster_custom-ops_kafka-user-acl.md)	 - Create a custom ops with opsDef kafka-user-acl
 
 #### Go Back to [CLI Overview](cli.md) Homepage.
 
