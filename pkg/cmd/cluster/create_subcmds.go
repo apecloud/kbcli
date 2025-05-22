@@ -160,6 +160,14 @@ func (o *CreateSubCmdsOptions) Complete(cmd *cobra.Command) error {
 		}
 	}
 
+	if o.Tenancy == "" {
+		o.Tenancy = "SharedNode"
+	}
+
+	if o.PodAntiAffinity == "" {
+		o.PodAntiAffinity = "Preferred"
+	}
+
 	// get values from flags
 	if cmd != nil {
 		o.Values = getValuesFromFlags(cmd.LocalNonPersistentFlags())

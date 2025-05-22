@@ -1,0 +1,71 @@
+apiVersion: extensions.kubeblocks.io/v1alpha1
+kind: Addon
+metadata:
+  name: snapshot-controller
+spec:
+  defaultInstallValues:
+  - enabled: true
+    resources: {}
+    tolerations: '[{"effect":"NoSchedule","key":"kb-controller","operator":"Equal","value":"true"}]'
+  - resources: {}
+    selectors:
+    - key: KubeGitVersion
+      operator: Contains
+      values:
+      - eks
+    storageClass: ebs.csi.aws.com
+    tolerations: '[{"effect":"NoSchedule","key":"kb-controller","operator":"Equal","value":"true"}]'
+  - resources: {}
+    selectors:
+    - key: KubeGitVersion
+      operator: Contains
+      values:
+      - gke
+    storageClass: pd.csi.storage.gke.io
+    tolerations: '[{"effect":"NoSchedule","key":"kb-controller","operator":"Equal","value":"true"}]'
+  - resources: {}
+    selectors:
+    - key: KubeGitVersion
+      operator: Contains
+      values:
+      - aks
+    storageClass: disk.csi.azure.com
+    tolerations: '[{"effect":"NoSchedule","key":"kb-controller","operator":"Equal","value":"true"}]'
+  description: 'Deploys a Snapshot Controller in a cluster. Snapshot Controllers are
+    often bundled with the Kubernetes distribution, this chart is meant for cases
+    where it is not. '
+  helm:
+    chartLocationURL: file:///snapshot-controller-1.7.2.tgz
+    chartsImage: apecloud-registry.cn-zhangjiakou.cr.aliyuncs.com/apecloud/kubeblocks-charts:0.9.3
+    chartsPathInImage: /charts
+    installValues:
+      configMapRefs:
+      - key: values-kubeblocks-override.yaml
+        name: snapshot-controller-chart-kubeblocks-values
+    valuesMapping:
+      jsonMap:
+        tolerations: tolerations
+      resources:
+        cpu:
+          limits: resources.limits.cpu
+          requests: resources.requests.cpu
+        memory:
+          limits: resources.limits.memory
+          requests: resources.requests.memory
+      valueMap:
+        replicaCount: replicaCount
+        storageClass: volumeSnapshotClasses[0].driver
+  installable:
+    autoInstall: true
+    selectors:
+    - key: KubeGitVersion
+      operator: DoesNotContain
+      values:
+      - tke
+      - aliyun.
+    - key: KubeProvider
+      operator: DoesNotContain
+      values:
+      - huaweiCloud
+      - azure
+  type: Helm

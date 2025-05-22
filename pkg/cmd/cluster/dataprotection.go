@@ -93,8 +93,11 @@ var (
 		kbcli cluster list-restores --names r1,r2
 	`)
 	describeBackupExample = templates.Examples(`
+		# describe backups of the cluster
+		kbcli cluster describe-backup <clusterName>
+
 		# describe a backup
-		kbcli cluster describe-backup backup-default-mycluster-20230616190023
+		kbcli cluster describe-backup --names <backupName>
 	`)
 	describeBackupPolicyExample = templates.Examples(`
 		# describe the default backup policy of the cluster
