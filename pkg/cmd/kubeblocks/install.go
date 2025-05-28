@@ -534,12 +534,17 @@ func (o *InstallOptions) checkNamespace() error {
 	// target namespace is not specified, use default namespace
 	if o.HelmCfg.Namespace() == "" {
 		o.HelmCfg.SetNamespace(o.Namespace)
+	}
+	if o.Namespace == types.DefaultNamespace {
 		o.CreateNamespace = true
 	}
 	fmt.Fprintf(o.Out, "KubeBlocks will be installed to namespace \"%s\"\n", o.HelmCfg.Namespace())
 	// check if namespace exists
 	if !o.CreateNamespace {
 		_, err := o.Client.CoreV1().Namespaces().Get(context.TODO(), o.Namespace, metav1.GetOptions{})
+		if apierrors.IsNotFound(err) {
+			return fmt.Errorf("namespace %s not found, please use --create-namespace to create it", o.Namespace)
+		}
 		return err
 	}
 	return nil
