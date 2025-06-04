@@ -46,6 +46,7 @@ const (
 )
 
 const (
+	typeNull    = "null"
 	typeString  = "string"
 	typeNumber  = "number"
 	typeInteger = "integer"
@@ -123,6 +124,8 @@ func buildOneFlag(cmd *cobra.Command, k string, s *spec.Schema, isArray bool) er
 			}
 		case typeArray:
 			return fmt.Errorf("unsupported build flags for object with array nested within an array")
+		case typeNull:
+			return nil
 		default:
 			return fmt.Errorf("unsupported json schema type %s", s.Type)
 		}
@@ -148,6 +151,8 @@ func buildOneFlag(cmd *cobra.Command, k string, s *spec.Schema, isArray bool) er
 			if err := buildOneFlag(cmd, name, s.Items.Schema, true); err != nil {
 				return err
 			}
+		case typeNull:
+			return nil
 		default:
 			return fmt.Errorf("unsupported json schema type %s", s.Type)
 		}
