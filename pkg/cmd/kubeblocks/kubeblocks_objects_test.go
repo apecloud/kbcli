@@ -196,7 +196,8 @@ func mockCRD() []runtime.Object {
 			APIVersion: "apiextensions.k8s.io/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "clusterversions.apps.kubeblocks.io",
+			Name:   "clusterversions.apps.kubeblocks.io",
+			Labels: label,
 		},
 		Spec: v1.CustomResourceDefinitionSpec{
 			Group: types.AppsAPIGroup,
