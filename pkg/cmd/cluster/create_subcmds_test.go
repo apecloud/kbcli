@@ -48,7 +48,7 @@ var _ = Describe("create cluster by cluster type", func() {
 	const (
 		clusterType    = "apecloud-mysql"
 		redisCluster   = "redis"
-		redisComponent = "redis-cluster-7"
+		redisComponent = "redis-cluster"
 	)
 
 	var (
