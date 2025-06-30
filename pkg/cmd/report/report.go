@@ -506,6 +506,9 @@ func (o *reportClusterOptions) handleManifests(ctx context.Context) error {
 			types.OpsGVR(),
 			types.PVCGVR(),
 			types.ComponentGVR(),
+			types.ParameterGVR(),
+			types.ComponentParameterGVR(),
+			types.PodGVR(),
 			// TODO: add new configuration API
 		}
 		globalGvrs = []schema.GroupVersionResource{

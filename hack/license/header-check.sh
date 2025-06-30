@@ -5,9 +5,9 @@
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -24,7 +24,7 @@ set -e -o pipefail
 # Initialize vars
 ERR=false
 FAIL=false
-EXCLUDES_DIRS="vendor/\|apis/\|tools/\|externalapis/\|pkg/lorry/component/\|pkg/cli/cmd/plugin/download"
+EXCLUDES_DIRS="vendor/\|apis/\|tools/\|externalapis/\|pkg/lorry/component/\|pkg/cmd/plugin/download"
 APACHE2_DIRS="apis/\|externalapis/"
 
 for file in $(git ls-files | grep '\.cue\|\.go$' | grep -v ${EXCLUDES_DIRS}); do
