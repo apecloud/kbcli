@@ -131,8 +131,6 @@ const (
 	KindDeployment                   = "Deployment"
 	KindConfigMap                    = "ConfigMap"
 	KindCronJob                      = "CronJob"
-	KindParametersDef                = "ParametersDefinition"
-	KindParameterConfigRender        = "ParameterConfigRender"
 )
 
 // K8S rbac API group
@@ -178,8 +176,18 @@ const (
 	ResourceBackupRepos     = "backuprepos"
 	ResourceBackupSchedules = "backupschedules"
 	ResourceBackupTemplates = "backuppolicytemplates"
-	ParametersAPIGroup      = "parameters.kubeblocks.io"
-	ParametersAPIVersion    = "v1alpha1"
+)
+
+// Parameters API group
+const (
+	ParametersAPIGroup   = "parameters.kubeblocks.io"
+	ParametersAPIVersion = "v1alpha1"
+
+	KindParametersDef         = "ParametersDefinition"
+	KindParameterConfigRender = "ParameterConfigRender"
+
+	ResourceParameters          = "parameters"
+	ResourceComponentParameters = "componentparameters"
 )
 
 // Extensions API group
@@ -497,4 +505,14 @@ func CronJobGVR() schema.GroupVersionResource {
 
 func TraceGVR() schema.GroupVersionResource {
 	return schema.GroupVersionResource{Group: TraceAPIGroup, Version: TraceAPIVersion, Resource: ResourceTrace}
+}
+
+// Parameters API group
+
+func ParameterGVR() schema.GroupVersionResource {
+	return schema.GroupVersionResource{Group: ParametersAPIGroup, Version: ParametersAPIVersion, Resource: ResourceParameters}
+}
+
+func ComponentParameterGVR() schema.GroupVersionResource {
+	return schema.GroupVersionResource{Group: ParametersAPIGroup, Version: ParametersAPIVersion, Resource: ResourceComponentParameters}
 }
