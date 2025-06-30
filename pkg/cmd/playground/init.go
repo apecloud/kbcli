@@ -219,7 +219,7 @@ func (o *initOptions) local() error {
 			if err != nil {
 				return err
 			}
-			return fmt.Errorf(fmt.Sprintf("k3s image not specified, you can run `rm -rf %s ` and retry", playgrouddir))
+			return fmt.Errorf("k3s image not specified, you can run `rm -rf %s ` and retry", playgrouddir)
 		}
 		clusterInfo.K3sImage = cp.K3sImageDefault
 		clusterInfo.K3dProxyImage = cp.K3dProxyImageDefault
@@ -343,7 +343,7 @@ func (o *initOptions) confirmToContinue() error {
 
 func (o *initOptions) confirmInitNewKubeCluster() error {
 	printer.Warning(o.Out, `This action will create a kubernetes cluster on the cloud that may
-  incur charges. Be sure to delete your infrastructure properly to avoid additional charges. 
+  incur charges. Be sure to delete your infrastructure properly to avoid additional charges.
 `)
 
 	fmt.Fprintf(o.Out, `
