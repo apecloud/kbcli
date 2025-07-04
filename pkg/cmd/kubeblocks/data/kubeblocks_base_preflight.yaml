@@ -25,6 +25,27 @@ spec:
               message: This application requires at least 3 nodes
           - pass:
               message: This cluster has enough nodes
+    - customResourceDefinition:
+        customResourceDefinitionName: volumesnapshotclasses.snapshot.storage.k8s.io
+        outcomes:
+          - fail:
+              message: The volumesnapshotclasses CRD was not found in the cluster.
+          - pass:
+              message: volumesnapshotclasses is installed.
+    - customResourceDefinition:
+        customResourceDefinitionName: volumesnapshots.snapshot.storage.k8s.io
+        outcomes:
+          - fail:
+              message: The volumesnapshots CRD was not found in the cluster.
+          - pass:
+              message: volumesnapshots is installed.
+    - customResourceDefinition:
+        customResourceDefinitionName: volumesnapshotcontents.snapshot.storage.k8s.io
+        outcomes:
+          - fail:
+              message: The volumesnapshotcontents CRD was not found in the cluster.
+          - pass:
+              message: volumesnapshotcontents is installed.
   extendAnalyzers:
     - clusterAccess:
         checkName: Check-K8S-Access
