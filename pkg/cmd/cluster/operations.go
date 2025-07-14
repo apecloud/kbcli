@@ -1272,7 +1272,7 @@ func (o *CustomOperations) completeCustomSpec(cmd *cobra.Command) error {
 			}
 		}
 		// validate if flags values are legal.
-		data, err := common.CoverStringToInterfaceBySchemaType(o.SchemaProperties, paramMap)
+		data, err := common.ConvertStringToInterfaceBySchemaType(o.SchemaProperties, paramMap)
 		if err != nil {
 			return err
 		}

@@ -245,8 +245,8 @@ github.com/antlr/antlr4/runtime/Go/antlr/v4 v4.0.0-20230305170008-8188dc5388df h
 github.com/antlr/antlr4/runtime/Go/antlr/v4 v4.0.0-20230305170008-8188dc5388df/go.mod h1:pSwJ0fSY5KhvocuWSx4fz3BA8OrA1bQn+K1Eli3BRwM=
 github.com/apecloud/kubebench v0.0.0-20240327101848-6a031d3f4ebe h1:OFkCAToRcNt0VqgCndw0mw1Ke3P2XgRJLrXsNOyc3sQ=
 github.com/apecloud/kubebench v0.0.0-20240327101848-6a031d3f4ebe/go.mod h1:5IZiDkFdgiZRGLsL+FOlvPsiF9LbyU55DVj4/5vT7+4=
-github.com/apecloud/kubeblocks v0.9.3 h1:06hUB4oVZdHfkFg/wez6LJahiJCE+vp5DDyrcXHqCZc=
-github.com/apecloud/kubeblocks v0.9.3/go.mod h1:uC7CHg8mTEEhYeJSyiZI1tX2Ep7rpq5qumcJyTIqlCg=
+github.com/apecloud/kubeblocks v0.9.5-beta.4 h1:9YXzpzzXrGyA/BO9ej2Fu5VK2SPU5SezkAkI7TAuozA=
+github.com/apecloud/kubeblocks v0.9.5-beta.4/go.mod h1:uC7CHg8mTEEhYeJSyiZI1tX2Ep7rpq5qumcJyTIqlCg=
 github.com/apparentlymart/go-textseg v1.0.0/go.mod h1:z96Txxhf3xSFMPmb5X/1W05FF/Nj9VFpLOpjS5yuumk=
 github.com/apparentlymart/go-textseg/v13 v13.0.0/go.mod h1:ZK2fH7c4NqDTLtiYLvIkEghdlcqw7yxLeM89kiTRPUo=
 github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5 h1:0CwZNZbxp69SHPdPJAN/hZIm0C4OItdklCFmMRWYpio=
