@@ -35,6 +35,7 @@ import (
 	appsv1beta1 "github.com/apecloud/kubeblocks/apis/apps/v1beta1"
 	cfgcm "github.com/apecloud/kubeblocks/pkg/configuration/config_manager"
 	"github.com/apecloud/kubeblocks/pkg/configuration/core"
+	"github.com/apecloud/kubeblocks/pkg/controller/configuration"
 	"github.com/apecloud/kubeblocks/pkg/controllerutil"
 
 	"github.com/apecloud/kbcli/pkg/printer"
@@ -153,9 +154,11 @@ func (o *configOpsOptions) validateConfigParams(tpl *appsv1alpha1.ComponentConfi
 	if o.FileContent != "" {
 		newConfigData = map[string]string{o.CfgFile: o.FileContent}
 	} else {
+		builder := configuration.NewValueManager(&configConstraint)
+		params, _ := core.FromStringMap(o.KeyValues, builder.BuildValueTransformer())
 		newConfigData, err = controllerutil.MergeAndValidateConfigs(configConstraint.Spec, map[string]string{o.CfgFile: ""}, tpl.Keys, []core.ParamPairs{{
 			Key:           o.CfgFile,
-			UpdatedParams: core.FromStringMap(o.KeyValues),
+			UpdatedParams: params,
 		}})
 	}
 	if err != nil {
