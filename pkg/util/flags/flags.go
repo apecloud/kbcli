@@ -105,7 +105,10 @@ func buildOneFlag(cmd *cobra.Command, k string, s *spec.Schema, isArray bool) er
 	if len(s.Type) > 0 {
 		tpe = s.Type[0]
 	}
-
+	if cmd.Flags().Lookup(name) != nil {
+		// flag already exists, skip
+		return nil
+	}
 	if isArray {
 		switch tpe {
 		case typeString:
