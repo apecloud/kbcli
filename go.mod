@@ -1,6 +1,6 @@
 module github.com/apecloud/kbcli
 
-go 1.23.0
+go 1.23.1
 
 toolchain go1.23.6
 
@@ -10,7 +10,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.3.0
 	github.com/NimbleMarkets/ntcharts v0.1.2
 	github.com/apecloud/dbctl v0.0.0-20240827084000-68a1980b1a46
-	github.com/apecloud/kubeblocks v1.0.0
+	github.com/apecloud/kubeblocks v1.0.1-beta.9
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
 	github.com/briandowns/spinner v1.23.0
 	github.com/chaos-mesh/chaos-mesh/api v0.0.0-20230912020346-a5d89c1c90ad
@@ -266,6 +266,7 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f // indirect
 	github.com/nsf/termbox-go v1.1.1 // indirect
+	github.com/onsi/ginkgo v1.16.5 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0 // indirect
 	github.com/opencontainers/runtime-spec v1.2.0 // indirect
@@ -308,7 +309,6 @@ require (
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.50.0 // indirect
 	github.com/vbatts/tar-split v0.11.5 // indirect
-	github.com/vmware-tanzu/velero v1.13.2 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
 	github.com/xdg-go/scram v1.1.2 // indirect
@@ -339,7 +339,7 @@ require (
 	go.starlark.net v0.0.0-20230525235612-a134d8f9ddca // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba // indirect
-	golang.org/x/oauth2 v0.24.0 // indirect
+	golang.org/x/oauth2 v0.27.0 // indirect
 	golang.org/x/sys v0.33.0 // indirect
 	golang.org/x/term v0.32.0 // indirect
 	golang.org/x/text v0.26.0 // indirect
