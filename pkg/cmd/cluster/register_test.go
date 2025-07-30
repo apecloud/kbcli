@@ -91,9 +91,9 @@ var _ = Describe("cluster register", func() {
 
 	Context("test register cluster chart", func() {
 		var (
-			source  = "https://github.com/apecloud/helm-charts/releases/download/apecloud-mysql-cluster-1.0.0-alpha.0/apecloud-mysql-cluster-1.0.0-alpha.0.tgz"
+			source  = "https://github.com/apecloud/helm-charts/releases/download/apecloud-mysql-cluster-1.0.0/apecloud-mysql-cluster-1.0.0.tgz"
 			engine  = "apecloud-mysql"
-			version = "1.0.0-alpha.0"
+			version = "1.0.0"
 			repo    = types.ClusterChartsRepoURL
 		)
 

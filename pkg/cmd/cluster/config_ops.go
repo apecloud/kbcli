@@ -31,6 +31,7 @@ import (
 	"github.com/apecloud/kubeblocks/pkg/configuration/core"
 	configctrl "github.com/apecloud/kubeblocks/pkg/controller/configuration"
 	"github.com/apecloud/kubeblocks/pkg/controllerutil"
+	intctrlutil "github.com/apecloud/kubeblocks/pkg/controllerutil"
 	"github.com/apecloud/kubeblocks/pkg/generics"
 	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
@@ -174,9 +175,12 @@ func (o *configOpsOptions) validateConfigParams(rctx *ReconfigureContext, classi
 	transform := func(params map[string]*parametersv1alpha1.ParametersInFile) []core.ParamPairs {
 		var result []core.ParamPairs
 		for file, ps := range params {
+			configDescs := intctrlutil.GetComponentConfigDescriptions(&rctx.ConfigRender.Spec, file)
+			builder := configctrl.NewValueManager(rctx.ParametersDefs, configDescs)
+			updatedParams, _ := core.FromStringMap(ps.Parameters, builder.BuildValueTransformer(file))
 			result = append(result, core.ParamPairs{
 				Key:           file,
-				UpdatedParams: core.FromStringMap(ps.Parameters),
+				UpdatedParams: updatedParams,
 			})
 		}
 		return result
