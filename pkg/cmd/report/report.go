@@ -437,10 +437,12 @@ func (o *reportClusterOptions) complete(f cmdutil.Factory) error {
 	if err := o.reportOptions.complete(f); err != nil {
 		return err
 	}
-	// update namespace
-	o.namespace, _, err = f.ToRawKubeConfigLoader().Namespace()
-	if err != nil {
-		return err
+	// update namespace if not specified
+	if o.namespace == "" {
+		o.namespace, _, err = f.ToRawKubeConfigLoader().Namespace()
+		if err != nil {
+			return err
+		}
 	}
 	// complete file name
 
