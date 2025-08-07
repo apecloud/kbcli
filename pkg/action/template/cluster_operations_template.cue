@@ -83,7 +83,7 @@ options: {
 			name:  string
 			value: string
 		},
-	]
+	] | *[]
 	...
 }
 

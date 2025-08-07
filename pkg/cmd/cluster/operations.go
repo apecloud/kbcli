@@ -27,6 +27,7 @@ import (
 
 	appsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
 	"github.com/apecloud/kubeblocks/pkg/common"
+	"github.com/apecloud/kubeblocks/pkg/controller/component"
 	jsonpatch "github.com/evanphx/json-patch"
 	"github.com/spf13/cobra"
 	"github.com/stoewer/go-strcase"
@@ -1038,7 +1039,7 @@ var customOpsExample = templates.Examples(`
 type CustomOperations struct {
 	*OperationsOptions
 	OpsDefinitionName string                  `json:"opsDefinitionName"`
-	Params            []opsv1alpha1.Parameter `json:"params"`
+	Params            []opsv1alpha1.Parameter `json:"params,omitempty"`
 	SchemaProperties  *apiextensionsv1.JSONSchemaProps
 }
 
@@ -1107,8 +1108,6 @@ func buildCustomOpsCmds(option *OperationsOptions) []*cobra.Command {
 			OperationsOptions: option,
 			OpsDefinitionName: t.GetName(),
 		}
-		// set options to build cue struct
-		o.CreateOptions.Options = o
 		cmd := &cobra.Command{
 			Use:               strcase.KebabCase(t.GetName()) + " <ClusterName>",
 			Short:             fmt.Sprintf("Create a custom ops with opsDef %s", t.GetName()),
@@ -1120,6 +1119,7 @@ func buildCustomOpsCmds(option *OperationsOptions) []*cobra.Command {
 				cmdutil.CheckErr(o.Complete())
 				cmdutil.CheckErr(o.validateAndCompleteComponentName())
 				cmdutil.CheckErr(o.completeCustomSpec(cmd))
+				o.CreateOptions.Options = o
 				cmdutil.CheckErr(o.Run())
 			},
 		}
@@ -1175,24 +1175,28 @@ func (o *CustomOperations) validateAndCompleteComponentName() error {
 		return err
 	}
 	// check if the custom ops supports the component or complete the component for the cluster
-	supportedComponentDefs := map[string]struct{}{}
-	for _, v := range opsDef.Spec.ComponentInfos {
-		supportedComponentDefs[v.ComponentDefinitionName] = struct{}{}
+	supportedComponentDef := func(compDef string) bool {
+		for _, v := range opsDef.Spec.ComponentInfos {
+			if component.PrefixOrRegexMatched(compDef, v.ComponentDefinitionName) {
+				return true
+			}
+		}
+		return false
 	}
-	if len(supportedComponentDefs) > 0 {
+
+	if len(opsDef.Spec.ComponentInfos) > 0 {
 		// check if the ops supports the input component
 		var isSupported bool
 		for _, v := range clusterObj.Spec.ComponentSpecs {
 			if v.ComponentDef == "" {
 				continue
 			}
-			if _, ok := supportedComponentDefs[v.ComponentDef]; ok {
+			if supportedComponentDef(v.ComponentDef) {
+				isSupported = true
 				if o.Component == "" {
 					o.Component = v.Name
-					isSupported = true
 					break
 				} else if o.Component == v.Name {
-					isSupported = true
 					break
 				}
 			}
