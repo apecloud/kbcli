@@ -108,6 +108,7 @@ type OperationsOptions struct {
 	// Switchover options
 	Component              string                         `json:"component"`
 	ComponentObjectName    string                         `json:"componentObjectName"`
+	ShardingName           string                         `json:"shardingName"`
 	Instance               string                         `json:"instance"`
 	Primary                string                         `json:"-"`
 	CharacterType          string                         `json:"-"`
@@ -215,10 +216,20 @@ func (o *OperationsOptions) CompletePromoteOps() error {
 	}
 
 	if o.Component == "" {
-		if len(clusterObj.Spec.ComponentSpecs) > 1 {
-			return fmt.Errorf("there are multiple components in cluster, please use --component to specify the component for promote")
+		if o.ComponentObjectName == "" {
+			if len(clusterObj.Spec.ComponentSpecs) > 1 {
+				return fmt.Errorf("there are multiple components in cluster, please use --component to specify the component for promote")
+			}
+			o.Component = clusterObj.Spec.ComponentSpecs[0].Name
+		} else {
+			componentObj := &appsv1alpha1.Component{}
+			if err := util.GetK8SClientObject(o.Dynamic, componentObj, types.ComponentGVR(), o.Namespace, o.ComponentObjectName); err != nil {
+				return err
+			}
+			if componentObj.GetLabels()[constant.KBAppShardingNameLabelKey] != "" {
+				o.ShardingName = componentObj.GetLabels()[constant.KBAppShardingNameLabelKey]
+			}
 		}
-		o.Component = clusterObj.Spec.ComponentSpecs[0].Name
 	}
 	o.CompleteHaEnabled()
 	return o.CompleteCharacterType(clusterObj)
@@ -229,10 +240,19 @@ func (o *OperationsOptions) CompletePromoteOps() error {
 func (o *OperationsOptions) CompleteCharacterType(clusterObj *appsv1alpha1.Cluster) error {
 	var primaryRoles []string
 	var componentSpec appsv1alpha1.ClusterComponentSpec
-	for _, compSpec := range clusterObj.Spec.ComponentSpecs {
-		if compSpec.Name == o.Component {
-			componentSpec = compSpec
-			break
+	if o.ShardingName != "" {
+		for _, shardingSpec := range clusterObj.Spec.ShardingSpecs {
+			if shardingSpec.Name == o.ShardingName {
+				componentSpec = shardingSpec.Template
+				break
+			}
+		}
+	} else {
+		for _, compSpec := range clusterObj.Spec.ComponentSpecs {
+			if compSpec.Name == o.Component {
+				componentSpec = compSpec
+				break
+			}
 		}
 	}
 
@@ -321,8 +341,12 @@ func (o *OperationsOptions) CompleteCharacterType(clusterObj *appsv1alpha1.Clust
 }
 
 func (o *OperationsOptions) CompleteHaEnabled() {
-	cmName := fmt.Sprintf("%s-%s-haconfig", o.Name, o.Component)
-
+	var cmName string
+	if o.ComponentObjectName != "" {
+		cmName = fmt.Sprintf("%s-haconfig", o.ComponentObjectName)
+	} else {
+		cmName = fmt.Sprintf("%s-%s-haconfig", o.Name, o.Component)
+	}
 	cm, err := o.Client.CoreV1().ConfigMaps(o.Namespace).Get(context.Background(), cmName, metav1.GetOptions{})
 	if err != nil {
 		return
@@ -476,9 +500,11 @@ func (o *OperationsOptions) validatePromote(cluster *appsv1alpha1.Cluster) error
 		podObj        = &corev1.Pod{}
 		componentName = o.Component
 	)
-
-	if len(cluster.Spec.ComponentSpecs) == 0 {
-		return fmt.Errorf("cluster.Spec.ComponentSpecs cannot be empty")
+	if o.ShardingName != "" {
+		componentName = o.ShardingName
+	}
+	if len(cluster.Spec.ComponentSpecs) == 0 && len(cluster.Spec.ShardingSpecs) == 0 {
+		return fmt.Errorf("cluster.Spec.ComponentSpecs or cluster.Spec.ShardingSpecs cannot be empty")
 	}
 
 	getAndValidatePod := func(targetRoles ...string) error {
@@ -1074,10 +1100,8 @@ func NewPromoteCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 			cmdutil.BehaviorOnFatal(printer.FatalWithRedColor)
 			cmdutil.CheckErr(o.Complete())
 			cmdutil.CheckErr(o.CompleteComponentsFlag())
-			if len(o.ComponentObjectName) == 0 {
-				cmdutil.CheckErr(o.CompletePromoteOps())
-				cmdutil.CheckErr(o.Validate())
-			}
+			cmdutil.CheckErr(o.CompletePromoteOps())
+			cmdutil.CheckErr(o.Validate())
 			if (o.LorryHAEnabled || o.CharacterType == oceanbase) && o.ExecPod != nil {
 				// lorryCli, err := lorryclient.NewK8sExecClientWithPod(nil, o.ExecPod)
 				// cmdutil.CheckErr(err)
@@ -1095,6 +1119,9 @@ func NewPromoteCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 						Name:  "candidate",
 						Value: o.Instance,
 					},
+				}
+				if customOpr.Component == "" {
+					customOpr.Component = o.ShardingName
 				}
 				customOpr.CreateOptions.Options = customOpr
 				cmdutil.CheckErr(customOpr.Run())
