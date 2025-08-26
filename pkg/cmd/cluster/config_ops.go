@@ -30,8 +30,7 @@ import (
 	cfgcm "github.com/apecloud/kubeblocks/pkg/configuration/config_manager"
 	"github.com/apecloud/kubeblocks/pkg/configuration/core"
 	configctrl "github.com/apecloud/kubeblocks/pkg/controller/configuration"
-	"github.com/apecloud/kubeblocks/pkg/controllerutil"
-	intctrlutil "github.com/apecloud/kubeblocks/pkg/controllerutil"
+	controllerutil "github.com/apecloud/kubeblocks/pkg/controllerutil"
 	"github.com/apecloud/kubeblocks/pkg/generics"
 	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
@@ -63,7 +62,7 @@ type configOpsOptions struct {
 
 var (
 	createReconfigureExample = templates.Examples(`
-		# update component params 
+		# update component params
 		kbcli cluster configure mycluster --components=mysql --config-spec=mysql-3node-tpl --config-file=my.cnf --set=max_connections=1000,general_log=OFF
 
 		# if only one component, and one config spec, and one config file, simplify the searching process of configure. e.g:
@@ -175,7 +174,7 @@ func (o *configOpsOptions) validateConfigParams(rctx *ReconfigureContext, classi
 	transform := func(params map[string]*parametersv1alpha1.ParametersInFile) []core.ParamPairs {
 		var result []core.ParamPairs
 		for file, ps := range params {
-			configDescs := intctrlutil.GetComponentConfigDescriptions(&rctx.ConfigRender.Spec, file)
+			configDescs := controllerutil.GetComponentConfigDescriptions(&rctx.ConfigRender.Spec, file)
 			builder := configctrl.NewValueManager(rctx.ParametersDefs, configDescs)
 			updatedParams, _ := core.FromStringMap(ps.Parameters, builder.BuildValueTransformer(file))
 			result = append(result, core.ParamPairs{
