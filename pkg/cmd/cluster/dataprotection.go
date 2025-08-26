@@ -68,10 +68,10 @@ var (
 		# list all backups
 		kbcli cluster list-backups
 
-	   # list all backups of the cluster 
+	    # list all backups of the cluster
 		kbcli cluster list-backups <clusterName>
-      
-        # list the specified backups 
+
+        # list the specified backups
 		kbcli cluster list-backups --names b1,b2
 	`)
 	deleteBackupExample = templates.Examples(`
@@ -86,10 +86,10 @@ var (
 		# list all restores
 		kbcli cluster list-restores
 
-	   # list all restores of the cluster 
+	    # list all restores of the cluster
 		kbcli cluster list-restores <clusterName>
-      
-        # list the specified restores 
+
+        # list the specified restores
 		kbcli cluster list-restores --names r1,r2
 	`)
 	describeBackupExample = templates.Examples(`
@@ -116,7 +116,7 @@ func NewCreateBackupCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *
 	customOutPut := func(opt *action.CreateOptions) {
 		output := fmt.Sprintf("Backup %s created successfully, you can view the progress:", opt.Name)
 		printer.PrintLine(output)
-		nextLine := fmt.Sprintf("\tkbcli cluster list-backups --name=%s -n %s", opt.Name, opt.Namespace)
+		nextLine := fmt.Sprintf("\tkbcli cluster list-backups --names=%s -n %s", opt.Name, opt.Namespace)
 		printer.PrintLine(nextLine)
 	}
 
