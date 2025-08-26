@@ -400,6 +400,16 @@ func (o *InstallOptions) waitAddonsEnabled() error {
 		return nil
 	}
 
+	// if addon list is empty, return nil
+	objs, err := o.Dynamic.Resource(types.AddonGVR()).List(context.TODO(), metav1.ListOptions{
+		LabelSelector: buildKubeBlocksSelectorLabels(),
+	})
+
+	if err == nil && (objs == nil || len(objs.Items) == 0) {
+		klog.V(1).Info("No Addons found")
+		return nil
+	}
+
 	addons := make(map[string]*extensionsv1alpha1.Addon)
 	fetchAddons := func() error {
 		objs, err := o.Dynamic.Resource(types.AddonGVR()).List(context.TODO(), metav1.ListOptions{
@@ -454,7 +464,6 @@ func (o *InstallOptions) waitAddonsEnabled() error {
 	s := spinner.New(o.Out, spinnerMsg(header))
 
 	var (
-		err         error
 		spinnerDone = func() {
 			s.SetFinalMsg(msg)
 			s.Done("")
