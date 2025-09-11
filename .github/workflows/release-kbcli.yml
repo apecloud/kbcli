@@ -139,6 +139,7 @@ jobs:
     steps:
       - name: Remove kbcli Artifact
         uses: geekyeggo/delete-artifact@v2
+        continue-on-error: true
         with:
           name: ${{ env.TAG_NAME }}-kbcli
 
