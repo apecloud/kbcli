@@ -312,17 +312,16 @@ func (o *InstallOptions) Install() error {
 	defer s.Fail()
 
 	getImageRegistry := func() string {
-		registry := viperx.GetString(types.CfgKeyImageRegistry)
-		if registry != "" {
-			return registry
-		}
-
 		// get from values options
 		for _, s := range o.ValueOpts.Values {
 			if split := strings.Split(s, "="); split[0] == types.ImageRegistryKey && len(split) == 2 {
-				registry = split[1]
-				break
+				return split[1]
 			}
+		}
+
+		registry := viperx.GetString(types.CfgKeyImageRegistry)
+		if registry != "" {
+			return registry
 		}
 
 		// user do not specify image registry, get default image registry based on K8s provider and region
