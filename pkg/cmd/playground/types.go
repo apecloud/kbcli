@@ -63,15 +63,7 @@ var guideStr = `
   kbcli cluster list                     # list database cluster and check its status
   kbcli cluster describe %[1]s       # get cluster information
 
-2. Connect to database
-
-  kbcli cluster connect %[1]s
-  
-3. View the Grafana:
-
-  kbcli dashboard open kubeblocks-grafana
-	
-4. Destroy Playground:
+2. Destroy Playground:
 
   kbcli playground destroy
 

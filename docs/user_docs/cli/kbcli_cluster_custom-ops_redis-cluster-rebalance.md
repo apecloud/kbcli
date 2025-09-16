@@ -1,24 +1,32 @@
 ---
-title: kbcli cluster diff-config
+title: kbcli cluster custom-ops redis-cluster-rebalance
 ---
 
-Show the difference in parameters between the two submitted OpsRequest.
+Create a custom ops with opsDef redis-cluster-rebalance
 
 ```
-kbcli cluster diff-config [flags]
+kbcli cluster custom-ops redis-cluster-rebalance <ClusterName> [flags]
 ```
 
 ### Examples
 
 ```
-  # compare config files
-  kbcli cluster diff-config opsrequest1 opsrequest2
+  # Create a redis-cluster-rebalance ops
+  kbcli cluster custom-ops redis-cluster-rebalance <clusterName> --component <componentName>
 ```
 
 ### Options
 
 ```
-  -h, --help   help for diff-config
+      --auto-approve                   Skip interactive approval before promote the instance
+      --component string               Specify the component name of the cluster. if not specified, using the first component which referenced the defined componentDefinition.
+      --dry-run string[="unchanged"]   Must be "client", or "server". If with client strategy, only print the object that would be sent, and no data is actually sent. If with server strategy, submit the server-side request, but no data is persistent. (default "none")
+      --edit                           Edit the API resource before creating
+      --force                           skip the pre-checks of the opsRequest to run the opsRequest forcibly
+  -h, --help                           help for redis-cluster-rebalance
+      --name string                    OpsRequest name. if not specified, it will be randomly generated
+  -o, --output format                  Prints the output in the specified format. Allowed values: JSON and YAML (default yaml)
+      --ttlSecondsAfterSucceed int     Time to live after the OpsRequest succeed
 ```
 
 ### Options inherited from parent commands
@@ -47,7 +55,7 @@ kbcli cluster diff-config [flags]
 
 ### SEE ALSO
 
-* [kbcli cluster](kbcli_cluster.md)	 - Cluster command.
+* [kbcli cluster custom-ops](kbcli_cluster_custom-ops.md)	 - 
 
 #### Go Back to [CLI Overview](cli.md) Homepage.
 
