@@ -1,35 +1,29 @@
 ---
-title: kbcli cluster custom-ops mysql-orc-switchover
+title: kbcli cluster upgrade-to-v1
 ---
 
-Create a custom ops with opsDef mysql-orc-switchover
+upgrade cluster to v1 api version.
 
 ```
-kbcli cluster custom-ops mysql-orc-switchover <ClusterName> [flags]
+kbcli cluster upgrade-to-v1 [NAME] [flags]
 ```
 
 ### Examples
 
 ```
-  # Create a mysql-orc-switchover ops
-  kbcli cluster custom-ops mysql-orc-switchover <clusterName> --component <componentName>
+  # upgrade a v1alpha1 cluster to v1 cluster
+  kbcli cluster upgrade-to-v1 mycluster
+  
+  # upgrade a v1alpha1 cluster with --dry-run
+  kbcli cluster upgrade-to-v1 mycluster --dry-run
 ```
 
 ### Options
 
 ```
-      --auto-approve                   Skip interactive approval before promote the instance
-      --candidate string               candidate instance name(pod Name). if candidate is not empty, will promote it to primary.
-                                       otherwise promote a randomly selected pod to primary.
-                                       
-      --component string               Specify the component name of the cluster. if not specified, using the first component which referenced the defined componentDefinition.
-      --dry-run string[="unchanged"]   Must be "client", or "server". If with client strategy, only print the object that would be sent, and no data is actually sent. If with server strategy, submit the server-side request, but no data is persistent. (default "none")
-      --edit                           Edit the API resource before creating
-      --force                           skip the pre-checks of the opsRequest to run the opsRequest forcibly
-  -h, --help                           help for mysql-orc-switchover
-      --name string                    OpsRequest name. if not specified, it will be randomly generated
-  -o, --output format                  Prints the output in the specified format. Allowed values: JSON and YAML (default yaml)
-      --ttlSecondsAfterSucceed int     Time to live after the OpsRequest succeed
+      --dry-run   dry run mode
+  -h, --help      help for upgrade-to-v1
+      --no-diff   only print the new cluster yaml
 ```
 
 ### Options inherited from parent commands
@@ -58,7 +52,7 @@ kbcli cluster custom-ops mysql-orc-switchover <ClusterName> [flags]
 
 ### SEE ALSO
 
-* [kbcli cluster custom-ops](kbcli_cluster_custom-ops.md)	 - 
+* [kbcli cluster](kbcli_cluster.md)	 - Cluster command.
 
 #### Go Back to [CLI Overview](cli.md) Homepage.
 
