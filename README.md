@@ -41,14 +41,14 @@ curl -fsSL https://kubeblocks.io/installer/install_cli.sh | bash
     sudo apt-get update
     sudo apt-get install kbcli
     ```
-    
+
 ***For Debian-based distributions, in addition to the installation method above, you can also install it through the following methods:***
 ```bash
 echo "deb [trusted=yes] https://apt.fury.io/kubeblocks/ /" | sudo tee /etc/apt/sources.list.d/kbcli.list
 sudo apt update
 sudo apt install kbcli
 ```
-    
+
 **Red Hat-based distributions**
 
 1. Installs the package yum-utils using the package manager yum.
@@ -177,22 +177,6 @@ View the details of a specified database cluster, such as `STATUS`, `Endpoints`,
 
  ```bash
  kbcli cluster describe mycluster
- ```
-
-Wait until the status of this cluster is `Running`, run `kbcli cluster connect` to access a specified database cluster. For example,
-
- ```bash
- kbcli cluster connect mycluster
- ```
-
-List and open the grafana dashboard.
-
- ```bash
- # list all dashboards
- kbcli dashboard list
-
- # open grafana dashboard
- kbcli dashboard open kubeblocks-grafana
  ```
 
 ### Destroy Playground

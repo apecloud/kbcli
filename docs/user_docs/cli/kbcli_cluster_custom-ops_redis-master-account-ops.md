@@ -1,55 +1,38 @@
 ---
-title: kbcli playground init
+title: kbcli cluster custom-ops redis-master-account-ops
 ---
 
-Bootstrap a kubernetes cluster and install KubeBlocks for playground.
-
-### Synopsis
-
-Bootstrap a kubernetes cluster and install KubeBlocks for playground.
-
- If no cloud provider is specified, a k3d cluster named kb-playground will be created on local host, otherwise a kubernetes cluster will be created on the specified cloud. Then KubeBlocks will be installed on the created kubernetes cluster, and an apecloud-mysql cluster named mycluster will be created.
+Create a custom ops with opsDef redis-master-account-ops
 
 ```
-kbcli playground init [flags]
+kbcli cluster custom-ops redis-master-account-ops <ClusterName> [flags]
 ```
 
 ### Examples
 
 ```
-  # create a k3d cluster on local host and install KubeBlocks
-  kbcli playground init
-  
-  # create an AWS EKS cluster and install KubeBlocks, the region is required
-  kbcli playground init --cloud-provider aws --region us-west-1
-  
-  # after init, run the following commands to experience KubeBlocks quickly
-  # list database cluster and check its status
-  kbcli cluster list
-  
-  # get cluster information
-  kbcli cluster describe mycluster
-  
-  # connect to database
-  kbcli exec -it mycluster-mysql-0 bash
-  mysql -h 127.1 -u root -p$MYSQL_ROOT_PASSWORD
-  
-  # destroy playground
-  kbcli playground destroy
+  # Create a redis-master-account-ops ops
+  kbcli cluster custom-ops redis-master-account-ops <clusterName> --component <componentName>
 ```
 
 ### Options
 
 ```
-      --auto-approve             Skip interactive approval during the initialization of playground
-      --cloud-provider string    Cloud provider type, one of [local aws] (default "local")
-      --cluster-type string      Specify the cluster type to create, use 'kbcli cluster create --help' to get the available cluster type. (default "mysql")
-  -h, --help                     help for init
-      --k3d-proxy-image string   Specify k3d proxy image if you want to init playground locally (default "docker.io/apecloud/k3d-proxy:5.4.4")
-      --k3s-image string         Specify k3s image that you want to use for the nodes if you want to init playground locally (default "rancher/k3s:v1.23.8-k3s1")
-      --region string            The region to create kubernetes cluster
-      --timeout duration         Time to wait for init playground, such as --timeout=10m (default 10m0s)
-      --version string           KubeBlocks version
+      --acl-command string             ACL_COMMAND is the complete Redis command for account operations, such as:
+                                       'ACL SETUSER alice-sen on ~* &* +@all #<hash-password>' or 'ACL DELUSER alice-sen',
+                                       It is recommended to use hashed passwords (#<hash-password>) instead of plaintext passwords when setting user credentials
+                                       
+      --auto-approve                   Skip interactive approval before promote the instance
+      --component string               Specify the component name of the cluster. if not specified, using the first component which referenced the defined componentDefinition.
+      --dry-run string[="unchanged"]   Must be "client", or "server". If with client strategy, only print the object that would be sent, and no data is actually sent. If with server strategy, submit the server-side request, but no data is persistent. (default "none")
+      --edit                           Edit the API resource before creating
+      --force                           skip the pre-checks of the opsRequest to run the opsRequest forcibly
+  -h, --help                           help for redis-master-account-ops
+      --name string                    OpsRequest name. if not specified, it will be randomly generated
+  -o, --output format                  Prints the output in the specified format. Allowed values: JSON and YAML (default yaml)
+      --replicas int                   REPLICAS is the number of replicas of the Redis cluster.
+                                       
+      --ttlSecondsAfterSucceed int     Time to live after the OpsRequest succeed
 ```
 
 ### Options inherited from parent commands
@@ -78,7 +61,7 @@ kbcli playground init [flags]
 
 ### SEE ALSO
 
-* [kbcli playground](kbcli_playground.md)	 - Bootstrap or destroy a playground KubeBlocks in local host or cloud.
+* [kbcli cluster custom-ops](kbcli_cluster_custom-ops.md)	 - 
 
 #### Go Back to [CLI Overview](cli.md) Homepage.
 
