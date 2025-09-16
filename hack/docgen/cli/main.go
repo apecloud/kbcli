@@ -97,6 +97,15 @@ func main() {
 		rootPath = os.Args[1]
 	}
 
+	// normalize and ensure output directory exists
+	rootPath = filepath.Clean(rootPath)
+
+	// 0o755 is an octal literal for Unix file permissions: rwxr-xr-x
+	// (owner can read/write/execute, group and others can read/execute)
+	if err := os.MkdirAll(rootPath, 0o755); err != nil {
+		log.Fatal(err)
+	}
+
 	fmt.Println("Scanning CLI docs rootPath: ", rootPath)
 	cli := cmd.NewCliCmd()
 	cli.Long = fmt.Sprintf("```\n%s\n```", cli.Long)
