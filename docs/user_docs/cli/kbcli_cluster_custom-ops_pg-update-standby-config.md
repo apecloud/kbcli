@@ -1,29 +1,35 @@
 ---
-title: kbcli cluster convert-to-v1
+title: kbcli cluster custom-ops pg-update-standby-config
 ---
 
-convert cluster api version.
+Create a custom ops with opsDef pg-update-standby-config
 
 ```
-kbcli cluster convert-to-v1 [NAME] [flags]
+kbcli cluster custom-ops pg-update-standby-config <ClusterName> [flags]
 ```
 
 ### Examples
 
 ```
-  # convert a v1alpha1 cluster
-  kbcli cluster convert-to-v1 mycluster
-  
-  # convert a v1alpha1 cluster with --dry-run
-  kbcli cluster convert-to-v1 mycluster --dry-run
+  # Create a pg-update-standby-config ops
+  kbcli cluster custom-ops pg-update-standby-config <clusterName> --component <componentName>
 ```
 
 ### Options
 
 ```
-      --dry-run   dry run mode
-  -h, --help      help for convert-to-v1
-      --no-diff   only print the new cluster yaml
+      --auto-approve                   Skip interactive approval before promote the instance
+      --component string               Specify the component name of the cluster. if not specified, using the first component which referenced the defined componentDefinition.
+      --dry-run string[="unchanged"]   Must be "client", or "server". If with client strategy, only print the object that would be sent, and no data is actually sent. If with server strategy, submit the server-side request, but no data is persistent. (default "none")
+      --edit                           Edit the API resource before creating
+      --force                           skip the pre-checks of the opsRequest to run the opsRequest forcibly
+  -h, --help                           help for pg-update-standby-config
+      --name string                    OpsRequest name. if not specified, it will be randomly generated
+  -o, --output format                  Prints the output in the specified format. Allowed values: JSON and YAML (default yaml)
+      --primary-endpoint string        primaryEndpoint defines endpoint of the primary instance.empty string means no primary instance.
+                                       The format is {host}:{port}
+                                       
+      --ttlSecondsAfterSucceed int     Time to live after the OpsRequest succeed
 ```
 
 ### Options inherited from parent commands
@@ -52,7 +58,7 @@ kbcli cluster convert-to-v1 [NAME] [flags]
 
 ### SEE ALSO
 
-* [kbcli cluster](kbcli_cluster.md)	 - Cluster command.
+* [kbcli cluster custom-ops](kbcli_cluster_custom-ops.md)	 - 
 
 #### Go Back to [CLI Overview](cli.md) Homepage.
 

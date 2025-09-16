@@ -1,24 +1,39 @@
 ---
-title: kbcli cluster diff-config
+title: kbcli cluster custom-ops kafka-quota
 ---
 
-Show the difference in parameters between the two submitted OpsRequest.
+Create a custom ops with opsDef kafka-quota
 
 ```
-kbcli cluster diff-config [flags]
+kbcli cluster custom-ops kafka-quota <ClusterName> [flags]
 ```
 
 ### Examples
 
 ```
-  # compare config files
-  kbcli cluster diff-config opsrequest1 opsrequest2
+  # Create a kafka-quota ops
+  kbcli cluster custom-ops kafka-quota <clusterName> --component <componentName>
 ```
 
 ### Options
 
 ```
-  -h, --help   help for diff-config
+      --auto-approve                   Skip interactive approval before promote the instance
+      --client string                  client id.
+      --component string               Specify the component name of the cluster. if not specified, using the first component which referenced the defined componentDefinition.
+      --consumer-byte-rate int         the maximum number of messages that can be consumed per second, measured in bytes/sec
+      --controller-mutation-rate int   partition mutation quota to control the rate at which mutations are accepted for user requests.
+      --delete-quotas stringArray      
+      --dry-run string[="unchanged"]   Must be "client", or "server". If with client strategy, only print the object that would be sent, and no data is actually sent. If with server strategy, submit the server-side request, but no data is persistent. (default "none")
+      --edit                           Edit the API resource before creating
+      --force                           skip the pre-checks of the opsRequest to run the opsRequest forcibly
+  -h, --help                           help for kafka-quota
+      --name string                    OpsRequest name. if not specified, it will be randomly generated
+  -o, --output format                  Prints the output in the specified format. Allowed values: JSON and YAML (default yaml)
+      --producer-byte-rate int         the maximum number of messages that can be produced per second, measured in bytes/sec
+      --request-percentage int         request percentage.
+      --ttlSecondsAfterSucceed int     Time to live after the OpsRequest succeed
+      --user string                    user name
 ```
 
 ### Options inherited from parent commands
@@ -42,12 +57,11 @@ kbcli cluster diff-config [flags]
   -s, --server string                  The address and port of the Kubernetes API server
       --tls-server-name string         Server name to use for server certificate validation. If it is not provided, the hostname used to contact the server is used
       --token string                   Bearer token for authentication to the API server
-      --user string                    The name of the kubeconfig user to use
 ```
 
 ### SEE ALSO
 
-* [kbcli cluster](kbcli_cluster.md)	 - Cluster command.
+* [kbcli cluster custom-ops](kbcli_cluster_custom-ops.md)	 - 
 
 #### Go Back to [CLI Overview](cli.md) Homepage.
 
