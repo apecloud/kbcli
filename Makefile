@@ -135,7 +135,7 @@ mod-download: ## Run go mod download against go modules.
 
 .PHONY: module
 module: ## Run go mod tidy->verify against go modules.
-	$(GO) mod tidy -compat=1.21
+	$(GO) mod tidy -compat=1.24
 	$(GO) mod verify
 
 TEST_PACKAGES ?= ./pkg/... ./cmd/...
