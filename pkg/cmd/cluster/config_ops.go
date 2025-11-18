@@ -215,7 +215,7 @@ func (o *configOpsOptions) confirmReconfigureWithRestart() error {
 		return nil
 	}
 	const confirmStr = "yes"
-	printer.Warning(o.Out, restartConfirmPrompt)
+	printer.Warning(o.Out, "%s", restartConfirmPrompt)
 	_, err := prompt.NewPrompt(fmt.Sprintf("Please type \"%s\" to confirm:", confirmStr),
 		func(input string) error {
 			if input != confirmStr {
@@ -228,7 +228,7 @@ func (o *configOpsOptions) confirmReconfigureWithRestart() error {
 
 func (o *configOpsOptions) parseUpdatedParams() (map[string]string, error) {
 	if len(o.Parameters) == 0 && len(o.LocalFilePath) == 0 {
-		return nil, core.MakeError(missingUpdatedParametersErrMessage)
+		return nil, core.MakeError("%s", missingUpdatedParametersErrMessage)
 	}
 
 	keyValues := make(map[string]string)
