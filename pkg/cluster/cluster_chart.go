@@ -223,8 +223,8 @@ func loadHelmChart(ci *ChartInfo, t ClusterType) error {
 
 func SupportedTypes() []ClusterType {
 	types := maps.Keys(ClusterTypeCharts)
-	slices.SortFunc(types, func(i, j ClusterType) bool {
-		return i.String() < j.String()
+	slices.SortFunc(types, func(i, j ClusterType) int {
+		return strings.Compare(i.String(), j.String())
 	})
 	return types
 }

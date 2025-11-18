@@ -1077,7 +1077,7 @@ func buildClusterComp(cd *appsv1alpha1.ClusterDefinition,
 		// get replicas
 		setReplicas, err := strconv.Atoi(getVal(&c, keyReplicas, sets))
 		if err != nil {
-			return nil, fmt.Errorf("repicas is illegal " + err.Error())
+			return nil, fmt.Errorf("repicas is illegal: %w", err)
 		}
 		if setReplicas < 0 {
 			return nil, fmt.Errorf("repicas is illegal, required value >=0")
@@ -1114,7 +1114,7 @@ func buildClusterComp(cd *appsv1alpha1.ClusterDefinition,
 						AccessModes: []corev1.PersistentVolumeAccessMode{
 							corev1.ReadWriteOnce,
 						},
-						Resources: corev1.ResourceRequirements{
+						Resources: corev1.VolumeResourceRequirements{
 							Requests: corev1.ResourceList{
 								corev1.ResourceStorage: resource.MustParse(getVal(&c, keyStorage, sets)),
 							},
@@ -1719,7 +1719,7 @@ func rebuildCompStorage(pvcMaps map[string][]map[storageKey]string, specs []*app
 				AccessModes: []corev1.PersistentVolumeAccessMode{
 					corev1.ReadWriteOnce,
 				},
-				Resources: corev1.ResourceRequirements{
+				Resources: corev1.VolumeResourceRequirements{
 					Requests: corev1.ResourceList{
 						corev1.ResourceStorage: resource.MustParse(viper.GetString(types.CfgKeyClusterDefaultStorageSize)),
 					},
@@ -1740,7 +1740,7 @@ func rebuildCompStorage(pvcMaps map[string][]map[storageKey]string, specs []*app
 			res.Spec.StorageClassName = &storageClass
 		}
 		if storageSize, ok := storageSet[storageKeySize]; ok {
-			res.Spec.Resources = corev1.ResourceRequirements{
+			res.Spec.Resources = corev1.VolumeResourceRequirements{
 				Requests: corev1.ResourceList{
 					corev1.ResourceStorage: resource.MustParse(storageSize),
 				},

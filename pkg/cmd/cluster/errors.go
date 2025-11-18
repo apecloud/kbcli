@@ -74,5 +74,5 @@ func makeNotSupportConfigFileUpdateErr(configFile string, configSpec appsv1alpha
 }
 
 func makeMissingClusterNameErr() error {
-	return cfgcore.MakeError(missingClusterArgErrMassage)
+	return cfgcore.MakeError("%s", missingClusterArgErrMassage)
 }

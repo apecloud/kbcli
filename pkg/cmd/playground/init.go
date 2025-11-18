@@ -327,7 +327,7 @@ func (o *initOptions) confirmToContinue() error {
 
 func (o *initOptions) confirmInitNewKubeCluster() error {
 	printer.Warning(o.Out, `This action will create a kubernetes cluster on the cloud that may
-  incur charges. Be sure to delete your infrastructure properly to avoid additional charges. 
+  incur charges. Be sure to delete your infrastructure properly to avoid additional charges.
 `)
 
 	fmt.Fprintf(o.Out, `
@@ -487,7 +487,7 @@ func (o *initOptions) installKubeBlocks(k8sClusterName string) error {
 		// if the KubeBlocks has been installed, we ignore the error
 		errMsg := err.Error()
 		if strings.Contains(errMsg, "repeated installation is not supported") {
-			fmt.Fprintf(o.Out, strings.Split(errMsg, ",")[0]+"\n")
+			fmt.Fprintf(o.Out, "%s", strings.Split(errMsg, ",")[0]+"\n")
 			return nil
 		}
 		return err
@@ -545,7 +545,7 @@ func (o *initOptions) checkExistedCluster() error {
 	// if cloud provider is not same with the existed cluster cloud provider, suggest
 	// user to destroy the previous cluster first
 	if o.prevCluster.CloudProvider != o.cloudProvider {
-		printer.Warning(o.Out, warningMsg)
+		printer.Warning(o.Out, "%s", warningMsg)
 		return cmdutil.ErrExit
 	}
 
@@ -557,7 +557,7 @@ func (o *initOptions) checkExistedCluster() error {
 	// is same with the new cluster region, if not, suggest user to destroy the previous
 	// cluster first
 	if o.prevCluster.Region != o.region {
-		printer.Warning(o.Out, warningMsg)
+		printer.Warning(o.Out, "%s", warningMsg)
 		return cmdutil.ErrExit
 	}
 	return nil

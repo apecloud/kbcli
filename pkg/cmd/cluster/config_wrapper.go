@@ -120,7 +120,7 @@ func (w *configWrapper) fillComponent() error {
 		return err
 	}
 	if len(componentNames) != 1 {
-		return core.MakeError(multiComponentsErrorMessage)
+		return core.MakeError("%s", multiComponentsErrorMessage)
 	}
 	w.componentName = componentNames[0]
 	return nil
@@ -159,7 +159,7 @@ func (w *configWrapper) fillConfigSpec() error {
 	}
 
 	if len(w.updatedParams) == 0 {
-		return core.MakeError(multiConfigTemplateErrorMessage)
+		return core.MakeError("%s", multiConfigTemplateErrorMessage)
 	}
 	supportUpdatedTpl := make([]appsv1alpha1.ComponentConfigSpec, 0)
 	for _, configSpec := range configSpecs {
@@ -172,7 +172,7 @@ func (w *configWrapper) fillConfigSpec() error {
 		w.configSpecName = supportUpdatedTpl[0].Name
 		return nil
 	}
-	return core.MakeError(multiConfigTemplateErrorMessage)
+	return core.MakeError("%s", multiConfigTemplateErrorMessage)
 }
 
 func (w *configWrapper) fillConfigFile() error {
@@ -201,7 +201,7 @@ func (w *configWrapper) fillConfigFile() error {
 		w.configFileKey = keys[0]
 		return nil
 	}
-	return core.MakeError(multiConfigFileErrorMessage)
+	return core.MakeError("%s", multiConfigFileErrorMessage)
 }
 
 func (w *configWrapper) filterForReconfiguring(data map[string]string) []string {
