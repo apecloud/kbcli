@@ -144,7 +144,7 @@ func FakeCluster(name, namespace string, conditions ...metav1.Condition) *appsv1
 								AccessModes: []corev1.PersistentVolumeAccessMode{
 									corev1.ReadWriteOnce,
 								},
-								Resources: corev1.ResourceRequirements{
+								Resources: corev1.VolumeResourceRequirements{
 									Requests: corev1.ResourceList{
 										corev1.ResourceStorage: resource.MustParse("1Gi"),
 									},
@@ -170,7 +170,7 @@ func FakeCluster(name, namespace string, conditions ...metav1.Condition) *appsv1
 								AccessModes: []corev1.PersistentVolumeAccessMode{
 									corev1.ReadWriteOnce,
 								},
-								Resources: corev1.ResourceRequirements{
+								Resources: corev1.VolumeResourceRequirements{
 									Requests: corev1.ResourceList{
 										corev1.ResourceStorage: resource.MustParse("1Gi"),
 									},
@@ -686,7 +686,7 @@ func FakePVCs() *corev1.PersistentVolumeClaimList {
 		Spec: corev1.PersistentVolumeClaimSpec{
 			StorageClassName: pointer.String(StorageClassName),
 			AccessModes:      []corev1.PersistentVolumeAccessMode{"ReadWriteOnce"},
-			Resources: corev1.ResourceRequirements{
+			Resources: corev1.VolumeResourceRequirements{
 				Requests: corev1.ResourceList{
 					corev1.ResourceStorage: resource.MustParse("1Gi"),
 				},

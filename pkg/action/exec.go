@@ -166,7 +166,7 @@ func (o *ExecOptions) RunWithRedirect(outWriter io.Writer, errWriter io.Writer) 
 			TTY:       t.Raw,
 		}, scheme.ParameterCodec)
 
-		return o.Executor.Execute("POST", req.URL(), o.Config, o.In, outWriter, errWriter, t.Raw, sizeQueue)
+		return o.Executor.Execute(req.URL(), o.Config, o.In, outWriter, errWriter, t.Raw, sizeQueue)
 	}
 
 	if err := t.Safe(fn); err != nil {

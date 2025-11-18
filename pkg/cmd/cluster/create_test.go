@@ -63,6 +63,10 @@ func getResource(res corev1.ResourceRequirements, name corev1.ResourceName) inte
 	return res.Requests[name].ToUnstructured()
 }
 
+func getVolumeResource(res corev1.VolumeResourceRequirements, name corev1.ResourceName) interface{} {
+	return res.Requests[name].ToUnstructured()
+}
+
 var _ = Describe("create", func() {
 	Context("setEnableAllLogs Test", func() {
 		var cluster *appsv1alpha1.Cluster
@@ -124,7 +128,7 @@ var _ = Describe("create", func() {
 		Expect(len(comps)).Should(BeNumerically(">=", compIndex))
 
 		comp := comps[compIndex]
-		Expect(getResource(comp.VolumeClaimTemplates[0].Spec.Resources, corev1.ResourceStorage)).Should(Equal(storage))
+		Expect(getVolumeResource(comp.VolumeClaimTemplates[0].Spec.Resources, corev1.ResourceStorage)).Should(Equal(storage))
 		Expect(comp.Replicas).Should(BeEquivalentTo(replicas))
 
 		resources := comp.Resources
@@ -683,7 +687,7 @@ var _ = Describe("create", func() {
 								AccessModes: []corev1.PersistentVolumeAccessMode{
 									corev1.ReadWriteOnce,
 								},
-								Resources: corev1.ResourceRequirements{
+								Resources: corev1.VolumeResourceRequirements{
 									Requests: corev1.ResourceList{
 										corev1.ResourceStorage: resource.MustParse("10Gi"),
 									},
@@ -696,7 +700,7 @@ var _ = Describe("create", func() {
 								AccessModes: []corev1.PersistentVolumeAccessMode{
 									corev1.ReadWriteOnce,
 								},
-								Resources: corev1.ResourceRequirements{
+								Resources: corev1.VolumeResourceRequirements{
 									Requests: corev1.ResourceList{
 										corev1.ResourceStorage: resource.MustParse("5Gi"),
 									},
@@ -711,7 +715,7 @@ var _ = Describe("create", func() {
 								AccessModes: []corev1.PersistentVolumeAccessMode{
 									corev1.ReadWriteOnce,
 								},
-								Resources: corev1.ResourceRequirements{
+								Resources: corev1.VolumeResourceRequirements{
 									Requests: corev1.ResourceList{
 										corev1.ResourceStorage: resource.MustParse("5Gi"),
 									},

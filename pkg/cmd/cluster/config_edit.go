@@ -208,7 +208,7 @@ func (o *editConfigOptions) confirmReconfigure(promptStr string) (bool, error) {
 	const noStr = "no"
 
 	confirmStr := []string{yesStr, noStr}
-	printer.Warning(o.Out, promptStr)
+	printer.Warning(o.Out, "%s", promptStr)
 	input, err := prompt.NewPrompt("Please type [Yes/No] to confirm:",
 		func(input string) error {
 			if !slices.Contains(confirmStr, strings.ToLower(input)) {
