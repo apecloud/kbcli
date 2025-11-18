@@ -38,6 +38,18 @@ jobs:
     name: Upload and release kbcli
     runs-on: ubuntu-22.04
     steps:
+      - name: Free disk space
+        run: |
+          df -h
+          echo "free disk space"
+          sudo apt-get autoremove -y >/dev/null 2>&1
+          sudo apt-get autoclean -y >/dev/null 2>&1
+          sudo rm -rf /usr/local/lib/android >/dev/null 2>&1
+          docker rmi $(docker image ls -aq) >/dev/null 2>&1
+          sudo swapoff -a
+          sudo rm -f /swapfile
+          df -h
+
       - uses: actions/checkout@v4
       - name: install lib
         run: |
@@ -70,6 +82,7 @@ jobs:
 
       - name: upload .rpm and .deb to fury.io
         run: |
+          df -h
           for file in $(find "${{ github.workspace }}/dist" -type f | grep -E '\.(deb|rpm)$'); do
               echo "Processing file: $file"
               curl -F package=@$file https://${{ env.FURY_TOKEN }}@push.fury.io/${{ env.FURY_ACCOUNT }}/
