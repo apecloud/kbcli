@@ -152,7 +152,7 @@ func (o *destroyOptions) destroyCloud() error {
 	// kubeconfig and context, otherwise, it will delete the wrong cluster.
 	if err = o.deleteClustersAndUninstallKB(); err != nil {
 		if strings.Contains(err.Error(), kubeClusterUnreachableErr.Error()) {
-			printer.Warning(o.Out, err.Error())
+			printer.Warning(o.Out, "%s", err.Error())
 		} else {
 			return err
 		}

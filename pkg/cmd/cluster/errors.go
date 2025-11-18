@@ -52,5 +52,5 @@ func makeNotFoundConfigFileErr(configFile, configSpec string, all []string) erro
 }
 
 func makeMissingClusterNameErr() error {
-	return cfgcore.MakeError(missingClusterArgErrMassage)
+	return cfgcore.MakeError("%s", missingClusterArgErrMassage)
 }
