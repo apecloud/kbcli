@@ -378,7 +378,7 @@ func checkResources(dynamic dynamic.Interface) error {
 		for k, v := range crs {
 			errMsg.WriteString(fmt.Sprintf("  %s: %s\n", k, strings.Join(v, " ")))
 		}
-		return errors.Errorf(errMsg.String())
+		return errors.New(errMsg.String())
 	}
 	return nil
 }
