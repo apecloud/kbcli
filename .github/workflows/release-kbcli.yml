@@ -9,7 +9,7 @@ env:
   GH_TOKEN: ${{ github.token }}
   GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
   TAG_NAME: ${{ github.ref_name }}
-  GO_VERSION: "1.21"
+  GO_VERSION: "1.24"
   CLI_NAME: 'kbcli'
   JIHULAB_KBCLI_PROJECT_ID: 85948
   JIHULAB_ACCESS_TOKEN: ${{ secrets.GITLAB_ACCESS_TOKEN }}
