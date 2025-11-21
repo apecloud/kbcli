@@ -1,10 +1,7 @@
 name: CodeQL
 
 on:
-  schedule:
-    - cron: '0 0 * * *'
   push:
-    branches: [ main, release-*, releasing-* ]
 
 env:
   BASE_BRANCH: origin/main
