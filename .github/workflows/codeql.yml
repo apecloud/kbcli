@@ -35,7 +35,6 @@ jobs:
   analyze:
     name: Analyze
     needs: trigger-mode
-    if: contains(needs.trigger-mode.outputs.trigger-mode, '[go]')
     runs-on: ${{ (matrix.language == 'swift' && 'macos-latest') || 'ubuntu-latest' }}
     timeout-minutes: ${{ (matrix.language == 'swift' && 120) || 360 }}
     permissions:
