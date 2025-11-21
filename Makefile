@@ -345,6 +345,3 @@ check-license-header: ## Run license header check.
 .PHONY: fix-license-header
 fix-license-header: ## Run license header fix.
 	@./hack/license/header-check.sh fix
-
-# NOTE: include must be placed at the end
-include docker/docker.mk
