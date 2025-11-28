@@ -34,11 +34,11 @@ kbcli cluster create kafka NAME [flags]
       --memory float                                Memory, the unit is Gi. Value range [0.5, 1000]. (default 0.5)
       --meta-storage float                          Metadata Storage size, the unit is Gi. Value range [1, 10000]. (default 5)
       --meta-storage-class string                   The StorageClass for Kafka Metadata Storage.
-      --mode string                                 Mode for Kafka kraft cluster, 'combined' is combined Kafka controller and broker,'separated' is broker and controller running independently. Legal values [combined, separated]. (default "combined")
+      --mode string                                 Mode for Kafka kraft cluster, 'combined' is combined Kafka controller and broker,'separated' is broker and controller running independently. Legal values [combined, separated, withZookeeper-10]. (default "combined")
       --monitor-enable                              Enable monitor for Kafka. (default true)
       --monitor.limit.cpu float                      (default 0.5)
       --monitor.limit.memory float                   (default 1)
-      --monitor.replicas int                        Number of replicas for the monitor component. Value range [1]. (default 1)
+      --monitor.replicas float                      Number of replicas for the monitor component. Value range [1]. (default 1)
       --monitor.request.cpu float                    (default 0.1)
       --monitor.request.memory float                 (default 0.2)
       --node-labels stringToString                  Node label selector (default [])
@@ -47,6 +47,11 @@ kbcli cluster create kafka NAME [flags]
       --pod-anti-affinity string                    Pod anti-affinity type, one of: (Preferred, Required) (default "Preferred")
       --replicas int                                The number of Kafka broker replicas for combined mode. Legal values [1, 3, 5]. (default 1)
       --sasl-enable                                 Enable authentication using SASL/PLAIN for Kafka.
+      --sasl-scram-enable                           Enable authentication using SASL/SCRAM for Kafka.
+      --sasl.enable                                 Enable SASL authentication.
+      --sasl.inter-broker-protocol string           SASL mechanism used for inter-broker communication. Should be one of sasl.mechanisms. Legal values [PLAIN, SCRAM-SHA-256, SCRAM-SHA-512]. (default "PLAIN")
+      --sasl.mechanisms stringArray                  Legal values [PLAIN, SCRAM-SHA-256, SCRAM-SHA-512].
+      --sasl.use-kb-build-in-sasl                   Whether to use the built-in SASL server callback handler. (default true)
       --storage float                               Data Storage size, the unit is Gi. Value range [1, 10000]. (default 10)
       --storage-class string                        The StorageClass for Kafka Data Storage.
       --storage-enable                              Enable storage for Kafka.
