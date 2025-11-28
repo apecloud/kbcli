@@ -116,7 +116,7 @@ var _ = Describe("create cluster by cluster type", func() {
 		Expect(o.Complete(mysqlCmd)).Should(Succeed())
 		Expect(o.Name).ShouldNot(BeEmpty())
 		Expect(o.Values).ShouldNot(BeNil())
-		Expect(o.ChartInfo.ClusterDef).Should(Equal(apeCloudMysql))
+		Expect(o.ChartInfo.ClusterDef).Should(Equal(clusterType))
 
 		By("validate")
 		o.Dynamic = testing.FakeDynamicClient()
