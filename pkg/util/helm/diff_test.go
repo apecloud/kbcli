@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2022-2025 ApeCloud Co., Ltd
+Copyright (C) 2022-2026 ApeCloud Co., Ltd
 
 This file is part of KubeBlocks project
 
@@ -32,7 +32,7 @@ import (
 const (
 	resourceName = "kubeblocks-opsrequest-editor-role, ClusterRole (rbac.authorization.k8s.io)"
 	exceptRemove = `--- kubeblocks-opsrequest-editor-role, ClusterRole (rbac.authorization.k8s.io) 0.5.1-fake
-+++ 
++++
 @@ -1,13 +1 @@
 -apiVersion: rbac.authorization.k8s.io/v1
 -kind: ClusterRole
@@ -46,7 +46,7 @@ const (
 -  change: 1
 -  slice:
 -  - {}
- 
+
 
 `
 	exceptAdd = `--- kubeblocks-opsrequest-editor-role, ClusterRole (rbac.authorization.k8s.io) 0.5.1-fake
@@ -299,14 +299,14 @@ data:
 		It("test OutputDiff CRD", func() {
 			crdRelease := buildRelease(crdObj)
 			Expect(OutputDiff(crdRelease, nil, "0.5.1-fake", "", &out, false)).ShouldNot(HaveOccurred())
-			Expect(out.String()).Should(Equal(`CUSTOMRESOURCEDEFINITION            MODE      
-kubeblocks-opsrequest-editor-role   Removed   
+			Expect(out.String()).Should(Equal(`CUSTOMRESOURCEDEFINITION            MODE
+kubeblocks-opsrequest-editor-role   Removed
 
 `))
 			out.Reset()
 			Expect(OutputDiff(nil, crdRelease, "", "0.5.1-fake", &out, false)).Should(Succeed())
-			Expect(out.String()).Should(Equal(`CUSTOMRESOURCEDEFINITION            MODE    
-kubeblocks-opsrequest-editor-role   Added   
+			Expect(out.String()).Should(Equal(`CUSTOMRESOURCEDEFINITION            MODE
+kubeblocks-opsrequest-editor-role   Added
 
 `))
 		})
@@ -403,9 +403,9 @@ kubeblocks-opsrequest-editor-role   Added
 			apiB := removeAPIAndAddAPI()
 			outputCRDDiff(apiA, apiB, "Fake CRD", &out)
 			Expect(out.String()).Should(Equal(`Fake CRD
-API              IS-REQUIRED   MODE      DETAILS             
-spec.newApi      false         Added                         
-spec.namespace   false         Removed   {"type":"string"}   
+API              IS-REQUIRED   MODE      DETAILS
+spec.newApi      false         Added
+spec.namespace   false         Removed   {"type":"string"}
 
 `))
 		})
@@ -414,16 +414,16 @@ spec.namespace   false         Removed   {"type":"string"}
 			apiB := modifyTheField()
 			outputCRDDiff(apiA, apiB, "Fake CRD", &out)
 			Expect(out.String()).Should(Equal(`Fake CRD
-API         IS-REQUIRED   MODE       DETAILS                                                 
-spec.name   true          Modified   {"type":"string"} -> {"maxLength":63,"type":"string"}   
+API         IS-REQUIRED   MODE       DETAILS
+spec.name   true          Modified   {"type":"string"} -> {"maxLength":63,"type":"string"}
 
 `))
 			out.Reset()
 			apiB = modifyTheRequired()
 			outputCRDDiff(apiA, apiB, "Fake CRD", &out)
 			Expect(out.String()).Should(Equal(`Fake CRD
-API         IS-REQUIRED     MODE       DETAILS   
-spec.name   true -> false   Modified             
+API         IS-REQUIRED     MODE       DETAILS
+spec.name   true -> false   Modified
 
 `))
 		})

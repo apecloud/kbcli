@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2022-2025 ApeCloud Co., Ltd
+Copyright (C) 2022-2026 ApeCloud Co., Ltd
 
 This file is part of KubeBlocks project
 
@@ -40,7 +40,7 @@ import (
 var (
 	pluginLong = templates.LongDesc(`
 	Provides utilities for interacting with plugins.
-		
+
 	Plugins provide extended functionality that is not part of the major command-line distribution.
 	`)
 

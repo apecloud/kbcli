@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2022-2025 ApeCloud Co., Ltd
+Copyright (C) 2022-2026 ApeCloud Co., Ltd
 
 This file is part of KubeBlocks project
 
@@ -62,8 +62,8 @@ var _ = Describe("index test", func() {
 	It("test index list cmd", func() {
 		Expect(newIndexListCmd(streams)).ShouldNot(BeNil())
 		Expect(listIndexes(out)).Should(Succeed())
-		expect := `INDEX        URL                                           
-kubeblocks   https://github.com/apecloud/block-index.git   
+		expect := `INDEX        URL
+kubeblocks   https://github.com/apecloud/block-index.git
 `
 		Expect(out.String()).Should(Equal(expect))
 	})

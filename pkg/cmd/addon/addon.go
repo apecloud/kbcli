@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2022-2025 ApeCloud Co., Ltd
+Copyright (C) 2022-2026 ApeCloud Co., Ltd
 
 This file is part of KubeBlocks project
 
@@ -197,15 +197,15 @@ func newEnableCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.
 		Example: templates.Examples(`
     	# Enabled "prometheus" addon
     	kbcli addon enable prometheus
-    
+
         # Enabled "prometheus" addon with custom resources settings
     	kbcli addon enable prometheus --memory 512Mi/4Gi --storage 8Gi --replicas 2
-    
-        # Enabled "prometheus" addon and its extra alertmanager component with custom resources settings 
-    	kbcli addon enable prometheus --memory 512Mi/4Gi --storage 8Gi --replicas 2 \
-  			--memory alertmanager:16Mi/256Mi --storage alertmanager:1Gi --replicas alertmanager:2 
 
-        # Enabled "prometheus" addon with tolerations 
+        # Enabled "prometheus" addon and its extra alertmanager component with custom resources settings
+    	kbcli addon enable prometheus --memory 512Mi/4Gi --storage 8Gi --replicas 2 \
+  			--memory alertmanager:16Mi/256Mi --storage alertmanager:1Gi --replicas alertmanager:2
+
+        # Enabled "prometheus" addon with tolerations
     	kbcli addon enable prometheus \
 			--tolerations '[{"key":"taintkey","operator":"Equal","effect":"NoSchedule","value":"true"}]' \
 			--tolerations 'alertmanager:[{"key":"taintkey","operator":"Equal","effect":"NoSchedule","value":"true"}]'
@@ -238,11 +238,11 @@ func newEnableCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.
 	cmd.Flags().StringArrayVar(&o.addonEnableFlags.CPUSets, "cpu", []string{},
 		"Sets addon CPU resource values (--cpu [extraName:]<request>/<limit>) (can specify multiple if has extra items))")
 	cmd.Flags().StringArrayVar(&o.addonEnableFlags.StorageSets, "storage", []string{},
-		`Sets addon storage size (--storage [extraName:]<request>) (can specify multiple if has extra items)). 
+		`Sets addon storage size (--storage [extraName:]<request>) (can specify multiple if has extra items)).
 Additional notes:
 1. Specify '0' value will remove storage values settings and explicitly disable 'persistentVolumeEnabled' attribute.
-2. For Helm type Addon, that resizing storage will fail if modified value is a storage request size 
-that belongs to StatefulSet's volume claim template, to resolve 'Failed' Addon status possible action is disable and 
+2. For Helm type Addon, that resizing storage will fail if modified value is a storage request size
+that belongs to StatefulSet's volume claim template, to resolve 'Failed' Addon status possible action is disable and
 re-enable the addon (More info on how-to resize a PVC: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources).
 `)
 	cmd.Flags().StringArrayVar(&o.addonEnableFlags.ReplicaCountSets, "replicas", []string{},

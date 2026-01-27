@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2022-2025 ApeCloud Co., Ltd
+Copyright (C) 2022-2026 ApeCloud Co., Ltd
 
 This file is part of KubeBlocks project
 
@@ -41,7 +41,7 @@ import (
 
 var addonUpgradeExample = templates.Examples(`
 	# upgrade an addon from default index to latest version
-	kbcli addon upgrade apecloud-mysql 
+	kbcli addon upgrade apecloud-mysql
 
 	# upgrade an addon from default index to latest version and skip KubeBlocks version compatibility check
 	kbcli addon upgrade apecloud-mysql --force
@@ -49,7 +49,7 @@ var addonUpgradeExample = templates.Examples(`
 	# upgrade an addon to latest version from a specified index
 	kbcli addon upgrade apecloud-mysql --index my-index
 
-	# upgrade an addon with a specified version default index 
+	# upgrade an addon with a specified version default index
 	kbcli addon upgrade apecloud-mysql --version 0.7.0
 
 	# upgrade an addon with a specified version, default index and a different version of cluster chart

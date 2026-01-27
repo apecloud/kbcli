@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2022-2025 ApeCloud Co., Ltd
+Copyright (C) 2022-2026 ApeCloud Co., Ltd
 
 This file is part of KubeBlocks project
 
@@ -36,7 +36,7 @@ import (
 )
 
 var clusterCreateExample = templates.Examples(`
-	# Create a postgresql 
+	# Create a postgresql
 	kbcli cluster create postgresql my-cluster
 
    # Get the cluster yaml by dry-run

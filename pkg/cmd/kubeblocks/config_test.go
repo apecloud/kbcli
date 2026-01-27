@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2022-2025 ApeCloud Co., Ltd
+Copyright (C) 2022-2026 ApeCloud Co., Ltd
 
 This file is part of KubeBlocks project
 
@@ -193,21 +193,21 @@ var _ = Describe("backupconfig", func() {
 			output = printer.Table
 			err := describeConfig(o, output, mockHelmConfig)
 			Expect(err).Should(Succeed())
-			expect := `KEY                                VALUE                                   
-cloudProvider.accessKey            "******"                                
-dnsPolicy                          "ClusterFirst"                          
-fullnameOverride                   ""                                      
-hostNetwork                        false                                   
-keepAddons                         false                                   
-loggerSettings.developmentMode     false                                   
-loggerSettings.encoder             "console"                               
-loggerSettings.timeEncoding        "iso8601"                               
-nameOverride                       ""                                      
-podDisruptionBudget.minAvailable   1                                       
-priorityClassName                  <nil>                                   
-replicaCount                       1                                       
-updateStrategy.rollingUpdate       {"maxSurge":1,"maxUnavailable":"40%"}   
-updateStrategy.type                "RollingUpdate"                         
+			expect := `KEY                                VALUE
+cloudProvider.accessKey            "******"
+dnsPolicy                          "ClusterFirst"
+fullnameOverride                   ""
+hostNetwork                        false
+keepAddons                         false
+loggerSettings.developmentMode     false
+loggerSettings.encoder             "console"
+loggerSettings.timeEncoding        "iso8601"
+nameOverride                       ""
+podDisruptionBudget.minAvailable   1
+priorityClassName                  <nil>
+replicaCount                       1
+updateStrategy.rollingUpdate       {"maxSurge":1,"maxUnavailable":"40%"}
+updateStrategy.type                "RollingUpdate"
 `
 			Expect(out.String()).Should(Equal(expect))
 		})
