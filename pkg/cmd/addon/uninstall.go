@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2022-2025 ApeCloud Co., Ltd
+Copyright (C) 2022-2026 ApeCloud Co., Ltd
 
 This file is part of KubeBlocks project
 
@@ -35,8 +35,8 @@ import (
 )
 
 var addonUninstallExample = templates.Examples(`
-	# uninstall an addon 
-	kbcli addon uninstall apecloud-mysql 
+	# uninstall an addon
+	kbcli addon uninstall apecloud-mysql
 
 	# uninstall more than one addons
 	kbcli addon uninstall apecloud-mysql postgresql

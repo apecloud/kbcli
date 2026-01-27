@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2022-2025 ApeCloud Co., Ltd
+Copyright (C) 2022-2026 ApeCloud Co., Ltd
 
 This file is part of KubeBlocks project
 
@@ -1065,7 +1065,7 @@ func buildCustomOpsExamples(t unstructured.Unstructured) string {
 	parametersSchema := opsDef.Spec.ParametersSchema
 	commandName := strcase.KebabCase(t.GetName())
 	baseCommand := fmt.Sprintf(`
-	# Create a %s ops 
+	# Create a %s ops
 	kbcli cluster custom-ops %s <clusterName> --component <componentName>`, commandName, commandName)
 	if parametersSchema == nil {
 		return templates.Examples(baseCommand)

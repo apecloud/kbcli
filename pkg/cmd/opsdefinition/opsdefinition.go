@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2022-2025 ApeCloud Co., Ltd
+Copyright (C) 2022-2026 ApeCloud Co., Ltd
 
 This file is part of KubeBlocks project
 
@@ -33,7 +33,7 @@ import (
 var listExample = templates.Examples(`
 		# list all ops-definitions
 		kbcli ops-definition list
-	
+
 		# list all ops-definitions by alias
 		kbcli ops-def list
 `)

@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2022-2025 ApeCloud Co., Ltd
+Copyright (C) 2022-2026 ApeCloud Co., Ltd
 
 This file is part of KubeBlocks project
 
@@ -42,10 +42,10 @@ import (
 
 var (
 	deleteOpsExample = templates.Examples(`
-		# delete all ops belong the specified cluster 
+		# delete all ops belong the specified cluster
 		kbcli cluster delete-ops mycluster
 
-		# delete the specified ops belong the specify cluster 
+		# delete the specified ops belong the specify cluster
 		kbcli cluster delete-ops --name=mysql-restart-82zxv
 `)
 )

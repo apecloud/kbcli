@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2022-2025 ApeCloud Co., Ltd
+Copyright (C) 2022-2026 ApeCloud Co., Ltd
 
 This file is part of KubeBlocks project
 
@@ -51,7 +51,7 @@ var (
 		kbcli dp restore mybackup --cluster cluster-name`)
 
 	describeRestoreExample = templates.Examples(`
-		# describe a restore 
+		# describe a restore
 		kbcli dp describe-restore <restoreName>`)
 
 	listRestoreExample = templates.Examples(`
