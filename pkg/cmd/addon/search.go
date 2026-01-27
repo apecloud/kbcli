@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2022-2025 ApeCloud Co., Ltd
+Copyright (C) 2022-2026 ApeCloud Co., Ltd
 
 This file is part of KubeBlocks project
 
@@ -47,7 +47,7 @@ var addonSearchExample = templates.Examples(`
 	# search the addons of all index
 	kbcli addon search
 
-	# search the addons from a specified local path 
+	# search the addons from a specified local path
 	kbcli addon search --path /path/to/local/chart
 
 	# search different versions and indexes of an addon

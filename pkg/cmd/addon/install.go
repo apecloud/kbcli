@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2022-2025 ApeCloud Co., Ltd
+Copyright (C) 2022-2026 ApeCloud Co., Ltd
 
 This file is part of KubeBlocks project
 
@@ -57,7 +57,7 @@ import (
 
 var addonInstallExample = templates.Examples(`
 	# install an addon from default index
-	kbcli addon install apecloud-mysql 
+	kbcli addon install apecloud-mysql
 
 	# install an addon from default index and skip KubeBlocks version compatibility check
 	kbcli addon install apecloud-mysql --force

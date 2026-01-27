@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2022-2025 ApeCloud Co., Ltd
+Copyright (C) 2022-2026 ApeCloud Co., Ltd
 
 This file is part of KubeBlocks project
 
@@ -42,7 +42,7 @@ var (
 	listVersionsExample = templates.Examples(`
 	# list KubeBlocks release versions
 	kbcli kubeblocks list-versions
-	
+
 	# list KubeBlocks versions including development versions, such as alpha, beta and release candidate
 	kbcli kubeblocks list-versions --devel`)
 )
