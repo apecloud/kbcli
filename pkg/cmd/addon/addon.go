@@ -32,6 +32,7 @@ import (
 	extensionsv1alpha1 "github.com/apecloud/kubeblocks/apis/extensions/v1alpha1"
 	"github.com/apecloud/kubeblocks/pkg/constant"
 	viper "github.com/apecloud/kubeblocks/pkg/viperx"
+	"github.com/fatih/color"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -49,7 +50,6 @@ import (
 	"k8s.io/utils/strings/slices"
 
 	"github.com/apecloud/kbcli/pkg/action"
-	clusterCmd "github.com/apecloud/kbcli/pkg/cmd/cluster"
 	"github.com/apecloud/kbcli/pkg/cmd/plugin"
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
@@ -228,7 +228,13 @@ func newEnableCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.
 				util.CheckErr(o.PatchOptions.CmdComplete(cmd))
 				util.CheckErr(o.PatchOptions.Run())
 				if isEngineAddon(&o.addon) {
-					util.CheckErr(clusterCmd.RegisterClusterChart(f, streams, "", name, getAddonVersion(&o.addon), types.ClusterChartsRepoURL))
+					fmt.Fprintf(o.Out, "addon %s enabled successfully\n", name)
+					fmt.Fprintf(o.Out, "You can run the following command to register a cluster:\n")
+					msg := color.GreenString(fmt.Sprintf("  kbcli cluster register %s --engine %s --repo %s --version <cluster-chart-version>\n", name, name, types.ClusterChartsRepoURL))
+					fmt.Fprintf(o.Out, msg)
+					fmt.Fprintf(o.Out, "To find available cluster chart versions, run:\n")
+					msg = color.GreenString(fmt.Sprintf("  helm search repo kubeblocks-addons/%s-cluster --versions\n", name))
+					fmt.Fprintf(o.Out, msg)
 				}
 			}
 		},

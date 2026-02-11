@@ -29,6 +29,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
 	"github.com/apecloud/kubeblocks/pkg/constant"
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	helmaction "helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart/loader"
@@ -48,7 +49,6 @@ import (
 	extensionsv1alpha1 "github.com/apecloud/kubeblocks/apis/extensions/v1alpha1"
 
 	"github.com/apecloud/kbcli/pkg/cluster"
-	clusterCmd "github.com/apecloud/kbcli/pkg/cmd/cluster"
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
 	"github.com/apecloud/kbcli/pkg/util"
@@ -149,9 +149,12 @@ func newInstallCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 			util.CheckErr(o.Run(f, streams))
 			// avoid unnecessary messages for upgrade
 			fmt.Fprintf(o.Out, "addon %s installed successfully\n", o.name)
-			if err := clusterCmd.RegisterClusterChart(f, streams, "", o.name, o.clusterChartVersion, o.clusterChartRepo); err != nil {
-				util.CheckErr(err)
-			}
+			fmt.Fprintf(o.Out, "You can run the following command to register a cluster:\n")
+			msg := color.GreenString(fmt.Sprintf("  kbcli cluster register %s --engine %s --repo %s --version <cluster-chart-version>\n", o.name, o.name, o.clusterChartRepo))
+			fmt.Fprintf(o.Out, msg)
+			fmt.Fprintf(o.Out, "To find available cluster chart versions, run:\n")
+			msg = color.GreenString(fmt.Sprintf("  helm search repo kubeblocks-addons/%s-cluster --versions\n", o.name))
+			fmt.Fprintf(o.Out, msg)
 		},
 	}
 	cmd.Flags().BoolVar(&o.force, "force", false, "force install the addon and ignore the version check")
