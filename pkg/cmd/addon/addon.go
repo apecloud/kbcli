@@ -230,9 +230,9 @@ func newEnableCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.
 				if isEngineAddon(&o.addon) {
 					fmt.Fprintf(o.Out, "addon %s enabled successfully\n", name)
 					fmt.Fprintf(o.Out, "You can run the following command to register a cluster:\n")
-					fmt.Fprintf(o.Out, color.GreenString(fmt.Sprintf("  kbcli cluster register %s --engine %s --repo %s --version <cluster-chart-version>\n", name, name, types.ClusterChartsRepoURL)))
+					fmt.Fprint(o.Out, color.GreenString(fmt.Sprintf("  kbcli cluster register %s --engine %s --repo %s --version <cluster-chart-version>\n", name, name, types.ClusterChartsRepoURL)))
 					fmt.Fprintf(o.Out, "To find available cluster chart versions, run:\n")
-					fmt.Fprintf(o.Out, color.GreenString(fmt.Sprintf("  helm search repo kubeblocks-addons/%s-cluster --versions\n", name)))
+					fmt.Fprint(o.Out, color.GreenString(fmt.Sprintf("  helm search repo kubeblocks-addons/%s-cluster --versions\n", name)))
 				}
 			}
 		},
