@@ -150,11 +150,9 @@ func newInstallCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 			// avoid unnecessary messages for upgrade
 			fmt.Fprintf(o.Out, "addon %s installed successfully\n", o.name)
 			fmt.Fprintf(o.Out, "You can run the following command to register a cluster:\n")
-			msg := color.GreenString(fmt.Sprintf("  kbcli cluster register %s --engine %s --repo %s --version <cluster-chart-version>\n", o.name, o.name, o.clusterChartRepo))
-			fmt.Fprintf(o.Out, msg)
+			fmt.Fprintf(o.Out, color.GreenString(fmt.Sprintf("  kbcli cluster register %s --engine %s --repo %s --version <cluster-chart-version>\n", o.name, o.name, o.clusterChartRepo)))
 			fmt.Fprintf(o.Out, "To find available cluster chart versions, run:\n")
-			msg = color.GreenString(fmt.Sprintf("  helm search repo kubeblocks-addons/%s-cluster --versions\n", o.name))
-			fmt.Fprintf(o.Out, msg)
+			fmt.Fprintf(o.Out, color.GreenString(fmt.Sprintf("  helm search repo kubeblocks-addons/%s-cluster --versions\n", o.name)))
 		},
 	}
 	cmd.Flags().BoolVar(&o.force, "force", false, "force install the addon and ignore the version check")
