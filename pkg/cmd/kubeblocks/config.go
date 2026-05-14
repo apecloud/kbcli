@@ -107,7 +107,7 @@ func configKBRelease(o *InstallOptions) error {
 	if kbRelease != nil && kbRelease.Chart != nil && kbRelease.Chart.Metadata != nil {
 		kbVersion = kbRelease.Chart.Metadata.Version
 	}
-	s := spinner.New(o.Out, spinnerMsg("Config KubeBlocks "+kbVersion))
+	s := spinner.New(o.Out, spinnerMsg("Config KubeBlocks %s", kbVersion))
 	defer s.Fail()
 	o.disableHelmPreHookJob()
 	// upgrade KubeBlocks chart
