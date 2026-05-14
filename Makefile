@@ -131,7 +131,7 @@ mod-download: ## Run go mod download against go modules.
 
 .PHONY: module
 module: ## Run go mod tidy->verify against go modules.
-	$(GO) mod tidy -compat=1.24
+	$(GO) mod tidy -compat=1.25
 	$(GO) mod verify
 
 TEST_PACKAGES ?= ./pkg/... ./cmd/...
@@ -257,16 +257,19 @@ install-docker-buildx: ## Create `docker buildx` builder.
 	fi
 
 .PHONY: golangci
-golangci: GOLANGCILINT_VERSION = v1.64.8
+golangci: GOLANGCILINT_VERSION = v2.8.0
 golangci: ## Download golangci-lint locally if necessary.
-ifneq ($(shell which golangci-lint),)
+ifeq ($(shell golangci-lint version >/dev/null 2>&1 && echo ok),ok)
 	@echo golangci-lint is already installed
 GOLANGCILINT=$(shell which golangci-lint)
 else ifeq (, $(shell which $(GOBIN)/golangci-lint))
 	@{ \
 	set -e ;\
 	echo 'installing golangci-lint-$(GOLANGCILINT_VERSION)' ;\
-	curl -sSfL $(GITHUB_PROXY)https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOBIN) $(GOLANGCILINT_VERSION) ;\
+	tmpfile=$$(mktemp) ;\
+	trap 'rm -f "$$tmpfile"' EXIT ;\
+	curl -sSfL https://golangci-lint.run/install.sh -o "$$tmpfile" ;\
+	sh "$$tmpfile" -b $(GOBIN) $(GOLANGCILINT_VERSION) ;\
 	echo 'Successfully installed' ;\
 	}
 GOLANGCILINT=$(GOBIN)/golangci-lint

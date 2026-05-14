@@ -123,7 +123,7 @@ func readClusterInfoFromFile(path string) (*cp.K8sClusterInfo, error) {
 }
 
 func writeAndUseKubeConfig(kubeConfig string, kubeConfigPath string, out io.Writer) error {
-	s := spinner.New(out, spinnerMsg("Write kubeconfig to "+kubeConfigPath))
+	s := spinner.New(out, spinnerMsg("Write kubeconfig to %s", kubeConfigPath))
 	defer s.Fail()
 	if err := kubeConfigWrite(kubeConfig, kubeConfigPath, writeKubeConfigOptions{
 		UpdateExisting:       true,
