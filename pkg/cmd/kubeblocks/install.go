@@ -299,7 +299,7 @@ func (o *InstallOptions) Install() error {
 	s.Success()
 
 	// add helm repo
-	s = spinner.New(o.Out, spinnerMsg("Add and update repo "+types.KubeBlocksRepoName))
+	s = spinner.New(o.Out, spinnerMsg("Add and update repo %s", types.KubeBlocksRepoName))
 	defer s.Fail()
 	// Add repo, if exists, will update it
 	if err = helm.AddRepo(newHelmRepoEntry()); err != nil {
@@ -308,7 +308,7 @@ func (o *InstallOptions) Install() error {
 	s.Success()
 
 	// install KubeBlocks
-	s = spinner.New(o.Out, spinnerMsg("Install KubeBlocks "+o.Version))
+	s = spinner.New(o.Out, spinnerMsg("Install KubeBlocks %s", o.Version))
 	defer s.Fail()
 
 	getImageRegistry := func() string {
@@ -460,7 +460,7 @@ func (o *InstallOptions) waitAddonsEnabled() error {
 	msg := ""
 	header := "Wait for addons to be enabled"
 	failedErr := errors.New("some addons are failed to be enabled")
-	s := spinner.New(o.Out, spinnerMsg(header))
+	s := spinner.New(o.Out, spinnerMsg("Wait for addons to be enabled"))
 
 	var (
 		spinnerDone = func() {

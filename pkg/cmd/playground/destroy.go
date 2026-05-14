@@ -104,7 +104,7 @@ func (o *destroyOptions) destroy() error {
 // destroyLocal destroy local k3d cluster that will destroy all resources
 func (o *destroyOptions) destroyLocal() error {
 	provider, _ := cp.New(cp.Local, "", o.Out, o.ErrOut)
-	s := spinner.New(o.Out, spinnerMsg("Delete playground k3d cluster "+o.prevCluster.ClusterName))
+	s := spinner.New(o.Out, spinnerMsg("Delete playground k3d cluster %s", o.prevCluster.ClusterName))
 	defer s.Fail()
 	if err := provider.DeleteK8sCluster(o.prevCluster); err != nil {
 		if !strings.Contains(err.Error(), "no cluster found") &&
@@ -358,7 +358,7 @@ func (o *destroyOptions) uninstallKubeBlocks(client kubernetes.Interface, dynami
 }
 
 func (o *destroyOptions) removeKubeConfig() error {
-	s := spinner.New(o.Out, spinnerMsg("Remove kubeconfig from "+defaultKubeConfigPath))
+	s := spinner.New(o.Out, spinnerMsg("Remove kubeconfig from %s", defaultKubeConfigPath))
 	defer s.Fail()
 	if err := kubeConfigRemove(o.prevCluster.KubeConfig, defaultKubeConfigPath); err != nil {
 		if os.IsNotExist(err) {
