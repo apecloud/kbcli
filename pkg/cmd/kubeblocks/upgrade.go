@@ -178,7 +178,7 @@ func (o *InstallOptions) Upgrade() error {
 	}
 
 	// add helm repo
-	s := spinner.New(o.Out, spinnerMsg("Add and update repo "+types.KubeBlocksChartName))
+	s := spinner.New(o.Out, spinnerMsg("Add and update repo %s", types.KubeBlocksChartName))
 	defer s.Fail()
 	// Add repo, if exists, will update it
 	if err = helm.AddRepo(newHelmRepoEntry()); err != nil {
@@ -200,7 +200,7 @@ func (o *InstallOptions) Upgrade() error {
 		// stop the old version KubeBlocks, otherwise the old version KubeBlocks will reconcile the
 		// new version resources, which may be not compatible. helm will start the new version
 		// KubeBlocks after upgrade.
-		s = spinner.New(o.Out, spinnerMsg("Stop KubeBlocks "+kbVersion))
+		s = spinner.New(o.Out, spinnerMsg("Stop KubeBlocks %s", kbVersion))
 		if err = o.stopDeployment(s, util.GetKubeBlocksDeploy); err != nil {
 			return err
 		}
@@ -244,7 +244,7 @@ func (o *InstallOptions) Upgrade() error {
 		s.Success()
 	}
 
-	s = spinner.New(o.Out, spinnerMsg("Upgrading KubeBlocks "+msg))
+	s = spinner.New(o.Out, spinnerMsg("Upgrading KubeBlocks %s", msg))
 	defer s.Fail()
 	o.disableHelmPreHookJob()
 	// upgrade KubeBlocks chart
