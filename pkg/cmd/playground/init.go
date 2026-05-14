@@ -227,7 +227,7 @@ func (o *initOptions) local() error {
 	}
 
 	// create a local kubernetes cluster (k3d cluster) to deploy KubeBlocks
-	s := spinner.New(o.Out, spinnerMsg("Create k3d cluster: "+clusterInfo.ClusterName))
+	s := spinner.New(o.Out, spinnerMsg("Create k3d cluster: %s", clusterInfo.ClusterName))
 	defer s.Fail()
 	if err = provider.CreateK8sCluster(clusterInfo); err != nil {
 		return errors.Wrap(err, "failed to set up k3d cluster")
@@ -379,7 +379,7 @@ func (o *initOptions) writeStateFile(provider cp.Interface) (*cp.K8sClusterInfo,
 
 // merge created kubernetes cluster kubeconfig to ~/.kube/config and set it as default
 func (o *initOptions) setKubeConfig(info *cp.K8sClusterInfo) error {
-	s := spinner.New(o.Out, spinnerMsg("Merge kubeconfig to "+defaultKubeConfigPath))
+	s := spinner.New(o.Out, spinnerMsg("Merge kubeconfig to %s", defaultKubeConfigPath))
 	defer s.Fail()
 
 	// check if the default kubeconfig file exists, if not, create it
@@ -399,7 +399,7 @@ func (o *initOptions) setKubeConfig(info *cp.K8sClusterInfo) error {
 	s.Success()
 
 	currentContext, err := kubeConfigCurrentContext(info.KubeConfig)
-	s = spinner.New(o.Out, spinnerMsg("Switch current context to "+currentContext))
+	s = spinner.New(o.Out, spinnerMsg("Switch current context to %s", currentContext))
 	defer s.Fail()
 	if err != nil {
 		return err

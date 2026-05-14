@@ -85,7 +85,7 @@ func (o *InstallOptions) preInstallWhenUpgradeFrom09() error {
 			deploy := &kbDeploys[i]
 			kbVersion := deploy.Labels[constant.AppVersionLabelKey]
 			o.kb09Namespace = deploy.Namespace
-			s := spinner.New(o.Out, spinnerMsg(fmt.Sprintf("Stop %s %s", msgKey, kbVersion)))
+			s := spinner.New(o.Out, spinnerMsg("Stop %s %s", msgKey, kbVersion))
 			if err = o.stopDeploymentObject(s, deploy); err != nil {
 				return err
 			}
