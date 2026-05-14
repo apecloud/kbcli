@@ -1,8 +1,8 @@
 module github.com/apecloud/kbcli
 
-go 1.24.0
+go 1.25.0
 
-toolchain go1.24.9
+toolchain go1.25.10
 
 require (
 	cuelang.org/go v0.8.0
