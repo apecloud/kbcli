@@ -48,10 +48,7 @@ var _ = Describe("kubeblocks", func() {
 		cmd = NewKubeBlocksCmd(tf, streams)
 		Expect(cmd).ShouldNot(BeNil())
 		Expect(cmd.HasSubCommands()).Should(BeTrue())
-	})
-
-	It("preflight", func() {
-		cmd := NewPreflightCmd(tf, streams)
-		Expect(cmd).ShouldNot(BeNil())
+		_, _, err := cmd.Find([]string{"preflight"})
+		Expect(err).Should(HaveOccurred())
 	})
 })

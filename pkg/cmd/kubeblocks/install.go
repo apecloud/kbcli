@@ -30,7 +30,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/replicatedhq/troubleshoot/pkg/preflight"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"golang.org/x/exp/maps"
@@ -113,9 +112,6 @@ var (
 	# Install KubeBlocks with specified version
 	kbcli kubeblocks install --version=0.4.0
 
-	# Install KubeBlocks with ignoring preflight checks
-	kbcli kubeblocks install --force
-
 	# Install KubeBlocks with specified namespace, if the namespace is not present, it will be created
 	kbcli kubeblocks install --namespace=my-namespace --create-namespace
 
@@ -134,13 +130,6 @@ func newInstallCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 		},
 	}
 
-	p := &PreflightOptions{
-		PreflightFlags: preflight.NewPreflightFlags(),
-		IOStreams:      streams,
-	}
-	*p.Interactive = false
-	*p.Format = "kbcli"
-
 	cmd := &cobra.Command{
 		Use:     "install",
 		Short:   "Install KubeBlocks.",
@@ -150,7 +139,6 @@ func newInstallCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 			util.CheckErr(o.Complete(f, cmd))
 			util.CheckErr(o.PreCheck())
 			util.CheckErr(o.CompleteInstallOptions())
-			util.CheckErr(p.Preflight(f, args, o.ValueOpts))
 			util.CheckErr(o.Install())
 		},
 	}
@@ -162,7 +150,6 @@ func newInstallCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 	cmd.Flags().DurationVar(&o.Timeout, "timeout", 1800*time.Second, "Time to wait for installing KubeBlocks, such as --timeout=10m")
 	cmd.Flags().BoolVar(&o.Wait, "wait", true, "Wait for KubeBlocks to be ready, including all the auto installed add-ons. It will wait for a --timeout period")
 	cmd.Flags().BoolVar(&o.WaitAddons, "wait-addons", true, "Wait for auto installed add-ons. It will wait for a --timeout period")
-	cmd.Flags().BoolVar(&p.force, flagForce, p.force, "If present, just print fail item and continue with the following steps")
 	cmd.Flags().StringVar(&o.PodAntiAffinity, "pod-anti-affinity", "", "Pod anti-affinity type, one of: (Preferred, Required)")
 	cmd.Flags().StringArrayVar(&o.TopologyKeys, "topology-keys", nil, "Topology keys for affinity")
 	cmd.Flags().StringToStringVar(&o.NodeLabels, "node-labels", nil, "Node label selector")
