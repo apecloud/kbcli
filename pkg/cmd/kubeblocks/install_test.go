@@ -67,6 +67,7 @@ var _ = Describe("kubeblocks install", func() {
 		cmd = newInstallCmd(tf, streams)
 		Expect(cmd).ShouldNot(BeNil())
 		Expect(cmd.HasSubCommands()).Should(BeFalse())
+		Expect(cmd.Flags().Lookup("force")).Should(BeNil())
 
 		o := &InstallOptions{
 			Options: Options{
