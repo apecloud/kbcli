@@ -20,19 +20,62 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package preflight
 
 import (
+	troubleshoot "github.com/replicatedhq/troubleshoot/pkg/apis/troubleshoot/v1beta2"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("load_spec_test", func() {
 	It("LoadPreflightSpec test, and expect success", func() {
-		yamlCheckFiles := []string{"../testing/testdata/preflight.yaml", "..//testing/testdata/hostpreflight.yaml"}
+		yamlCheckFiles := []string{"../testing/testdata/preflight.yaml"}
 		Eventually(func(g Gomega) {
-			preflightSpec, hostPreflightSpec, preflightName, err := LoadPreflightSpec(yamlCheckFiles, nil)
+			preflightSpec, preflightName, err := LoadPreflightSpec(yamlCheckFiles, nil)
 			g.Expect(err).NotTo(HaveOccurred())
 			g.Expect(len(preflightSpec.Spec.Analyzers)).Should(Equal(1))
-			g.Expect(len(hostPreflightSpec.Spec.Analyzers)).Should(Equal(1))
 			g.Expect(preflightName).NotTo(BeNil())
 		}).Should(Succeed())
+	})
+
+	It("LoadPreflightSpec parses native troubleshoot preflight specs without requiring apiVersion", func() {
+		preflightYAML := []byte(`
+kind: Preflight
+metadata:
+  name: internal-preflight
+spec:
+  analyzers:
+    - clusterVersion:
+        outcomes:
+          - pass:
+              message: ok
+`)
+
+		preflightSpec, preflightName, err := LoadPreflightSpec(nil, [][]byte{preflightYAML})
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(preflightSpec).NotTo(BeNil())
+		Expect(preflightSpec).To(BeAssignableToTypeOf(&troubleshoot.Preflight{}))
+		Expect(preflightSpec.Name).To(Equal("internal-preflight"))
+		Expect(preflightName).To(Equal("internal-preflight"))
+	})
+
+	It("LoadPreflightSpec rejects host preflight specs", func() {
+		hostPreflightYAML := []byte(`
+kind: HostPreflight
+metadata:
+  name: internal-host-preflight
+spec:
+  analyzers:
+    - cpu:
+        outcomes:
+          - pass:
+              message: ok
+`)
+
+		preflightSpec, preflightName, err := LoadPreflightSpec(nil, [][]byte{hostPreflightYAML})
+
+		Expect(err).To(MatchError(`unsupported preflight kind "HostPreflight"`))
+		Expect(preflightSpec).To(BeNil())
+		Expect(preflightName).To(BeEmpty())
 	})
 })

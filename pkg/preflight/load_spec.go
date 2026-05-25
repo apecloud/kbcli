@@ -20,52 +20,51 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package preflight
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/pkg/errors"
-	"k8s.io/client-go/kubernetes/scheme"
-
-	preflightv1beta2 "github.com/apecloud/kubeblocks/externalapis/preflight/v1beta2"
+	troubleshoot "github.com/replicatedhq/troubleshoot/pkg/apis/troubleshoot/v1beta2"
+	"k8s.io/apimachinery/pkg/util/yaml"
 
 	"github.com/apecloud/kbcli/pkg/cmd/cluster"
-	"github.com/apecloud/kbcli/pkg/preflight/util"
 )
 
-// LoadPreflightSpec loads content of preflightSpec and hostPreflightSpec against yamlFiles from args
-func LoadPreflightSpec(checkFileList []string, checkYamlData [][]byte) (*preflightv1beta2.Preflight, *preflightv1beta2.HostPreflight, string, error) {
+type preflightKind struct {
+	Kind string `json:"kind"`
+}
+
+// LoadPreflightSpec loads preflight specs from args.
+func LoadPreflightSpec(checkFileList []string, checkYamlData [][]byte) (*troubleshoot.Preflight, string, error) {
 	var (
-		preflightSpec     *preflightv1beta2.Preflight
-		hostPreflightSpec *preflightv1beta2.HostPreflight
-		preflightContent  []byte
-		preflightName     string
-		err               error
+		preflightSpec    *troubleshoot.Preflight
+		preflightContent []byte
+		preflightName    string
+		err              error
 	)
 	for _, fileName := range checkFileList {
 		// support to load yaml from stdin, local file and URI
 		if preflightContent, err = cluster.MultipleSourceComponents(fileName, os.Stdin); err != nil {
-			return preflightSpec, hostPreflightSpec, preflightName, err
+			return preflightSpec, preflightName, err
 		}
 		checkYamlData = append(checkYamlData, preflightContent)
 	}
 	for _, yamlData := range checkYamlData {
-		obj, _, err := scheme.Codecs.UniversalDeserializer().Decode(yamlData, nil, nil)
-		if err != nil {
-			return preflightSpec, hostPreflightSpec, preflightName, errors.Wrapf(err, "failed to parse %s", string(yamlData))
+		var kind preflightKind
+		if err = yaml.Unmarshal(yamlData, &kind); err != nil {
+			return preflightSpec, preflightName, errors.Wrapf(err, "failed to parse %s", string(yamlData))
 		}
-		if spec, ok := obj.(*preflightv1beta2.Preflight); ok {
+		switch kind.Kind {
+		case "Preflight":
+			spec := new(troubleshoot.Preflight)
+			if err = yaml.Unmarshal(yamlData, spec); err != nil {
+				return preflightSpec, preflightName, errors.Wrapf(err, "failed to parse %s", string(yamlData))
+			}
 			preflightSpec = ConcatPreflightSpec(preflightSpec, spec)
 			preflightName = preflightSpec.Name
-		} else if spec, ok := obj.(*preflightv1beta2.HostPreflight); ok {
-			hostPreflightSpec = ConcatHostPreflightSpec(hostPreflightSpec, spec)
-			preflightName = hostPreflightSpec.Name
+		default:
+			return preflightSpec, preflightName, fmt.Errorf("unsupported preflight kind %q", kind.Kind)
 		}
 	}
-	return preflightSpec, hostPreflightSpec, preflightName, nil
-}
-
-func init() {
-	// register the scheme of troubleshoot API and decode function
-	if err := util.AddToScheme(scheme.Scheme); err != nil {
-		return
-	}
+	return preflightSpec, preflightName, nil
 }
