@@ -91,7 +91,6 @@ require (
 	cloud.google.com/go/monitoring v1.24.3 // indirect
 	cloud.google.com/go/storage v1.61.3 // indirect
 	cuelabs.dev/go/oci/ociregistry v0.0.0-20240314152124-224736b49f2e // indirect
-	cyphar.com/go-pathrs v0.2.1 // indirect
 	dario.cat/mergo v1.0.2 // indirect
 	filippo.io/edwards25519 v1.1.1 // indirect
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20240806141605-e8a1dd7889d6 // indirect
@@ -405,6 +404,8 @@ require (
 )
 
 replace (
+	github.com/cyphar/filepath-securejoin => github.com/cyphar/filepath-securejoin v0.5.1
+
 	k8s.io/api => k8s.io/api v0.29.14
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.29.14
 	k8s.io/apimachinery => k8s.io/apimachinery v0.29.14
