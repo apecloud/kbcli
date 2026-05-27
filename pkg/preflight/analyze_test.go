@@ -27,8 +27,6 @@ import (
 
 	troubleshoot "github.com/replicatedhq/troubleshoot/pkg/apis/troubleshoot/v1beta2"
 
-	preflightv1beta2 "github.com/apecloud/kubeblocks/externalapis/preflight/v1beta2"
-
 	preflightTesting "github.com/apecloud/kbcli/pkg/preflight/testing"
 )
 
@@ -37,26 +35,19 @@ var _ = Describe("analyze_test", func() {
 		ctx              context.Context
 		allCollectedData map[string][]byte
 		analyzers        []*troubleshoot.Analyze
-		kbAnalyzers      []*preflightv1beta2.ExtendAnalyze
-		hostAnalyzers    []*troubleshoot.HostAnalyze
-		kbhHostAnalyzers []*preflightv1beta2.ExtendHostAnalyze
 	)
 
 	BeforeEach(func() {
 		ctx = context.TODO()
 		allCollectedData = preflightTesting.FakeCollectedData()
 		analyzers = preflightTesting.FakeAnalyzers()
-		kbAnalyzers = []*preflightv1beta2.ExtendAnalyze{{}}
-		hostAnalyzers = []*troubleshoot.HostAnalyze{{}}
-		kbhHostAnalyzers = []*preflightv1beta2.ExtendHostAnalyze{{}}
 	})
 
 	It("doAnalyze test, and expect success", func() {
 		Eventually(func(g Gomega) {
-			analyzeList := doAnalyze(ctx, allCollectedData, analyzers, kbAnalyzers, hostAnalyzers, kbhHostAnalyzers, nil)
-			g.Expect(len(analyzeList)).Should(Equal(4))
+			analyzeList := doAnalyze(ctx, allCollectedData, analyzers, nil)
+			g.Expect(len(analyzeList)).Should(Equal(1))
 			g.Expect(analyzeList[0].IsPass).Should(Equal(true))
-			g.Expect(analyzeList[1].IsFail).Should(Equal(true))
 		}).Should(Succeed())
 	})
 })

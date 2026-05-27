@@ -256,13 +256,16 @@ install-docker-buildx: ## Create `docker buildx` builder.
 		echo "Buildx builder $(BUILDX_BUILDER) already exists"; \
 	fi
 
+GOLANGCILINT_VERSION ?= v2.8.0
+GOLANGCILINT_EXPECTED_VERSION = $(patsubst v%,%,$(GOLANGCILINT_VERSION))
+GOLANGCILINT_GOBIN_VERSION = $(shell [ -x "$(GOBIN)/golangci-lint" ] && $(GOBIN)/golangci-lint version 2>/dev/null | sed -n 's/.*version \([0-9.]*\).*/\1/p' | head -1)
+
 .PHONY: golangci
-golangci: GOLANGCILINT_VERSION = v2.8.0
 golangci: ## Download golangci-lint locally if necessary.
-ifeq ($(shell golangci-lint version >/dev/null 2>&1 && echo ok),ok)
-	@echo golangci-lint is already installed
-GOLANGCILINT=$(shell which golangci-lint)
-else ifeq (, $(shell which $(GOBIN)/golangci-lint))
+ifeq ($(GOLANGCILINT_EXPECTED_VERSION),$(GOLANGCILINT_GOBIN_VERSION))
+	@echo golangci-lint $(GOLANGCILINT_VERSION) is already installed
+GOLANGCILINT=$(GOBIN)/golangci-lint
+else
 	@{ \
 	set -e ;\
 	echo 'installing golangci-lint-$(GOLANGCILINT_VERSION)' ;\
@@ -272,9 +275,6 @@ else ifeq (, $(shell which $(GOBIN)/golangci-lint))
 	sh "$$tmpfile" -b $(GOBIN) $(GOLANGCILINT_VERSION) ;\
 	echo 'Successfully installed' ;\
 	}
-GOLANGCILINT=$(GOBIN)/golangci-lint
-else
-	@echo golangci-lint is already installed
 GOLANGCILINT=$(GOBIN)/golangci-lint
 endif
 
