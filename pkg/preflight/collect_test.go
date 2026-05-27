@@ -37,8 +37,6 @@ import (
 	clientfake "k8s.io/client-go/rest/fake"
 	cmdtesting "k8s.io/kubectl/pkg/cmd/testing"
 
-	preflightv1beta2 "github.com/apecloud/kubeblocks/externalapis/preflight/v1beta2"
-
 	preflightTesting "github.com/apecloud/kbcli/pkg/preflight/testing"
 	"github.com/apecloud/kbcli/pkg/testing"
 	"github.com/apecloud/kbcli/pkg/types"
@@ -46,14 +44,13 @@ import (
 
 var _ = Describe("collect_test", func() {
 	var (
-		timeOut       = 10 * time.Second
-		namespace     = "test"
-		clusterName   = "test"
-		tf            *cmdtesting.TestFactory
-		cluster       = testing.FakeCluster(clusterName, namespace)
-		pods          = testing.FakePods(3, namespace, clusterName)
-		preflight     *preflightv1beta2.Preflight
-		hostPreflight *preflightv1beta2.HostPreflight
+		timeOut     = 10 * time.Second
+		namespace   = "test"
+		clusterName = "test"
+		tf          *cmdtesting.TestFactory
+		cluster     = testing.FakeCluster(clusterName, namespace)
+		pods        = testing.FakePods(3, namespace, clusterName)
+		preflight   *troubleshoot.Preflight
 	)
 
 	BeforeEach(func() {
@@ -86,7 +83,6 @@ var _ = Describe("collect_test", func() {
 		tf.FakeDynamicClient = testing.FakeDynamicClient(cluster, testing.FakeClusterDef())
 
 		preflight = preflightTesting.FakeKbPreflight()
-		hostPreflight = preflightTesting.FakeKbHostPreflight()
 	})
 
 	AfterEach(func() {
@@ -101,38 +97,9 @@ var _ = Describe("collect_test", func() {
 					g.Expect(<-progressCh).NotTo(BeNil())
 				}
 			}()
-			results, err := CollectPreflight(tf, nil, context.TODO(), preflight, hostPreflight, progressCh)
+			results, err := CollectPreflight(tf, nil, context.TODO(), preflight, progressCh)
 			g.Expect(err).NotTo(HaveOccurred())
-			g.Expect(len(results)).Should(BeNumerically(">=", 3))
-		}).WithTimeout(timeOut).Should(Succeed())
-	})
-
-	It("CollectHostData Test, and expect success", func() {
-		Eventually(func(g Gomega) {
-			progressCh := make(chan interface{})
-			go func() {
-				for {
-					g.Expect(<-progressCh).NotTo(BeNil())
-				}
-			}()
-			results, err := CollectHostData(context.TODO(), hostPreflight, progressCh)
-			g.Expect(err).NotTo(HaveOccurred())
-			_, ok := (*results).(KBHostCollectResult)
-			g.Expect(ok).Should(BeTrue())
-		}).WithTimeout(timeOut).Should(Succeed())
-	})
-
-	It("CollectRemoteData test, and expect success", func() {
-		Eventually(func(g Gomega) {
-			progressCh := make(chan interface{})
-			go func() {
-				for {
-					g.Expect(<-progressCh).NotTo(BeNil())
-				}
-			}()
-			collectResult, err := CollectRemoteData(context.TODO(), &preflightv1beta2.HostPreflight{}, tf, progressCh)
-			g.Expect(err).NotTo(HaveOccurred())
-			g.Expect(collectResult).NotTo(BeNil())
+			g.Expect(len(results)).Should(Equal(1))
 		}).WithTimeout(timeOut).Should(Succeed())
 	})
 

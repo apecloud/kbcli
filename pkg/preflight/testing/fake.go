@@ -21,8 +21,6 @@ package testing
 
 import (
 	troubleshoot "github.com/replicatedhq/troubleshoot/pkg/apis/troubleshoot/v1beta2"
-
-	preflightv1beta2 "github.com/apecloud/kubeblocks/externalapis/preflight/v1beta2"
 )
 
 const (
@@ -91,7 +89,7 @@ func FakeCollectedData() map[string][]byte {
 	}
 }
 
-func FakeKbPreflight() *preflightv1beta2.Preflight {
+func FakeKbPreflight() *troubleshoot.Preflight {
 	var collectList []*troubleshoot.Collect
 	collect := &troubleshoot.Collect{
 		ClusterInfo:      &troubleshoot.ClusterInfo{},
@@ -99,29 +97,9 @@ func FakeKbPreflight() *preflightv1beta2.Preflight {
 	}
 	collectList = append(collectList, collect)
 
-	return &preflightv1beta2.Preflight{
-		Spec: preflightv1beta2.PreflightSpec{
-			PreflightSpec: troubleshoot.PreflightSpec{
-				Collectors: collectList,
-			},
+	return &troubleshoot.Preflight{
+		Spec: troubleshoot.PreflightSpec{
+			Collectors: collectList,
 		},
 	}
-}
-
-func FakeKbHostPreflight() *preflightv1beta2.HostPreflight {
-	var extendCollectList []*preflightv1beta2.ExtendHostCollect
-	var remoteCollectList []*troubleshoot.RemoteCollect
-	extendCollectList = append(
-		extendCollectList,
-		&preflightv1beta2.ExtendHostCollect{HostUtility: &preflightv1beta2.HostUtility{}},
-	)
-	remoteCollectList = append(remoteCollectList, &troubleshoot.RemoteCollect{CPU: &troubleshoot.RemoteCPU{}})
-
-	hostPreflight := &preflightv1beta2.HostPreflight{
-		Spec: preflightv1beta2.HostPreflightSpec{
-			ExtendCollectors: extendCollectList,
-		},
-	}
-	hostPreflight.Spec.RemoteCollectors = remoteCollectList
-	return hostPreflight
 }

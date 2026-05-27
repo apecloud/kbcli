@@ -21,7 +21,6 @@ package preflight
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"reflect"
 	"time"
@@ -33,112 +32,29 @@ import (
 	"github.com/replicatedhq/troubleshoot/pkg/preflight"
 	"helm.sh/helm/v3/pkg/cli/values"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/scheme"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
-	preflightv1beta2 "github.com/apecloud/kubeblocks/externalapis/preflight/v1beta2"
 	viper "github.com/apecloud/kubeblocks/pkg/viperx"
-
-	kbcollector "github.com/apecloud/kbcli/pkg/preflight/collector"
 )
 
-const (
-	StorageClassPath       = "cluster-resources/storage-classes.json"
-	StorageClassErrorsPath = "cluster-resources/storage-classes-errors.json"
-)
-
-func CollectPreflight(f cmdutil.Factory, helmOpts *values.Options, ctx context.Context, kbPreflight *preflightv1beta2.Preflight, kbHostPreflight *preflightv1beta2.HostPreflight, progressCh chan interface{}) ([]preflight.CollectResult, error) {
+func CollectPreflight(f cmdutil.Factory, helmOpts *values.Options, ctx context.Context, kbPreflight *troubleshoot.Preflight, progressCh chan interface{}) ([]preflight.CollectResult, error) {
 	var (
 		collectResults []preflight.CollectResult
 		err            error
 	)
-	// deal with preflight
-	if kbPreflight != nil && (len(kbPreflight.Spec.ExtendCollectors) > 0 || len(kbPreflight.Spec.Collectors) > 0) {
+	if kbPreflight != nil && len(kbPreflight.Spec.Collectors) > 0 {
 		res, err := CollectClusterData(ctx, kbPreflight, f, helmOpts, progressCh)
 		if err != nil {
 			return collectResults, errors.Wrap(err, "failed to collect data in cluster")
 		}
 		collectResults = append(collectResults, *res)
 	}
-	// deal with hostPreflight
-	if kbHostPreflight != nil {
-		if len(kbHostPreflight.Spec.ExtendCollectors) > 0 || len(kbHostPreflight.Spec.Collectors) > 0 {
-			res, err := CollectHostData(ctx, kbHostPreflight, progressCh)
-			if err != nil {
-				return collectResults, errors.Wrap(err, "failed to collect data from extend host")
-			}
-			collectResults = append(collectResults, *res)
-		}
-		if len(kbHostPreflight.Spec.RemoteCollectors) > 0 {
-			res, err := CollectRemoteData(ctx, kbHostPreflight, f, progressCh)
-			if err != nil {
-				return collectResults, errors.Wrap(err, "failed to collect data remotely")
-			}
-			collectResults = append(collectResults, *res)
-		}
-	}
 	return collectResults, err
 }
 
-// CollectHostData transforms the specs of hostPreflight to HostCollector, and sets the collectOpts
-func CollectHostData(ctx context.Context, hostPreflight *preflightv1beta2.HostPreflight, progressCh chan interface{}) (*preflight.CollectResult, error) {
-	collectOpts := preflight.CollectOpts{
-		ProgressChan: progressCh,
-	}
-	var collectors []pkgcollector.HostCollector
-	for _, collectSpec := range hostPreflight.Spec.Collectors {
-		collector, ok := pkgcollector.GetHostCollector(collectSpec, "")
-		if ok {
-			collectors = append(collectors, collector)
-		}
-	}
-	for _, kbCollector := range hostPreflight.Spec.ExtendCollectors {
-		collector, ok := kbcollector.GetExtendHostCollector(kbCollector, "")
-		if ok {
-			collectors = append(collectors, collector)
-		}
-	}
-	collectResults, err := CollectHost(ctx, collectOpts, collectors, hostPreflight)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to collect from extend host")
-	}
-	return &collectResults, nil
-}
-
-// CollectHost collects host data against by HostCollector, and returns the collected data which is encapsulated in CollectResult struct
-func CollectHost(ctx context.Context, opts preflight.CollectOpts, collectors []pkgcollector.HostCollector, hostPreflight *preflightv1beta2.HostPreflight) (preflight.CollectResult, error) {
-	allCollectedData := make(map[string][]byte)
-	collectResult := KBHostCollectResult{
-		HostCollectResult: preflight.HostCollectResult{
-			Collectors: collectors,
-			Context:    ctx,
-		},
-		AnalyzerSpecs:   hostPreflight.Spec.Analyzers,
-		KbAnalyzerSpecs: hostPreflight.Spec.ExtendAnalyzers,
-	}
-	for _, collector := range collectors {
-		isExcluded, _ := collector.IsExcluded()
-		if isExcluded {
-			continue
-		}
-		opts.ProgressChan <- fmt.Sprintf("[%s] Running collector...", collector.Title())
-		result, err := collector.Collect(opts.ProgressChan)
-		if err != nil {
-			opts.ProgressChan <- errors.Errorf("failed to run collector: %s: %v", collector.Title(), err)
-		}
-		for k, v := range result {
-			allCollectedData[k] = v
-		}
-	}
-	collectResult.AllCollectedData = allCollectedData
-	return collectResult, nil
-}
-
 // CollectClusterData transforms the specs of Preflight to Collector, and sets the collectOpts, such as restConfig, Namespace, and ProgressChan
-func CollectClusterData(ctx context.Context, kbPreflight *preflightv1beta2.Preflight, f cmdutil.Factory, helmOpts *values.Options, progressCh chan interface{}) (*preflight.CollectResult, error) {
+func CollectClusterData(ctx context.Context, kbPreflight *troubleshoot.Preflight, f cmdutil.Factory, helmOpts *values.Options, progressCh chan interface{}) (*preflight.CollectResult, error) {
 	var err error
 	v := viper.GetViper()
 
@@ -189,10 +105,6 @@ func CollectClusterData(ctx context.Context, kbPreflight *preflightv1beta2.Prefl
 			}
 		}
 	}
-	// for _, collectSpec := range kbPreflight.Spec.ExtendCollectors {
-	//	// todo user defined cluster collector
-	// }
-
 	collectResults, err := CollectCluster(ctx, collectOpts, collectors, allCollectorsMap, kbPreflight, helmOpts, k8sClient)
 	return &collectResults, err
 }
@@ -202,10 +114,11 @@ func CollectCluster(ctx context.Context,
 	opts preflight.CollectOpts,
 	allCollectors []pkgcollector.Collector,
 	allCollectorsMap map[reflect.Type][]pkgcollector.Collector,
-	kbPreflight *preflightv1beta2.Preflight,
+	kbPreflight *troubleshoot.Preflight,
 	helmOpts *values.Options,
 	client *kubernetes.Clientset,
 ) (preflight.CollectResult, error) {
+	_ = client
 	var foundForbidden bool
 	allCollectedData := make(map[string][]byte)
 	collectorList := map[string]preflight.CollectorStatus{}
@@ -239,9 +152,8 @@ func CollectCluster(ctx context.Context,
 			Collectors: allCollectors,
 			Context:    ctx,
 		},
-		AnalyzerSpecs:   kbPreflight.Spec.Analyzers,
-		KbAnalyzerSpecs: kbPreflight.Spec.ExtendAnalyzers,
-		HelmOptions:     helmOpts,
+		AnalyzerSpecs: kbPreflight.Spec.Analyzers,
+		HelmOptions:   helmOpts,
 	}
 
 	if foundForbidden && !opts.IgnorePermissionErrors {
@@ -313,87 +225,8 @@ func CollectCluster(ctx context.Context,
 			allCollectedData[k] = v
 		}
 	}
-	retryErrorCausedByMetricsUnavailable(ctx, opts, client, allCollectedData)
 	collectResult.AllCollectedData = allCollectedData
 	return collectResult, nil
-}
-
-func retryErrorCausedByMetricsUnavailable(ctx context.Context, opts preflight.CollectOpts, client *kubernetes.Clientset, data map[string][]byte) {
-	handleStorageClassError(ctx, opts, client, data)
-}
-
-func handleStorageClassError(ctx context.Context, _ preflight.CollectOpts, client *kubernetes.Clientset, data map[string][]byte) {
-	storageClassError, ok := data[StorageClassErrorsPath]
-	if !ok {
-		return
-	}
-	var errorStrs []string
-	if err := json.Unmarshal(storageClassError, &errorStrs); err != nil || len(errorStrs) == 0 {
-		return
-	}
-	storageClasses, err := client.StorageV1().StorageClasses().List(ctx, metav1.ListOptions{})
-	if err != nil || storageClasses.Items == nil || len(storageClasses.Items) == 0 {
-		return
-	}
-	gvk, err := apiutil.GVKForObject(storageClasses, scheme.Scheme)
-	if err == nil {
-		storageClasses.GetObjectKind().SetGroupVersionKind(gvk)
-	}
-
-	for i, o := range storageClasses.Items {
-		gvk, err := apiutil.GVKForObject(&o, scheme.Scheme)
-		if err == nil {
-			storageClasses.Items[i].GetObjectKind().SetGroupVersionKind(gvk)
-		}
-	}
-
-	scBytes, err := json.MarshalIndent(storageClasses, "", "  ")
-	if err != nil {
-		return
-	}
-	data[StorageClassPath] = scBytes
-}
-
-func CollectRemoteData(ctx context.Context, preflightSpec *preflightv1beta2.HostPreflight, f cmdutil.Factory, progressCh chan interface{}) (*preflight.CollectResult, error) {
-	v := viper.GetViper()
-
-	restConfig, err := f.ToRESTConfig()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to convert kube flags to rest config")
-	}
-
-	labelSelector, err := labels.Parse(v.GetString("selector"))
-	if err != nil {
-		return nil, errors.Wrap(err, "unable to parse selector")
-	}
-
-	namespace := v.GetString("namespace")
-	if namespace == "" {
-		namespace = "default"
-	}
-
-	timeout := v.GetDuration("request-timeout")
-	if timeout == 0 {
-		timeout = 30 * time.Second
-	}
-
-	collectOpts := preflight.CollectOpts{
-		Namespace:              namespace,
-		IgnorePermissionErrors: v.GetBool("collect-without-permissions"),
-		ProgressChan:           progressCh,
-		KubernetesRestConfig:   restConfig,
-		Image:                  v.GetString("collector-image"),
-		PullPolicy:             v.GetString("collector-pullpolicy"),
-		LabelSelector:          labelSelector.String(),
-		Timeout:                timeout,
-	}
-
-	collectResults, err := preflight.CollectRemoteWithContext(ctx, collectOpts, ExtractHostPreflightSpec(preflightSpec))
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to collect from remote")
-	}
-
-	return &collectResults, nil
 }
 
 func ParseTimeFlags(sinceTimeStr, sinceStr string, collectors []*troubleshoot.Collect) error {

@@ -40,7 +40,7 @@ jobs:
 
       - name: Add labels
         if: ${{ env.ISINTERACTION != null }}
-        uses: actions-cool/issues-helper@v3
+        uses: apecloud-inc/issues-helper@v3
         with:
           actions: 'add-labels'
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}

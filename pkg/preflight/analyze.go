@@ -29,40 +29,23 @@ import (
 	troubleshoot "github.com/replicatedhq/troubleshoot/pkg/apis/troubleshoot/v1beta2"
 	"github.com/replicatedhq/troubleshoot/pkg/preflight"
 	"helm.sh/helm/v3/pkg/cli/values"
-
-	preflightv1beta2 "github.com/apecloud/kubeblocks/externalapis/preflight/v1beta2"
-
-	kbanalyzer "github.com/apecloud/kbcli/pkg/preflight/analyzer"
 )
 
 type KBClusterCollectResult struct {
 	preflight.ClusterCollectResult
-	HelmOptions     *values.Options
-	AnalyzerSpecs   []*troubleshoot.Analyze
-	KbAnalyzerSpecs []*preflightv1beta2.ExtendAnalyze
-}
-
-type KBHostCollectResult struct {
-	preflight.HostCollectResult
-	AnalyzerSpecs   []*troubleshoot.HostAnalyze
-	KbAnalyzerSpecs []*preflightv1beta2.ExtendHostAnalyze
+	HelmOptions   *values.Options
+	AnalyzerSpecs []*troubleshoot.Analyze
 }
 
 func (c KBClusterCollectResult) Analyze() []*analyze.AnalyzeResult {
-	return doAnalyze(c.Context, c.AllCollectedData, c.AnalyzerSpecs, c.KbAnalyzerSpecs, nil, nil, c.HelmOptions)
-}
-
-func (c KBHostCollectResult) Analyze() []*analyze.AnalyzeResult {
-	return doAnalyze(c.Context, c.AllCollectedData, nil, nil, c.AnalyzerSpecs, c.KbAnalyzerSpecs, nil)
+	return doAnalyze(c.Context, c.AllCollectedData, c.AnalyzerSpecs, c.HelmOptions)
 }
 
 func doAnalyze(ctx context.Context, allCollectedData map[string][]byte,
 	analyzers []*troubleshoot.Analyze,
-	kbAnalyzers []*preflightv1beta2.ExtendAnalyze,
-	hostAnalyzers []*troubleshoot.HostAnalyze,
-	kbhHostAnalyzers []*preflightv1beta2.ExtendHostAnalyze,
 	options *values.Options,
 ) []*analyze.AnalyzeResult {
+	_ = options
 	getCollectedFileContents := func(fileName string) ([]byte, error) {
 		contents, ok := allCollectedData[fileName]
 		if !ok {
@@ -103,18 +86,6 @@ func doAnalyze(ctx context.Context, allCollectedData map[string][]byte,
 		if analyzeResult != nil {
 			analyzeResults = append(analyzeResults, analyzeResult...)
 		}
-	}
-	for _, kbAnalyzer := range kbAnalyzers {
-		analyzeResult := kbanalyzer.KBAnalyze(ctx, kbAnalyzer, getCollectedFileContents, getChildCollectedFileContents, options)
-		analyzeResults = append(analyzeResults, analyzeResult...)
-	}
-	for _, hostAnalyzer := range hostAnalyzers {
-		analyzeResult := analyze.HostAnalyze(ctx, hostAnalyzer, getCollectedFileContents, getChildCollectedFileContents)
-		analyzeResults = append(analyzeResults, analyzeResult...)
-	}
-	for _, kbHostAnalyzer := range kbhHostAnalyzers {
-		analyzeResult := kbanalyzer.HostKBAnalyze(ctx, kbHostAnalyzer, getCollectedFileContents, getChildCollectedFileContents)
-		analyzeResults = append(analyzeResults, analyzeResult...)
 	}
 	return analyzeResults
 }

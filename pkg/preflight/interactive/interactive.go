@@ -22,14 +22,16 @@ package interactive
 import (
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
 	ui "github.com/replicatedhq/termui/v3"
 	"github.com/replicatedhq/termui/v3/widgets"
-	"github.com/replicatedhq/troubleshoot/cmd/util"
 	analyzerunner "github.com/replicatedhq/troubleshoot/pkg/analyze"
 	"github.com/replicatedhq/troubleshoot/pkg/convert"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 var (
@@ -111,7 +113,7 @@ func drawHeader(preflightName string) {
 	termWidth, _ := ui.TerminalDimensions()
 
 	title := widgets.NewParagraph()
-	title.Text = fmt.Sprintf("%s Preflight Checks", util.AppName(preflightName))
+	title.Text = fmt.Sprintf("%s Preflight Checks", appName(preflightName))
 	title.TextStyle.Fg = ui.ColorWhite
 	title.TextStyle.Bg = ui.ColorClear
 	title.TextStyle.Modifier = ui.ModifierBold
@@ -260,7 +262,7 @@ func save(preflightName string, outputPath string, analyzeResults []*analyzerunn
 		_ = os.Remove(filename)
 	}
 
-	results := fmt.Sprintf("%s Preflight Checks\n\n", util.AppName(preflightName))
+	results := fmt.Sprintf("%s Preflight Checks\n\n", appName(preflightName))
 	for _, analyzeResult := range analyzeResults {
 		result := ""
 		switch {
@@ -290,6 +292,24 @@ func save(preflightName string, outputPath string, analyzeResults []*analyzerunn
 	}
 
 	return filename, nil
+}
+
+func appName(name string) string {
+	words := strings.Split(cases.Title(language.English).String(strings.ReplaceAll(name, "-", " ")), " ")
+	casedWords := []string{}
+	for i, word := range words {
+		switch strings.ToLower(word) {
+		case "ai":
+			casedWords = append(casedWords, "AI")
+		case "io":
+			if i > 0 {
+				casedWords[i-1] += ".io"
+			}
+		default:
+			casedWords = append(casedWords, word)
+		}
+	}
+	return strings.Join(casedWords, " ")
 }
 
 func showSaved(filename string) {

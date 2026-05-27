@@ -105,7 +105,7 @@ var _ = Describe("Preflight API Test", func() {
 		}
 		*p.Interactive = false
 		*p.Format = "yaml"
-		p.checkFileList = []string{"../../testing/testdata/hostpreflight.yaml"}
+		p.checkFileList = []string{"../../testing/testdata/preflight_nil.yaml"}
 		By("non-interactive mode, and expect success")
 		Eventually(func(g Gomega) {
 			err := p.run()
@@ -121,14 +121,10 @@ var _ = Describe("Preflight API Test", func() {
 	It("LoadVendorCheckYaml test, and expect success", func() {
 		res, err := LoadVendorCheckYaml(util.EKSProvider)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(len(res)).Should(Equal(2))
+		Expect(len(res)).Should(Equal(1))
 	})
 	It("newPreflightPath test, and expect success", func() {
 		res := newPreflightPath("test")
 		Expect(res).Should(Equal("data/test_preflight.yaml"))
-	})
-	It("newHostPreflightPath test, and expect success", func() {
-		res := newHostPreflightPath("test")
-		Expect(res).Should(Equal("data/test_hostpreflight.yaml"))
 	})
 })
