@@ -46,25 +46,3 @@ spec:
               message: The volumesnapshotcontents CRD was not found in the cluster.
           - pass:
               message: volumesnapshotcontents is installed.
-  extendAnalyzers:
-    - clusterAccess:
-        checkName: Check-K8S-Access
-        outcomes:
-          - fail:
-              message: K8s cluster access fail
-          - pass:
-              message: K8s cluster access ok
-    - taint:
-        checkName: Required-Taint-Match
-        outcomes:
-          - fail:
-              message: All nodes had taints that the pod didn't tolerate
-          - pass:
-              message: The taint matching succeeded
-    - storageClass:
-        checkName: Required-Default-SC
-        outcomes:
-          - warn:
-              message: The default storage class was not found. You can use option --set storageClass=<storageClassName> when creating cluster
-          - pass:
-              message: Default storage class is the presence, and all good on storage classes
