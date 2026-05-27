@@ -27,8 +27,8 @@ import (
 	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
 	parametersv1alpha1 "github.com/apecloud/kubeblocks/apis/parameters/v1alpha1"
 	"github.com/apecloud/kubeblocks/pkg/client/clientset/versioned"
-	intctrlutil "github.com/apecloud/kubeblocks/pkg/controllerutil"
 	"github.com/apecloud/kubeblocks/pkg/generics"
+	configctrl "github.com/apecloud/kubeblocks/pkg/parameters"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 )
@@ -61,7 +61,7 @@ func (w *ReconfigureWrapper) ConfigSpecName() string {
 	}
 	file := w.ConfigFile()
 	if file != "" && w.rctx.ConfigRender != nil {
-		config := intctrlutil.GetComponentConfigDescription(&w.rctx.ConfigRender.Spec, file)
+		config := configctrl.GetComponentConfigDescription(&w.rctx.ConfigRender.Spec, file)
 		if config != nil {
 			return config.TemplateName
 		}

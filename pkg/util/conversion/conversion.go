@@ -21,7 +21,6 @@ import (
 
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	appsv1beta1 "github.com/apecloud/kubeblocks/apis/apps/v1beta1"
-	"github.com/apecloud/kubeblocks/pkg/constant"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -37,6 +36,10 @@ import (
 const (
 	OldVersion = "08"
 	NewVersion = "09"
+
+	kubeblocksAPIConversionTypeAnnotationName = "api.kubeblocks.io/converted"
+	sourceAPIVersionAnnotationName            = "api.kubeblocks.io/source"
+	migratedAPIVersion                        = "migrated"
 )
 
 func FetchAndConversionResources(versionMeta *VersionConversionMeta) ([]unstructured.Unstructured, error) {
@@ -103,7 +106,7 @@ func hasConversionVersion(obj client.Object) bool {
 	if len(annotations) == 0 {
 		return false
 	}
-	return annotations[constant.KubeblocksAPIConversionTypeAnnotationName] == constant.MigratedAPIVersion
+	return annotations[kubeblocksAPIConversionTypeAnnotationName] == migratedAPIVersion
 }
 
 func UpdateNewVersionResources(versionMeta *VersionConversionMeta, targetObjects []unstructured.Unstructured) error {
@@ -152,8 +155,8 @@ func convertImpl(source *appsv1alpha1.ConfigConstraint, target *appsv1beta1.Conf
 	if target.Annotations == nil {
 		target.Annotations = make(map[string]string)
 	}
-	target.Annotations[constant.KubeblocksAPIConversionTypeAnnotationName] = constant.MigratedAPIVersion
-	target.Annotations[constant.SourceAPIVersionAnnotationName] = appsv1alpha1.GroupVersion.Version
+	target.Annotations[kubeblocksAPIConversionTypeAnnotationName] = migratedAPIVersion
+	target.Annotations[sourceAPIVersionAnnotationName] = appsv1alpha1.GroupVersion.Version
 	convertToConstraintSpec(&source.Spec, &target.Spec)
 	return nil
 }

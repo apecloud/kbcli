@@ -124,10 +124,10 @@ func FakeCluster(name, namespace string, conditions ...metav1.Condition) *kbapps
 							corev1.ResourceMemory: resource.MustParse("2Gi"),
 						},
 					},
-					VolumeClaimTemplates: []kbappsv1.ClusterComponentVolumeClaimTemplate{
+					VolumeClaimTemplates: []kbappsv1.PersistentVolumeClaimTemplate{
 						{
 							Name: "data",
-							Spec: kbappsv1.PersistentVolumeClaimSpec{
+							Spec: corev1.PersistentVolumeClaimSpec{
 								AccessModes: []corev1.PersistentVolumeAccessMode{
 									corev1.ReadWriteOnce,
 								},
@@ -150,10 +150,10 @@ func FakeCluster(name, namespace string, conditions ...metav1.Condition) *kbapps
 							corev1.ResourceMemory: resource.MustParse("100Mi"),
 						},
 					},
-					VolumeClaimTemplates: []kbappsv1.ClusterComponentVolumeClaimTemplate{
+					VolumeClaimTemplates: []kbappsv1.PersistentVolumeClaimTemplate{
 						{
 							Name: "data",
-							Spec: kbappsv1.PersistentVolumeClaimSpec{
+							Spec: corev1.PersistentVolumeClaimSpec{
 								AccessModes: []corev1.PersistentVolumeAccessMode{
 									corev1.ReadWriteOnce,
 								},

@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package cluster
 
 import (
-	cfgcore "github.com/apecloud/kubeblocks/pkg/configuration/core"
+	cfgcore "github.com/apecloud/kubeblocks/pkg/parameters/core"
 )
 
 var (

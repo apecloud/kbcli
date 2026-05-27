@@ -39,9 +39,9 @@ import (
 	"k8s.io/kubectl/pkg/util/templates"
 
 	dpv1alpha1 "github.com/apecloud/kubeblocks/apis/dataprotection/v1alpha1"
-	cfgutil "github.com/apecloud/kubeblocks/pkg/configuration/util"
 	"github.com/apecloud/kubeblocks/pkg/constant"
 	"github.com/apecloud/kubeblocks/pkg/dataprotection/utils"
+	cfgutil "github.com/apecloud/kubeblocks/pkg/parameters/util"
 
 	"github.com/apecloud/kbcli/pkg/action"
 	"github.com/apecloud/kbcli/pkg/cluster"

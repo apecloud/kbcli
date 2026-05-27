@@ -77,10 +77,10 @@ import (
 
 	kbappsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	kbappsv1beta1 "github.com/apecloud/kubeblocks/apis/apps/v1beta1"
-	"github.com/apecloud/kubeblocks/pkg/configuration/core"
-	"github.com/apecloud/kubeblocks/pkg/configuration/openapi"
-	cfgutil "github.com/apecloud/kubeblocks/pkg/configuration/util"
 	"github.com/apecloud/kubeblocks/pkg/constant"
+	"github.com/apecloud/kubeblocks/pkg/parameters/core"
+	"github.com/apecloud/kubeblocks/pkg/parameters/openapi"
+	cfgutil "github.com/apecloud/kubeblocks/pkg/parameters/util"
 	viper "github.com/apecloud/kubeblocks/pkg/viperx"
 
 	"github.com/apecloud/kbcli/pkg/testing"

@@ -23,16 +23,16 @@ import (
 	"fmt"
 
 	parametersv1alpha1 "github.com/apecloud/kubeblocks/apis/parameters/v1alpha1"
-	intctrlutil "github.com/apecloud/kubeblocks/pkg/controllerutil"
+	configctrl "github.com/apecloud/kubeblocks/pkg/parameters"
 	"github.com/spf13/cobra"
 	apiext "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
 
-	cfgcore "github.com/apecloud/kubeblocks/pkg/configuration/core"
-	"github.com/apecloud/kubeblocks/pkg/configuration/openapi"
-	cfgutil "github.com/apecloud/kubeblocks/pkg/configuration/util"
+	cfgcore "github.com/apecloud/kubeblocks/pkg/parameters/core"
+	"github.com/apecloud/kubeblocks/pkg/parameters/openapi"
+	cfgutil "github.com/apecloud/kubeblocks/pkg/parameters/util"
 
 	"github.com/apecloud/kbcli/pkg/printer"
 	"github.com/apecloud/kbcli/pkg/types"
@@ -140,7 +140,7 @@ func (r *configObserverOptions) printComponentConfigSpecsDescribe(rctx *Reconfig
 func (r *configObserverOptions) printComponentExplainConfigure(rctx *ReconfigureContext) error {
 	for _, pd := range rctx.ParametersDefs {
 		if rctx.ConfigRender != nil {
-			config := intctrlutil.GetComponentConfigDescription(&rctx.ConfigRender.Spec, pd.Spec.FileName)
+			config := configctrl.GetComponentConfigDescription(&rctx.ConfigRender.Spec, pd.Spec.FileName)
 			if config != nil {
 				fmt.Println("template meta:")
 				printer.PrintLineWithTabSeparator(

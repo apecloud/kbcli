@@ -266,7 +266,7 @@ func (o *OperationsOptions) validateVolumeExpansion(clusterObj *appsv1.Cluster) 
 			}
 			var pvc *corev1.PersistentVolumeClaim
 			for _, pvcItem := range pvcs.Items {
-				if pvcItem.Labels[constant.KBAppComponentInstanceTemplateLabelKey] == "" {
+				if pvcItem.Labels["apps.kubeblocks.io/instance-template"] == "" {
 					pvc = &pvcItem
 					break
 				}

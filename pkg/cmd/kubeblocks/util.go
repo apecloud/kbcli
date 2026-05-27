@@ -201,7 +201,7 @@ func buildKubeBlocksSelectorLabels() string {
 // and it should be consistent with the labelSelectors defined
 // in `configuration.updateConfigMapFinalizerImpl`.
 func buildConfigTypeSelectorLabels() string {
-	return fmt.Sprintf("%s=%s", constant.CMConfigurationTypeLabelKey, constant.ConfigTemplateType)
+	return fmt.Sprintf("%s=%s", constant.CMConfigurationTypeLabelKey, "tpl")
 }
 
 // printAddonMsg prints addon message when has failed addon or timeouts
