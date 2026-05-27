@@ -29,6 +29,7 @@ import (
 
 	"github.com/pkg/errors"
 	analyze "github.com/replicatedhq/troubleshoot/pkg/analyze"
+	troubleshoot "github.com/replicatedhq/troubleshoot/pkg/apis/troubleshoot/v1beta2"
 	"github.com/replicatedhq/troubleshoot/pkg/preflight"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
@@ -38,7 +39,6 @@ import (
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
 
-	preflightv1beta2 "github.com/apecloud/kubeblocks/externalapis/preflight/v1beta2"
 	intctrlutil "github.com/apecloud/kubeblocks/pkg/controllerutil"
 
 	kbpreflight "github.com/apecloud/kbcli/pkg/preflight"
@@ -60,12 +60,15 @@ const (
 	flagForce                     = "force"
 	flagFormat                    = "format"
 
-	PreflightPattern     = "data/%s_preflight.yaml"
-	HostPreflightPattern = "data/%s_hostpreflight.yaml"
-	PreflightMessage     = "Kubernetes cluster preflight"
+	PreflightPattern = "data/%s_preflight.yaml"
+	PreflightMessage = "Kubernetes cluster preflight"
 
-	BasePreflightPattern     = "data/kubeblocks_base_preflight.yaml"
-	BaseHostPreflightPattern = "data/kubeblocks_base_hostpreflight.yaml"
+	BasePreflightPattern = "data/kubeblocks_base_preflight.yaml"
+)
+
+const (
+	errorTypeSkipPreflight   intctrlutil.ErrorType = "SkipPreflight"
+	errorTypePreflightCommon intctrlutil.ErrorType = "PreflightCommon"
 )
 
 var (
@@ -136,13 +139,6 @@ func LoadVendorCheckYaml(vendorName util.K8sProvider) ([][]byte, error) {
 			yamlDataList = append(yamlDataList, data)
 		}
 	}
-	if data, err := defaultVendorYamlData.ReadFile(newHostPreflightPath(vendorName)); err == nil {
-		yamlDataList = append(yamlDataList, data)
-	} else {
-		if data, err := defaultVendorYamlData.ReadFile(BaseHostPreflightPattern); err == nil {
-			yamlDataList = append(yamlDataList, data)
-		}
-	}
 	if len(yamlDataList) == 0 {
 		return yamlDataList, errors.New("unsupported k8s provider")
 	}
@@ -159,13 +155,13 @@ func (p *PreflightOptions) Preflight(f cmdutil.Factory, args []string, opts valu
 
 	var err error
 	if err = p.complete(f, args); err != nil {
-		if intctrlutil.IsTargetError(err, intctrlutil.ErrorTypeSkipPreflight) {
+		if intctrlutil.IsTargetError(err, errorTypeSkipPreflight) {
 			return nil
 		}
-		return intctrlutil.NewError(intctrlutil.ErrorTypePreflightCommon, err.Error())
+		return intctrlutil.NewError(errorTypePreflightCommon, err.Error())
 	}
 	if err = p.run(); err != nil {
-		return intctrlutil.NewError(intctrlutil.ErrorTypePreflightCommon, err.Error())
+		return intctrlutil.NewError(errorTypePreflightCommon, err.Error())
 	}
 	return nil
 }
@@ -175,25 +171,25 @@ func (p *PreflightOptions) complete(f cmdutil.Factory, args []string) error {
 	if len(args) == 0 {
 		clientSet, err := f.KubernetesClientSet()
 		if err != nil {
-			return intctrlutil.NewError(intctrlutil.ErrorTypePreflightCommon, "init k8s client failed, please check the kubeconfig")
+			return intctrlutil.NewError(errorTypePreflightCommon, "init k8s client failed, please check the kubeconfig")
 		}
 		versionInfo, err := util.GetVersionInfo(clientSet)
 		if err != nil {
-			return intctrlutil.NewError(intctrlutil.ErrorTypePreflightCommon, "get k8s version of server failed, please check accessibility to k8s")
+			return intctrlutil.NewError(errorTypePreflightCommon, "get k8s version of server failed, please check accessibility to k8s")
 		}
 		vendorName, err := util.GetK8sProvider(versionInfo.Kubernetes, clientSet)
 		if err != nil {
-			return intctrlutil.NewError(intctrlutil.ErrorTypePreflightCommon, "get k8s cloud provider failed, please check accessibility to k8s")
+			return intctrlutil.NewError(errorTypePreflightCommon, "get k8s cloud provider failed, please check accessibility to k8s")
 		}
 		p.checkYamlData, err = LoadVendorCheckYaml(vendorName)
 		if err != nil {
-			return intctrlutil.NewError(intctrlutil.ErrorTypeSkipPreflight, err.Error())
+			return intctrlutil.NewError(errorTypeSkipPreflight, err.Error())
 		}
 	} else {
 		p.checkFileList = args
 	}
 	if len(p.checkFileList) < 1 && len(p.checkYamlData) < 1 {
-		return intctrlutil.NewError(intctrlutil.ErrorTypeSkipPreflight, "must specify at least one checks yaml")
+		return intctrlutil.NewError(errorTypeSkipPreflight, "must specify at least one checks yaml")
 	}
 
 	p.factory = f
@@ -210,12 +206,11 @@ func (p *PreflightOptions) complete(f cmdutil.Factory, args []string) error {
 
 func (p *PreflightOptions) run() error {
 	var (
-		kbPreflight     *preflightv1beta2.Preflight
-		kbHostPreflight *preflightv1beta2.HostPreflight
-		collectResults  []preflight.CollectResult
-		analyzeResults  []*analyze.AnalyzeResult
-		preflightName   string
-		err             error
+		kbPreflight    *troubleshoot.Preflight
+		collectResults []preflight.CollectResult
+		analyzeResults []*analyze.AnalyzeResult
+		preflightName  string
+		err            error
 	)
 	// set progress chan
 	progressCh := make(chan interface{})
@@ -226,15 +221,15 @@ func (p *PreflightOptions) run() error {
 	progressCollections, ctx := errgroup.WithContext(ctx)
 	progressCollections.Go(CollectProgress(ctx, progressCh, p.verbose))
 	// 1. load yaml
-	if kbPreflight, kbHostPreflight, preflightName, err = kbpreflight.LoadPreflightSpec(p.checkFileList, p.checkYamlData); err != nil {
-		return intctrlutil.NewError(intctrlutil.ErrorTypePreflightCommon, err.Error())
+	if kbPreflight, preflightName, err = kbpreflight.LoadPreflightSpec(p.checkFileList, p.checkYamlData); err != nil {
+		return intctrlutil.NewError(errorTypePreflightCommon, err.Error())
 	}
 	// 2. collect data
 	s := spinner.New(p.Out, spinner.WithMessage(fmt.Sprintf("%-50s", "Collecting data from cluster")))
-	collectResults, err = kbpreflight.CollectPreflight(p.factory, &p.ValueOpts, ctx, kbPreflight, kbHostPreflight, progressCh)
+	collectResults, err = kbpreflight.CollectPreflight(p.factory, &p.ValueOpts, ctx, kbPreflight, progressCh)
 	if err != nil {
 		s.Fail()
-		return intctrlutil.NewError(intctrlutil.ErrorTypePreflightCommon, err.Error())
+		return intctrlutil.NewError(errorTypePreflightCommon, err.Error())
 	}
 	s.Success()
 
@@ -244,7 +239,7 @@ func (p *PreflightOptions) run() error {
 	}
 	cancelFunc()
 	if err := progressCollections.Wait(); err != nil {
-		return intctrlutil.NewError(intctrlutil.ErrorTypePreflightCommon, err.Error())
+		return intctrlutil.NewError(errorTypePreflightCommon, err.Error())
 	}
 	// 4. display analyzed data
 	if len(analyzeResults) == 0 {
@@ -252,7 +247,7 @@ func (p *PreflightOptions) run() error {
 		return nil
 	}
 	if err = kbpreflight.ShowTextResults(preflightName, analyzeResults, *p.Format, p.verbose, p.Out); err != nil {
-		return intctrlutil.NewError(intctrlutil.ErrorTypePreflightCommon, err.Error())
+		return intctrlutil.NewError(errorTypePreflightCommon, err.Error())
 	}
 	return nil
 }
@@ -281,8 +276,4 @@ func CollectProgress(ctx context.Context, progressCh <-chan interface{}, verbose
 
 func newPreflightPath(vendorName util.K8sProvider) string {
 	return fmt.Sprintf(PreflightPattern, strings.ToLower(string(vendorName)))
-}
-
-func newHostPreflightPath(vendorName util.K8sProvider) string {
-	return fmt.Sprintf(HostPreflightPattern, strings.ToLower(string(vendorName)))
 }
