@@ -81,7 +81,7 @@ func getInstanceInfoByList(dynamic dynamic.Interface, name, componentName, names
 		if ok {
 			info.Role = role
 		}
-		if role == constant.Primary || role == constant.Leader {
+		if role == "primary" || role == "leader" {
 			infos = append([]*InstanceInfo{info}, infos...)
 		} else {
 			infos = append(infos, info)

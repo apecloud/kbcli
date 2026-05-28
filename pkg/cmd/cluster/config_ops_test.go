@@ -34,7 +34,7 @@ import (
 
 	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
 	kbfakeclient "github.com/apecloud/kubeblocks/pkg/client/clientset/versioned/fake"
-	cfgcore "github.com/apecloud/kubeblocks/pkg/configuration/core"
+	cfgcore "github.com/apecloud/kubeblocks/pkg/parameters/core"
 	testapps "github.com/apecloud/kubeblocks/pkg/testutil/apps"
 
 	"github.com/apecloud/kbcli/pkg/testing"
@@ -79,7 +79,7 @@ var _ = Describe("reconfigure test", func() {
 
 		By("Create configmap and config constraint obj")
 		configmap := testapps.NewCustomizedObj("resources/mysql-config-template.yaml", &corev1.ConfigMap{}, testapps.WithNamespace(ns), testapps.WithName(testing.FakeMysqlTemplateName))
-		componentConfig := testapps.NewConfigMap(ns, cfgcore.GetComponentCfgName(clusterName, statefulCompName, configSpecName), testapps.SetConfigMapData("my.cnf", ""))
+		componentConfig := testapps.NewConfigMap(ns, cfgcore.GetComponentCfgName(clusterName, statefulCompName, configSpecName), setConfigMapData("my.cnf", ""))
 		objs := []runtime.Object{configmap, componentConfig}
 		ttf, ops := NewFakeOperationsOptions(ns, clusterName, objs...)
 		o := &configOpsOptions{
@@ -121,3 +121,9 @@ var _ = Describe("reconfigure test", func() {
 	})
 
 })
+
+func setConfigMapData(key string, value string) func(*corev1.ConfigMap) {
+	return func(cm *corev1.ConfigMap) {
+		cm.Data[key] = value
+	}
+}

@@ -310,7 +310,7 @@ func (o *ClusterObjects) GetComponentInfo() []*ComponentInfo {
 	var comps []*ComponentInfo
 	setComponentInfos := func(compSpec kbappsv1.ClusterComponentSpec,
 		resources corev1.ResourceRequirements,
-		storages []kbappsv1.ClusterComponentVolumeClaimTemplate,
+		storages []kbappsv1.PersistentVolumeClaimTemplate,
 		replicas int32,
 		clusterCompName string,
 		templateName string,
@@ -514,12 +514,12 @@ func (o *ClusterObjects) getPodPhase(pod *corev1.Pod) string {
 	return reason
 }
 
-func (o *ClusterObjects) getStorageInfo(vcts []kbappsv1.ClusterComponentVolumeClaimTemplate, componentName string) []StorageInfo {
+func (o *ClusterObjects) getStorageInfo(vcts []kbappsv1.PersistentVolumeClaimTemplate, componentName string) []StorageInfo {
 	if len(vcts) == 0 {
 		return nil
 	}
 
-	getClassName := func(vcTpl *kbappsv1.ClusterComponentVolumeClaimTemplate) string {
+	getClassName := func(vcTpl *kbappsv1.PersistentVolumeClaimTemplate) string {
 		if vcTpl.Spec.StorageClassName != nil {
 			return *vcTpl.Spec.StorageClassName
 		}
