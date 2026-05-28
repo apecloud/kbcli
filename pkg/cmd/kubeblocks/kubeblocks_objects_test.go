@@ -232,6 +232,6 @@ func mockConfigMaps() []runtime.Object {
 	if obj.ObjectMeta.Labels == nil {
 		obj.ObjectMeta.Labels = make(map[string]string)
 	}
-	obj.ObjectMeta.Labels[constant.CMConfigurationTypeLabelKey] = constant.ConfigTemplateType
+	obj.ObjectMeta.Labels[constant.CMConfigurationTypeLabelKey] = "tpl"
 	return []runtime.Object{obj}
 }

@@ -27,11 +27,10 @@ import (
 	opsv1alpha1 "github.com/apecloud/kubeblocks/apis/operations/v1alpha1"
 	parametersv1alpha1 "github.com/apecloud/kubeblocks/apis/parameters/v1alpha1"
 	"github.com/apecloud/kubeblocks/pkg/client/clientset/versioned"
-	cfgcm "github.com/apecloud/kubeblocks/pkg/configuration/config_manager"
-	"github.com/apecloud/kubeblocks/pkg/configuration/core"
-	configctrl "github.com/apecloud/kubeblocks/pkg/controller/configuration"
-	controllerutil "github.com/apecloud/kubeblocks/pkg/controllerutil"
 	"github.com/apecloud/kubeblocks/pkg/generics"
+	configctrl "github.com/apecloud/kubeblocks/pkg/parameters"
+	cfgcm "github.com/apecloud/kubeblocks/pkg/parameters/configmanager"
+	"github.com/apecloud/kubeblocks/pkg/parameters/core"
 	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
@@ -115,7 +114,7 @@ func (o *configOpsOptions) validateReconfigureOptions() error {
 		if err != nil {
 			return err
 		}
-		o.KeyValues = core.FromStringPointerMap(kvs)
+		o.KeyValues = fromStringPointerMap(kvs)
 	}
 	return nil
 }
@@ -174,7 +173,7 @@ func (o *configOpsOptions) validateConfigParams(rctx *ReconfigureContext, classi
 	transform := func(params map[string]*parametersv1alpha1.ParametersInFile) []core.ParamPairs {
 		var result []core.ParamPairs
 		for file, ps := range params {
-			configDescs := controllerutil.GetComponentConfigDescriptions(&rctx.ConfigRender.Spec, file)
+			configDescs := configctrl.GetComponentConfigDescriptions(&rctx.ConfigRender.Spec, file)
 			builder := configctrl.NewValueManager(rctx.ParametersDefs, configDescs)
 			updatedParams, _ := core.FromStringMap(ps.Parameters, builder.BuildValueTransformer(file))
 			result = append(result, core.ParamPairs{
@@ -187,7 +186,7 @@ func (o *configOpsOptions) validateConfigParams(rctx *ReconfigureContext, classi
 
 	restart := false
 	for _, parameters := range classifyParameters {
-		_, err := controllerutil.MergeAndValidateConfigs(mockEmptyData(parameters), transform(parameters), rctx.ParametersDefs, rctx.ConfigRender.Spec.Configs)
+		_, err := configctrl.MergeAndValidateConfigs(mockEmptyData(parameters), transform(parameters), rctx.ParametersDefs, rctx.ConfigRender.Spec.Configs)
 		if err != nil {
 			return err
 		}
@@ -206,6 +205,15 @@ func mockEmptyData(m map[string]*parametersv1alpha1.ParametersInFile) map[string
 	r := make(map[string]string, len(m))
 	for key := range m {
 		r[key] = ""
+	}
+	return r
+}
+
+func fromStringPointerMap(m map[string]string) map[string]*string {
+	r := make(map[string]*string, len(m))
+	for key, value := range m {
+		v := value
+		r[key] = &v
 	}
 	return r
 }

@@ -41,8 +41,8 @@ import (
 
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	appsv1beta1 "github.com/apecloud/kubeblocks/apis/apps/v1beta1"
-	cfgcore "github.com/apecloud/kubeblocks/pkg/configuration/core"
 	"github.com/apecloud/kubeblocks/pkg/constant"
+	cfgcore "github.com/apecloud/kubeblocks/pkg/parameters/core"
 	testapps "github.com/apecloud/kubeblocks/pkg/testutil/apps"
 	"github.com/apecloud/kubeblocks/test/testdata"
 
@@ -272,7 +272,7 @@ var _ = Describe("util", func() {
 		}}
 
 		for _, tt := range tests {
-			ret, err := IsSupportReconfigureParams(tt.args.configSpec, cfgcore.FromStringPointerMap(tt.args.updatedParams), mockClient)
+			ret, err := IsSupportReconfigureParams(tt.args.configSpec, fromStringPointerMap(tt.args.updatedParams), mockClient)
 			Expect(ret).Should(BeEquivalentTo(tt.expected))
 			Expect(err != nil).Should(BeEquivalentTo(tt.err != nil))
 			if err != nil {
@@ -364,3 +364,12 @@ var _ = Describe("util", func() {
 		}
 	})
 })
+
+func fromStringPointerMap(m map[string]string) map[string]*string {
+	r := make(map[string]*string, len(m))
+	for key, value := range m {
+		v := value
+		r[key] = &v
+	}
+	return r
+}

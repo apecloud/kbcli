@@ -28,10 +28,10 @@ import (
 
 	opsv1alpha1 "github.com/apecloud/kubeblocks/apis/operations/v1alpha1"
 	parametersv1alpha1 "github.com/apecloud/kubeblocks/apis/parameters/v1alpha1"
-	cfgcm "github.com/apecloud/kubeblocks/pkg/configuration/config_manager"
-	"github.com/apecloud/kubeblocks/pkg/configuration/core"
-	"github.com/apecloud/kubeblocks/pkg/configuration/validate"
-	intctrlutil "github.com/apecloud/kubeblocks/pkg/controllerutil"
+	configctrl "github.com/apecloud/kubeblocks/pkg/parameters"
+	cfgcm "github.com/apecloud/kubeblocks/pkg/parameters/configmanager"
+	"github.com/apecloud/kubeblocks/pkg/parameters/core"
+	"github.com/apecloud/kubeblocks/pkg/parameters/validate"
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/slices"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -111,7 +111,7 @@ func hasSchemaForFile(rctx *ReconfigureContext, configFile string) bool {
 	if rctx.ConfigRender == nil {
 		return false
 	}
-	return intctrlutil.GetComponentConfigDescription(&rctx.ConfigRender.Spec, configFile) != nil
+	return configctrl.GetComponentConfigDescription(&rctx.ConfigRender.Spec, configFile) != nil
 }
 
 func (o *editConfigOptions) runWithConfigConstraints(cfgEditContext *configEditContext, rctx *ReconfigureContext, fn func() error) error {
@@ -146,7 +146,7 @@ func (o *editConfigOptions) runWithConfigConstraints(cfgEditContext *configEditC
 	}
 
 	var config *parametersv1alpha1.ComponentConfigDescription
-	if config = intctrlutil.GetComponentConfigDescription(&rctx.ConfigRender.Spec, o.CfgFile); config == nil {
+	if config = configctrl.GetComponentConfigDescription(&rctx.ConfigRender.Spec, o.CfgFile); config == nil {
 		return fn()
 	}
 	var pd *parametersv1alpha1.ParametersDefinition
