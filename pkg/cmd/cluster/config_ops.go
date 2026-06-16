@@ -29,7 +29,6 @@ import (
 	"github.com/apecloud/kubeblocks/pkg/client/clientset/versioned"
 	"github.com/apecloud/kubeblocks/pkg/generics"
 	configctrl "github.com/apecloud/kubeblocks/pkg/parameters"
-	cfgcm "github.com/apecloud/kubeblocks/pkg/parameters/configmanager"
 	"github.com/apecloud/kubeblocks/pkg/parameters/core"
 	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
@@ -137,7 +136,7 @@ func (o *configOpsOptions) Validate() error {
 		return err
 	}
 
-	classifyParams, err := configctrl.ClassifyComponentParameters(o.KeyValues, rctx.ParametersDefs, rctx.Cmpd.Spec.Configs, tplObjs, rctx.ConfigRender)
+	classifyParams, err := configctrl.ClassifyComponentParameters(o.KeyValues, rctx.ParametersDefs, rctx.Cmpd.Spec.Configs, tplObjs, configDescriptions(rctx))
 	if err != nil {
 		return err
 	}
@@ -161,7 +160,7 @@ func (o *configOpsOptions) validateConfigParams(rctx *ReconfigureContext, classi
 	checkRestart := func(params map[string]*parametersv1alpha1.ParametersInFile) bool {
 		for file := range params {
 			match := func(pd *parametersv1alpha1.ParametersDefinition) bool {
-				return pd.Spec.FileName == file && cfgcm.IsSupportReload(pd.Spec.ReloadAction)
+				return pd.Spec.FileName == file && supportsDynamicReload(&pd.Spec)
 			}
 			if generics.FindFirstFunc(rctx.ParametersDefs, match) < 0 {
 				return true
@@ -173,7 +172,7 @@ func (o *configOpsOptions) validateConfigParams(rctx *ReconfigureContext, classi
 	transform := func(params map[string]*parametersv1alpha1.ParametersInFile) []core.ParamPairs {
 		var result []core.ParamPairs
 		for file, ps := range params {
-			configDescs := configctrl.GetComponentConfigDescriptions(&rctx.ConfigRender.Spec, file)
+			configDescs := configctrl.GetComponentConfigDescriptions(configDescriptions(rctx), file)
 			builder := configctrl.NewValueManager(rctx.ParametersDefs, configDescs)
 			updatedParams, _ := core.FromStringMap(ps.Parameters, builder.BuildValueTransformer(file))
 			result = append(result, core.ParamPairs{
@@ -186,7 +185,7 @@ func (o *configOpsOptions) validateConfigParams(rctx *ReconfigureContext, classi
 
 	restart := false
 	for _, parameters := range classifyParameters {
-		_, err := configctrl.MergeAndValidateConfigs(mockEmptyData(parameters), transform(parameters), rctx.ParametersDefs, rctx.ConfigRender.Spec.Configs)
+		_, err := configctrl.MergeAndValidateConfigs(mockEmptyData(parameters), transform(parameters), rctx.ParametersDefs, configDescriptions(rctx))
 		if err != nil {
 			return err
 		}
@@ -207,6 +206,16 @@ func mockEmptyData(m map[string]*parametersv1alpha1.ParametersInFile) map[string
 		r[key] = ""
 	}
 	return r
+}
+
+func supportsDynamicReload(pd *parametersv1alpha1.ParametersDefinitionSpec) bool {
+	if pd == nil {
+		return false
+	}
+	if configctrl.NeedDynamicReloadAction(pd) {
+		return true
+	}
+	return pd.ReloadAction != nil && (pd.ReloadAction.AutoTrigger != nil || pd.ReloadAction.ShellTrigger != nil)
 }
 
 func fromStringPointerMap(m map[string]string) map[string]*string {

@@ -33,6 +33,7 @@ import (
 	cmdtesting "k8s.io/kubectl/pkg/cmd/testing"
 
 	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
+	parametersv1alpha1 "github.com/apecloud/kubeblocks/apis/parameters/v1alpha1"
 	kbfakeclient "github.com/apecloud/kubeblocks/pkg/client/clientset/versioned/fake"
 	cfgcore "github.com/apecloud/kubeblocks/pkg/parameters/core"
 	testapps "github.com/apecloud/kubeblocks/pkg/testutil/apps"
@@ -118,6 +119,21 @@ var _ = Describe("reconfigure test", func() {
 
 		o.CreateOptions.In = io.NopCloser(in)
 		Expect(o.Validate()).Should(Succeed())
+	})
+
+	It("detects v1.2 and legacy dynamic reload support", func() {
+		mergeReloadAndRestart := false
+		Expect(supportsDynamicReload(&parametersv1alpha1.ParametersDefinitionSpec{
+			MergeReloadAndRestart: &mergeReloadAndRestart,
+		})).Should(BeTrue())
+
+		Expect(supportsDynamicReload(&parametersv1alpha1.ParametersDefinitionSpec{
+			ReloadAction: &parametersv1alpha1.ReloadAction{
+				ShellTrigger: &parametersv1alpha1.ShellTrigger{},
+			},
+		})).Should(BeTrue())
+
+		Expect(supportsDynamicReload(&parametersv1alpha1.ParametersDefinitionSpec{})).Should(BeFalse())
 	})
 
 })

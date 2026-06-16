@@ -61,7 +61,7 @@ func (w *ReconfigureWrapper) ConfigSpecName() string {
 	}
 	file := w.ConfigFile()
 	if file != "" && w.rctx.ConfigRender != nil {
-		config := configctrl.GetComponentConfigDescription(&w.rctx.ConfigRender.Spec, file)
+		config := configctrl.GetComponentConfigDescription(configDescriptions(w.rctx), file)
 		if config != nil {
 			return config.TemplateName
 		}
@@ -81,6 +81,13 @@ func (w *ReconfigureWrapper) ConfigFile() string {
 		return w.rctx.ConfigRender.Spec.Configs[0].Name
 	}
 	return ""
+}
+
+func configDescriptions(rctx *ReconfigureContext) []parametersv1alpha1.ComponentConfigDescription {
+	if rctx == nil || rctx.ConfigRender == nil {
+		return nil
+	}
+	return rctx.ConfigRender.Spec.Configs
 }
 
 func GetClientFromOptionsOrDie(factory cmdutil.Factory) versioned.Interface {
