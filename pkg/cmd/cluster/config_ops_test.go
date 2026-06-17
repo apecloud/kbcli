@@ -27,6 +27,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	clientfake "k8s.io/client-go/rest/fake"
@@ -125,15 +126,67 @@ var _ = Describe("reconfigure test", func() {
 		mergeReloadAndRestart := false
 		Expect(supportsDynamicReload(&parametersv1alpha1.ParametersDefinitionSpec{
 			MergeReloadAndRestart: &mergeReloadAndRestart,
+		}, nil)).Should(BeFalse())
+
+		Expect(supportsDynamicReload(&parametersv1alpha1.ParametersDefinitionSpec{}, &kbappsv1.ComponentFileTemplate{
+			Reconfigure: &kbappsv1.Action{},
 		})).Should(BeTrue())
 
 		Expect(supportsDynamicReload(&parametersv1alpha1.ParametersDefinitionSpec{
 			ReloadAction: &parametersv1alpha1.ReloadAction{
 				ShellTrigger: &parametersv1alpha1.ShellTrigger{},
 			},
-		})).Should(BeTrue())
+		}, nil)).Should(BeTrue())
 
-		Expect(supportsDynamicReload(&parametersv1alpha1.ParametersDefinitionSpec{})).Should(BeFalse())
+		Expect(supportsDynamicReload(&parametersv1alpha1.ParametersDefinitionSpec{}, nil)).Should(BeFalse())
+	})
+
+	It("uses config template name to transform typed parameter values", func() {
+		value := "true"
+		params := map[string]*parametersv1alpha1.ParametersInFile{
+			"my.cnf": {
+				Parameters: map[string]*string{
+					"enabled": &value,
+				},
+			},
+		}
+		rctx := &ReconfigureContext{
+			ConfigRender: &parametersv1alpha1.ParamConfigRenderer{
+				Spec: parametersv1alpha1.ParamConfigRendererSpec{
+					Configs: []parametersv1alpha1.ComponentConfigDescription{{
+						Name:         "my.cnf",
+						TemplateName: "mysql-config",
+						FileFormatConfig: &parametersv1alpha1.FileFormatConfig{
+							Format: parametersv1alpha1.JSON,
+						},
+					}},
+				},
+			},
+			ParametersDefs: []*parametersv1alpha1.ParametersDefinition{{
+				Spec: parametersv1alpha1.ParametersDefinitionSpec{
+					FileName: "my.cnf",
+					ParametersSchema: &parametersv1alpha1.ParametersSchema{
+						SchemaInJSON: &apiextensionsv1.JSONSchemaProps{
+							Type: "object",
+							Properties: map[string]apiextensionsv1.JSONSchemaProps{
+								"spec": {
+									Type: "object",
+									Properties: map[string]apiextensionsv1.JSONSchemaProps{
+										"enabled": {Type: "boolean"},
+									},
+								},
+							},
+						},
+					},
+				},
+			}},
+		}
+
+		result, err := transformConfigParams(rctx, "mysql-config", params)
+		Expect(err).Should(Succeed())
+		Expect(result).Should(HaveLen(1))
+		Expect(result[0].Key).Should(Equal("my.cnf"))
+		Expect(result[0].UpdatedParams["enabled"]).Should(BeTrue())
 	})
 
 })

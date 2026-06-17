@@ -24,6 +24,7 @@ import (
 	"os"
 	"strings"
 
+	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
 	opsv1alpha1 "github.com/apecloud/kubeblocks/apis/operations/v1alpha1"
 	parametersv1alpha1 "github.com/apecloud/kubeblocks/apis/parameters/v1alpha1"
 	"github.com/apecloud/kubeblocks/pkg/client/clientset/versioned"
@@ -157,40 +158,28 @@ func (o *configOpsOptions) validateConfigParams(rctx *ReconfigureContext, classi
 		return o.confirmReconfigureWithRestart()
 	}
 
-	checkRestart := func(params map[string]*parametersv1alpha1.ParametersInFile) bool {
+	checkRestart := func(templateName string, params map[string]*parametersv1alpha1.ParametersInFile) bool {
+		template := componentFileTemplate(rctx, templateName)
 		for file := range params {
-			match := func(pd *parametersv1alpha1.ParametersDefinition) bool {
-				return pd.Spec.FileName == file && supportsDynamicReload(&pd.Spec)
-			}
-			if generics.FindFirstFunc(rctx.ParametersDefs, match) < 0 {
+			if !fileSupportsDynamicReload(rctx.ParametersDefs, file, template) {
 				return true
 			}
 		}
 		return false
 	}
 
-	transform := func(params map[string]*parametersv1alpha1.ParametersInFile) []core.ParamPairs {
-		var result []core.ParamPairs
-		for file, ps := range params {
-			configDescs := configctrl.GetComponentConfigDescriptions(configDescriptions(rctx), file)
-			builder := configctrl.NewValueManager(rctx.ParametersDefs, configDescs)
-			updatedParams, _ := core.FromStringMap(ps.Parameters, builder.BuildValueTransformer(file))
-			result = append(result, core.ParamPairs{
-				Key:           file,
-				UpdatedParams: updatedParams,
-			})
-		}
-		return result
-	}
-
 	restart := false
-	for _, parameters := range classifyParameters {
-		_, err := configctrl.MergeAndValidateConfigs(mockEmptyData(parameters), transform(parameters), rctx.ParametersDefs, configDescriptions(rctx))
+	for templateName, parameters := range classifyParameters {
+		paramPairs, err := transformConfigParams(rctx, templateName, parameters)
+		if err != nil {
+			return err
+		}
+		_, err = configctrl.MergeAndValidateConfigs(mockEmptyData(parameters), paramPairs, rctx.ParametersDefs, configDescriptions(rctx))
 		if err != nil {
 			return err
 		}
 		if !restart {
-			restart = checkRestart(parameters)
+			restart = checkRestart(templateName, parameters)
 		}
 	}
 
@@ -208,12 +197,51 @@ func mockEmptyData(m map[string]*parametersv1alpha1.ParametersInFile) map[string
 	return r
 }
 
-func supportsDynamicReload(pd *parametersv1alpha1.ParametersDefinitionSpec) bool {
+func transformConfigParams(rctx *ReconfigureContext, templateName string, params map[string]*parametersv1alpha1.ParametersInFile) ([]core.ParamPairs, error) {
+	var result []core.ParamPairs
+	configDescs := configctrl.GetComponentConfigDescriptions(configDescriptions(rctx), templateName)
+	builder := configctrl.NewValueManager(rctx.ParametersDefs, configDescs)
+	for file, ps := range params {
+		updatedParams, err := core.FromStringMap(ps.Parameters, builder.BuildValueTransformer(file))
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, core.ParamPairs{
+			Key:           file,
+			UpdatedParams: updatedParams,
+		})
+	}
+	return result, nil
+}
+
+func componentFileTemplate(rctx *ReconfigureContext, templateName string) *kbappsv1.ComponentFileTemplate {
+	if rctx == nil || rctx.Cmpd == nil {
+		return nil
+	}
+	for i := range rctx.Cmpd.Spec.Configs {
+		if rctx.Cmpd.Spec.Configs[i].Name == templateName {
+			return &rctx.Cmpd.Spec.Configs[i]
+		}
+	}
+	return nil
+}
+
+func fileSupportsDynamicReload(paramsDefs []*parametersv1alpha1.ParametersDefinition, file string, template *kbappsv1.ComponentFileTemplate) bool {
+	if supportsDynamicReload(nil, template) {
+		return true
+	}
+	match := func(pd *parametersv1alpha1.ParametersDefinition) bool {
+		return pd.Spec.FileName == file && supportsDynamicReload(&pd.Spec, nil)
+	}
+	return generics.FindFirstFunc(paramsDefs, match) >= 0
+}
+
+func supportsDynamicReload(pd *parametersv1alpha1.ParametersDefinitionSpec, template *kbappsv1.ComponentFileTemplate) bool {
+	if template != nil && template.Reconfigure != nil {
+		return true
+	}
 	if pd == nil {
 		return false
-	}
-	if configctrl.NeedDynamicReloadAction(pd) {
-		return true
 	}
 	return pd.ReloadAction != nil && (pd.ReloadAction.AutoTrigger != nil || pd.ReloadAction.ShellTrigger != nil)
 }
