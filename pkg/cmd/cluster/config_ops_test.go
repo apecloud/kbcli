@@ -21,6 +21,7 @@ package cluster
 
 import (
 	"bytes"
+	"context"
 	"io"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -83,6 +84,8 @@ var _ = Describe("reconfigure test", func() {
 		configmap := testapps.NewCustomizedObj("resources/mysql-config-template.yaml", &corev1.ConfigMap{}, testapps.WithNamespace(ns), testapps.WithName(testing.FakeMysqlTemplateName))
 		componentConfig := testapps.NewConfigMap(ns, cfgcore.GetComponentCfgName(clusterName, statefulCompName, configSpecName), setConfigMapData("my.cnf", ""))
 		objs := []runtime.Object{configmap, componentConfig}
+		pd := testing.FakeParameterDefinition()
+		pd.Status = parametersv1alpha1.ParametersDefinitionStatus{Phase: parametersv1alpha1.PDAvailablePhase}
 		ttf, ops := NewFakeOperationsOptions(ns, clusterName, objs...)
 		o := &configOpsOptions{
 			// nil cannot be set to a map struct in CueLang, so init the map of KeyValues.
@@ -95,7 +98,7 @@ var _ = Describe("reconfigure test", func() {
 		o.clientSet = kbfakeclient.NewSimpleClientset(
 			testing.FakeCluster(clusterName, ns),
 			testing.FakeCompDef(),
-			testing.FakeParameterDefinition(),
+			pd,
 			testing.FakeParameterConfigRenderer(),
 		)
 		defer ttf.Cleanup()
@@ -139,6 +142,135 @@ var _ = Describe("reconfigure test", func() {
 		}, nil)).Should(BeTrue())
 
 		Expect(supportsDynamicReload(&parametersv1alpha1.ParametersDefinitionSpec{}, nil)).Should(BeFalse())
+	})
+
+	It("discovers direct ParametersDefinitions without legacy ParamConfigRenderer", func() {
+		pd := testing.FakeParameterDefinition()
+		pd.Name = "direct-pd"
+		pd.Spec.ComponentDef = testing.CompDefName
+		pd.Spec.TemplateName = "mysql-config"
+		pd.Spec.FileName = "my.cnf"
+		pd.Spec.FileFormatConfig = &parametersv1alpha1.FileFormatConfig{Format: parametersv1alpha1.Ini}
+		pd.Status = parametersv1alpha1.ParametersDefinitionStatus{Phase: parametersv1alpha1.PDAvailablePhase}
+
+		rctx, err := generateReconfigureContext(
+			context.TODO(),
+			kbfakeclient.NewSimpleClientset(
+				testing.FakeCluster(clusterName, testing.Namespace),
+				testing.FakeCompDef(),
+				pd,
+			),
+			clusterName,
+			testing.ComponentName,
+			testing.Namespace,
+		)
+
+		Expect(err).Should(Succeed())
+		Expect(rctx.ParametersDefs).Should(HaveLen(1))
+		Expect(rctx.ParametersDefs[0].Name).Should(Equal("direct-pd"))
+		Expect(configDescriptions(rctx)).Should(Equal([]parametersv1alpha1.ComponentConfigDescription{{
+			Name:         "my.cnf",
+			TemplateName: "mysql-config",
+			FileFormatConfig: &parametersv1alpha1.FileFormatConfig{
+				Format: parametersv1alpha1.Ini,
+			},
+		}}))
+		Expect(rctx.ConfigRender).Should(BeNil())
+	})
+
+	It("keeps legacy ParamConfigRenderer discovery with component definition pattern matching", func() {
+		pd := testing.FakeParameterDefinition()
+		pd.Status = parametersv1alpha1.ParametersDefinitionStatus{Phase: parametersv1alpha1.PDAvailablePhase}
+		pcr := testing.FakeParameterConfigRenderer()
+		pcr.Spec.ComponentDef = "fake-component"
+
+		rctx, err := generateReconfigureContext(
+			context.TODO(),
+			kbfakeclient.NewSimpleClientset(
+				testing.FakeCluster(clusterName, testing.Namespace),
+				testing.FakeCompDef(),
+				pd,
+				pcr,
+			),
+			clusterName,
+			testing.ComponentName,
+			testing.Namespace,
+		)
+
+		Expect(err).Should(Succeed())
+		Expect(rctx.ParametersDefs).Should(HaveLen(1))
+		Expect(rctx.ParametersDefs[0].Name).Should(Equal("test-pd"))
+		Expect(configDescriptions(rctx)).Should(Equal(pcr.Spec.Configs))
+		Expect(rctx.ConfigRender).ShouldNot(BeNil())
+	})
+
+	It("merges direct ParametersDefinitions with legacy ParamConfigRenderer for uncovered files", func() {
+		directPD := testing.FakeParameterDefinition()
+		directPD.Name = "direct-pd"
+		directPD.Spec.ComponentDef = testing.CompDefName
+		directPD.Spec.TemplateName = "mysql-config"
+		directPD.Spec.FileName = "my.cnf"
+		directPD.Spec.FileFormatConfig = &parametersv1alpha1.FileFormatConfig{Format: parametersv1alpha1.Ini}
+		directPD.Status = parametersv1alpha1.ParametersDefinitionStatus{Phase: parametersv1alpha1.PDAvailablePhase}
+
+		legacyPD := testing.FakeParameterDefinition()
+		legacyPD.Name = "legacy-pd"
+		legacyPD.Spec.FileName = "log.conf"
+		legacyPD.Status = parametersv1alpha1.ParametersDefinitionStatus{Phase: parametersv1alpha1.PDAvailablePhase}
+
+		pcr := testing.FakeParameterConfigRenderer()
+		pcr.Spec.ParametersDefs = []string{"direct-pd", "legacy-pd"}
+		pcr.Spec.Configs = []parametersv1alpha1.ComponentConfigDescription{
+			{
+				Name:         "my.cnf",
+				TemplateName: "legacy-mysql-config",
+				FileFormatConfig: &parametersv1alpha1.FileFormatConfig{
+					Format: parametersv1alpha1.Properties,
+				},
+			},
+			{
+				Name:         "log.conf",
+				TemplateName: "log-config",
+				FileFormatConfig: &parametersv1alpha1.FileFormatConfig{
+					Format: parametersv1alpha1.Properties,
+				},
+			},
+		}
+
+		rctx, err := generateReconfigureContext(
+			context.TODO(),
+			kbfakeclient.NewSimpleClientset(
+				testing.FakeCluster(clusterName, testing.Namespace),
+				testing.FakeCompDef(),
+				directPD,
+				legacyPD,
+				pcr,
+			),
+			clusterName,
+			testing.ComponentName,
+			testing.Namespace,
+		)
+
+		Expect(err).Should(Succeed())
+		Expect(rctx.ParametersDefs).Should(HaveLen(2))
+		Expect(rctx.ParametersDefs[0].Name).Should(Equal("direct-pd"))
+		Expect(rctx.ParametersDefs[1].Name).Should(Equal("legacy-pd"))
+		Expect(configDescriptions(rctx)).Should(Equal([]parametersv1alpha1.ComponentConfigDescription{
+			{
+				Name:         "my.cnf",
+				TemplateName: "mysql-config",
+				FileFormatConfig: &parametersv1alpha1.FileFormatConfig{
+					Format: parametersv1alpha1.Ini,
+				},
+			},
+			{
+				Name:         "log.conf",
+				TemplateName: "log-config",
+				FileFormatConfig: &parametersv1alpha1.FileFormatConfig{
+					Format: parametersv1alpha1.Properties,
+				},
+			},
+		}))
 	})
 
 	It("uses config template name to transform typed parameter values", func() {
