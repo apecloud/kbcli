@@ -452,6 +452,14 @@ var _ = Describe("report", func() {
 			Expect(o.file).Should(MatchRegexp("report-cluster-.*.zip"))
 		})
 
+		It("complete cluster-report options should respect specified namespace", func() {
+			o := reportClusterOptions{reportOptions: newReportOptions(streams)}
+			o.outputFormat = jsonFormat
+			o.namespace = "demo"
+			Expect(o.complete(tf)).To(Succeed())
+			Expect(o.namespace).Should(Equal("demo"))
+		})
+
 		It("handle cluster-report manifests", func() {
 			o := reportClusterOptions{reportOptions: newReportOptions(streams)}
 			o.outputFormat = jsonFormat
