@@ -28,6 +28,7 @@ import (
 
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/version"
@@ -164,7 +165,34 @@ var _ = Describe("create cluster by cluster type", func() {
 		Expect(o.Complete(shardCmd)).Should(Succeed())
 		Expect(o.Name).ShouldNot(BeEmpty())
 		Expect(o.Values).ShouldNot(BeNil())
-		Expect(o.ChartInfo.ComponentDef[0]).Should(Equal(redisComponent))
+		Expect(o.ChartInfo.ClusterDef).Should(Equal(redisCluster))
+		hasRedisComponentDef := false
+		for _, componentDef := range o.ChartInfo.ComponentDef {
+			if componentDef == redisComponent {
+				hasRedisComponentDef = true
+				break
+			}
+		}
+		objs, err := o.getObjectsInfo()
+		Expect(err).ShouldNot(HaveOccurred())
+		clusterObj, err := o.getClusterObj(objs)
+		Expect(err).ShouldNot(HaveOccurred())
+		hasShardingDef := false
+		shardings, ok, err := unstructured.NestedSlice(clusterObj.Object, "spec", "shardings")
+		Expect(err).ShouldNot(HaveOccurred())
+		if ok {
+			for _, item := range shardings {
+				shardingSpec, ok := item.(map[string]interface{})
+				if !ok {
+					continue
+				}
+				if shardingDef, ok := shardingSpec["shardingDef"].(string); ok && shardingDef != "" {
+					hasShardingDef = true
+					break
+				}
+			}
+		}
+		Expect(hasShardingDef || hasRedisComponentDef).Should(BeTrue(), "redis sharding chart should set either shardingDef or componentDef")
 
 		By("validate")
 		o.Dynamic = testing.FakeDynamicClient()
