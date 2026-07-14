@@ -46,9 +46,8 @@ import (
 
 var _ = Describe("create cluster by cluster type", func() {
 	const (
-		clusterType    = "apecloud-mysql"
-		redisCluster   = "redis"
-		redisComponent = "redis-cluster"
+		clusterType  = "apecloud-mysql"
+		redisCluster = "redis"
 	)
 
 	var (
@@ -164,7 +163,7 @@ var _ = Describe("create cluster by cluster type", func() {
 		Expect(o.Complete(shardCmd)).Should(Succeed())
 		Expect(o.Name).ShouldNot(BeEmpty())
 		Expect(o.Values).ShouldNot(BeNil())
-		Expect(o.ChartInfo.ComponentDef[0]).Should(Equal(redisComponent))
+		Expect(o.ChartInfo.ClusterDef).Should(Equal(redisCluster))
 
 		By("validate")
 		o.Dynamic = testing.FakeDynamicClient()
