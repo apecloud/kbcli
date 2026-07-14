@@ -10,7 +10,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.3.0
 	github.com/NimbleMarkets/ntcharts v0.1.2
 	github.com/apecloud/dbctl v0.0.0-20240827084000-68a1980b1a46
-	github.com/apecloud/kubeblocks v1.1.0-beta.5
+	github.com/apecloud/kubeblocks v1.2.0-alpha.2
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
 	github.com/briandowns/spinner v1.23.0
 	github.com/chaos-mesh/chaos-mesh/api v0.0.0-20230912020346-a5d89c1c90ad
@@ -71,7 +71,7 @@ require (
 	k8s.io/client-go v12.0.0+incompatible
 	k8s.io/component-base v0.33.3
 	k8s.io/klog v1.0.0
-	k8s.io/klog/v2 v2.130.1
+	k8s.io/klog/v2 v2.140.0
 	k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff
 	k8s.io/kubectl v0.33.3
 	k8s.io/metrics v0.29.14

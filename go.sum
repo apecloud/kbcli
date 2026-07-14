@@ -697,6 +697,8 @@ github.com/apecloud/dbctl v0.0.0-20240827084000-68a1980b1a46 h1:+Jcc7IjDGxPgIfIk
 github.com/apecloud/dbctl v0.0.0-20240827084000-68a1980b1a46/go.mod h1:eksJtZ7z1nVcVLqDzAdcN5EfpHwXllIAvHZEks2zWys=
 github.com/apecloud/kubeblocks v1.1.0-beta.5 h1:a3Jng19OOquH12SqqEBi/pd6fMAeD01NCInLZe9nTP4=
 github.com/apecloud/kubeblocks v1.1.0-beta.5/go.mod h1:vx9p2tv5x4NZiShUvl1MXVl9RO343Bu1nCpbAKdcA6k=
+github.com/apecloud/kubeblocks v1.2.0-alpha.2 h1:dHfjbAc8u59TPbi7Rrqqn7PdgglI7ihryXNnR04Oh2A=
+github.com/apecloud/kubeblocks v1.2.0-alpha.2/go.mod h1:w00VNDQqlqrjz4GGCE48hvJjAKfdzx83V7mkZAxJPIg=
 github.com/apparentlymart/go-textseg v1.0.0/go.mod h1:z96Txxhf3xSFMPmb5X/1W05FF/Nj9VFpLOpjS5yuumk=
 github.com/apparentlymart/go-textseg/v13 v13.0.0/go.mod h1:ZK2fH7c4NqDTLtiYLvIkEghdlcqw7yxLeM89kiTRPUo=
 github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5 h1:0CwZNZbxp69SHPdPJAN/hZIm0C4OItdklCFmMRWYpio=
@@ -2685,6 +2687,8 @@ k8s.io/klog/v2 v2.80.1/go.mod h1:y1WjHnz7Dj687irZUWR/WLkLc5N1YHtjLdmgWjndZn0=
 k8s.io/klog/v2 v2.110.1/go.mod h1:YGtd1984u+GgbuZ7e08/yBuAfKLSO0+uR1Fhi6ExXjo=
 k8s.io/klog/v2 v2.130.1 h1:n9Xl7H1Xvksem4KFG4PYbdQCQxqc/tTUyrgXaOhHSzk=
 k8s.io/klog/v2 v2.130.1/go.mod h1:3Jpz1GvMt720eyJH1ckRHK1EDfpxISzJ7I9OYgaDtPE=
+k8s.io/klog/v2 v2.140.0 h1:Tf+J3AH7xnUzZyVVXhTgGhEKnFqye14aadWv7bzXdzc=
+k8s.io/klog/v2 v2.140.0/go.mod h1:o+/RWfJ6PwpnFn7OyAG3QnO47BFsymfEfrz6XyYSSp0=
 k8s.io/kube-openapi v0.0.0-20231010175941-2dd684a91f00/go.mod h1:AsvuZPBlUDVuCdzJ87iajxtXuR9oktsTctW/R9wwouA=
 k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff h1:/usPimJzUKKu+m+TE36gUyGcf03XZEP0ZIKgKj35LS4=
 k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff/go.mod h1:5jIi+8yX4RIb8wk3XwBo5Pq2ccx4FP10ohkbSKCZoK8=
