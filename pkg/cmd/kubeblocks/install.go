@@ -82,6 +82,8 @@ type InstallOptions struct {
 	Options
 	OldVersion      string
 	Version         string
+	chartFile       string
+	crdsFile        string
 	Quiet           bool
 	CreateNamespace bool
 	Check           bool
@@ -293,7 +295,7 @@ func (o *InstallOptions) Install() error {
 	// create or update crds
 	s := spinner.New(o.Out, spinnerMsg("Create CRDs"))
 	defer s.Fail()
-	if err = createOrUpdateCRDS(o.Dynamic, o.Version); err != nil {
+	if err = createOrUpdateCRDS(o.Dynamic, o.Version, ""); err != nil {
 		return fmt.Errorf("install crds failed: %s", err.Error())
 	}
 	s.Success()
@@ -502,11 +504,13 @@ func (o *InstallOptions) checkVersion(v util.Version) error {
 	}
 
 	// check installing version exists
-	if exists, err := versionExists(o.Version); !exists {
-		if err != nil {
-			return err
+	if o.chartFile == "" {
+		if exists, err := versionExists(o.Version); !exists {
+			if err != nil {
+				return err
+			}
+			return fmt.Errorf("version %s does not exist, please use \"kbcli kubeblocks list-versions --devel\" to show the available versions", o.Version)
 		}
-		return fmt.Errorf("version %s does not exist, please use \"kbcli kubeblocks list-versions --devel\" to show the available versions", o.Version)
 	}
 
 	versionErr := fmt.Errorf("failed to get kubernetes version")
@@ -611,9 +615,13 @@ func (o *InstallOptions) printNotes() {
 }
 
 func (o *InstallOptions) buildChart() *helm.InstallOpts {
+	chart := types.KubeBlocksChartName + "/" + types.KubeBlocksChartName
+	if o.chartFile != "" {
+		chart = o.chartFile
+	}
 	return &helm.InstallOpts{
 		Name:            types.KubeBlocksChartName,
-		Chart:           types.KubeBlocksChartName + "/" + types.KubeBlocksChartName,
+		Chart:           chart,
 		Wait:            o.Wait,
 		Version:         o.Version,
 		Namespace:       o.HelmCfg.Namespace(),

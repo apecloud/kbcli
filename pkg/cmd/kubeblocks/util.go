@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -317,23 +318,32 @@ func newHelmRepoEntry() *repo.Entry {
 }
 
 // createOrUpdateCRDS creates or updates the kubeBlocks crds.
-func createOrUpdateCRDS(dynamic dynamic.Interface, kbVersion string) error {
-	if kbVersion == "" {
-		kbVersion = version.GetVersion()
+func createOrUpdateCRDS(dynamic dynamic.Interface, kbVersion, crdsFile string) error {
+	var reader io.ReadCloser
+	var err error
+	if crdsFile != "" {
+		if reader, err = os.Open(crdsFile); err != nil {
+			return err
+		}
+	} else {
+		if kbVersion == "" {
+			kbVersion = version.GetVersion()
+		}
+		crdsURL := util.GetKubeBlocksCRDsURL(kbVersion)
+		resp, err := http.Get(crdsURL)
+		if err != nil {
+			return err
+		}
+		if resp.StatusCode == http.StatusNotFound {
+			fmt.Printf("not found CRDs from %s, please specify the right version", crdsURL)
+			return nil
+		} else if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("failed to download CRDs from %s", crdsURL)
+		}
+		reader = resp.Body
 	}
-	crdsURL := util.GetKubeBlocksCRDsURL(kbVersion)
-	resp, err := http.Get(crdsURL)
-	if err != nil {
-		return err
-	}
-	if resp.StatusCode == http.StatusNotFound {
-		fmt.Printf("not found CRDs from %s, please specify the right version", crdsURL)
-		return nil
-	} else if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("failed to download CRDs from %s", crdsURL)
-	}
-	defer resp.Body.Close()
-	d := yaml.NewYAMLToJSONDecoder(resp.Body)
+	defer reader.Close()
+	d := yaml.NewYAMLToJSONDecoder(reader)
 	var objs []unstructured.Unstructured
 	for {
 		var obj unstructured.Unstructured

@@ -82,6 +82,8 @@ func newUpgradeCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 	}
 
 	cmd.Flags().StringVar(&o.Version, "version", "", "Set KubeBlocks version")
+	cmd.Flags().StringVar(&o.chartFile, "chart-file", "", "Path to the KubeBlocks Helm chart")
+	cmd.Flags().StringVar(&o.crdsFile, "crds-file", "", "Path to the KubeBlocks CRDs")
 	cmd.Flags().StringVarP(&o.Namespace, "namespace", "n", "", "KubeBlocks namespace")
 	cmd.Flags().BoolVar(&o.Check, "check", true, "Check kubernetes environment before upgrade")
 	cmd.Flags().DurationVar(&o.Timeout, "timeout", 1800*time.Second, "Time to wait for upgrading KubeBlocks, such as --timeout=10m")
@@ -177,14 +179,17 @@ func (o *InstallOptions) Upgrade() error {
 		}
 	}
 
-	// add helm repo
-	s := spinner.New(o.Out, spinnerMsg("Add and update repo %s", types.KubeBlocksChartName))
-	defer s.Fail()
-	// Add repo, if exists, will update it
-	if err = helm.AddRepo(newHelmRepoEntry()); err != nil {
-		return err
+	var s spinner.Interface
+	if o.chartFile == "" {
+		// add helm repo
+		s = spinner.New(o.Out, spinnerMsg("Add and update repo %s", types.KubeBlocksChartName))
+		defer s.Fail()
+		// Add repo, if exists, will update it
+		if err = helm.AddRepo(newHelmRepoEntry()); err != nil {
+			return err
+		}
+		s.Success()
 	}
-	s.Success()
 
 	// it's time to upgrade
 	msg := ""
@@ -229,7 +234,7 @@ func (o *InstallOptions) Upgrade() error {
 	// create or update crds
 	s = spinner.New(o.Out, spinnerMsg("Upgrade CRDs"))
 	defer s.Fail()
-	if err = createOrUpdateCRDS(o.Dynamic, o.Version); err != nil {
+	if err = createOrUpdateCRDS(o.Dynamic, o.Version, o.crdsFile); err != nil {
 		return fmt.Errorf("upgrade crds failed: %s", err.Error())
 	}
 	s.Success()
