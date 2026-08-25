@@ -26,10 +26,10 @@ import (
 	"os"
 	"strings"
 
+	kbappsv1 "github.com/apecloud/kubeblocks/apis/apps/v1"
 	opsv1alpha1 "github.com/apecloud/kubeblocks/apis/operations/v1alpha1"
 	parametersv1alpha1 "github.com/apecloud/kubeblocks/apis/parameters/v1alpha1"
 	configctrl "github.com/apecloud/kubeblocks/pkg/parameters"
-	cfgcm "github.com/apecloud/kubeblocks/pkg/parameters/configmanager"
 	"github.com/apecloud/kubeblocks/pkg/parameters/core"
 	"github.com/apecloud/kubeblocks/pkg/parameters/validate"
 	"github.com/spf13/cobra"
@@ -111,7 +111,7 @@ func hasSchemaForFile(rctx *ReconfigureContext, configFile string) bool {
 	if rctx.ConfigRender == nil {
 		return false
 	}
-	return configctrl.GetComponentConfigDescription(&rctx.ConfigRender.Spec, configFile) != nil
+	return configctrl.GetComponentConfigDescription(configDescriptions(rctx), configFile) != nil
 }
 
 func (o *editConfigOptions) runWithConfigConstraints(cfgEditContext *configEditContext, rctx *ReconfigureContext, fn func() error) error {
@@ -122,7 +122,7 @@ func (o *editConfigOptions) runWithConfigConstraints(cfgEditContext *configEditC
 		o.CfgFile: cfgEditContext.getEdited(),
 	}
 
-	configPatch, fileUpdated, err := core.CreateConfigPatch(oldVersion, newVersion, rctx.ConfigRender.Spec, true)
+	configPatch, fileUpdated, err := core.CreateConfigPatch(oldVersion, newVersion, configDescriptions(rctx), true)
 	if err != nil {
 		return err
 	}
@@ -133,7 +133,7 @@ func (o *editConfigOptions) runWithConfigConstraints(cfgEditContext *configEditC
 
 	fmt.Fprintf(o.CreateOptions.Out, "Config patch(updated parameters): \n%s\n\n", string(configPatch.UpdateConfig[o.CfgFile]))
 	if !o.enableDelete {
-		if err := core.ValidateConfigPatch(configPatch, rctx.ConfigRender.Spec); err != nil {
+		if err := core.ValidateConfigPatch(configPatch, configDescriptions(rctx)); err != nil {
 			return err
 		}
 	}
@@ -146,7 +146,7 @@ func (o *editConfigOptions) runWithConfigConstraints(cfgEditContext *configEditC
 	}
 
 	var config *parametersv1alpha1.ComponentConfigDescription
-	if config = configctrl.GetComponentConfigDescription(&rctx.ConfigRender.Spec, o.CfgFile); config == nil {
+	if config = configctrl.GetComponentConfigDescription(configDescriptions(rctx), o.CfgFile); config == nil {
 		return fn()
 	}
 	var pd *parametersv1alpha1.ParametersDefinition
@@ -157,7 +157,7 @@ func (o *editConfigOptions) runWithConfigConstraints(cfgEditContext *configEditC
 		}
 	}
 
-	confirmPrompt, err := generateReconfiguringPrompt(fileUpdated, configPatch, pd, o.CfgFile, config.FileFormatConfig)
+	confirmPrompt, err := generateReconfiguringPrompt(fileUpdated, configPatch, pd, o.CfgFile, config.FileFormatConfig, componentFileTemplate(rctx, config.TemplateName))
 	if err != nil {
 		return err
 	}
@@ -177,7 +177,7 @@ func (o *editConfigOptions) runWithConfigConstraints(cfgEditContext *configEditC
 	return fn()
 }
 
-func generateReconfiguringPrompt(fileUpdated bool, configPatch *core.ConfigPatchInfo, pd *parametersv1alpha1.ParametersDefinition, fileName string, config *parametersv1alpha1.FileFormatConfig) (string, error) {
+func generateReconfiguringPrompt(fileUpdated bool, configPatch *core.ConfigPatchInfo, pd *parametersv1alpha1.ParametersDefinition, fileName string, config *parametersv1alpha1.FileFormatConfig, template *kbappsv1.ComponentFileTemplate) (string, error) {
 	if fileUpdated || pd == nil {
 		return restartConfirmPrompt, nil
 	}
@@ -188,7 +188,7 @@ func generateReconfiguringPrompt(fileUpdated bool, configPatch *core.ConfigPatch
 	}
 
 	confirmPrompt := confirmApplyReconfigurePrompt
-	if !dynamicUpdated || !cfgcm.IsSupportReload(pd.Spec.ReloadAction) {
+	if !dynamicUpdated || !supportsDynamicReload(&pd.Spec, template) {
 		confirmPrompt = restartConfirmPrompt
 	}
 	return confirmPrompt, nil

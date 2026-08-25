@@ -140,7 +140,7 @@ func (r *configObserverOptions) printComponentConfigSpecsDescribe(rctx *Reconfig
 func (r *configObserverOptions) printComponentExplainConfigure(rctx *ReconfigureContext) error {
 	for _, pd := range rctx.ParametersDefs {
 		if rctx.ConfigRender != nil {
-			config := configctrl.GetComponentConfigDescription(&rctx.ConfigRender.Spec, pd.Spec.FileName)
+			config := configctrl.GetComponentConfigDescription(configDescriptions(rctx), pd.Spec.FileName)
 			if config != nil {
 				fmt.Println("template meta:")
 				printer.PrintLineWithTabSeparator(
