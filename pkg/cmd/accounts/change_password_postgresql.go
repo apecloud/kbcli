@@ -41,7 +41,7 @@ func (c *postgresPasswordChanger) ChangePassword(request passwordChangeRequest) 
 }
 
 func buildPostgresPasswordSQL(role, password string) string {
-	return "SET standard_conforming_strings = on;\nALTER ROLE " + quotePostgresIdentifier(role) + " PASSWORD " + quotePostgresLiteral(password) + ";\n"
+	return "SET standard_conforming_strings = on;\nDO $$ BEGIN IF pg_is_in_recovery() THEN RAISE EXCEPTION 'PostgreSQL is in recovery mode and is not writable'; END IF; END $$;\nALTER ROLE " + quotePostgresIdentifier(role) + " PASSWORD " + quotePostgresLiteral(password) + ";\n"
 }
 
 func quotePostgresIdentifier(value string) string {

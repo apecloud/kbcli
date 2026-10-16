@@ -44,8 +44,10 @@ import (
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/cmd/util/podcmd"
 
+	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	"github.com/apecloud/kubeblocks/pkg/constant"
 
+	clusterutil "github.com/apecloud/kbcli/pkg/cluster"
 	"github.com/apecloud/kbcli/pkg/printer"
 )
 
@@ -117,6 +119,9 @@ func (o *ChangePasswordOptions) Complete() error {
 		return err
 	}
 	o.setDatabaseDefaults()
+	if err := o.validateComponentStatus(); err != nil {
+		return err
+	}
 
 	ctx := context.Background()
 	if !explicitInstance {
@@ -138,6 +143,25 @@ func (o *ChangePasswordOptions) Complete() error {
 			return err
 		}
 		o.ContainerName = container.Name
+	}
+	return nil
+}
+
+func (o *ChangePasswordOptions) validateComponentStatus() error {
+	cluster, err := clusterutil.GetClusterByName(o.Dynamic, o.ClusterName, o.Namespace)
+	if err != nil {
+		return fmt.Errorf("get cluster %s/%s status: %w", o.Namespace, o.ClusterName, err)
+	}
+	componentStatus, ok := cluster.Status.Components[o.ComponentName]
+	if !ok {
+		return fmt.Errorf("component status %s not found in cluster %s", o.ComponentName, o.ClusterName)
+	}
+	return validatePasswordComponentPhase(o.ComponentName, componentStatus.Phase)
+}
+
+func validatePasswordComponentPhase(componentName string, phase appsv1alpha1.ClusterComponentPhase) error {
+	if phase != appsv1alpha1.RunningClusterCompPhase {
+		return fmt.Errorf("component %s is not running (phase %s), please try again later", componentName, phase)
 	}
 	return nil
 }

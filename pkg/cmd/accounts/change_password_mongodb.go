@@ -33,7 +33,7 @@ func (c *mongoPasswordChanger) ChangePassword(request passwordChangeRequest) err
 
 func buildMongoPasswordScript(database, authUser, authPassword, targetUser, newPassword string) string {
 	return fmt.Sprintf(
-		"var auth = db.getSiblingDB(%s).auth(%s, %s); if (!auth) { throw new Error(\"authentication failed\"); } var result = db.getSiblingDB(%s).runCommand({updateUser: %s, pwd: %s}); if (!result || result.ok !== 1) { printjson(result); throw new Error(\"updateUser failed\"); }",
+		"var admin = db.getSiblingDB(\"admin\"); var ping = admin.runCommand({ping: 1}); if (!ping || ping.ok !== 1) { printjson(ping); throw new Error(\"MongoDB health check failed: ping\"); } var hello = admin.runCommand({hello: 1}); if (!hello || hello.ok !== 1) { hello = admin.runCommand({isMaster: 1}); } if (!hello || hello.ok !== 1 || (hello.isWritablePrimary !== true && hello.ismaster !== true)) { printjson(hello); throw new Error(\"MongoDB is not a writable primary\"); } var auth = db.getSiblingDB(%s).auth(%s, %s); if (!auth) { throw new Error(\"authentication failed\"); } var result = db.getSiblingDB(%s).runCommand({updateUser: %s, pwd: %s}); if (!result || result.ok !== 1) { printjson(result); throw new Error(\"updateUser failed\"); }",
 		quoteMongoJavaScriptString(database),
 		quoteMongoJavaScriptString(authUser),
 		quoteMongoJavaScriptString(authPassword),

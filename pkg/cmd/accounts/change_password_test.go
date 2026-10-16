@@ -31,12 +31,13 @@ import (
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	"k8s.io/client-go/kubernetes/fake"
 
+	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	"github.com/apecloud/kubeblocks/pkg/constant"
 )
 
 func TestBuildPostgresPasswordSQL(t *testing.T) {
 	got := buildPostgresPasswordSQL(`role"name`, `p'ass\word`)
-	want := "SET standard_conforming_strings = on;\nALTER ROLE \"role\"\"name\" PASSWORD 'p''ass\\word';\n"
+	want := "SET standard_conforming_strings = on;\nDO $$ BEGIN IF pg_is_in_recovery() THEN RAISE EXCEPTION 'PostgreSQL is in recovery mode and is not writable'; END IF; END $$;\nALTER ROLE \"role\"\"name\" PASSWORD 'p''ass\\word';\n"
 	if got != want {
 		t.Fatalf("buildPostgresPasswordSQL() = %q, want %q", got, want)
 	}
@@ -44,9 +45,20 @@ func TestBuildPostgresPasswordSQL(t *testing.T) {
 
 func TestBuildMongoPasswordScriptEscapesValues(t *testing.T) {
 	got := buildMongoPasswordScript("admin", `admin"user`, `a'p\ass`, `root"user`, `p'ass\word`)
-	want := `var auth = db.getSiblingDB("admin").auth("admin\"user", "a'p\\ass"); if (!auth) { throw new Error("authentication failed"); } var result = db.getSiblingDB("admin").runCommand({updateUser: "root\"user", pwd: "p'ass\\word"}); if (!result || result.ok !== 1) { printjson(result); throw new Error("updateUser failed"); }`
+	want := `var admin = db.getSiblingDB("admin"); var ping = admin.runCommand({ping: 1}); if (!ping || ping.ok !== 1) { printjson(ping); throw new Error("MongoDB health check failed: ping"); } var hello = admin.runCommand({hello: 1}); if (!hello || hello.ok !== 1) { hello = admin.runCommand({isMaster: 1}); } if (!hello || hello.ok !== 1 || (hello.isWritablePrimary !== true && hello.ismaster !== true)) { printjson(hello); throw new Error("MongoDB is not a writable primary"); } var auth = db.getSiblingDB("admin").auth("admin\"user", "a'p\\ass"); if (!auth) { throw new Error("authentication failed"); } var result = db.getSiblingDB("admin").runCommand({updateUser: "root\"user", pwd: "p'ass\\word"}); if (!result || result.ok !== 1) { printjson(result); throw new Error("updateUser failed"); }`
 	if got != want {
 		t.Fatalf("buildMongoPasswordScript() = %q, want %q", got, want)
+	}
+}
+
+func TestValidatePasswordComponentPhase(t *testing.T) {
+	if err := validatePasswordComponentPhase("mongodb", appsv1alpha1.RunningClusterCompPhase); err != nil {
+		t.Fatalf("validatePasswordComponentPhase() error = %v", err)
+	}
+
+	err := validatePasswordComponentPhase("mongodb", appsv1alpha1.UpdatingClusterCompPhase)
+	if err == nil || !strings.Contains(err.Error(), "is not running") {
+		t.Fatalf("validatePasswordComponentPhase() error = %v, want not-running error", err)
 	}
 }
 

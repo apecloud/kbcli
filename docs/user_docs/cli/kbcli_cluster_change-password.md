@@ -6,6 +6,8 @@ Change a database account password
 
 When automatically discovered account Secrets are immutable, kbcli deletes them after updating mutable credential Secrets so KubeBlocks can recreate them with the new password.
 
+The cluster and selected component must be in the `Running` phase. For PostgreSQL, kbcli verifies that the server is not in recovery mode before changing the password. For MongoDB, kbcli checks connectivity and verifies that the selected server is a writable primary.
+
 ```
 kbcli cluster change-password [flags]
 ```
