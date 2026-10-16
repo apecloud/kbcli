@@ -27,10 +27,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"sort"
 	"strings"
 
 	"github.com/spf13/cobra"
+	"golang.org/x/crypto/ssh/terminal"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -78,6 +80,7 @@ type ChangePasswordOptions struct {
 
 	kubeClient      kubernetes.Interface
 	passwordChanger passwordChanger
+	readPassword    func() ([]byte, error)
 }
 
 func NewChangePasswordOptions(f cmdutil.Factory, streams genericiooptions.IOStreams) *ChangePasswordOptions {
@@ -89,19 +92,15 @@ func NewChangePasswordOptions(f cmdutil.Factory, streams genericiooptions.IOStre
 func (o *ChangePasswordOptions) AddFlags(cmd *cobra.Command) {
 	o.AccountBaseOptions.AddFlags(cmd)
 	cmd.Flags().StringVar(&o.UserName, "name", "", "Specify the database account whose password should be changed. Defaults to postgres for PostgreSQL and root for MongoDB.")
-	cmd.Flags().StringVarP(&o.Password, "password", "p", "", "Required. Specify the new password.")
+	cmd.Flags().StringVarP(&o.Password, "password", "p", "", "Specify the new password; prompts interactively when omitted.")
 	cmd.Flags().StringVar(&o.DatabaseName, "database", "", "Database used for authentication and the password change. Defaults to postgres for PostgreSQL and admin for MongoDB.")
 	cmd.Flags().StringVar(&o.SecretName, "secret", "", "Secret to update; when omitted, all related account Secrets are detected and updated.")
 	cmd.Flags().StringVar(&o.AuthSecretName, "auth-secret", "", "Secret used for database login; defaults to the target Secret.")
 	cmd.Flags().StringVar(&o.ContainerName, "container", "", "Container used for the database command; defaults to the Pod's default container.")
-	_ = cmd.MarkFlagRequired("password")
 }
 
 func (o *ChangePasswordOptions) Validate() error {
-	if o.Password == "" {
-		return errMissingPassword
-	}
-	if bytes.IndexByte([]byte(o.Password), 0) >= 0 {
+	if o.Password != "" && bytes.IndexByte([]byte(o.Password), 0) >= 0 {
 		return errors.New("password cannot contain a NUL byte")
 	}
 	if bytes.IndexByte([]byte(o.UserName), 0) >= 0 {
@@ -361,7 +360,61 @@ func (o *ChangePasswordOptions) Exec() error {
 	if err := o.Complete(); err != nil {
 		return err
 	}
+	if o.Password == "" {
+		if err := o.promptPassword(); err != nil {
+			return err
+		}
+	}
 	return o.Run()
+}
+
+func (o *ChangePasswordOptions) promptPassword() error {
+	readPassword := o.readPassword
+	if readPassword == nil {
+		readPassword = func() ([]byte, error) {
+			return terminal.ReadPassword(int(os.Stdin.Fd()))
+		}
+	}
+	out := o.Out
+	if out == nil {
+		out = io.Discard
+	}
+	fmt.Fprint(out, "New password: ")
+	passwordBytes, err := readPassword()
+	fmt.Fprintln(out)
+	if err != nil {
+		return fmt.Errorf("read new password: %w; specify --password for non-interactive use", err)
+	}
+	password := string(passwordBytes)
+	if err := validatePassword(password); err != nil {
+		return fmt.Errorf("read new password: %w", err)
+	}
+
+	fmt.Fprint(out, "Confirm password: ")
+	confirmationBytes, err := readPassword()
+	fmt.Fprintln(out)
+	if err != nil {
+		return fmt.Errorf("confirm new password: %w; specify --password for non-interactive use", err)
+	}
+	confirmation := string(confirmationBytes)
+	if err := validatePassword(confirmation); err != nil {
+		return fmt.Errorf("confirm new password: %w", err)
+	}
+	if confirmation != password {
+		return errors.New("confirm new password: passwords do not match")
+	}
+	o.Password = password
+	return nil
+}
+
+func validatePassword(password string) error {
+	if password == "" {
+		return errMissingPassword
+	}
+	if bytes.IndexByte([]byte(password), 0) >= 0 {
+		return errors.New("password cannot contain a NUL byte")
+	}
+	return nil
 }
 
 type passwordChangeRequest struct {

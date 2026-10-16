@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package accounts
 
 import (
+	"bytes"
 	"context"
 	"io"
 	"strings"
@@ -40,6 +41,29 @@ func TestBuildPostgresPasswordSQL(t *testing.T) {
 	want := "SET standard_conforming_strings = on;\nDO $$ BEGIN IF pg_is_in_recovery() THEN RAISE EXCEPTION 'PostgreSQL is in recovery mode and is not writable'; END IF; END $$;\nALTER ROLE \"role\"\"name\" PASSWORD 'p''ass\\word';\n"
 	if got != want {
 		t.Fatalf("buildPostgresPasswordSQL() = %q, want %q", got, want)
+	}
+}
+
+func TestPromptPassword(t *testing.T) {
+	streams, _, _, _ := genericiooptions.NewTestIOStreams()
+	var output bytes.Buffer
+	streams.Out = &output
+	o := NewChangePasswordOptions(nil, streams)
+	passwords := [][]byte{[]byte("new-password"), []byte("new-password")}
+	o.readPassword = func() ([]byte, error) {
+		password := passwords[0]
+		passwords = passwords[1:]
+		return password, nil
+	}
+
+	if err := o.promptPassword(); err != nil {
+		t.Fatalf("promptPassword() error = %v", err)
+	}
+	if o.Password != "new-password" {
+		t.Fatalf("prompted password = %q, want %q", o.Password, "new-password")
+	}
+	if strings.Contains(output.String(), "new-password") {
+		t.Fatalf("prompt output contains the plaintext password: %q", output.String())
 	}
 }
 

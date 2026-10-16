@@ -15,8 +15,8 @@ kbcli cluster change-password [flags]
 ### Examples
 
 ```
-  # change the default PostgreSQL account password and update its Secret
-  kbcli cluster change-password CLUSTERNAME --password PASSWD
+  # interactively change the default PostgreSQL account password and update its Secret
+  kbcli cluster change-password CLUSTERNAME
   # change the default MongoDB root password and update its Secret
   kbcli cluster change-password CLUSTERNAME --password PASSWD
   # change an application role password with explicit Secrets
@@ -35,7 +35,7 @@ kbcli cluster change-password [flags]
   -h, --help                 help for change-password
   -i, --instance string      Specify the name of instance to be connected.
       --name string          Specify the database account whose password should be changed. Defaults to postgres for PostgreSQL and root for MongoDB.
-  -p, --password string      Required. Specify the new password.
+  -p, --password string      Specify the new password; prompts interactively when omitted.
       --secret string        Secret to update; when omitted, all related account Secrets are detected and updated.
 ```
 
