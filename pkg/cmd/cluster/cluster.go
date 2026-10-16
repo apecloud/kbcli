@@ -105,6 +105,7 @@ func NewClusterCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra
 			Message: "User Accounts Commands:",
 			Commands: []*cobra.Command{
 				NewCreateAccountCmd(f, streams),
+				NewChangePasswordCmd(f, streams),
 				NewDeleteAccountCmd(f, streams),
 				NewDescAccountCmd(f, streams),
 				NewListAccountsCmd(f, streams),

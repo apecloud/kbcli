@@ -83,7 +83,17 @@ var (
 		kbcli cluster revoke-role CLUSTERNAME --name USERNAME --role ROLENAME
 		# revoke role from user for instance
 		kbcli cluster revoke-role --instance INSTANCE --name USERNAME --role ROLENAME
-	`)
+ `)
+	changePasswordExamples = templates.Examples(`
+		# change the default PostgreSQL account password and update its Secret
+		kbcli cluster change-password CLUSTERNAME --password PASSWD
+		# change the default MongoDB root password and update its Secret
+		kbcli cluster change-password CLUSTERNAME --password PASSWD
+		# change an application role password with explicit Secrets
+		kbcli cluster change-password CLUSTERNAME --component COMPNAME --name USERNAME --password PASSWD --secret TARGET_SECRET --auth-secret ADMIN_SECRET
+		# change a password on a specified instance
+		kbcli cluster change-password --instance INSTANCE --name USERNAME --password PASSWD
+ `)
 )
 
 func NewCreateAccountCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
@@ -186,6 +196,22 @@ func NewRevokeOptions(f cmdutil.Factory, streams genericiooptions.IOStreams) *co
 			cmdutil.CheckErr(o.Validate(args))
 			cmdutil.CheckErr(o.Complete(f))
 			cmdutil.CheckErr(o.Run(cmd, f, streams))
+		},
+	}
+	o.AddFlags(cmd)
+	return cmd
+}
+
+func NewChangePasswordCmd(f cmdutil.Factory, streams genericiooptions.IOStreams) *cobra.Command {
+	o := accounts.NewChangePasswordOptions(f, streams)
+	cmd := &cobra.Command{
+		Use:               "change-password",
+		Short:             "Change a database account password",
+		Example:           changePasswordExamples,
+		ValidArgsFunction: util.ResourceNameCompletionFunc(f, types.ClusterGVR()),
+		Run: func(cmd *cobra.Command, args []string) {
+			cmdutil.CheckErr(o.AccountBaseOptions.Validate(args))
+			cmdutil.CheckErr(o.Exec())
 		},
 	}
 	o.AddFlags(cmd)
