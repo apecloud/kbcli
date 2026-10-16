@@ -25,12 +25,16 @@ import (
 	"io"
 	"strings"
 	"testing"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	"k8s.io/client-go/kubernetes/fake"
+	k8stesting "k8s.io/client-go/testing"
 
 	appsv1alpha1 "github.com/apecloud/kubeblocks/apis/apps/v1alpha1"
 	"github.com/apecloud/kubeblocks/pkg/constant"
@@ -265,6 +269,76 @@ func TestChangePasswordRunDeletesImmutableTargetSecret(t *testing.T) {
 	if _, err := client.CoreV1().Secrets("default").Get(context.Background(), accountSecret.Name, metav1.GetOptions{}); !apierrors.IsNotFound(err) {
 		t.Fatalf("immutable account Secret lookup error = %v, want NotFound", err)
 	}
+}
+
+func TestChangePasswordRunWarnsWhenMongoAccountRootSecretDeletionSticks(t *testing.T) {
+	connectionSecret := passwordTestSecret("mongo-conn-credential", "root", "old-password")
+	accountSecret := passwordTestSecret("mongo-mongodb-account-root", "root", "old-password")
+	accountSecret.Immutable = boolptr(true)
+	accountSecret.UID = "old-account-root"
+	client := fake.NewSimpleClientset(connectionSecret, accountSecret)
+	changer := &recordingPasswordChanger{}
+	o := newTestChangePasswordOptions(client, connectionSecret, changer)
+	o.CharType = "mongodb"
+	o.ClusterName = "mongo"
+	o.ComponentName = "mongodb"
+	o.UserName = "root"
+	o.targetSecrets = []*corev1.Secret{connectionSecret, accountSecret}
+	o.oldPasswords = map[string]string{
+		connectionSecret.Name: "old-password",
+		accountSecret.Name:    "old-password",
+	}
+	o.AccountRootSecretWaitTimeout = 5 * time.Millisecond
+	var output bytes.Buffer
+	o.Out = &output
+
+	if err := o.Run(); err != nil {
+		t.Fatalf("ChangePasswordOptions.Run() error = %v", err)
+	}
+	if !strings.Contains(output.String(), "password changed successfully") {
+		t.Fatalf("output = %q, want success message", output.String())
+	}
+	if !strings.Contains(output.String(), "kubectl patch secret mongo-mongodb-account-root -n default") {
+		t.Fatalf("output = %q, want account-root finalizer patch command", output.String())
+	}
+}
+
+func TestWaitForMongoAccountRootSecretRecreated(t *testing.T) {
+	oldSecret := passwordTestSecret("mongo-mongodb-account-root", "root", "old-password")
+	oldSecret.UID = "old-account-root"
+	newSecret := oldSecret.DeepCopy()
+	newSecret.UID = "new-account-root"
+	newSecret.Data[constant.AccountPasswdForSecret] = []byte("new-password")
+	client := fake.NewSimpleClientset(oldSecret)
+	getCount := 0
+	client.PrependReactor("get", "secrets", func(_ k8stesting.Action) (bool, runtime.Object, error) {
+		getCount++
+		if getCount == 1 {
+			return true, nil, apierrors.NewNotFound(schema.GroupResource{Resource: "secrets"}, oldSecret.Name)
+		}
+		return true, newSecret, nil
+	})
+
+	if err := waitForMongoAccountRootSecretRecreated(context.Background(), client, "default", oldSecret.Name, oldSecret.UID, []byte("new-password"), time.Second, time.Millisecond); err != nil {
+		t.Fatalf("waitForMongoAccountRootSecretRecreated() error = %v", err)
+	}
+}
+
+func TestWaitForMongoAccountRootSecretRecreatedTimesOut(t *testing.T) {
+	secret := passwordTestSecret("mongo-mongodb-account-root", "root", "old-password")
+	secret.UID = "old-account-root"
+	now := metav1.Now()
+	secret.DeletionTimestamp = &now
+	client := fake.NewSimpleClientset(secret)
+
+	err := waitForMongoAccountRootSecretRecreated(context.Background(), client, "default", secret.Name, secret.UID, []byte("new-password"), 5*time.Millisecond, time.Millisecond)
+	if err == nil || !strings.Contains(err.Error(), "was not deleted and recreated") {
+		t.Fatalf("waitForMongoAccountRootSecretRecreated() error = %v, want timeout error", err)
+	}
+}
+
+func boolptr(value bool) *bool {
+	return &value
 }
 
 func TestChangePasswordRunRollsBackWhenSecretUpdateFails(t *testing.T) {

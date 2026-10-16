@@ -30,6 +30,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh/terminal"
@@ -64,11 +65,12 @@ var errMissingPassword = errors.New("please specify password")
 
 type ChangePasswordOptions struct {
 	*AccountBaseOptions
-	UserName       string
-	Password       string
-	DatabaseName   string
-	SecretName     string
-	AuthSecretName string
+	UserName                     string
+	Password                     string
+	DatabaseName                 string
+	SecretName                   string
+	AuthSecretName               string
+	AccountRootSecretWaitTimeout time.Duration
 
 	targetSecret  *corev1.Secret
 	targetSecrets []*corev1.Secret
@@ -96,6 +98,7 @@ func (o *ChangePasswordOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.DatabaseName, "database", "", "Database used for authentication and the password change. Defaults to postgres for PostgreSQL and admin for MongoDB.")
 	cmd.Flags().StringVar(&o.SecretName, "secret", "", "Secret to update; when omitted, all related account Secrets are detected and updated.")
 	cmd.Flags().StringVar(&o.AuthSecretName, "auth-secret", "", "Secret used for database login; defaults to the target Secret.")
+	cmd.Flags().DurationVar(&o.AccountRootSecretWaitTimeout, "account-root-secret-timeout", defaultMongoAccountRootSecretWaitTimeout, "Maximum time to wait for a MongoDB account-root Secret to be deleted and recreated.")
 	cmd.Flags().StringVar(&o.ContainerName, "container", "", "Container used for the database command; defaults to the Pod's default container.")
 }
 
@@ -108,6 +111,9 @@ func (o *ChangePasswordOptions) Validate() error {
 	}
 	if bytes.IndexByte([]byte(o.DatabaseName), 0) >= 0 {
 		return errors.New("database cannot contain a NUL byte")
+	}
+	if o.AccountRootSecretWaitTimeout < 0 {
+		return errors.New("account-root-secret-timeout cannot be negative")
 	}
 	return nil
 }
@@ -283,17 +289,34 @@ func (o *ChangePasswordOptions) Run() error {
 		}
 		updatedSecrets = append(updatedSecrets, targetSecret)
 	}
+	deletedImmutableSecrets := make([]*corev1.Secret, 0, len(immutableSecrets))
+	stuckAccountRootSecrets := make([]*corev1.Secret, 0, len(immutableSecrets))
 	for _, targetSecret := range immutableSecrets {
 		if err := deletePasswordSecret(context.Background(), o.kube(), o.Namespace, targetSecret.Name); err != nil {
 			o.printGeneralInfo("fail", err.Error())
 			return fmt.Errorf("password changed and mutable target Secrets were updated, but failed to delete immutable Secret %s/%s for KubeBlocks to recreate: %w", o.Namespace, targetSecret.Name, err)
 		}
+		if err := o.waitForMongoAccountRootSecret(targetSecret); err != nil {
+			stuckAccountRootSecrets = append(stuckAccountRootSecrets, targetSecret)
+			continue
+		}
+		deletedImmutableSecrets = append(deletedImmutableSecrets, targetSecret)
 	}
 
 	o.printGeneralInfo("success", fmt.Sprintf("password for account %q changed successfully", o.UserName))
-	if len(immutableSecrets) > 0 {
+	if len(deletedImmutableSecrets) > 0 {
 		printer.Alert(o.Out, "The new password is stored in mutable Secret(s); immutable Secret(s) were deleted for KubeBlocks to recreate.\n")
-	} else {
+	}
+	if len(stuckAccountRootSecrets) > 0 {
+		for _, targetSecret := range stuckAccountRootSecrets {
+			timeout := o.AccountRootSecretWaitTimeout
+			if timeout <= 0 {
+				timeout = defaultMongoAccountRootSecretWaitTimeout
+			}
+			printer.Warning(o.Out, "MongoDB password changed successfully, but deletion and recreation of account-root Secret %s/%s was not confirmed within %s. The deletion may be blocked by a finalizer. If the Secret remains stuck, run:\n  %s\n", o.Namespace, targetSecret.Name, timeout, mongoAccountRootSecretFinalizerPatchCommand(o.Namespace, targetSecret.Name))
+		}
+	}
+	if len(immutableSecrets) == 0 {
 		printer.Alert(o.Out, "The new password is stored in the target Secret(s).\n")
 	}
 	return nil
@@ -611,14 +634,14 @@ func selectPasswordPod(pods []corev1.Pod, cluster, component string) (*corev1.Po
 }
 
 func defaultPasswordUserForCharacterType(characterType string) string {
-	if strings.EqualFold(characterType, "mongo") || strings.EqualFold(characterType, "mongodb") {
+	if isMongoCharacterType(characterType) {
 		return defaultMongoPasswordUser
 	}
 	return defaultPasswordUser
 }
 
 func defaultPasswordDatabaseForCharacterType(characterType string) string {
-	if strings.EqualFold(characterType, "mongo") || strings.EqualFold(characterType, "mongodb") {
+	if isMongoCharacterType(characterType) {
 		return defaultMongoPasswordDatabase
 	}
 	return defaultPasswordDatabase
