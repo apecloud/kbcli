@@ -24,6 +24,7 @@ CLUSTER_DEFINITION_RESOURCE="clusterdefinitions.apps.kubeblocks.io"
 COMPONENT_DEFINITION_RESOURCE="componentdefinitions.apps.kubeblocks.io"
 
 NAMESPACE=""
+SCOPE=""
 CONTEXT=""
 USERNAME="postgres"
 PASSWORD_BYTES=24
@@ -48,8 +49,12 @@ by KubeBlocks in a Kubernetes cluster. A unique password is generated for each
 target and recorded in a local TSV file with mode 0600.
 
 Options:
-  -n, --namespace NAME     Only scan this namespace. By default all namespaces
-                            are scanned.
+  -n, --namespace NAME     Only scan this namespace. Mutually exclusive with
+                            --scope.
+      --scope SCOPE        Namespace selection scope: all or system. all scans
+                            every namespace (default); system scans namespaces
+                            whose names do not start with ns-. Mutually
+                            exclusive with --namespace.
       --context NAME       Kubernetes context used by kubectl and kbcli.
       --username NAME      PostgreSQL account to rotate (default: postgres).
       --password-bytes N   Random bytes used for each hexadecimal password
@@ -109,6 +114,15 @@ while (($# > 0)); do
       ;;
     --namespace=*)
       NAMESPACE=${1#*=}
+      shift
+      ;;
+    --scope)
+      [[ $# -ge 2 ]] || die "--scope requires a value"
+      SCOPE=$2
+      shift 2
+      ;;
+    --scope=*)
+      SCOPE=${1#*=}
       shift
       ;;
     --context)
@@ -216,6 +230,11 @@ if (($# > 0)); then
   die "unexpected argument: $1"
 fi
 
+[[ "$SCOPE" == "" || "$SCOPE" == "all" || "$SCOPE" == "system" ]] ||
+  die "scope must be all or system"
+[[ -z "$NAMESPACE" || -z "$SCOPE" ]] ||
+  die "--namespace and --scope are mutually exclusive"
+[[ -n "$SCOPE" ]] || SCOPE=all
 [[ -n "$USERNAME" ]] || die "username must not be empty"
 [[ "$USERNAME" != *$'\t'* && "$USERNAME" != *$'\n'* && "$USERNAME" != *$'\r'* ]] ||
   die "username must not contain tabs or newlines"
@@ -290,12 +309,18 @@ TARGETS_FILE="$WORK_DIR/targets.tsv"
   --slurpfile components "$COMPONENTS_JSON" \
   --slurpfile clusterDefinitions "$CLUSTER_DEFINITIONS_JSON" \
   --slurpfile componentDefinitions "$COMPONENT_DEFINITIONS_JSON" \
-  --argjson runningOnly "$RUNNING_ONLY" '
+  --argjson runningOnly "$RUNNING_ONLY" \
+  --arg namespaceScope "$SCOPE" \
+  '
   def clusterIsRunning($namespace; $clusterName):
     any($clusters[0].items[];
         .metadata.namespace == $namespace and
         .metadata.name == $clusterName and
         .status.phase == "Running");
+
+  def namespaceMatchesScope($namespace):
+    $namespaceScope == "all" or
+      ($namespaceScope == "system" and (($namespace | startswith("ns-")) | not));
 
   [
     $components[0].items[]
@@ -304,6 +329,7 @@ TARGETS_FILE="$WORK_DIR/targets.tsv"
     | (.metadata.labels["apps.kubeblocks.io/component-name"] // "") as $componentName
     | (.metadata.labels["apps.kubeblocks.io/component-def-ref"] // "") as $componentDefinition
     | select($clusterName != "" and $componentName != "" and $componentDefinition != "")
+    | select(namespaceMatchesScope($namespace))
     | select(any($componentDefinitions[0].items[];
                  .metadata.name == $componentDefinition and
                  ((.spec.serviceKind // "" | ascii_downcase) == "postgresql")))
@@ -320,6 +346,7 @@ TARGETS_FILE="$WORK_DIR/targets.tsv"
     | (.componentDef // "") as $componentDefinition
     | (.name // "") as $componentName
     | select($componentDefinition != "" and $componentName != "")
+    | select(namespaceMatchesScope($namespace))
     | select(any($componentDefinitions[0].items[];
                  .metadata.name == $componentDefinition and
                  ((.spec.serviceKind // "" | ascii_downcase) == "postgresql")))
@@ -336,6 +363,7 @@ TARGETS_FILE="$WORK_DIR/targets.tsv"
     | (.componentDefRef // "") as $componentDefinition
     | (.name // "") as $componentName
     | select($clusterDefinition != null and $componentDefinition != "" and $componentName != "")
+    | select(namespaceMatchesScope($namespace))
     | select(any($clusterDefinitions[0].items[];
                  .metadata.name == $clusterDefinition and
                  any(.spec.componentDefs[]?;
