@@ -289,6 +289,10 @@ func (o *ChangePasswordOptions) Run() error {
 		}
 		updatedSecrets = append(updatedSecrets, targetSecret)
 	}
+	if err := o.ensureMongoAccountRootRecreationSource(context.Background(), immutableSecrets); err != nil {
+		o.printGeneralInfo("fail", err.Error())
+		return fmt.Errorf("password changed, but failed to prepare MongoDB account-root Secret recreation: %w", err)
+	}
 	deletedImmutableSecrets := make([]*corev1.Secret, 0, len(immutableSecrets))
 	stuckAccountRootSecrets := make([]*corev1.Secret, 0, len(immutableSecrets))
 	for _, targetSecret := range immutableSecrets {

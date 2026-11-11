@@ -4,7 +4,7 @@ title: kbcli cluster change-password
 
 Change a database account password
 
-When automatically discovered account Secrets are immutable, kbcli deletes them after updating mutable credential Secrets so KubeBlocks can recreate them with the new password. For MongoDB, kbcli waits up to 30 seconds for the immutable `<cluster>-<component>-account-root` Secret to be deleted and recreated with the new password. If deletion remains pending, kbcli still reports the password change as successful and prints a `kubectl patch secret ...` command for manually removing the Secret finalizer.
+When automatically discovered account Secrets are immutable, kbcli deletes them after updating mutable credential Secrets so KubeBlocks can recreate them with the new password. For MongoDB, if only the immutable `<cluster>-<component>-account-root` Secret exists, kbcli creates or updates the legacy `<cluster>-conn-credential` Secret as KubeBlocks' recreation source. It then waits up to 30 seconds for the account-root Secret to be deleted and recreated with the new password. If deletion remains pending, kbcli still reports the password change as successful and prints a `kubectl patch secret ...` command for manually removing the Secret finalizer.
 
 The cluster and selected component must be in the `Running` phase. For PostgreSQL, kbcli verifies that the server is not in recovery mode before changing the password. For MongoDB, kbcli checks connectivity and verifies that the selected server is a writable primary.
 

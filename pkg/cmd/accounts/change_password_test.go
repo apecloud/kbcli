@@ -303,6 +303,36 @@ func TestChangePasswordRunWarnsWhenMongoAccountRootSecretDeletionSticks(t *testi
 	}
 }
 
+func TestChangePasswordRunSupportsOnlyImmutableMongoAccountRootSecret(t *testing.T) {
+	accountSecret := passwordTestSecret("mongo-mongodb-account-root", "root", "old-password")
+	accountSecret.Immutable = boolptr(true)
+	accountSecret.UID = "old-account-root"
+	client := fake.NewSimpleClientset(accountSecret)
+	changer := &recordingPasswordChanger{}
+	o := newTestChangePasswordOptions(client, accountSecret, changer)
+	o.CharType = "mongodb"
+	o.ClusterName = "mongo"
+	o.ComponentName = "mongodb"
+	o.UserName = "root"
+	o.targetSecrets = []*corev1.Secret{accountSecret}
+	o.oldPasswords = map[string]string{accountSecret.Name: "old-password"}
+	o.AccountRootSecretWaitTimeout = 5 * time.Millisecond
+
+	if err := o.Run(); err != nil {
+		t.Fatalf("ChangePasswordOptions.Run() error = %v", err)
+	}
+	source, err := client.CoreV1().Secrets("default").Get(context.Background(), "mongo-conn-credential", metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("get MongoDB legacy connection Secret: %v", err)
+	}
+	if string(source.Data[constant.AccountNameForSecret]) != "root" {
+		t.Fatalf("legacy connection username = %q, want %q", source.Data[constant.AccountNameForSecret], "root")
+	}
+	if string(source.Data[constant.AccountPasswdForSecret]) != "new-password" {
+		t.Fatalf("legacy connection password = %q, want %q", source.Data[constant.AccountPasswdForSecret], "new-password")
+	}
+}
+
 func TestWaitForMongoAccountRootSecretRecreated(t *testing.T) {
 	oldSecret := passwordTestSecret("mongo-mongodb-account-root", "root", "old-password")
 	oldSecret.UID = "old-account-root"

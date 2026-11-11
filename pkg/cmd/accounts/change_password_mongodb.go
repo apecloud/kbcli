@@ -68,6 +68,58 @@ func (o *ChangePasswordOptions) waitForMongoAccountRootSecret(targetSecret *core
 	)
 }
 
+func (o *ChangePasswordOptions) ensureMongoAccountRootRecreationSource(ctx context.Context, immutableSecrets []*corev1.Secret) error {
+	for _, targetSecret := range immutableSecrets {
+		if !isMongoAccountRootSecret(o.CharType, o.ClusterName, o.ComponentName, o.UserName, targetSecret) {
+			continue
+		}
+
+		secretName := constant.GenerateDefaultConnCredential(o.ClusterName)
+		secrets := o.kube().CoreV1().Secrets(o.Namespace)
+		sourceSecret, err := secrets.Get(ctx, secretName, metav1.GetOptions{})
+		if apierrors.IsNotFound(err) {
+			sourceSecret, err = secrets.Create(ctx, &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: o.Namespace,
+					Name:      secretName,
+					Labels: map[string]string{
+						constant.AppInstanceLabelKey:    o.ClusterName,
+						constant.ClusterAccountLabelKey: defaultMongoPasswordUser,
+					},
+				},
+				Data: map[string][]byte{
+					constant.AccountNameForSecret:   []byte(defaultMongoPasswordUser),
+					constant.AccountPasswdForSecret: []byte(o.Password),
+				},
+			}, metav1.CreateOptions{})
+			if err == nil {
+				return nil
+			}
+			if !apierrors.IsAlreadyExists(err) {
+				return fmt.Errorf("create MongoDB legacy connection Secret %s/%s: %w", o.Namespace, secretName, err)
+			}
+			sourceSecret, err = secrets.Get(ctx, secretName, metav1.GetOptions{})
+		}
+		if err != nil {
+			return fmt.Errorf("get MongoDB legacy connection Secret %s/%s: %w", o.Namespace, secretName, err)
+		}
+		if secretIsImmutable(sourceSecret) {
+			if bytes.Equal(sourceSecret.Data[constant.AccountPasswdForSecret], []byte(o.Password)) {
+				return nil
+			}
+			return fmt.Errorf("MongoDB legacy connection Secret %s/%s is immutable and does not contain the new password", o.Namespace, secretName)
+		}
+		if bytes.Equal(sourceSecret.Data[constant.AccountPasswdForSecret], []byte(o.Password)) {
+			return nil
+		}
+		if err := patchPasswordSecret(ctx, o.kube(), o.Namespace, secretName, []byte(o.Password)); err != nil {
+			return fmt.Errorf("update MongoDB legacy connection Secret %s/%s: %w", o.Namespace, secretName, err)
+		}
+		return nil
+	}
+	return nil
+}
+
 func isMongoAccountRootSecret(characterType, cluster, component, user string, secret *corev1.Secret) bool {
 	return isMongoCharacterType(characterType) &&
 		strings.EqualFold(user, defaultMongoPasswordUser) &&
